@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { supabase } from '@/services/supabase';
@@ -79,12 +81,13 @@ export default function ProfileScreen() {
     try {
       const uri = result.assets[0].uri;
       const fileName = `${user.id}/avatar_${Date.now()}.jpg`;
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+        .upload(fileName, decode(base64), { contentType: 'image/jpeg', upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
