@@ -26,10 +26,13 @@
 - [x] Path aliases configured (@/ prefix)
 
 ### Backend (Supabase)
-- [ ] Supabase project created
-- [ ] Database schema (users, profiles, logs, gamification)
-- [ ] Row Level Security (RLS) policies
-- [ ] Storage buckets (photos, documents)
+- [x] Supabase project created
+- [x] Database schema (users, profiles, logs, gamification)
+- [x] Row Level Security (RLS) policies
+- [x] Storage buckets (photos, documents, avatars)
+- [x] Auth trigger (auto-create profile on signup)
+- [x] Service files (auth.ts, logs.ts, gamification.ts)
+- [x] Zustand stores (authStore, logStore, gamificationStore, uiStore)
 - [ ] Edge functions (if needed)
 
 ### Authentication
@@ -40,13 +43,13 @@
 - [ ] Auth state management
 - [ ] Protected routes
 
-### Navigation
-- [ ] Root navigator (Auth vs App)
-- [ ] Auth stack navigator
-- [ ] Student tab navigator
-- [ ] Mentor tab navigator
-- [ ] Advisor tab navigator
-- [ ] Role-based routing
+### Navigation (Expo Router)
+- [x] Root layout (app/_layout.tsx)
+- [x] Auth stack (app/(auth)/)
+- [x] Student tabs (app/(student)/)
+- [x] Mentor tabs (app/(mentor)/)
+- [x] Advisor tabs (app/(advisor)/)
+- [x] Role-based redirect (app/index.tsx)
 
 ### UI Components
 - [ ] Button component
@@ -65,3 +68,4 @@
 | Date | Session | Work Done |
 |------|---------|-----------|
 | 2026-02-07 | Session 1 | Project infrastructure setup - Git, Expo, configs, types, theme, i18n, Supabase client |
+| 2026-02-07 | Session 2 | Expo Router, NativeWind, docs, Supabase DB schema + RLS + services + stores |
