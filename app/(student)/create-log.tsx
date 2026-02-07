@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { logService } from '@/services/logs';
@@ -111,12 +112,9 @@ export default function CreateLogScreen() {
 
   const allChecklistDone = checklist.contentFilled && checklist.hasPhotos && checklist.allRated && checklist.hasReflection;
 
-  useEffect(() => {
-    loadTodayLog();
-  }, []);
-
-  const loadTodayLog = async () => {
+  const loadTodayLog = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const data = await logService.getLogByDate(user.id, today);
       if (data) {
@@ -127,13 +125,30 @@ export default function CreateLogScreen() {
         setActivities(log.activitiesPerformed);
         setSkills(log.skillsLearned);
         setChallenges(log.challengesFaced);
+      } else {
+        // No log for today — reset form
+        setExistingLog(null);
+        setTitle('');
+        setContent('');
+        setActivities('');
+        setSkills('');
+        setChallenges('');
+        setPhotos([]);
+        setCompetencyRatings({});
+        setReflectionNotes('');
       }
     } catch (err) {
       console.error('Load today log error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, today]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTodayLog();
+    }, [loadTodayLog])
+  );
 
   const validate = (): string | null => {
     if (title.trim().length < LIMITS.minTitleLength) {
