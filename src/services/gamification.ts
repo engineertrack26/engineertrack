@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { POINT_VALUES, LEVELS } from '@/types/gamification';
+import { notificationService } from './notifications';
 
 export const gamificationService = {
   async addXp(studentId: string, amount: number, reason: string, logId?: string) {
@@ -31,7 +32,24 @@ export const gamificationService = {
       .eq('id', studentId);
     if (updateError) throw updateError;
 
-    return { totalXp: newTotalXp, level: newLevel, leveledUp: newLevel > profile.current_level };
+    const leveledUp = newLevel > profile.current_level;
+
+    if (leveledUp) {
+      const levelData = LEVELS.find((l) => l.level === newLevel);
+      try {
+        await notificationService.create(
+          studentId,
+          'Level Up!',
+          `Congratulations! You reached Level ${newLevel}${levelData ? ` - ${levelData.nameKey}` : ''}!`,
+          'level_up',
+          { newLevel, totalXp: newTotalXp },
+        );
+      } catch (e) {
+        console.warn('Level up notification failed:', e);
+      }
+    }
+
+    return { totalXp: newTotalXp, level: newLevel, leveledUp };
   },
 
   calculateLevel(totalXp: number): number {
@@ -77,6 +95,22 @@ export const gamificationService = {
       .single();
     // Ignore unique constraint error (badge already earned)
     if (error && error.code !== '23505') throw error;
+
+    // Send notification only if badge was newly earned (not duplicate)
+    if (data) {
+      try {
+        await notificationService.create(
+          studentId,
+          'Badge Earned!',
+          `You earned the "${badgeKey}" badge! Keep up the great work!`,
+          'badge_earned',
+          { badgeKey },
+        );
+      } catch (e) {
+        console.warn('Badge notification failed:', e);
+      }
+    }
+
     return data;
   },
 
