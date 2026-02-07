@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "EngineerTrack",
+    "slug": "engineertrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a73e8"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.engineertrack.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "EngineerTrack needs camera access to take photos for daily logs.",
+        "NSPhotoLibraryUsageDescription": "EngineerTrack needs photo library access to attach images to daily logs."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a73e8"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.engineertrack.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-image-picker",
+      "expo-notifications",
+      "expo-localization",
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}

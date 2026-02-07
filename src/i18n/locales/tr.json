@@ -1,0 +1,143 @@
+{
+  "common": {
+    "loading": "",
+    "error": "",
+    "retry": "",
+    "save": "",
+    "cancel": "",
+    "delete": "",
+    "edit": "",
+    "submit": "",
+    "confirm": "",
+    "back": "",
+    "next": "",
+    "done": "",
+    "search": "",
+    "noData": "",
+    "settings": "",
+    "notifications": "",
+    "profile": "",
+    "logout": "",
+    "language": ""
+  },
+  "auth": {
+    "login": "",
+    "register": "",
+    "email": "",
+    "password": "",
+    "confirmPassword": "",
+    "forgotPassword": "",
+    "resetPassword": "",
+    "firstName": "",
+    "lastName": "",
+    "role": "",
+    "student": "",
+    "mentor": "",
+    "advisor": "",
+    "selectLanguage": "",
+    "loginSuccess": "",
+    "registerSuccess": "",
+    "resetEmailSent": "",
+    "invalidCredentials": "",
+    "emailRequired": "",
+    "passwordRequired": "",
+    "passwordMismatch": ""
+  },
+  "student": {
+    "dashboard": "",
+    "createLog": "",
+    "logHistory": "",
+    "achievements": "",
+    "leaderboard": "",
+    "dailyLog": "",
+    "title": "",
+    "content": "",
+    "activitiesPerformed": "",
+    "skillsLearned": "",
+    "challengesFaced": "",
+    "attachPhoto": "",
+    "attachDocument": "",
+    "selfAssessment": "",
+    "submitLog": "",
+    "saveDraft": "",
+    "todayLog": "",
+    "streak": "",
+    "totalXp": "",
+    "level": "",
+    "daysLeft": "",
+    "completionRate": ""
+  },
+  "gamification": {
+    "points": "",
+    "badges": "",
+    "level": "",
+    "xp": "",
+    "streak": "",
+    "leaderboard": "",
+    "rank": "",
+    "earnedBadge": "",
+    "levelUp": "",
+    "streakBonus": "",
+    "dailyLogPoints": "",
+    "approvalPoints": ""
+  },
+  "mentor": {
+    "dashboard": "",
+    "studentList": "",
+    "reviewLog": "",
+    "feedback": "",
+    "approve": "",
+    "requestRevision": "",
+    "rating": "",
+    "comments": "",
+    "competencyRating": "",
+    "pendingReviews": "",
+    "reviewedToday": "",
+    "averageRating": ""
+  },
+  "advisor": {
+    "dashboard": "",
+    "studentMonitor": "",
+    "validation": "",
+    "reports": "",
+    "validate": "",
+    "overallProgress": "",
+    "complianceRate": "",
+    "flaggedLogs": "",
+    "exportReport": ""
+  },
+  "levels": {
+    "beginner": "",
+    "novice": "",
+    "apprentice": "",
+    "journeyman": "",
+    "expert": "",
+    "master": "",
+    "grandmaster": "",
+    "legend": "",
+    "mythic": "",
+    "transcendent": ""
+  },
+  "badges": {
+    "firstLog": {
+      "name": "",
+      "description": ""
+    },
+    "streak7": {
+      "name": "",
+      "description": ""
+    },
+    "streak30": {
+      "name": "",
+      "description": ""
+    },
+    "quality10": {
+      "name": "",
+      "description": ""
+    },
+    "allApproved": {
+      "name": "",
+      "description": ""
+    }
+  }
+}

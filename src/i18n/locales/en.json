@@ -1,0 +1,143 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "search": "Search",
+    "noData": "No data available",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "logout": "Logout",
+    "language": "Language"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "role": "Role",
+    "student": "Student",
+    "mentor": "Mentor",
+    "advisor": "Advisor",
+    "selectLanguage": "Select Language",
+    "loginSuccess": "Login successful!",
+    "registerSuccess": "Registration successful!",
+    "resetEmailSent": "Password reset email sent.",
+    "invalidCredentials": "Invalid email or password.",
+    "emailRequired": "Email is required.",
+    "passwordRequired": "Password is required.",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "student": {
+    "dashboard": "Dashboard",
+    "createLog": "Create Log",
+    "logHistory": "Log History",
+    "achievements": "Achievements",
+    "leaderboard": "Leaderboard",
+    "dailyLog": "Daily Log",
+    "title": "Title",
+    "content": "Content",
+    "activitiesPerformed": "Activities Performed",
+    "skillsLearned": "Skills Learned",
+    "challengesFaced": "Challenges Faced",
+    "attachPhoto": "Attach Photo",
+    "attachDocument": "Attach Document",
+    "selfAssessment": "Self Assessment",
+    "submitLog": "Submit Log",
+    "saveDraft": "Save Draft",
+    "todayLog": "Today's Log",
+    "streak": "Streak",
+    "totalXp": "Total XP",
+    "level": "Level",
+    "daysLeft": "Days Left",
+    "completionRate": "Completion Rate"
+  },
+  "gamification": {
+    "points": "Points",
+    "badges": "Badges",
+    "level": "Level",
+    "xp": "XP",
+    "streak": "Day Streak",
+    "leaderboard": "Leaderboard",
+    "rank": "Rank",
+    "earnedBadge": "You earned a new badge!",
+    "levelUp": "Level Up!",
+    "streakBonus": "Streak Bonus!",
+    "dailyLogPoints": "+{{points}} XP for daily log",
+    "approvalPoints": "+{{points}} XP for approved log"
+  },
+  "mentor": {
+    "dashboard": "Mentor Dashboard",
+    "studentList": "My Students",
+    "reviewLog": "Review Log",
+    "feedback": "Feedback",
+    "approve": "Approve",
+    "requestRevision": "Request Revision",
+    "rating": "Rating",
+    "comments": "Comments",
+    "competencyRating": "Competency Rating",
+    "pendingReviews": "Pending Reviews",
+    "reviewedToday": "Reviewed Today",
+    "averageRating": "Average Rating"
+  },
+  "advisor": {
+    "dashboard": "Advisor Dashboard",
+    "studentMonitor": "Student Monitor",
+    "validation": "Validation",
+    "reports": "Reports",
+    "validate": "Validate",
+    "overallProgress": "Overall Progress",
+    "complianceRate": "Compliance Rate",
+    "flaggedLogs": "Flagged Logs",
+    "exportReport": "Export Report"
+  },
+  "levels": {
+    "beginner": "Beginner",
+    "novice": "Novice",
+    "apprentice": "Apprentice",
+    "journeyman": "Journeyman",
+    "expert": "Expert",
+    "master": "Master",
+    "grandmaster": "Grandmaster",
+    "legend": "Legend",
+    "mythic": "Mythic",
+    "transcendent": "Transcendent"
+  },
+  "badges": {
+    "firstLog": {
+      "name": "First Step",
+      "description": "Submit your first daily log"
+    },
+    "streak7": {
+      "name": "Week Warrior",
+      "description": "Maintain a 7-day streak"
+    },
+    "streak30": {
+      "name": "Monthly Master",
+      "description": "Maintain a 30-day streak"
+    },
+    "quality10": {
+      "name": "Quality Writer",
+      "description": "Get 10 logs approved with high ratings"
+    },
+    "allApproved": {
+      "name": "Perfect Record",
+      "description": "All submitted logs approved without revision"
+    }
+  }
+}
