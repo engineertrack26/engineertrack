@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { supabase } from '@/services/supabase';
@@ -32,6 +33,38 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  const LANGUAGES: { code: string; label: string }[] = [
+    { code: 'en', label: 'English' },
+    { code: 'tr', label: 'Türkçe' },
+    { code: 'sr', label: 'Srpski' },
+    { code: 'el', label: 'Ελληνικά' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'ro', label: 'Română' },
+    { code: 'de', label: 'Deutsch' },
+  ];
+
+  const handleChangeLanguage = () => {
+    const buttons = LANGUAGES.map((lang) => ({
+      text: `${lang.label}${lang.code === currentLang ? ' ✓' : ''}`,
+      onPress: async () => {
+        if (lang.code === currentLang) return;
+        try {
+          await i18n.changeLanguage(lang.code);
+          setCurrentLang(lang.code);
+          if (user) {
+            await authService.updateProfile(user.id, { language: lang.code });
+            setUser({ ...user, language: lang.code as typeof user.language });
+          }
+        } catch (err) {
+          console.error('Language change error:', err);
+        }
+      },
+    }));
+    buttons.push({ text: t('common.cancel') || 'Cancel', onPress: async () => {} });
+    Alert.alert(t('common.language') || 'Language', undefined, buttons);
+  };
 
   const initials = `${(user?.firstName || '')[0] || ''}${(user?.lastName || '')[0] || ''}`.toUpperCase();
 
@@ -288,7 +321,7 @@ export default function ProfileScreen() {
           {/* Language */}
           <TouchableOpacity
             style={styles.settingsRow}
-            onPress={() => router.push('/(auth)/language-select')}
+            onPress={handleChangeLanguage}
             activeOpacity={0.6}
           >
             <View style={styles.settingsLeft}>
@@ -296,7 +329,9 @@ export default function ProfileScreen() {
               <Text style={styles.settingsLabel}>{t('common.language') || 'Language'}</Text>
             </View>
             <View style={styles.settingsRight}>
-              <Text style={styles.settingsValue}>{user?.language?.toUpperCase() || 'EN'}</Text>
+              <Text style={styles.settingsValue}>
+                {LANGUAGES.find((l) => l.code === currentLang)?.label || currentLang.toUpperCase()}
+              </Text>
               <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
             </View>
           </TouchableOpacity>
