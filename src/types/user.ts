@@ -1,6 +1,6 @@
 export type UserRole = 'student' | 'mentor' | 'advisor';
 
-export type SupportedLanguage = 'en' | 'tr' | 'el' | 'es' | 'it' | 'de';
+export type SupportedLanguage = 'en' | 'tr' | 'sr' | 'el' | 'it' | 'ro' | 'de';
 
 export interface User {
   id: string;

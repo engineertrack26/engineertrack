@@ -3,9 +3,10 @@ import { SupportedLanguage } from '@/types/user';
 export const SUPPORTED_LANGUAGES: { code: SupportedLanguage; label: string }[] = [
   { code: 'en', label: 'English' },
   { code: 'tr', label: 'Türkçe' },
+  { code: 'sr', label: 'Srpski' },
   { code: 'el', label: 'Ελληνικά' },
-  { code: 'es', label: 'Español' },
   { code: 'it', label: 'Italiano' },
+  { code: 'ro', label: 'Română' },
   { code: 'de', label: 'Deutsch' },
 ];
 

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   role TEXT NOT NULL CHECK (role IN ('student', 'mentor', 'advisor')),
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
-  language TEXT NOT NULL DEFAULT 'en' CHECK (language IN ('en', 'tr', 'el', 'es', 'it', 'de')),
+  language TEXT NOT NULL DEFAULT 'en' CHECK (language IN ('en', 'tr', 'sr', 'el', 'it', 'ro', 'de')),
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
