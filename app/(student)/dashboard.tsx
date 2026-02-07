@@ -8,8 +8,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { logService } from '@/services/logs';
+import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import { StatCard, ProgressBar } from '@/components/common';
+import { AppNotification } from '@/types/notification';
 import { LogCard } from '@/components/cards';
 import { LEVELS } from '@/types/gamification';
 import { DailyLog } from '@/types/log';
@@ -52,6 +54,7 @@ export default function StudentDashboard() {
   // Notification state
   const [revisionCount, setRevisionCount] = useState(0);
   const [feedbackCount, setFeedbackCount] = useState(0);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const currentLevelData = LEVELS.find((l) => l.level === currentLevel) || LEVELS[0];
   const nextLevelData = LEVELS.find((l) => l.level === currentLevel + 1);
@@ -78,17 +81,26 @@ export default function StudentDashboard() {
       const revisionLogs = mappedLogs.filter((l) => l.status === 'needs_revision');
       setRevisionCount(revisionLogs.length);
 
-      // Count recent feedbacks (last 7 days)
+      // Fetch unread notifications from DB
       try {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const { data: feedbacks } = await supabase
-          .from('mentor_feedbacks')
-          .select('id, log_id')
-          .in('log_id', mappedLogs.map((l) => l.id))
-          .gte('created_at', sevenDaysAgo.toISOString());
-        setFeedbackCount(feedbacks?.length || 0);
+        const unread = await notificationService.getUnread(user.id);
+        const mapped: AppNotification[] = (unread || []).map((n: Record<string, unknown>) => ({
+          id: n.id as string,
+          userId: (n.user_id as string) || '',
+          title: (n.title as string) || '',
+          body: (n.body as string) || '',
+          type: (n.type as AppNotification['type']) || 'general',
+          isRead: (n.is_read as boolean) || false,
+          data: (n.data as Record<string, unknown>) || undefined,
+          createdAt: (n.created_at as string) || '',
+        }));
+        setNotifications(mapped);
+        const fbCount = mapped.filter(
+          (n) => n.type === 'log_approved' || n.type === 'new_feedback',
+        ).length;
+        setFeedbackCount(fbCount);
       } catch {
+        setNotifications([]);
         setFeedbackCount(0);
       }
 

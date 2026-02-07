@@ -7,7 +7,7 @@
 | Phase 1 | Setup & Foundation | Complete |
 | Phase 2 | Auth & Navigation | Complete |
 | Phase 3 | Student Features | Complete |
-| Phase 4 | Mentor & Advisor Features + Realtime | Not Started |
+| Phase 4 | Mentor & Advisor Features + Realtime | Mentor Complete |
 | Phase 5 | Gamification, i18n & Realtime | Not Started |
 | Phase 6 | Polish & Deployment | Not Started |
 
@@ -83,6 +83,28 @@
 
 ---
 
+## Phase 4: Mentor Features - Detailed Checklist
+
+### Mentor Service
+- [x] mentorService.getAssignedStudents()
+- [x] mentorService.getPendingReviewLogs()
+- [x] mentorService.getReviewedLogsCount()
+- [x] mentorService.getDashboardStats()
+- [x] mentorService.getFeedbackHistory()
+
+### Mentor Screens
+- [x] Dashboard (stats grid, pending reviews, my students)
+- [x] Student List (FlatList with progress, XP, level, streak)
+- [x] Review Log (pending list + detail/review form with competency ratings)
+- [x] Feedback History (FlatList with status badge, rating, comments)
+- [x] Profile (avatar, name edit, language, sign out, Mentor role badge)
+- [x] Layout updated with 5th Profile tab
+
+### TypeScript
+- [x] `npx tsc --noEmit` passes with zero errors
+
+---
+
 ## Phase 4-5: Realtime Features (Planned)
 
 - [ ] Supabase Realtime subscriptions setup
@@ -100,3 +122,4 @@
 | 2026-02-07 | Session 2 | Expo Router, NativeWind, docs, Supabase DB schema + RLS + services + stores |
 | 2026-02-07 | Session 3 | Auth screens (Login, Register, Forgot Password, Language Select), UI components, auth state listener, protected routing |
 | 2026-02-07 | Session 4 | Phase 3 Student Features - 5 UI components + 5 screens (Dashboard, Create Log, Log History, Achievements, Leaderboard) |
+| 2026-02-07 | Session 5 | Phase 4 Mentor Features - mentor service + 5 screens (Dashboard, Student List, Review Log, Feedback, Profile) + layout update |
