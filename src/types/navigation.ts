@@ -1,38 +1,31 @@
-export type AuthStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  ForgotPassword: undefined;
-  LanguageSelect: undefined;
+// Route parameter types for Expo Router
+// These are used with useLocalSearchParams<T>() in screen components
+
+export type AuthRoutes = {
+  login: undefined;
+  register: undefined;
+  'forgot-password': undefined;
+  'language-select': undefined;
 };
 
-export type StudentTabParamList = {
-  Dashboard: undefined;
-  CreateLog: undefined;
-  LogHistory: undefined;
-  Achievements: undefined;
-  Leaderboard: undefined;
+export type StudentRoutes = {
+  dashboard: undefined;
+  'create-log': undefined;
+  'log-history': undefined;
+  achievements: undefined;
+  leaderboard: undefined;
 };
 
-export type MentorTabParamList = {
-  Dashboard: undefined;
-  StudentList: undefined;
-  ReviewLog: { logId: string };
-  FeedbackForm: { logId: string; studentId: string };
+export type MentorRoutes = {
+  dashboard: undefined;
+  'student-list': undefined;
+  'review-log': { logId: string };
+  feedback: { logId: string; studentId: string };
 };
 
-export type AdvisorTabParamList = {
-  Dashboard: undefined;
-  StudentMonitor: undefined;
-  Validation: { logId: string };
-  Reports: undefined;
-};
-
-export type RootStackParamList = {
-  Auth: undefined;
-  StudentTabs: undefined;
-  MentorTabs: undefined;
-  AdvisorTabs: undefined;
-  Settings: undefined;
-  Notifications: undefined;
-  ProfileEdit: undefined;
+export type AdvisorRoutes = {
+  dashboard: undefined;
+  'student-monitor': undefined;
+  validation: { logId: string };
+  reports: undefined;
 };

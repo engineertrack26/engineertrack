@@ -13,12 +13,18 @@ npx expo install <pkg>  # Install SDK-compatible package
 ```
 
 ## Architecture
-- **Navigation**: React Navigation (NOT expo-router) - 3 role-based tab navigators
+- **Routing**: Expo Router (file-based) - `app/` directory with route groups
+- **Styling**: NativeWind (Tailwind CSS) + theme tokens
 - **State**: Zustand with domain-separated stores (auth, log, gamification, ui)
 - **Backend**: Supabase (auth, database, storage)
 - **i18n**: i18next + react-i18next (6 languages: en, tr, el, es, it, de)
 - **Auth tokens**: expo-secure-store
-- **Template**: blank-typescript (full control)
+
+## Route Groups
+- `app/(auth)/` - Login, Register, Forgot Password, Language Select
+- `app/(student)/` - Dashboard, Create Log, Log History, Achievements, Leaderboard
+- `app/(mentor)/` - Dashboard, Student List, Review Log, Feedback
+- `app/(advisor)/` - Dashboard, Student Monitor, Validation, Reports
 
 ## Path Aliases
 - `@/*` → `src/*`

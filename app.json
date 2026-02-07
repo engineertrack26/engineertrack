@@ -37,13 +37,15 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "scheme": "engineertrack",
     "plugins": [
       "expo-camera",
       "expo-image-picker",
       "expo-notifications",
       "expo-localization",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-router"
     ]
   }
 }
