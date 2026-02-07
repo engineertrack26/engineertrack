@@ -1,6 +1,7 @@
 import '../global.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,10 +9,13 @@ import '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   const { setUser, setSession, setLoading, reset, isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [appReady, setAppReady] = useState(false);
 
   // Listen for auth state changes
   useEffect(() => {
@@ -27,6 +31,7 @@ export default function RootLayout() {
         // No active session
       } finally {
         setLoading(false);
+        setAppReady(true);
       }
     }
 
@@ -46,9 +51,16 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Hide splash screen when ready
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
   // Protected routing
   useEffect(() => {
-    if (isLoading) return;
+    if (!appReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -57,7 +69,7 @@ export default function RootLayout() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, appReady, segments]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
