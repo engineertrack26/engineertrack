@@ -114,13 +114,33 @@ export const logService = {
   // Photo attachments
   async uploadPhoto(logId: string, userId: string, uri: string, caption?: string) {
     const fileName = `${userId}/${logId}/${Date.now()}.jpg`;
-    const response = await fetch(uri);
-    const blob = await response.blob();
 
-    const { error: uploadError } = await supabase.storage
-      .from('log-photos')
-      .upload(fileName, blob, { contentType: 'image/jpeg' });
-    if (uploadError) throw uploadError;
+    // Use FormData REST API for reliable React Native upload
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+
+    const formData = new FormData();
+    formData.append('', {
+      uri,
+      name: 'photo.jpg',
+      type: 'image/jpeg',
+    } as unknown as Blob);
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/log-photos/${fileName}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      },
+    );
+    if (!uploadRes.ok) {
+      const errBody = await uploadRes.text();
+      throw new Error(errBody || 'Photo upload failed');
+    }
 
     const { data: urlData } = supabase.storage
       .from('log-photos')
@@ -145,13 +165,32 @@ export const logService = {
     fileSize: number,
   ) {
     const storagePath = `${userId}/${logId}/${Date.now()}_${fileName}`;
-    const response = await fetch(uri);
-    const blob = await response.blob();
 
-    const { error: uploadError } = await supabase.storage
-      .from('log-documents')
-      .upload(storagePath, blob, { contentType: fileType });
-    if (uploadError) throw uploadError;
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+
+    const formData = new FormData();
+    formData.append('', {
+      uri,
+      name: fileName,
+      type: fileType,
+    } as unknown as Blob);
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/log-documents/${storagePath}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      },
+    );
+    if (!uploadRes.ok) {
+      const errBody = await uploadRes.text();
+      throw new Error(errBody || 'Document upload failed');
+    }
 
     const { data: urlData } = supabase.storage
       .from('log-documents')
