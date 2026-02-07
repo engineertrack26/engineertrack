@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { UserRole, SupportedLanguage } from '@/types/user';
+import { User, UserRole, SupportedLanguage } from '@/types/user';
 
 interface SignUpParams {
   email: string;
@@ -65,7 +65,19 @@ export const authService = {
       .eq('id', userId)
       .single();
     if (error) throw error;
-    return data;
+    const row = data as Record<string, unknown>;
+    const profile: User = {
+      id: row.id as string,
+      email: (row.email as string) || '',
+      role: ((row.role as string) || 'student') as UserRole,
+      firstName: (row.first_name as string) || '',
+      lastName: (row.last_name as string) || '',
+      language: ((row.language as string) || 'en') as SupportedLanguage,
+      avatarUrl: (row.avatar_url as string) || undefined,
+      createdAt: (row.created_at as string) || '',
+      updatedAt: (row.updated_at as string) || '',
+    };
+    return profile;
   },
 
   async getStudentProfile(userId: string) {

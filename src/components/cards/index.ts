@@ -1,1 +1,1 @@
-export {};
+export { LogCard } from './LogCard';
