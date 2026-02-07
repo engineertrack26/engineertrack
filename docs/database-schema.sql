@@ -197,9 +197,13 @@ CREATE TRIGGER tr_daily_logs_updated_at
 -- ============================================
 
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, email, role, first_name, last_name, language)
+  INSERT INTO public.profiles (id, email, role, first_name, last_name, language)
   VALUES (
     NEW.id,
     NEW.email,
@@ -210,7 +214,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
