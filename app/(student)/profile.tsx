@@ -15,8 +15,6 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { supabase } from '@/services/supabase';
@@ -81,14 +79,35 @@ export default function ProfileScreen() {
     try {
       const uri = result.assets[0].uri;
       const fileName = `${user.id}/avatar_${Date.now()}.jpg`;
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: 'base64',
-      });
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, decode(base64), { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) throw uploadError;
+      // Upload via REST API with FormData — most reliable on React Native
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) throw new Error('No session');
+
+      const formData = new FormData();
+      formData.append('', {
+        uri,
+        name: 'avatar.jpg',
+        type: 'image/jpeg',
+      } as unknown as Blob);
+
+      const uploadRes = await fetch(
+        `${supabaseUrl}/storage/v1/object/avatars/${fileName}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'x-upsert': 'true',
+          },
+          body: formData,
+        },
+      );
+
+      if (!uploadRes.ok) {
+        const errBody = await uploadRes.text();
+        throw new Error(errBody || 'Upload failed');
+      }
 
       const { data: urlData } = supabase.storage
         .from('avatars')
