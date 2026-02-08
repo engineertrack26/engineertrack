@@ -82,6 +82,15 @@ docs/                   # Project documentation
 - Key format: `section.key` (e.g., `common.save`, `student.dashboard`)
 - English (`en.json`) is the source of truth
 
+### Security Notes (Phase 1-2 Updates)
+- `profiles` read access is restricted to self, assigned mentor/advisor, or admin.
+- Public data for leaderboards is served via `leaderboard_public` (synced from `student_profiles`).
+- Public profile fields are mirrored in `profiles_public` (synced from `profiles`).
+- Storage reads for `log-photos` and `log-documents` are limited to owner or assigned mentor/advisor.
+- Mentor pending reviews are filtered by assigned students in the service layer.
+- Leaderboard names are masked in UI (e.g., `First L.`).
+- Profile updates are whitelisted in `authService.updateProfile`.
+
 ## Development Phases
 
 1. **Setup & Foundation** - Project structure, configs, types
