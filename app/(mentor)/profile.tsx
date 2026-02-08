@@ -19,7 +19,6 @@ import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { studentCodeService } from '@/services/studentCode';
-import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -32,9 +31,6 @@ export default function MentorProfileScreen() {
 
   const [studentCodeInput, setStudentCodeInput] = useState('');
   const [linkingStudent, setLinkingStudent] = useState(false);
-  const [deptCodeInput, setDeptCodeInput] = useState('');
-  const [joiningDepartment, setJoiningDepartment] = useState(false);
-  const [departmentName, setDepartmentName] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -319,53 +315,6 @@ export default function MentorProfileScreen() {
               <Text style={styles.roleBadgeText}>Mentor</Text>
             </View>
           </View>
-        </View>
-
-        {/* Join Department Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Join Department</Text>
-          <Text style={styles.linkHint}>
-            Enter the department code provided by your institution admin.
-          </Text>
-          <View style={styles.linkRow}>
-            <TextInput
-              style={styles.linkInput}
-              value={deptCodeInput}
-              onChangeText={setDeptCodeInput}
-              placeholder="e.g. ABCD12"
-              placeholderTextColor={colors.textDisabled}
-              autoCapitalize="characters"
-              maxLength={6}
-            />
-            <TouchableOpacity
-              style={[styles.linkBtn, !deptCodeInput.trim() && { opacity: 0.5 }]}
-              disabled={!deptCodeInput.trim() || joiningDepartment}
-              onPress={async () => {
-                if (!user || !deptCodeInput.trim()) return;
-                setJoiningDepartment(true);
-                try {
-                  const dept = await departmentCodeService.joinDepartment(deptCodeInput.trim());
-                  setDepartmentName(dept.name);
-                  Alert.alert('Success', `Joined department: ${dept.name}`);
-                  setDeptCodeInput('');
-                } catch (err: any) {
-                  Alert.alert('Error', err.message || 'Invalid department code.');
-                } finally {
-                  setJoiningDepartment(false);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              {joiningDepartment ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.linkBtnText}>Join</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          {departmentName && (
-            <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
-          )}
         </View>
 
         {/* Link Student Card */}
@@ -664,12 +613,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
-  },
-  institutionInfo: {
-    fontSize: 13,
-    color: colors.success,
-    fontWeight: '500',
-    marginTop: spacing.sm,
   },
 
   // Settings

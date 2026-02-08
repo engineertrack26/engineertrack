@@ -98,6 +98,7 @@ docs/                   # Project documentation
 - Admins can create only one institution (unique constraint on `institutions.admin_id`).
 - Institution code regeneration is rate-limited to once every 24 hours via RPC.
 - Departments are single-level with their own codes and are joined via RPC.
+- Mentors do not join departments; they link to students via student codes.
 
 ## Development Phases
 
