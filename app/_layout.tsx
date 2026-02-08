@@ -2,6 +2,7 @@ import '../global.css';
 import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +11,10 @@ import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 
 SplashScreen.preventAutoHideAsync();
+
+LogBox.ignoreLogs([
+  'SafeAreaView has been deprecated and will be removed in a future release',
+]);
 
 export default function RootLayout() {
   const { setUser, setSession, setLoading, reset, isAuthenticated, isLoading } = useAuthStore();
