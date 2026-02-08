@@ -5,15 +5,16 @@ import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { authService } from '@/services/auth';
+import { authService, isEduEmail } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
 import type { UserRole, SupportedLanguage } from '@/types/user';
 
-const ROLES: { key: UserRole; icon: string }[] = [
+const ROLES: { key: UserRole; icon: string; color?: string }[] = [
   { key: 'student', icon: '🎓' },
   { key: 'mentor', icon: '👨‍🏫' },
   { key: 'advisor', icon: '📋' },
+  { key: 'admin', icon: '🏛️', color: '#e65100' },
 ];
 
 export default function RegisterScreen() {
@@ -26,6 +27,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
+  const [eduEmail, setEduEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -58,6 +60,14 @@ export default function RegisterScreen() {
       newErrors.confirmPassword = t('auth.passwordMismatch');
     }
 
+    if (role === 'admin') {
+      if (!eduEmail.trim()) {
+        newErrors.eduEmail = 'Educational email is required for admin';
+      } else if (!isEduEmail(eduEmail)) {
+        newErrors.eduEmail = 'Must be a .edu or .edu.tr email address';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -75,6 +85,7 @@ export default function RegisterScreen() {
         lastName: lastName.trim(),
         role,
         language: currentLang,
+        eduEmail: role === 'admin' ? eduEmail.trim() : undefined,
       });
 
       if (session && user) {
@@ -165,28 +176,47 @@ export default function RegisterScreen() {
           {/* Role Selection */}
           <Text style={styles.label}>{t('auth.role')}</Text>
           <View style={styles.roleRow}>
-            {ROLES.map((item) => (
-              <TouchableOpacity
-                key={item.key}
-                style={[
-                  styles.roleCard,
-                  role === item.key && styles.roleCardActive,
-                ]}
-                onPress={() => setRole(item.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.roleIcon}>{item.icon}</Text>
-                <Text
+            {ROLES.map((item) => {
+              const isActive = role === item.key;
+              const activeColor = item.color || colors.primary;
+              return (
+                <TouchableOpacity
+                  key={item.key}
                   style={[
-                    styles.roleText,
-                    role === item.key && styles.roleTextActive,
+                    styles.roleCard,
+                    isActive && [styles.roleCardActive, item.color ? { borderColor: activeColor, backgroundColor: activeColor + '15' } : undefined],
                   ]}
+                  onPress={() => setRole(item.key)}
+                  activeOpacity={0.7}
                 >
-                  {t(`auth.${item.key}`)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.roleIcon}>{item.icon}</Text>
+                  <Text
+                    style={[
+                      styles.roleText,
+                      isActive && [styles.roleTextActive, item.color ? { color: activeColor } : undefined],
+                    ]}
+                  >
+                    {t(`auth.${item.key}`)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          {/* Admin .edu Email */}
+          {role === 'admin' && (
+            <Input
+              label="Educational Email (.edu)"
+              icon="school-outline"
+              placeholder="admin@university.edu"
+              value={eduEmail}
+              onChangeText={setEduEmail}
+              error={errors.eduEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
 
           <Button
             title={t('auth.register')}

@@ -8,6 +8,7 @@
 | Phase 2 | Auth & Navigation | Complete |
 | Phase 3 | Student Features | Complete |
 | Phase 4 | Mentor & Advisor Features + Realtime | Complete |
+| Phase 4.5 | Admin Role & Code-Based Linking | Complete |
 | Phase 5 | Gamification, i18n & Realtime | Not Started |
 | Phase 6 | Polish & Deployment | Not Started |
 

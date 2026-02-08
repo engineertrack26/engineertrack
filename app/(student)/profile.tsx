@@ -16,10 +16,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import i18n from '@/i18n';
+import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
+import { studentCodeService } from '@/services/studentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
+import type { StudentCode } from '@/types/institution';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -36,6 +39,12 @@ export default function ProfileScreen() {
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [studentProfile, setStudentProfile] = useState<Record<string, unknown> | null>(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
+  const [studentCode, setStudentCode] = useState<StudentCode | null>(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [linkedUsers, setLinkedUsers] = useState<{
+    mentor: { id: string; firstName: string; lastName: string } | null;
+    advisor: { id: string; firstName: string; lastName: string } | null;
+  }>({ mentor: null, advisor: null });
 
   const LANGUAGES: { code: string; label: string }[] = [
     { code: 'en', label: 'English' },
@@ -76,6 +85,14 @@ export default function ProfileScreen() {
     try {
       const data = await authService.getStudentProfile(user.id);
       setStudentProfile(data || null);
+
+      // Load student code
+      const code = await studentCodeService.getMyCode(user.id);
+      setStudentCode(code);
+
+      // Load linked mentor/advisor
+      const linked = await studentCodeService.getLinkedUsers(user.id);
+      setLinkedUsers(linked);
     } catch (err) {
       console.error('Load student profile error:', err);
       setStudentProfile(null);
@@ -448,6 +465,81 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* My Student Code Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>My Student Code</Text>
+          <Text style={styles.codeHintText}>
+            Share this code with your mentor and advisor so they can link to your account.
+          </Text>
+          {studentCode ? (
+            <TouchableOpacity
+              style={styles.codeDisplayRow}
+              onPress={async () => {
+                await Clipboard.setStringAsync(studentCode.code);
+                Alert.alert('Copied!', 'Student code copied to clipboard.');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.codeDisplayText}>{studentCode.code}</Text>
+              <Ionicons name="copy-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.generateCodeBtn}
+              onPress={async () => {
+                if (!user) return;
+                setGeneratingCode(true);
+                try {
+                  const code = await studentCodeService.generateCode(user.id);
+                  setStudentCode(code);
+                } catch (err: any) {
+                  Alert.alert('Error', err.message || 'Failed to generate code.');
+                } finally {
+                  setGeneratingCode(false);
+                }
+              }}
+              disabled={generatingCode}
+              activeOpacity={0.7}
+            >
+              {generatingCode ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="key-outline" size={18} color="#fff" />
+                  <Text style={styles.generateCodeText}>Generate Code</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Linked Users */}
+          {(linkedUsers.mentor || linkedUsers.advisor) && (
+            <View style={styles.linkedSection}>
+              <Text style={styles.linkedTitle}>Linked Users</Text>
+              {linkedUsers.mentor && (
+                <View style={styles.linkedRow}>
+                  <View style={[styles.linkedBadge, { backgroundColor: colors.secondary + '15' }]}>
+                    <Text style={[styles.linkedBadgeText, { color: colors.secondary }]}>Mentor</Text>
+                  </View>
+                  <Text style={styles.linkedName}>
+                    {linkedUsers.mentor.firstName} {linkedUsers.mentor.lastName}
+                  </Text>
+                </View>
+              )}
+              {linkedUsers.advisor && (
+                <View style={styles.linkedRow}>
+                  <View style={[styles.linkedBadge, { backgroundColor: colors.info + '15' }]}>
+                    <Text style={[styles.linkedBadgeText, { color: colors.info }]}>Advisor</Text>
+                  </View>
+                  <Text style={styles.linkedName}>
+                    {linkedUsers.advisor.firstName} {linkedUsers.advisor.lastName}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Settings Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('common.settings') || 'Settings'}</Text>
@@ -671,6 +763,76 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     fontWeight: '600',
+  },
+
+  // Student Code
+  codeHintText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  codeDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary + '08',
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  codeDisplayText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 3,
+  },
+  generateCodeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  generateCodeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  linkedSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: spacing.sm,
+  },
+  linkedTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  linkedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  linkedBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  linkedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  linkedName: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
   },
 
   // Settings

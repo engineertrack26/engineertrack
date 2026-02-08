@@ -18,6 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
+import { studentCodeService } from '@/services/studentCode';
+import { institutionCodeService } from '@/services/institutionCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -27,6 +29,12 @@ export default function AdvisorProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const reset = useAuthStore((s) => s.reset);
+
+  const [studentCodeInput, setStudentCodeInput] = useState('');
+  const [linkingStudent, setLinkingStudent] = useState(false);
+  const [instCodeInput, setInstCodeInput] = useState('');
+  const [joiningInstitution, setJoiningInstitution] = useState(false);
+  const [institutionName, setInstitutionName] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -313,6 +321,100 @@ export default function AdvisorProfileScreen() {
           </View>
         </View>
 
+        {/* Join Institution Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Join Institution</Text>
+          <Text style={styles.linkHint}>
+            Enter the 8-digit institution code provided by your institution admin.
+          </Text>
+          <View style={styles.linkRow}>
+            <TextInput
+              style={styles.linkInput}
+              value={instCodeInput}
+              onChangeText={setInstCodeInput}
+              placeholder="e.g. ABCD1234"
+              placeholderTextColor={colors.textDisabled}
+              autoCapitalize="characters"
+              maxLength={8}
+            />
+            <TouchableOpacity
+              style={[styles.linkBtn, !instCodeInput.trim() && { opacity: 0.5 }]}
+              disabled={!instCodeInput.trim() || joiningInstitution}
+              onPress={async () => {
+                if (!user || !instCodeInput.trim()) return;
+                setJoiningInstitution(true);
+                try {
+                  const inst = await institutionCodeService.joinInstitution(instCodeInput.trim(), user.id);
+                  setInstitutionName(inst.name);
+                  Alert.alert('Success', `Joined institution: ${inst.name}`);
+                  setInstCodeInput('');
+                } catch (err: any) {
+                  Alert.alert('Error', err.message || 'Invalid institution code.');
+                } finally {
+                  setJoiningInstitution(false);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {joiningInstitution ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.linkBtnText}>Join</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          {institutionName && (
+            <Text style={styles.institutionInfo}>Current: {institutionName}</Text>
+          )}
+        </View>
+
+        {/* Link Student Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Link Student</Text>
+          <Text style={styles.linkHint}>
+            Enter a student's 6-digit code to link to their account as an advisor.
+          </Text>
+          <View style={styles.linkRow}>
+            <TextInput
+              style={styles.linkInput}
+              value={studentCodeInput}
+              onChangeText={setStudentCodeInput}
+              placeholder="e.g. ABC123"
+              placeholderTextColor={colors.textDisabled}
+              autoCapitalize="characters"
+              maxLength={6}
+            />
+            <TouchableOpacity
+              style={[styles.linkBtn, !studentCodeInput.trim() && { opacity: 0.5 }]}
+              disabled={!studentCodeInput.trim() || linkingStudent}
+              onPress={async () => {
+                if (!user || !studentCodeInput.trim()) return;
+                setLinkingStudent(true);
+                try {
+                  const result = await studentCodeService.linkWithCode(
+                    studentCodeInput.trim(),
+                    user.id,
+                    'advisor',
+                  );
+                  Alert.alert('Success', `Linked to student: ${result.studentName}`);
+                  setStudentCodeInput('');
+                } catch (err: any) {
+                  Alert.alert('Error', err.message || 'Invalid code.');
+                } finally {
+                  setLinkingStudent(false);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {linkingStudent ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.linkBtnText}>Link</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Settings Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('common.settings') || 'Settings'}</Text>
@@ -524,6 +626,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.info,
     fontWeight: '600',
+  },
+
+  // Link Student / Institution
+  linkHint: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  linkInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 2,
+    backgroundColor: colors.background,
+  },
+  linkBtn: {
+    backgroundColor: colors.info,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  linkBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  institutionInfo: {
+    fontSize: 13,
+    color: colors.success,
+    fontWeight: '500',
+    marginTop: spacing.sm,
   },
 
   // Settings

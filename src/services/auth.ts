@@ -8,6 +8,12 @@ interface SignUpParams {
   lastName: string;
   role: UserRole;
   language: SupportedLanguage;
+  eduEmail?: string;
+}
+
+export function isEduEmail(email: string): boolean {
+  const lower = email.toLowerCase().trim();
+  return lower.endsWith('.edu') || lower.endsWith('.edu.tr');
 }
 
 interface SignInParams {
@@ -16,18 +22,20 @@ interface SignInParams {
 }
 
 export const authService = {
-  async signUp({ email, password, firstName, lastName, role, language }: SignUpParams) {
+  async signUp({ email, password, firstName, lastName, role, language, eduEmail }: SignUpParams) {
+    const metadata: Record<string, unknown> = {
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      language,
+    };
+    if (role === 'admin' && eduEmail) {
+      metadata.edu_email = eduEmail;
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          role,
-          language,
-        },
-      },
+      options: { data: metadata },
     });
     if (error) throw error;
     return data;

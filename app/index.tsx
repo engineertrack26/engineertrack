@@ -25,6 +25,8 @@ export default function Index() {
       return <Redirect href="/(mentor)/dashboard" />;
     case 'advisor':
       return <Redirect href="/(advisor)/dashboard" />;
+    case 'admin':
+      return <Redirect href="/(admin)/dashboard" />;
     default:
       return <Redirect href="/(auth)/login" />;
   }
