@@ -21,6 +21,28 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Public profile fields (safe for wider visibility)
+CREATE TABLE IF NOT EXISTS profiles_public (
+  id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  first_name TEXT NOT NULL DEFAULT '',
+  last_name TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'student',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Public leaderboard snapshot
+CREATE TABLE IF NOT EXISTS leaderboard_public (
+  id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  total_xp INTEGER NOT NULL DEFAULT 0,
+  current_level INTEGER NOT NULL DEFAULT 1,
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  first_name TEXT NOT NULL DEFAULT '',
+  last_name TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Student-specific profile data
 CREATE TABLE IF NOT EXISTS student_profiles (
   id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
@@ -196,6 +218,110 @@ CREATE TRIGGER tr_daily_logs_updated_at
   BEFORE UPDATE ON daily_logs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- Keep profiles_public in sync with profiles
+CREATE OR REPLACE FUNCTION sync_profiles_public()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles_public (id, first_name, last_name, avatar_url, role, updated_at)
+  VALUES (NEW.id, NEW.first_name, NEW.last_name, NEW.avatar_url, NEW.role, NOW())
+  ON CONFLICT (id) DO UPDATE SET
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    avatar_url = EXCLUDED.avatar_url,
+    role = EXCLUDED.role,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER tr_profiles_public_sync
+  AFTER INSERT OR UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION sync_profiles_public();
+
+-- Keep leaderboard_public in sync with student_profiles
+CREATE OR REPLACE FUNCTION sync_leaderboard_public_from_student()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO leaderboard_public (
+    id, total_xp, current_level, current_streak, first_name, last_name, avatar_url, updated_at
+  )
+  SELECT
+    NEW.id,
+    NEW.total_xp,
+    NEW.current_level,
+    NEW.current_streak,
+    COALESCE(p.first_name, ''),
+    COALESCE(p.last_name, ''),
+    p.avatar_url,
+    NOW()
+  FROM profiles_public p
+  WHERE p.id = NEW.id
+  ON CONFLICT (id) DO UPDATE SET
+    total_xp = EXCLUDED.total_xp,
+    current_level = EXCLUDED.current_level,
+    current_streak = EXCLUDED.current_streak,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER tr_leaderboard_public_sync_student
+  AFTER INSERT OR UPDATE ON student_profiles
+  FOR EACH ROW EXECUTE FUNCTION sync_leaderboard_public_from_student();
+
+-- Refresh leaderboard names when profile changes
+CREATE OR REPLACE FUNCTION sync_leaderboard_public_from_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE leaderboard_public
+  SET first_name = COALESCE(NEW.first_name, ''),
+      last_name = COALESCE(NEW.last_name, ''),
+      avatar_url = NEW.avatar_url,
+      updated_at = NOW()
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER tr_leaderboard_public_sync_profile
+  AFTER UPDATE ON profiles_public
+  FOR EACH ROW EXECUTE FUNCTION sync_leaderboard_public_from_profile();
+
+-- Initial backfill for public tables
+INSERT INTO profiles_public (id, first_name, last_name, avatar_url, role, updated_at)
+SELECT id, first_name, last_name, avatar_url, role, NOW()
+FROM profiles
+ON CONFLICT (id) DO UPDATE SET
+  first_name = EXCLUDED.first_name,
+  last_name = EXCLUDED.last_name,
+  avatar_url = EXCLUDED.avatar_url,
+  role = EXCLUDED.role,
+  updated_at = NOW();
+
+INSERT INTO leaderboard_public (id, total_xp, current_level, current_streak, first_name, last_name, avatar_url, updated_at)
+SELECT
+  sp.id,
+  sp.total_xp,
+  sp.current_level,
+  sp.current_streak,
+  COALESCE(pp.first_name, ''),
+  COALESCE(pp.last_name, ''),
+  pp.avatar_url,
+  NOW()
+FROM student_profiles sp
+JOIN profiles_public pp ON pp.id = sp.id
+ON CONFLICT (id) DO UPDATE SET
+  total_xp = EXCLUDED.total_xp,
+  current_level = EXCLUDED.current_level,
+  current_streak = EXCLUDED.current_streak,
+  first_name = EXCLUDED.first_name,
+  last_name = EXCLUDED.last_name,
+  avatar_url = EXCLUDED.avatar_url,
+  updated_at = NOW();
+
 -- ============================================
 -- 4. AUTO-CREATE PROFILE ON SIGNUP TRIGGER
 -- ============================================
@@ -230,6 +356,8 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles_public ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leaderboard_public ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mentor_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE advisor_profiles ENABLE ROW LEVEL SECURITY;
@@ -268,13 +396,26 @@ RETURNS BOOLEAN AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ---- PROFILES ----
--- Everyone can read profiles
+-- Profiles: only self or assigned mentor/advisor (or admin)
 CREATE POLICY "profiles_select" ON profiles
-  FOR SELECT USING (true);
+  FOR SELECT USING (
+    auth.uid() = id
+    OR is_mentor_of(id)
+    OR is_advisor_of(id)
+    OR get_user_role() = 'admin'
+  );
 
 -- Users can update their own profile
 CREATE POLICY "profiles_update_own" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+
+-- Public profiles: anyone authenticated can read
+CREATE POLICY "profiles_public_select" ON profiles_public
+  FOR SELECT TO authenticated USING (true);
+
+-- Public leaderboard: anyone authenticated can read
+CREATE POLICY "leaderboard_public_select" ON leaderboard_public
+  FOR SELECT TO authenticated USING (true);
 
 -- ---- STUDENT PROFILES ----
 CREATE POLICY "student_profiles_select" ON student_profiles
@@ -487,6 +628,11 @@ CREATE POLICY "log_photos_read" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'log-photos'
     AND auth.role() = 'authenticated'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR is_mentor_of((storage.foldername(name))[1]::uuid)
+      OR is_advisor_of((storage.foldername(name))[1]::uuid)
+    )
   );
 
 CREATE POLICY "log_photos_delete_own" ON storage.objects
@@ -507,6 +653,11 @@ CREATE POLICY "log_documents_read" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'log-documents'
     AND auth.role() = 'authenticated'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR is_mentor_of((storage.foldername(name))[1]::uuid)
+      OR is_advisor_of((storage.foldername(name))[1]::uuid)
+    )
   );
 
 CREATE POLICY "log_documents_delete_own" ON storage.objects

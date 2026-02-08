@@ -136,8 +136,8 @@ export const gamificationService = {
 
   async getLeaderboard(limit = 20) {
     const { data, error } = await supabase
-      .from('student_profiles')
-      .select('id, total_xp, current_level, current_streak, profiles!student_profiles_id_fkey(first_name, last_name, avatar_url)')
+      .from('leaderboard_public')
+      .select('id, total_xp, current_level, current_streak, first_name, last_name, avatar_url')
       .order('total_xp', { ascending: false })
       .limit(limit);
     if (error) throw error;

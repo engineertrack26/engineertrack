@@ -20,11 +20,9 @@ interface LeaderboardEntry {
   total_xp: number;
   current_level: number;
   current_streak: number;
-  profiles: {
-    first_name: string;
-    last_name: string;
-    avatar_url: string | null;
-  };
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
 }
 
 const PODIUM_COLORS = [
@@ -43,20 +41,15 @@ export default function LeaderboardScreen() {
   const loadData = useCallback(async () => {
     try {
       const data = await gamificationService.getLeaderboard(50);
-      // Supabase may return profiles as object or array depending on FK relation
       const mapped = (data || []).map((item: Record<string, unknown>) => {
-        const profiles = item.profiles as Record<string, unknown> | Record<string, unknown>[];
-        const profile = Array.isArray(profiles) ? profiles[0] : profiles;
         return {
           id: item.id as string,
           total_xp: item.total_xp as number,
           current_level: item.current_level as number,
           current_streak: item.current_streak as number,
-          profiles: {
-            first_name: (profile?.first_name as string) || '',
-            last_name: (profile?.last_name as string) || '',
-            avatar_url: (profile?.avatar_url as string) || null,
-          },
+          first_name: (item.first_name as string) || '',
+          last_name: (item.last_name as string) || '',
+          avatar_url: (item.avatar_url as string) || null,
         };
       });
       setEntries(mapped);
@@ -122,7 +115,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[1]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {topThree[1].profiles.first_name}
+                            {topThree[1].first_name}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[1].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumSecond, { backgroundColor: PODIUM_COLORS[1] }]}>
@@ -138,7 +131,7 @@ export default function LeaderboardScreen() {
                           <Ionicons name="person" size={28} color={PODIUM_COLORS[0]} />
                         </View>
                         <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>
-                          {topThree[0].profiles.first_name}
+                          {topThree[0].first_name}
                         </Text>
                         <Text style={styles.podiumXp}>{topThree[0].total_xp} XP</Text>
                         <View style={[styles.podiumBlock, styles.podiumFirst, { backgroundColor: PODIUM_COLORS[0] }]}>
@@ -153,7 +146,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[2]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {topThree[2].profiles.first_name}
+                            {topThree[2].first_name}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[2].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumThird, { backgroundColor: PODIUM_COLORS[2] }]}>
@@ -175,7 +168,7 @@ export default function LeaderboardScreen() {
             renderItem={({ item, index }) => (
               <LeaderboardRow
                 rank={index + 4}
-                name={`${item.profiles.first_name} ${item.profiles.last_name}`}
+                name={`${item.first_name} ${item.last_name}`}
                 xp={item.total_xp}
                 level={item.current_level}
                 isCurrentUser={item.id === user?.id}
