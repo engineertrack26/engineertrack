@@ -7,7 +7,7 @@
 | Phase 1 | Setup & Foundation | Complete |
 | Phase 2 | Auth & Navigation | Complete |
 | Phase 3 | Student Features | Complete |
-| Phase 4 | Mentor & Advisor Features + Realtime | Mentor Complete |
+| Phase 4 | Mentor & Advisor Features + Realtime | Complete |
 | Phase 5 | Gamification, i18n & Realtime | Not Started |
 | Phase 6 | Polish & Deployment | Not Started |
 
@@ -105,6 +105,31 @@
 
 ---
 
+## Phase 4: Advisor Features - Detailed Checklist
+
+### Advisor Service
+- [x] advisorService.getAssignedStudents()
+- [x] advisorService.getPendingValidationLogs()
+- [x] advisorService.getValidatedLogsCount()
+- [x] advisorService.getDashboardStats()
+- [x] advisorService.validateLog()
+- [x] advisorService.getStudentDetailedProgress()
+- [x] advisorService.getReportsData()
+
+### Advisor Screens
+- [x] Dashboard (stats grid, pending validations, student overview)
+- [x] Student Monitor (FlatList with progress bar, XP, streak, completion %)
+- [x] Validation (pending list + detail view with mentor feedback, self-assessment comparison, validate button)
+- [x] Reports (summary stats, log status breakdown bar, student completion list)
+- [x] Profile (avatar, name edit, language, sign out, Advisor role badge)
+- [x] Notifications (notification list, mark all read, unread banner)
+- [x] Layout updated with 6 tabs (Dashboard, Monitor, Validate, Reports, Alerts, Profile)
+
+### TypeScript
+- [x] `npx tsc --noEmit` passes with zero errors
+
+---
+
 ## Phase 4-5: Realtime Features (Planned)
 
 - [ ] Supabase Realtime subscriptions setup
@@ -123,3 +148,4 @@
 | 2026-02-07 | Session 3 | Auth screens (Login, Register, Forgot Password, Language Select), UI components, auth state listener, protected routing |
 | 2026-02-07 | Session 4 | Phase 3 Student Features - 5 UI components + 5 screens (Dashboard, Create Log, Log History, Achievements, Leaderboard) |
 | 2026-02-07 | Session 5 | Phase 4 Mentor Features - mentor service + 5 screens (Dashboard, Student List, Review Log, Feedback, Profile) + layout update |
+| 2026-02-08 | Session 6 | Phase 4 Advisor Features - advisor service + 6 screens (Dashboard, Student Monitor, Validation, Reports, Profile, Notifications) + layout update |
