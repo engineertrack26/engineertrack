@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,8 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+  const [studentProfile, setStudentProfile] = useState<Record<string, unknown> | null>(null);
+  const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
 
   const LANGUAGES: { code: string; label: string }[] = [
     { code: 'en', label: 'English' },
@@ -67,6 +69,26 @@ export default function ProfileScreen() {
   };
 
   const initials = `${(user?.firstName || '')[0] || ''}${(user?.lastName || '')[0] || ''}`.toUpperCase();
+
+  const loadStudentProfile = useCallback(async () => {
+    if (!user) return;
+    setLoadingStudentProfile(true);
+    try {
+      const data = await authService.getStudentProfile(user.id);
+      setStudentProfile(data || null);
+    } catch (err) {
+      console.error('Load student profile error:', err);
+      setStudentProfile(null);
+    } finally {
+      setLoadingStudentProfile(false);
+    }
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStudentProfile();
+    }, [loadStudentProfile]),
+  );
 
   const pickAvatar = useCallback(async () => {
     if (!user) return;
@@ -210,6 +232,19 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleEditInternship = () => {
+    router.push('/(student)/internship-form?return=profile');
+  };
+
+  const internshipComplete =
+    !!studentProfile &&
+    !!studentProfile.university &&
+    !!studentProfile.department &&
+    !!studentProfile.company_name &&
+    !!studentProfile.student_id &&
+    !!studentProfile.internship_start_date &&
+    !!studentProfile.internship_end_date;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -312,6 +347,105 @@ export default function ProfileScreen() {
               <Text style={styles.roleBadgeText}>Student</Text>
             </View>
           </View>
+        </View>
+
+        {/* Internship Info Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>
+              {t('student.internshipInfo') || 'Internship Info'}
+            </Text>
+            <TouchableOpacity onPress={handleEditInternship} hitSlop={8}>
+              <Ionicons name="pencil" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {loadingStudentProfile ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              {!internshipComplete && (
+                <Text style={styles.emptyStateText}>
+                  {t('student.completeInternshipInfo') ||
+                    'Complete your internship info to unlock all features.'}
+                </Text>
+              )}
+
+              <Text style={styles.sectionLabel}>
+                {t('student.schoolInfo') || 'School Information'}
+              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.universityName') || 'University'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.university as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.facultyName') || 'Faculty'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.faculty as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.departmentName') || 'Department'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.department as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>
+                  {t('student.departmentBranch') || 'Department Branch'}
+                </Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.department_branch as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.studentId') || 'Student ID'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.student_id as string) || '-'}
+                </Text>
+              </View>
+
+              <Text style={styles.sectionLabel}>
+                {t('student.internshipWorkplace') || 'Internship Workplace'}
+              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.companyName') || 'Company Name'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.company_name as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.companyAddress') || 'Company Address'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.company_address as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{t('student.companySector') || 'Company Sector'}</Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.company_sector as string) || '-'}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>
+                  {t('student.internshipStartDate') || 'Internship Start Date'}
+                </Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.internship_start_date as string) || '-'}
+                </Text>
+              </View>
+              <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.infoLabel}>
+                  {t('student.internshipEndDate') || 'Internship End Date'}
+                </Text>
+                <Text style={styles.infoValue}>
+                  {(studentProfile?.internship_end_date as string) || '-'}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Settings Card */}
@@ -455,6 +589,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.xs,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  emptyStateText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
 
   // Edit actions

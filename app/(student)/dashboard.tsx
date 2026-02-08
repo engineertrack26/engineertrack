@@ -68,6 +68,29 @@ export default function StudentDashboard() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
+      const { data: profile } = await supabase
+        .from('student_profiles')
+        .select(
+          'university, department, company_name, student_id, internship_start_date, internship_end_date, total_xp, current_level, current_streak, longest_streak',
+        )
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const isIncomplete =
+        !profile ||
+        !profile.university ||
+        !profile.department ||
+        !profile.company_name ||
+        !profile.student_id ||
+        !profile.internship_start_date ||
+        !profile.internship_end_date;
+
+      if (isIncomplete) {
+        router.replace('/(student)/internship-form?return=dashboard');
+        setLoading(false);
+        return;
+      }
+
       const [logsData, todayData] = await Promise.all([
         logService.getLogsByStudent(user.id),
         logService.getLogByDate(user.id, today),
@@ -103,12 +126,6 @@ export default function StudentDashboard() {
         setNotifications([]);
         setFeedbackCount(0);
       }
-
-      const { data: profile } = await supabase
-        .from('student_profiles')
-        .select('total_xp, current_level, current_streak, longest_streak')
-        .eq('id', user.id)
-        .single();
 
       if (profile) {
         setXp(profile.total_xp || 0);

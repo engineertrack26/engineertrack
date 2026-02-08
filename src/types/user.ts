@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'mentor' | 'advisor';
+export type UserRole = 'student' | 'mentor' | 'advisor' | 'admin';
 
 export type SupportedLanguage = 'en' | 'tr' | 'sr' | 'el' | 'it' | 'ro' | 'de';
 
@@ -17,13 +17,17 @@ export interface User {
 export interface StudentProfile extends User {
   role: 'student';
   university: string;
+  faculty?: string;
   department: string;
+  departmentBranch?: string;
   studentId: string;
   mentorId: string;
   advisorId: string;
   internshipStartDate: string;
   internshipEndDate: string;
   companyName: string;
+  companyAddress?: string;
+  companySector?: string;
   totalXp: number;
   currentLevel: number;
   currentStreak: number;

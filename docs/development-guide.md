@@ -86,7 +86,7 @@ docs/                   # Project documentation
 
 1. **Setup & Foundation** - Project structure, configs, types
 2. **Auth & Navigation** - Supabase auth, role-based routing
-3. **Student Features** - Log CRUD, dashboard, attachments
+3. **Student Features** - Log CRUD, dashboard, attachments, internship info form
 4. **Mentor & Advisor** - Review, feedback, validation, reports
 5. **Gamification & i18n** - XP, badges, streaks, translations
 6. **Polish & Deployment** - Testing, optimization, EAS build

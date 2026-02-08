@@ -10,11 +10,9 @@ import it from './locales/it.json';
 import ro from './locales/ro.json';
 import de from './locales/de.json';
 
-const deviceLanguage = getLocales()[0]?.languageCode ?? 'en';
 const supportedLanguages = ['en', 'tr', 'sr', 'el', 'it', 'ro', 'de'];
-const defaultLanguage = supportedLanguages.includes(deviceLanguage)
-  ? deviceLanguage
-  : 'en';
+// Force English until in-app language selection is finalized.
+const defaultLanguage = 'en';
 
 i18n.use(initReactI18next).init({
   resources: {

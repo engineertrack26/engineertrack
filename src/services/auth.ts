@@ -85,6 +85,16 @@ export const authService = {
       .from('student_profiles')
       .select('*')
       .eq('id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  async upsertStudentProfile(userId: string, updates: Record<string, unknown>) {
+    const { data, error } = await supabase
+      .from('student_profiles')
+      .upsert({ id: userId, ...updates }, { onConflict: 'id' })
+      .select()
       .single();
     if (error) throw error;
     return data;

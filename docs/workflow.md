@@ -6,12 +6,13 @@
 
 ### Student Flow
 1. Login / Register with language selection
-2. Dashboard: View streak, XP, level, today's log status
-3. Create daily log with activities, skills, challenges
-4. Attach photos/documents
-5. Self-assessment (competency ratings)
-6. Submit log for mentor review
-7. View achievements, badges, leaderboard
+2. Complete internship info form (school + workplace) on first login
+3. Dashboard: View streak, XP, level, today's log status
+4. Create daily log with activities, skills, challenges
+5. Attach photos/documents
+6. Self-assessment (competency ratings)
+7. Submit log for mentor review
+8. View achievements, badges, leaderboard
 
 ### Mentor Flow
 1. Login to mentor dashboard

@@ -87,6 +87,12 @@ export default function StudentLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="internship-form"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

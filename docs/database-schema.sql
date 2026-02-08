@@ -25,13 +25,17 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS student_profiles (
   id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
   university TEXT NOT NULL,
+  faculty TEXT,
   department TEXT NOT NULL,
+  department_branch TEXT,
   student_id TEXT NOT NULL,
   mentor_id UUID REFERENCES profiles(id),
   advisor_id UUID REFERENCES profiles(id),
   internship_start_date DATE NOT NULL,
   internship_end_date DATE NOT NULL,
   company_name TEXT NOT NULL,
+  company_address TEXT,
+  company_sector TEXT,
   total_xp INTEGER NOT NULL DEFAULT 0,
   current_level INTEGER NOT NULL DEFAULT 1,
   current_streak INTEGER NOT NULL DEFAULT 0,
@@ -278,6 +282,12 @@ CREATE POLICY "student_profiles_select" ON student_profiles
     auth.uid() = id
     OR is_mentor_of(id)
     OR is_advisor_of(id)
+  );
+
+CREATE POLICY "student_profiles_insert_own" ON student_profiles
+  FOR INSERT WITH CHECK (
+    auth.uid() = id
+    AND get_user_role() = 'student'
   );
 
 CREATE POLICY "student_profiles_update_own" ON student_profiles
