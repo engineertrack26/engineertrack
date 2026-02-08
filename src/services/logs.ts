@@ -102,10 +102,21 @@ export const logService = {
   },
 
   async getPendingReviewLogs(mentorId: string) {
+    // Limit to mentor's assigned students
+    const { data: students, error: studentsError } = await supabase
+      .from('student_profiles')
+      .select('id')
+      .eq('mentor_id', mentorId);
+    if (studentsError) throw studentsError;
+
+    const studentIds = (students || []).map((s) => s.id);
+    if (studentIds.length === 0) return [];
+
     const { data, error } = await supabase
       .from('daily_logs')
       .select('*, profiles!daily_logs_student_id_fkey(first_name, last_name)')
       .eq('status', 'submitted')
+      .in('student_id', studentIds)
       .order('created_at', { ascending: true });
     if (error) throw error;
     return data;

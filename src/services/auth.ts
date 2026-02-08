@@ -101,9 +101,17 @@ export const authService = {
   },
 
   async updateProfile(userId: string, updates: Record<string, unknown>) {
+    const allowed = ['first_name', 'last_name', 'language', 'avatar_url'];
+    const safeUpdates: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+    }
+    if (Object.keys(safeUpdates).length === 0) {
+      throw new Error('No valid fields to update.');
+    }
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', userId)
       .select()
       .single();

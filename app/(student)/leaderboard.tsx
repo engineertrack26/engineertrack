@@ -70,6 +70,14 @@ export default function LeaderboardScreen() {
     setRefreshing(false);
   }, [loadData]);
 
+  const maskName = (firstName: string, lastName: string) => {
+    const first = (firstName || '').trim();
+    const last = (lastName || '').trim();
+    if (!first && !last) return 'Student';
+    if (!last) return first;
+    return `${first} ${last[0].toUpperCase()}.`;
+  };
+
   const topThree = entries.slice(0, 3);
   const rest = entries.slice(3);
 
@@ -115,7 +123,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[1]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {topThree[1].first_name}
+                            {maskName(topThree[1].first_name, topThree[1].last_name)}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[1].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumSecond, { backgroundColor: PODIUM_COLORS[1] }]}>
@@ -131,7 +139,7 @@ export default function LeaderboardScreen() {
                           <Ionicons name="person" size={28} color={PODIUM_COLORS[0]} />
                         </View>
                         <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>
-                          {topThree[0].first_name}
+                          {maskName(topThree[0].first_name, topThree[0].last_name)}
                         </Text>
                         <Text style={styles.podiumXp}>{topThree[0].total_xp} XP</Text>
                         <View style={[styles.podiumBlock, styles.podiumFirst, { backgroundColor: PODIUM_COLORS[0] }]}>
@@ -146,7 +154,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[2]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {topThree[2].first_name}
+                            {maskName(topThree[2].first_name, topThree[2].last_name)}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[2].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumThird, { backgroundColor: PODIUM_COLORS[2] }]}>
@@ -168,7 +176,7 @@ export default function LeaderboardScreen() {
             renderItem={({ item, index }) => (
               <LeaderboardRow
                 rank={index + 4}
-                name={`${item.first_name} ${item.last_name}`}
+                name={maskName(item.first_name, item.last_name)}
                 xp={item.total_xp}
                 level={item.current_level}
                 isCurrentUser={item.id === user?.id}
