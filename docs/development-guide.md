@@ -95,6 +95,8 @@ docs/                   # Project documentation
 - Institution and student code validation now uses RPCs (no public SELECT on `institutions` / `student_codes`).
 - Admins can only read members within their own institution.
 - Mentor/advisor student linking enforces same `institution_id` on both sides.
+- Admins can create only one institution (unique constraint on `institutions.admin_id`).
+- Institution code regeneration is rate-limited to once every 24 hours via RPC.
 
 ## Development Phases
 

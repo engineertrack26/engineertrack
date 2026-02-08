@@ -114,18 +114,11 @@ export const adminService = {
   },
 
   async regenerateInstitutionCode(institutionId: string): Promise<string> {
-    // Generate a new 8-char code via DB function
-    const { data, error } = await supabase.rpc('generate_random_code', { length: 8 });
+    const { data, error } = await supabase.rpc('regenerate_institution_code', {
+      p_institution_id: institutionId,
+    });
     if (error) throw error;
-    const newCode = data as string;
-
-    const { error: updateError } = await supabase
-      .from('institutions')
-      .update({ institution_code: newCode, updated_at: new Date().toISOString() })
-      .eq('id', institutionId);
-    if (updateError) throw updateError;
-
-    return newCode;
+    return data as string;
   },
 
   async getInstitutionMembers(

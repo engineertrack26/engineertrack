@@ -4,15 +4,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useAdminStore } from '@/store/adminStore';
 
 export default function AdminLayout() {
   const user = useAuthStore((s) => s.user);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
+  const institution = useAdminStore((s) => s.institution);
+  const fetchInstitution = useAdminStore((s) => s.fetchInstitution);
 
   useEffect(() => {
     if (user) fetchUnreadCount(user.id);
   }, [user, fetchUnreadCount]);
+
+  useEffect(() => {
+    if (user) fetchInstitution(user.id);
+  }, [user, fetchInstitution]);
 
   return (
     <Tabs
@@ -35,6 +42,7 @@ export default function AdminLayout() {
         name="users"
         options={{
           title: 'Users',
+          href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
@@ -44,6 +52,7 @@ export default function AdminLayout() {
         name="reports"
         options={{
           title: 'Reports',
+          href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart-outline" size={size} color={color} />
           ),
@@ -53,6 +62,7 @@ export default function AdminLayout() {
         name="notifications"
         options={{
           title: 'Alerts',
+          href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),

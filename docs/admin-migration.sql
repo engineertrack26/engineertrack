@@ -29,9 +29,26 @@ CREATE TABLE IF NOT EXISTS institutions (
   country TEXT NOT NULL DEFAULT '',
   admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   institution_code TEXT UNIQUE NOT NULL DEFAULT generate_random_code(8),
+  code_last_rotated_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE institutions
+  ADD COLUMN IF NOT EXISTS code_last_rotated_at TIMESTAMPTZ DEFAULT now();
+
+-- Enforce one institution per admin
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'institutions_admin_id_unique'
+  ) THEN
+    CREATE UNIQUE INDEX institutions_admin_id_unique ON institutions(admin_id);
+  END IF;
+END;
+$$;
 
 -- 3. Admin profiles table
 CREATE TABLE IF NOT EXISTS admin_profiles (
@@ -161,6 +178,41 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 11. RPC: link student by code (institution-safe)
 CREATE OR REPLACE FUNCTION link_student_by_code(p_code TEXT, p_role TEXT) RETURNS TABLE (student_id UUID, student_name TEXT) LANGUAGE plpgsql SECURITY DEFINER AS $func$ DECLARE student_uuid UUID; caller_role TEXT; caller_institution UUID; student_institution UUID; BEGIN IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF; SELECT role, institution_id INTO caller_role, caller_institution FROM profiles WHERE id = auth.uid(); IF caller_role NOT IN ('mentor','advisor') THEN RAISE EXCEPTION 'Only mentor or advisor can link students'; END IF; SELECT sc.student_id INTO student_uuid FROM student_codes sc WHERE sc.code = upper(trim(p_code)) AND sc.is_active = true LIMIT 1; IF student_uuid IS NULL THEN RAISE EXCEPTION 'Invalid or expired student code'; END IF; SELECT institution_id INTO student_institution FROM profiles WHERE id = student_uuid; IF caller_institution IS NULL OR student_institution IS NULL OR caller_institution <> student_institution THEN RAISE EXCEPTION 'Institution mismatch'; END IF; IF caller_role = 'mentor' THEN UPDATE student_profiles SET mentor_id = auth.uid() WHERE id = student_uuid; ELSE UPDATE student_profiles SET advisor_id = auth.uid() WHERE id = student_uuid; END IF; RETURN QUERY SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')) FROM profiles p WHERE p.id = student_uuid; END; $func$;
+
+-- 12. RPC: regenerate institution code (rate-limited to 24h)
+CREATE OR REPLACE FUNCTION regenerate_institution_code(p_institution_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  last_rotated TIMESTAMPTZ;
+  new_code TEXT;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT code_last_rotated_at INTO last_rotated
+  FROM institutions
+  WHERE id = p_institution_id AND admin_id = auth.uid();
+
+  IF last_rotated IS NULL THEN
+    RAISE EXCEPTION 'Institution not found or not owned by admin';
+  END IF;
+
+  IF last_rotated > now() - interval '24 hours' THEN
+    RAISE EXCEPTION 'Code can be regenerated once every 24 hours';
+  END IF;
+
+  new_code := generate_random_code(8);
+
+  UPDATE institutions
+  SET institution_code = new_code,
+      code_last_rotated_at = now(),
+      updated_at = now()
+  WHERE id = p_institution_id AND admin_id = auth.uid();
+
+  RETURN new_code;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
 -- RLS Policies
