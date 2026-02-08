@@ -55,37 +55,16 @@ export const studentCodeService = {
     userId: string,
     role: 'mentor' | 'advisor',
   ): Promise<{ studentId: string; studentName: string }> {
-    // Find the student code
-    const { data: codeRow, error: codeError } = await supabase
-      .from('student_codes')
-      .select('*')
-      .eq('code', code.toUpperCase().trim())
-      .eq('is_active', true)
-      .maybeSingle();
-    if (codeError) throw codeError;
-    if (!codeRow) throw new Error('Invalid or expired student code');
-
-    const studentId = (codeRow as Record<string, unknown>).student_id as string;
-
-    // Set the appropriate field based on role
-    const updateField = role === 'mentor' ? 'mentor_id' : 'advisor_id';
-    const { error: updateError } = await supabase
-      .from('student_profiles')
-      .update({ [updateField]: userId })
-      .eq('id', studentId);
-    if (updateError) throw updateError;
-
-    // Get student name for confirmation
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', studentId)
-      .single();
-    const p = profile as Record<string, unknown> | null;
-
+    const { data, error } = await supabase.rpc('link_student_by_code', {
+      p_code: code.toUpperCase().trim(),
+      p_role: role,
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('Invalid or expired student code');
     return {
-      studentId,
-      studentName: `${(p?.first_name as string) || ''} ${(p?.last_name as string) || ''}`.trim(),
+      studentId: (row.student_id as string) || '',
+      studentName: (row.student_name as string) || '',
     };
   },
 

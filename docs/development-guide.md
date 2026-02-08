@@ -91,6 +91,11 @@ docs/                   # Project documentation
 - Leaderboard names are masked in UI (e.g., `First L.`).
 - Profile updates are whitelisted in `authService.updateProfile`.
 
+### Security Notes (Phase 4.5 Admin + Codes)
+- Institution and student code validation now uses RPCs (no public SELECT on `institutions` / `student_codes`).
+- Admins can only read members within their own institution.
+- Mentor/advisor student linking enforces same `institution_id` on both sides.
+
 ## Development Phases
 
 1. **Setup & Foundation** - Project structure, configs, types

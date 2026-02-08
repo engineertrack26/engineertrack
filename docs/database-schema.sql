@@ -395,6 +395,31 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
+-- Helper: check if current admin belongs to the target user's institution
+CREATE OR REPLACE FUNCTION is_admin_of_institution(target_user UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  has_table BOOLEAN;
+  result BOOLEAN;
+BEGIN
+  SELECT to_regclass('public.admin_profiles') IS NOT NULL INTO has_table;
+  IF NOT has_table THEN
+    RETURN FALSE;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM profiles p
+    JOIN admin_profiles ap ON ap.id = auth.uid()
+    WHERE p.id = target_user
+      AND ap.institution_id IS NOT NULL
+      AND p.institution_id = ap.institution_id
+  ) INTO result;
+
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 -- ---- PROFILES ----
 -- Profiles: only self or assigned mentor/advisor (or admin)
 CREATE POLICY "profiles_select" ON profiles
@@ -402,7 +427,7 @@ CREATE POLICY "profiles_select" ON profiles
     auth.uid() = id
     OR is_mentor_of(id)
     OR is_advisor_of(id)
-    OR get_user_role() = 'admin'
+    OR is_admin_of_institution(id)
   );
 
 -- Users can update their own profile

@@ -19,27 +19,23 @@ function mapInstitution(row: Record<string, unknown>): Institution {
 
 export const institutionCodeService = {
   async validateCode(code: string): Promise<Institution | null> {
-    const { data, error } = await supabase
-      .from('institutions')
-      .select('*')
-      .eq('institution_code', code.toUpperCase().trim())
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('validate_institution_code', {
+      p_code: code.toUpperCase().trim(),
+    });
     if (error) throw error;
-    if (!data) return null;
-    return mapInstitution(data as Record<string, unknown>);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null;
+    return mapInstitution(row as Record<string, unknown>);
   },
 
   async joinInstitution(code: string, userId: string): Promise<Institution> {
-    const institution = await this.validateCode(code);
-    if (!institution) throw new Error('Invalid institution code');
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ institution_id: institution.id })
-      .eq('id', userId);
+    const { data, error } = await supabase.rpc('join_institution_by_code', {
+      p_code: code.toUpperCase().trim(),
+    });
     if (error) throw error;
-
-    return institution;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('Invalid institution code');
+    return mapInstitution(row as Record<string, unknown>);
   },
 
   async leaveInstitution(userId: string): Promise<void> {

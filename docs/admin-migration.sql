@@ -84,6 +84,84 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 8. Helper function: admin can access only own institution
+CREATE OR REPLACE FUNCTION is_admin_of_institution(target_user UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM profiles p
+    JOIN admin_profiles ap ON ap.id = auth.uid()
+    WHERE p.id = target_user
+      AND ap.institution_id IS NOT NULL
+      AND p.institution_id = ap.institution_id
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 9. RPC: validate institution code without exposing full table
+CREATE OR REPLACE FUNCTION validate_institution_code(p_code TEXT)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  type TEXT,
+  faculty TEXT,
+  department TEXT,
+  city TEXT,
+  country TEXT
+) AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  RETURN QUERY
+    SELECT i.id, i.name, i.type, i.faculty, i.department, i.city, i.country
+    FROM institutions i
+    WHERE i.institution_code = upper(trim(p_code))
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 10. RPC: join institution by code
+CREATE OR REPLACE FUNCTION join_institution_by_code(p_code TEXT)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  type TEXT,
+  faculty TEXT,
+  department TEXT,
+  city TEXT,
+  country TEXT
+) AS $$
+DECLARE
+  inst_id UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT i.id INTO inst_id
+  FROM institutions i
+  WHERE i.institution_code = upper(trim(p_code))
+  LIMIT 1;
+
+  IF inst_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid institution code';
+  END IF;
+
+  UPDATE profiles
+  SET institution_id = inst_id
+  WHERE id = auth.uid();
+
+  RETURN QUERY
+    SELECT i.id, i.name, i.type, i.faculty, i.department, i.city, i.country
+    FROM institutions i
+    WHERE i.id = inst_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 11. RPC: link student by code (institution-safe)
+CREATE OR REPLACE FUNCTION link_student_by_code(p_code TEXT, p_role TEXT) RETURNS TABLE (student_id UUID, student_name TEXT) LANGUAGE plpgsql SECURITY DEFINER AS $func$ DECLARE student_uuid UUID; caller_role TEXT; caller_institution UUID; student_institution UUID; BEGIN IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF; SELECT role, institution_id INTO caller_role, caller_institution FROM profiles WHERE id = auth.uid(); IF caller_role NOT IN ('mentor','advisor') THEN RAISE EXCEPTION 'Only mentor or advisor can link students'; END IF; SELECT sc.student_id INTO student_uuid FROM student_codes sc WHERE sc.code = upper(trim(p_code)) AND sc.is_active = true LIMIT 1; IF student_uuid IS NULL THEN RAISE EXCEPTION 'Invalid or expired student code'; END IF; SELECT institution_id INTO student_institution FROM profiles WHERE id = student_uuid; IF caller_institution IS NULL OR student_institution IS NULL OR caller_institution <> student_institution THEN RAISE EXCEPTION 'Institution mismatch'; END IF; IF caller_role = 'mentor' THEN UPDATE student_profiles SET mentor_id = auth.uid() WHERE id = student_uuid; ELSE UPDATE student_profiles SET advisor_id = auth.uid() WHERE id = student_uuid; END IF; RETURN QUERY SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')) FROM profiles p WHERE p.id = student_uuid; END; $func$;
+
 -- ============================================
 -- RLS Policies
 -- ============================================
@@ -93,9 +171,16 @@ ALTER TABLE institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_codes ENABLE ROW LEVEL SECURITY;
 
--- Institutions: anyone authenticated can read (for code lookup), admin manages own
-CREATE POLICY "Anyone can read institutions" ON institutions
-  FOR SELECT TO authenticated USING (true);
+-- Institutions: admin manages own, members can read their institution only
+DROP POLICY IF EXISTS "Anyone can read institutions" ON institutions;
+CREATE POLICY "Institution members read" ON institutions
+  FOR SELECT TO authenticated USING (
+    admin_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid() AND p.institution_id = institutions.id
+    )
+  );
 
 CREATE POLICY "Admin can insert own institution" ON institutions
   FOR INSERT TO authenticated WITH CHECK (admin_id = auth.uid());
@@ -115,10 +200,36 @@ CREATE POLICY "Admin updates own profile" ON admin_profiles
 
 -- Student codes: student manages own, mentor/advisor can search by code
 CREATE POLICY "Student manages own codes" ON student_codes
-  FOR ALL TO authenticated USING (student_id = auth.uid());
+  FOR ALL TO authenticated USING (student_id = auth.uid())
+  WITH CHECK (student_id = auth.uid());
 
-CREATE POLICY "Anyone can search codes" ON student_codes
-  FOR SELECT TO authenticated USING (true);
+-- Code lookup happens via RPC (link_student_by_code); no public select.
+DROP POLICY IF EXISTS "Anyone can search codes" ON student_codes;
+
+-- ============================================
+-- Update profiles select policy for admin
+-- ============================================
+-- Admins can only read users within their own institution
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'profiles'
+      AND policyname = 'profiles_select'
+  ) THEN
+    EXECUTE 'DROP POLICY profiles_select ON profiles';
+  END IF;
+END;
+$$;
+
+CREATE POLICY "profiles_select" ON profiles
+  FOR SELECT USING (
+    auth.uid() = id
+    OR is_mentor_of(id)
+    OR is_advisor_of(id)
+    OR is_admin_of_institution(id)
+  );
 
 -- ============================================
 -- Update auth trigger to handle admin role
