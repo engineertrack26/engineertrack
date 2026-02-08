@@ -14,6 +14,15 @@ export interface Institution {
   updatedAt: string;
 }
 
+export interface Department {
+  id: string;
+  institutionId: string;
+  name: string;
+  departmentCode: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminProfile {
   id: string;
   institutionId?: string;
@@ -43,5 +52,6 @@ export interface MemberWithProfile {
   email: string;
   role: string;
   avatarUrl?: string;
+  departmentId?: string;
   createdAt: string;
 }

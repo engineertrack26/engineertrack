@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Institution, InstitutionType, AdminDashboardStats, MemberWithProfile } from '@/types/institution';
+import type { Institution, InstitutionType, AdminDashboardStats, MemberWithProfile, Department } from '@/types/institution';
 
 function mapInstitution(row: Record<string, unknown>): Institution {
   return {
@@ -25,7 +25,19 @@ function mapMember(row: Record<string, unknown>): MemberWithProfile {
     email: (row.email as string) || '',
     role: (row.role as string) || '',
     avatarUrl: (row.avatar_url as string) || undefined,
+    departmentId: (row.department_id as string) || undefined,
     createdAt: (row.created_at as string) || '',
+  };
+}
+
+function mapDepartment(row: Record<string, unknown>): Department {
+  return {
+    id: row.id as string,
+    institutionId: (row.institution_id as string) || '',
+    name: (row.name as string) || '',
+    departmentCode: (row.department_code as string) || '',
+    createdAt: (row.created_at as string) || '',
+    updatedAt: (row.updated_at as string) || '',
   };
 }
 
@@ -123,16 +135,19 @@ export const adminService = {
 
   async getInstitutionMembers(
     institutionId: string,
-    filters?: { role?: string; search?: string },
+    filters?: { role?: string; search?: string; departmentId?: string },
   ): Promise<MemberWithProfile[]> {
     let query = supabase
       .from('profiles')
-      .select('id, first_name, last_name, email, role, avatar_url, created_at')
+      .select('id, first_name, last_name, email, role, avatar_url, created_at, department_id')
       .eq('institution_id', institutionId)
       .order('created_at', { ascending: false });
 
     if (filters?.role && filters.role !== 'all') {
       query = query.eq('role', filters.role);
+    }
+    if (filters?.departmentId && filters.departmentId !== 'all') {
+      query = query.eq('department_id', filters.departmentId);
     }
     if (filters?.search) {
       query = query.or(
@@ -209,5 +224,25 @@ export const adminService = {
     };
 
     return { ...stats, members, roleBreakdown };
+  },
+
+  async getDepartments(institutionId: string): Promise<Department[]> {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .eq('institution_id', institutionId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []).map((r) => mapDepartment(r as Record<string, unknown>));
+  },
+
+  async createDepartment(institutionId: string, name: string): Promise<Department> {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert({ institution_id: institutionId, name })
+      .select()
+      .single();
+    if (error) throw error;
+    return mapDepartment(data as Record<string, unknown>);
   },
 };

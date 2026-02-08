@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -35,6 +36,9 @@ export default function AdminDashboard() {
   const [setupType, setSetupType] = useState<InstitutionType>('university');
   const [setupCountry, setSetupCountry] = useState('');
   const [creatingInstitution, setCreatingInstitution] = useState(false);
+  const [departments, setDepartments] = useState<{ id: string; name: string; departmentCode: string }[]>([]);
+  const [deptName, setDeptName] = useState('');
+  const [creatingDepartment, setCreatingDepartment] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -44,6 +48,8 @@ export default function AdminDashboard() {
       if (inst) {
         const s = await adminService.getDashboardStats(inst.id);
         useAdminStore.setState({ stats: s });
+        const deptList = await adminService.getDepartments(inst.id);
+        setDepartments(deptList.map((d) => ({ id: d.id, name: d.name, departmentCode: d.departmentCode })));
       }
     } catch (err) {
       console.error('Admin dashboard load error:', err);
@@ -93,6 +99,24 @@ export default function AdminDashboard() {
       Alert.alert('Error', err.message || 'Failed to create institution.');
     } finally {
       setCreatingInstitution(false);
+    }
+  };
+
+  const handleCreateDepartment = async () => {
+    if (!institution) return;
+    if (!deptName.trim()) {
+      Alert.alert('Error', 'Department name is required.');
+      return;
+    }
+    setCreatingDepartment(true);
+    try {
+      const dept = await adminService.createDepartment(institution.id, deptName.trim());
+      setDepartments((prev) => [...prev, { id: dept.id, name: dept.name, departmentCode: dept.departmentCode }]);
+      setDeptName('');
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to create department.');
+    } finally {
+      setCreatingDepartment(false);
     }
   };
 
@@ -243,6 +267,61 @@ export default function AdminDashboard() {
               Share this code with advisors and students to join your institution
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* Department Codes */}
+        {institution && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Departments</Text>
+            </View>
+            <Text style={styles.linkHint}>
+              Create departments to generate codes for users to join specific areas.
+            </Text>
+
+            <View style={styles.linkRow}>
+              <TextInput
+                style={styles.linkInput}
+                value={deptName}
+                onChangeText={setDeptName}
+                placeholder="e.g. Computer Engineering"
+                placeholderTextColor={colors.textDisabled}
+              />
+              <TouchableOpacity
+                style={[styles.linkBtn, !deptName.trim() && { opacity: 0.5 }]}
+                disabled={!deptName.trim() || creatingDepartment}
+                onPress={handleCreateDepartment}
+                activeOpacity={0.7}
+              >
+                {creatingDepartment ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.linkBtnText}>Add</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {departments.length > 0 && (
+              <View style={{ marginTop: spacing.md }}>
+                {departments.map((d) => (
+                  <View key={d.id} style={styles.departmentRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.departmentName}>{d.name}</Text>
+                      <Text style={styles.departmentHint}>Code: {d.departmentCode}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={async () => {
+                        await Clipboard.setStringAsync(d.departmentCode);
+                        Alert.alert('Copied!', 'Department code copied to clipboard.');
+                      }}
+                    >
+                      <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         )}
 
         {/* Stats Grid */}
@@ -574,6 +653,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  departmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  departmentName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  departmentHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 
   // Stats

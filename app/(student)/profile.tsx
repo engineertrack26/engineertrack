@@ -20,6 +20,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { studentCodeService } from '@/services/studentCode';
+import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { StudentCode } from '@/types/institution';
@@ -39,6 +40,9 @@ export default function ProfileScreen() {
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [studentProfile, setStudentProfile] = useState<Record<string, unknown> | null>(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
+  const [deptCodeInput, setDeptCodeInput] = useState('');
+  const [joiningDepartment, setJoiningDepartment] = useState(false);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<StudentCode | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [linkedUsers, setLinkedUsers] = useState<{
@@ -465,6 +469,53 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Join Department Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Join Department</Text>
+          <Text style={styles.linkHint}>
+            Enter the department code provided by your institution admin.
+          </Text>
+          <View style={styles.linkRow}>
+            <TextInput
+              style={styles.linkInput}
+              value={deptCodeInput}
+              onChangeText={setDeptCodeInput}
+              placeholder="e.g. ABCD12"
+              placeholderTextColor={colors.textDisabled}
+              autoCapitalize="characters"
+              maxLength={6}
+            />
+            <TouchableOpacity
+              style={[styles.linkBtn, !deptCodeInput.trim() && { opacity: 0.5 }]}
+              disabled={!deptCodeInput.trim() || joiningDepartment}
+              onPress={async () => {
+                if (!user || !deptCodeInput.trim()) return;
+                setJoiningDepartment(true);
+                try {
+                  const dept = await departmentCodeService.joinDepartment(deptCodeInput.trim());
+                  setDepartmentName(dept.name);
+                  Alert.alert('Success', `Joined department: ${dept.name}`);
+                  setDeptCodeInput('');
+                } catch (err: any) {
+                  Alert.alert('Error', err.message || 'Invalid department code.');
+                } finally {
+                  setJoiningDepartment(false);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              {joiningDepartment ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.linkBtnText}>Join</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          {departmentName && (
+            <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
+          )}
+        </View>
+
         {/* My Student Code Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>My Student Code</Text>
@@ -763,6 +814,50 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     fontWeight: '600',
+  },
+
+  // Join Department
+  linkHint: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  linkInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 2,
+    backgroundColor: colors.background,
+  },
+  linkBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  linkBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  institutionInfo: {
+    fontSize: 13,
+    color: colors.success,
+    fontWeight: '500',
+    marginTop: spacing.sm,
   },
 
   // Student Code

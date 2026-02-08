@@ -8,6 +8,7 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +43,8 @@ export default function UsersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [segment, setSegment] = useState('all');
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [departmentId, setDepartmentId] = useState('all');
   const [search, setSearch] = useState('');
 
   const loadData = useCallback(async () => {
@@ -50,9 +53,12 @@ export default function UsersScreen() {
       return;
     }
     try {
+      const deptList = await adminService.getDepartments(institution.id);
+      setDepartments([{ id: 'all', name: 'All Departments' }, ...deptList.map((d) => ({ id: d.id, name: d.name }))]);
       const data = await adminService.getInstitutionMembers(institution.id, {
         role: segment !== 'all' ? segment : undefined,
         search: search.trim() || undefined,
+        departmentId: departmentId !== 'all' ? departmentId : undefined,
       });
       setMembers(data);
     } catch (err) {
@@ -60,7 +66,7 @@ export default function UsersScreen() {
     } finally {
       setLoading(false);
     }
-  }, [institution, segment, search]);
+  }, [institution, segment, search, departmentId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -161,6 +167,23 @@ export default function UsersScreen() {
         ))}
       </View>
 
+      {/* Department Filter */}
+      {departments.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.departmentRow}>
+          {departments.map((dept) => (
+            <TouchableOpacity
+              key={dept.id}
+              style={[styles.departmentChip, departmentId === dept.id && styles.departmentChipActive]}
+              onPress={() => setDepartmentId(dept.id)}
+            >
+              <Text style={[styles.departmentText, departmentId === dept.id && styles.departmentTextActive]}>
+                {dept.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {/* Members List */}
       <FlatList
         data={members}
@@ -248,6 +271,32 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   segmentTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  departmentRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  departmentChip: {
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
+  },
+  departmentChipActive: {
+    backgroundColor: ADMIN_COLOR,
+    borderColor: ADMIN_COLOR,
+  },
+  departmentText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  departmentTextActive: {
     color: '#fff',
     fontWeight: '600',
   },

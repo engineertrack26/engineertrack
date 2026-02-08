@@ -97,6 +97,7 @@ docs/                   # Project documentation
 - Mentor/advisor student linking enforces same `institution_id` on both sides.
 - Admins can create only one institution (unique constraint on `institutions.admin_id`).
 - Institution code regeneration is rate-limited to once every 24 hours via RPC.
+- Departments are single-level with their own codes and are joined via RPC.
 
 ## Development Phases
 

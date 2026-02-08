@@ -68,9 +68,22 @@ CREATE TABLE IF NOT EXISTS student_codes (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 5. Departments table (single-level)
+CREATE TABLE IF NOT EXISTS departments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  institution_id UUID NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  department_code TEXT UNIQUE NOT NULL DEFAULT generate_random_code(6),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- 5. Add institution_id to profiles
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL;
+
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL;
 
 -- 6. Update role CHECK constraint to include 'admin'
 -- Drop existing constraint first (name may vary)
@@ -214,6 +227,65 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 13. RPC: validate department code
+CREATE OR REPLACE FUNCTION validate_department_code(p_code TEXT)
+RETURNS TABLE (
+  id UUID,
+  institution_id UUID,
+  name TEXT,
+  department_code TEXT
+) AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  RETURN QUERY
+    SELECT d.id, d.institution_id, d.name, d.department_code
+    FROM departments d
+    WHERE d.department_code = upper(trim(p_code))
+    LIMIT 1;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 14. RPC: join department by code (also sets institution_id)
+CREATE OR REPLACE FUNCTION join_department_by_code(p_code TEXT)
+RETURNS TABLE (
+  id UUID,
+  institution_id UUID,
+  name TEXT,
+  department_code TEXT
+) AS $$
+DECLARE
+  dept_id UUID;
+  inst_id UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT d.id, d.institution_id
+  INTO dept_id, inst_id
+  FROM departments d
+  WHERE d.department_code = upper(trim(p_code))
+  LIMIT 1;
+
+  IF dept_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid department code';
+  END IF;
+
+  UPDATE profiles
+  SET institution_id = inst_id,
+      department_id = dept_id
+  WHERE id = auth.uid();
+
+  RETURN QUERY
+    SELECT d.id, d.institution_id, d.name, d.department_code
+    FROM departments d
+    WHERE d.id = dept_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ============================================
 -- RLS Policies
 -- ============================================
@@ -222,6 +294,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ALTER TABLE institutions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
 
 -- Institutions: admin manages own, members can read their institution only
 DROP POLICY IF EXISTS "Anyone can read institutions" ON institutions;
@@ -257,6 +330,29 @@ CREATE POLICY "Student manages own codes" ON student_codes
 
 -- Code lookup happens via RPC (link_student_by_code); no public select.
 DROP POLICY IF EXISTS "Anyone can search codes" ON student_codes;
+
+-- Departments: members can read, admin can manage
+CREATE POLICY "Department members read" ON departments
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid()
+        AND p.institution_id = departments.institution_id
+    )
+  );
+
+CREATE POLICY "Admin manages departments" ON departments
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM institutions i
+      WHERE i.id = departments.institution_id AND i.admin_id = auth.uid()
+    )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM institutions i
+      WHERE i.id = departments.institution_id AND i.admin_id = auth.uid()
+    )
+  );
 
 -- ============================================
 -- Update profiles select policy for admin

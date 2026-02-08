@@ -19,7 +19,7 @@ import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { studentCodeService } from '@/services/studentCode';
-import { institutionCodeService } from '@/services/institutionCode';
+import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -32,9 +32,9 @@ export default function AdvisorProfileScreen() {
 
   const [studentCodeInput, setStudentCodeInput] = useState('');
   const [linkingStudent, setLinkingStudent] = useState(false);
-  const [instCodeInput, setInstCodeInput] = useState('');
-  const [joiningInstitution, setJoiningInstitution] = useState(false);
-  const [institutionName, setInstitutionName] = useState<string | null>(null);
+  const [deptCodeInput, setDeptCodeInput] = useState('');
+  const [joiningDepartment, setJoiningDepartment] = useState(false);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -321,50 +321,50 @@ export default function AdvisorProfileScreen() {
           </View>
         </View>
 
-        {/* Join Institution Card */}
+        {/* Join Department Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Join Institution</Text>
+          <Text style={styles.cardTitle}>Join Department</Text>
           <Text style={styles.linkHint}>
-            Enter the 8-digit institution code provided by your institution admin.
+            Enter the department code provided by your institution admin.
           </Text>
           <View style={styles.linkRow}>
             <TextInput
               style={styles.linkInput}
-              value={instCodeInput}
-              onChangeText={setInstCodeInput}
-              placeholder="e.g. ABCD1234"
+              value={deptCodeInput}
+              onChangeText={setDeptCodeInput}
+              placeholder="e.g. ABCD12"
               placeholderTextColor={colors.textDisabled}
               autoCapitalize="characters"
-              maxLength={8}
+              maxLength={6}
             />
             <TouchableOpacity
-              style={[styles.linkBtn, !instCodeInput.trim() && { opacity: 0.5 }]}
-              disabled={!instCodeInput.trim() || joiningInstitution}
+              style={[styles.linkBtn, !deptCodeInput.trim() && { opacity: 0.5 }]}
+              disabled={!deptCodeInput.trim() || joiningDepartment}
               onPress={async () => {
-                if (!user || !instCodeInput.trim()) return;
-                setJoiningInstitution(true);
+                if (!user || !deptCodeInput.trim()) return;
+                setJoiningDepartment(true);
                 try {
-                  const inst = await institutionCodeService.joinInstitution(instCodeInput.trim(), user.id);
-                  setInstitutionName(inst.name);
-                  Alert.alert('Success', `Joined institution: ${inst.name}`);
-                  setInstCodeInput('');
+                  const dept = await departmentCodeService.joinDepartment(deptCodeInput.trim());
+                  setDepartmentName(dept.name);
+                  Alert.alert('Success', `Joined department: ${dept.name}`);
+                  setDeptCodeInput('');
                 } catch (err: any) {
-                  Alert.alert('Error', err.message || 'Invalid institution code.');
+                  Alert.alert('Error', err.message || 'Invalid department code.');
                 } finally {
-                  setJoiningInstitution(false);
+                  setJoiningDepartment(false);
                 }
               }}
               activeOpacity={0.7}
             >
-              {joiningInstitution ? (
+              {joiningDepartment ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={styles.linkBtnText}>Join</Text>
               )}
             </TouchableOpacity>
           </View>
-          {institutionName && (
-            <Text style={styles.institutionInfo}>Current: {institutionName}</Text>
+          {departmentName && (
+            <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
           )}
         </View>
 
