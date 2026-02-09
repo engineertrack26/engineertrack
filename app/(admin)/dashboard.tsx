@@ -183,20 +183,15 @@ export default function AdminDashboard() {
             <Text style={styles.formTitle}>Create Institution</Text>
 
             <Text style={styles.formLabel}>Institution Name *</Text>
-            <View style={styles.formInput}>
-              <Ionicons name="business-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.formInputText}>
-                {/* Using Text as placeholder since we don't have Input imported */}
-              </Text>
-            </View>
-            {/* Simple inline TextInput */}
             <View style={styles.inputWrapper}>
               <Ionicons name="business-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <View style={{ flex: 1 }}>
-                <TextInputField
+                <TextInput
+                  style={styles.inputText}
                   value={setupName}
                   onChangeText={setSetupName}
                   placeholder="e.g. Istanbul Technical University"
+                  placeholderTextColor={colors.textDisabled}
                 />
               </View>
             </View>
@@ -220,10 +215,12 @@ export default function AdminDashboard() {
             <View style={styles.inputWrapper}>
               <Ionicons name="globe-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <View style={{ flex: 1 }}>
-                <TextInputField
+                <TextInput
+                  style={styles.inputText}
                   value={setupCountry}
                   onChangeText={setSetupCountry}
                   placeholder="e.g. Turkey"
+                  placeholderTextColor={colors.textDisabled}
                 />
               </View>
             </View>
@@ -407,32 +404,6 @@ export default function AdminDashboard() {
   );
 }
 
-// Simple inline TextInput component to avoid importing Input
-function TextInputField({
-  value,
-  onChangeText,
-  placeholder,
-}: {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-}) {
-  const { TextInput } = require('react-native');
-  return (
-    <TextInput
-      style={{
-        fontSize: 15,
-        color: colors.text,
-        paddingVertical: 4,
-      }}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textDisabled}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -545,11 +516,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
   },
-  formInput: {
-    display: 'none',
-  },
-  formInputText: {
-    display: 'none',
+  inputText: {
+    fontSize: 15,
+    color: colors.text,
+    paddingVertical: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -690,6 +660,66 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.sm,
+  },
+
+  // Card (departments)
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  linkHint: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  linkInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.background,
+  },
+  linkBtn: {
+    backgroundColor: ADMIN_COLOR,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 56,
+  },
+  linkBtnText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
   },
 
   // Quick Actions
