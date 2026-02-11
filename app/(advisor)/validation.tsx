@@ -7,9 +7,12 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +21,7 @@ import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { logService } from '@/services/logs';
 import { notificationService } from '@/services/notifications';
+import { COMPETENCY_RUBRIC } from '@/utils/constants';
 import { colors, spacing, borderRadius } from '@/theme';
 
 const COMPETENCY_LABELS: Record<string, string> = {
@@ -40,6 +44,7 @@ interface PendingLogItem {
   activitiesPerformed: string;
   skillsLearned: string;
   challengesFaced: string;
+  hoursSpent: number;
   createdAt: string;
   studentFirstName: string;
   studentLastName: string;
@@ -57,6 +62,7 @@ interface LogDetail {
   activitiesPerformed: string;
   skillsLearned: string;
   challengesFaced: string;
+  hoursSpent: number;
   photos: { id: string; uri: string; caption?: string }[];
   selfAssessment?: {
     competencyRatings: Record<string, number>;
@@ -66,6 +72,7 @@ interface LogDetail {
     rating: number;
     comments: string;
     competencyRatings: Record<string, number>;
+    areasOfExcellence?: string;
   };
 }
 
@@ -82,6 +89,7 @@ function mapPendingLog(row: Record<string, unknown>): PendingLogItem {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     createdAt: (row.created_at as string) || '',
     studentFirstName: (profile?.first_name as string) || '',
     studentLastName: (profile?.last_name as string) || '',
@@ -107,6 +115,7 @@ function mapLogDetail(row: Record<string, unknown>): LogDetail {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     photos: photos.map((p: Record<string, unknown>) => ({
       id: (p.id as string) || '',
       uri: (p.uri as string) || '',
@@ -123,6 +132,7 @@ function mapLogDetail(row: Record<string, unknown>): LogDetail {
           rating: (fb.rating as number) || 0,
           comments: (fb.comments as string) || '',
           competencyRatings: (fb.competency_ratings as Record<string, number>) || {},
+          areasOfExcellence: (fb.areas_of_excellence as string) || undefined,
         }
       : undefined,
   };
@@ -155,6 +165,8 @@ export default function ValidationScreen() {
   const [logDetail, setLogDetail] = useState<LogDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [advisorNotes, setAdvisorNotes] = useState('');
+  const [expandedRubric, setExpandedRubric] = useState<string | null>(null);
 
   const loadPendingLogs = useCallback(async () => {
     if (!user) return;
@@ -215,7 +227,7 @@ export default function ValidationScreen() {
           onPress: async () => {
             setSubmitting(true);
             try {
-              await advisorService.validateLog(selectedLog.id);
+              await advisorService.validateLog(selectedLog.id, advisorNotes.trim() || undefined);
 
               // Send notification to student
               const advisorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your advisor';
@@ -234,10 +246,62 @@ export default function ValidationScreen() {
               Alert.alert('Success', 'Log validated successfully!');
               setSelectedLog(null);
               setLogDetail(null);
+              setAdvisorNotes('');
               loadPendingLogs();
             } catch (err) {
               console.error('Validate log error:', err);
               Alert.alert('Error', 'Failed to validate log. Please try again.');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleSendBack = () => {
+    if (!user || !selectedLog) return;
+    if (!advisorNotes.trim()) {
+      Alert.alert('Notes Required', 'Please add notes explaining why the log is being sent back.');
+      return;
+    }
+
+    Alert.alert(
+      'Send Back to Mentor',
+      'This log will be sent back to the mentor for further review. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Back',
+          style: 'destructive',
+          onPress: async () => {
+            setSubmitting(true);
+            try {
+              await advisorService.sendBackToMentor(selectedLog.id, advisorNotes.trim());
+
+              // Send notification to student
+              const advisorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your advisor';
+              try {
+                await notificationService.create(
+                  selectedLog.studentId,
+                  'Log Sent Back',
+                  `${advisorName} sent back your log "${selectedLog.title}" for mentor re-review.`,
+                  'log_sent_back',
+                  { logId: selectedLog.id },
+                );
+              } catch (notifErr) {
+                console.warn('Notification insert failed (RLS?):', notifErr);
+              }
+
+              Alert.alert('Done', 'Log sent back to mentor for re-review.');
+              setSelectedLog(null);
+              setLogDetail(null);
+              setAdvisorNotes('');
+              loadPendingLogs();
+            } catch (err) {
+              console.error('Send back error:', err);
+              Alert.alert('Error', 'Failed to send back log. Please try again.');
             } finally {
               setSubmitting(false);
             }
@@ -264,8 +328,27 @@ export default function ValidationScreen() {
 
   // ─── DETAIL VIEW ───
   if (selectedLog) {
+    const logData = logDetail || {
+      id: selectedLog.id,
+      studentId: selectedLog.studentId,
+      title: selectedLog.title,
+      date: selectedLog.date,
+      content: selectedLog.content,
+      activitiesPerformed: selectedLog.activitiesPerformed,
+      skillsLearned: selectedLog.skillsLearned,
+      challengesFaced: selectedLog.challengesFaced,
+      hoursSpent: selectedLog.hoursSpent,
+      photos: [],
+      selfAssessment: undefined,
+      mentorFeedback: undefined,
+    };
+
     return (
       <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
         {/* Header */}
         <View style={styles.detailHeader}>
           <TouchableOpacity onPress={handleBack} hitSlop={8}>
@@ -286,6 +369,7 @@ export default function ValidationScreen() {
             style={styles.container}
             contentContainerStyle={styles.detailContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Student Info */}
             <View style={styles.studentInfoCard}>
@@ -299,7 +383,7 @@ export default function ValidationScreen() {
                   {selectedLog.studentFirstName} {selectedLog.studentLastName}
                 </Text>
                 <Text style={styles.logDateDetail}>
-                  {new Date(selectedLog.date).toLocaleDateString('en-US', {
+                  {new Date(logData.date).toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
@@ -311,37 +395,43 @@ export default function ValidationScreen() {
 
             {/* Log Content */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>{selectedLog.title}</Text>
-              <Text style={styles.cardContent}>{selectedLog.content}</Text>
+              <Text style={styles.cardTitle}>{logData.title || '-'}</Text>
+              <Text style={styles.cardContent}>{logData.content || '-'}</Text>
 
-              {selectedLog.activitiesPerformed ? (
-                <View style={styles.logSection}>
-                  <Text style={styles.logSectionLabel}>Activities Performed</Text>
-                  <Text style={styles.logSectionText}>{selectedLog.activitiesPerformed}</Text>
-                </View>
-              ) : null}
+              <View style={styles.logSection}>
+                <Text style={styles.logSectionLabel}>Activities Performed</Text>
+                <Text style={styles.logSectionText}>{logData.activitiesPerformed || '-'}</Text>
+              </View>
 
-              {selectedLog.skillsLearned ? (
-                <View style={styles.logSection}>
-                  <Text style={styles.logSectionLabel}>Skills Learned</Text>
-                  <Text style={styles.logSectionText}>{selectedLog.skillsLearned}</Text>
-                </View>
-              ) : null}
+              <View style={styles.logSection}>
+                <Text style={styles.logSectionLabel}>Skills Learned</Text>
+                <Text style={styles.logSectionText}>{logData.skillsLearned || '-'}</Text>
+              </View>
 
-              {selectedLog.challengesFaced ? (
-                <View style={styles.logSection}>
-                  <Text style={styles.logSectionLabel}>Challenges Faced</Text>
-                  <Text style={styles.logSectionText}>{selectedLog.challengesFaced}</Text>
+              <View style={styles.logSection}>
+                <Text style={styles.logSectionLabel}>Challenges Faced</Text>
+                <Text style={styles.logSectionText}>{logData.challengesFaced || '-'}</Text>
+              </View>
+
+              <View style={styles.logSection}>
+                <Text style={styles.logSectionLabel}>Time Spent</Text>
+                <View style={styles.timeSpentDisplay}>
+                  <Ionicons name="time-outline" size={16} color={colors.primary} />
+                  <Text style={styles.timeSpentText}>
+                    {logData.hoursSpent > 0
+                      ? `${Math.floor(logData.hoursSpent / 60)}h ${logData.hoursSpent % 60}m`
+                      : '-'}
+                  </Text>
                 </View>
-              ) : null}
+              </View>
             </View>
 
             {/* Photos */}
-            {logDetail && logDetail.photos.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Photos ({logDetail.photos.length})</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Photos ({logData.photos.length})</Text>
+              {logData.photos.length > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
-                  {logDetail.photos.map((photo) => (
+                  {logData.photos.map((photo) => (
                     <View key={photo.id} style={styles.photoWrapper}>
                       <Image source={{ uri: photo.uri }} style={styles.photo} />
                       {photo.caption ? (
@@ -350,8 +440,28 @@ export default function ValidationScreen() {
                     </View>
                   ))}
                 </ScrollView>
-              </View>
-            )}
+              ) : (
+                <Text style={styles.logSectionText}>-</Text>
+              )}
+            </View>
+
+            {/* Self Assessment */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Self Assessment</Text>
+              {logDetail?.selfAssessment?.competencyRatings &&
+              Object.keys(logDetail.selfAssessment.competencyRatings).length > 0 ? (
+                Object.entries(logDetail.selfAssessment.competencyRatings).map(([compKey, score]) => (
+                  <View key={compKey} style={styles.compRow}>
+                    <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
+                    <View style={[styles.scoreBadge, styles.selfBadge]}>
+                      <Text style={styles.selfBadgeText}>{score || '-'}/5</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.logSectionText}>-</Text>
+              )}
+            </View>
 
             {/* Mentor Feedback */}
             {logDetail?.mentorFeedback && (
@@ -372,6 +482,19 @@ export default function ValidationScreen() {
                   </View>
                 ) : null}
 
+                {/* Areas of Excellence from Mentor */}
+                {logDetail.mentorFeedback.areasOfExcellence ? (
+                  <View style={styles.excellenceBox}>
+                    <View style={styles.excellenceHeader}>
+                      <Ionicons name="trophy" size={16} color={colors.success} />
+                      <Text style={styles.excellenceLabel}>Areas of Excellence</Text>
+                    </View>
+                    <Text style={styles.excellenceText}>
+                      {logDetail.mentorFeedback.areasOfExcellence}
+                    </Text>
+                  </View>
+                ) : null}
+
                 {/* Competency Ratings Comparison */}
                 <Text style={styles.comparisonTitle}>Competency Assessment</Text>
                 <View style={styles.comparisonHeader}>
@@ -386,20 +509,76 @@ export default function ValidationScreen() {
                   const mentorScore = logDetail.mentorFeedback!.competencyRatings[compKey] || 0;
                   const selfScore = logDetail.selfAssessment?.competencyRatings[compKey] || 0;
                   const diff = Math.abs(selfScore - mentorScore);
+                  const rubric = COMPETENCY_RUBRIC[compKey];
+                  const isExpanded = expandedRubric === compKey;
                   return (
-                    <View key={compKey} style={styles.compRow}>
-                      <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
-                      <View style={styles.compScores}>
-                        <View style={[styles.scoreBadge, styles.selfBadge]}>
-                          <Text style={styles.selfBadgeText}>{selfScore || '-'}/5</Text>
+                    <View key={compKey}>
+                      <View style={styles.compRow}>
+                        <View style={styles.compLabelRow}>
+                          <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
+                          {rubric && (
+                            <TouchableOpacity
+                              onPress={() => setExpandedRubric(isExpanded ? null : compKey)}
+                              hitSlop={8}
+                            >
+                              <Ionicons
+                                name={isExpanded ? 'information-circle' : 'information-circle-outline'}
+                                size={18}
+                                color={isExpanded ? colors.primary : colors.textDisabled}
+                              />
+                            </TouchableOpacity>
+                          )}
                         </View>
-                        <View style={[styles.scoreBadge, styles.mentorBadge]}>
-                          <Text style={styles.mentorBadgeText}>{mentorScore}/5</Text>
+                        <View style={styles.compScores}>
+                          <View style={[styles.scoreBadge, styles.selfBadge]}>
+                            <Text style={styles.selfBadgeText}>{selfScore || '-'}/5</Text>
+                          </View>
+                          <View style={[styles.scoreBadge, styles.mentorBadge]}>
+                            <Text style={styles.mentorBadgeText}>{mentorScore}/5</Text>
+                          </View>
+                          {diff > 1.5 && (
+                            <Ionicons name="warning" size={14} color={colors.warning} />
+                          )}
                         </View>
-                        {diff > 1.5 && (
-                          <Ionicons name="warning" size={14} color={colors.warning} />
-                        )}
                       </View>
+                      {isExpanded && rubric && (
+                        <View style={styles.rubricPanel}>
+                          <Text style={styles.rubricDesc}>{rubric.description}</Text>
+                          {rubric.levels.map((level, idx) => {
+                            const levelNum = idx + 1;
+                            const isSelfLevel = selfScore === levelNum;
+                            const isMentorLevel = mentorScore === levelNum;
+                            return (
+                              <View
+                                key={idx}
+                                style={[
+                                  styles.rubricLevel,
+                                  (isSelfLevel || isMentorLevel) && styles.rubricLevelHighlight,
+                                ]}
+                              >
+                                <Text style={[
+                                  styles.rubricLevelText,
+                                  (isSelfLevel || isMentorLevel) && styles.rubricLevelTextHighlight,
+                                ]}>
+                                  {level}
+                                </Text>
+                                <View style={styles.rubricTags}>
+                                  {isSelfLevel && (
+                                    <View style={[styles.rubricTag, { backgroundColor: colors.info + '20' }]}>
+                                      <Text style={[styles.rubricTagText, { color: colors.info }]}>Self</Text>
+                                    </View>
+                                  )}
+                                  {isMentorLevel && (
+                                    <View style={[styles.rubricTag, { backgroundColor: colors.secondary + '20' }]}>
+                                      <Text style={[styles.rubricTagText, { color: colors.secondary }]}>Mentor</Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -416,26 +595,59 @@ export default function ValidationScreen() {
               </View>
             ) : null}
 
-            {/* Validate Button */}
-            <TouchableOpacity
-              style={styles.validateBtn}
-              onPress={handleValidate}
-              disabled={submitting}
-              activeOpacity={0.7}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="shield-checkmark" size={22} color="#fff" />
-                  <Text style={styles.validateBtnText}>Validate Log</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {/* Advisor Notes */}
+            <View style={styles.card}>
+              <Text style={styles.advisorNotesTitle}>Advisor Notes</Text>
+              <TextInput
+                style={styles.advisorNotesInput}
+                value={advisorNotes}
+                onChangeText={setAdvisorNotes}
+                placeholder="Add your notes or comments (required for Send Back)..."
+                placeholderTextColor={colors.textDisabled}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.sendBackBtn]}
+                onPress={handleSendBack}
+                disabled={submitting}
+                activeOpacity={0.7}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color={colors.warning} />
+                ) : (
+                  <>
+                    <Ionicons name="arrow-undo" size={20} color={colors.warning} />
+                    <Text style={styles.sendBackBtnText}>Send Back</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.validateBtn]}
+                onPress={handleValidate}
+                disabled={submitting}
+                activeOpacity={0.7}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="shield-checkmark" size={20} color="#fff" />
+                    <Text style={styles.validateBtnText}>Validate</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
 
             <View style={{ height: spacing.xxl }} />
           </ScrollView>
         )}
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
@@ -932,19 +1144,151 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Validate button
-  validateBtn: {
+  // Time Spent Display
+  timeSpentDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  timeSpentText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+
+  // Areas of Excellence Box
+  excellenceBox: {
+    backgroundColor: colors.success + '08',
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
+  },
+  excellenceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: 4,
+  },
+  excellenceLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.success,
+    textTransform: 'uppercase',
+  },
+  excellenceText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+
+  // Rubric
+  compLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  rubricPanel: {
+    backgroundColor: colors.primary + '06',
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary + '40',
+  },
+  rubricDesc: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: spacing.sm,
+  },
+  rubricLevel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginBottom: 2,
+  },
+  rubricLevelHighlight: {
+    backgroundColor: colors.primary + '12',
+  },
+  rubricLevelText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  rubricLevelTextHighlight: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  rubricTags: {
+    flexDirection: 'row',
+    gap: 4,
+    marginLeft: spacing.xs,
+  },
+  rubricTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: borderRadius.full,
+  },
+  rubricTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  // Advisor Notes
+  advisorNotesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  advisorNotesInput: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    fontSize: 14,
+    color: colors.text,
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.status.validated,
-    paddingVertical: spacing.md,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.md,
-    marginTop: spacing.sm,
+  },
+  sendBackBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.warning,
+    backgroundColor: 'transparent',
+  },
+  sendBackBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.warning,
+  },
+  validateBtn: {
+    backgroundColor: colors.success,
   },
   validateBtnText: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
   },

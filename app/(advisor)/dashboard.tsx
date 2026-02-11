@@ -43,18 +43,17 @@ interface PendingLogItem {
 
 function mapStudent(row: Record<string, unknown>): StudentItem {
   const profile = row.profiles as Record<string, unknown> | null;
-  const totalXp = (row.total_xp as number) || 0;
-  const currentStreak = (row.current_streak as number) || 0;
-  const hasActivity = totalXp > 0 || currentStreak > 0;
+  const submittedDays = (row.submitted_days as number) || 0;
   const start = row.internship_start_date as string | null;
   const end = row.internship_end_date as string | null;
   let completionPct = 0;
-  if (hasActivity && start && end) {
+  if (submittedDays > 0 && start && end) {
     const startDate = new Date(start).getTime();
     const endDate = new Date(end).getTime();
     const total = endDate - startDate;
     if (total > 0) {
-      completionPct = Math.min(100, Math.max(0, Math.round(((Date.now() - startDate) / total) * 100)));
+      const totalDays = Math.max(1, Math.ceil(total / (1000 * 60 * 60 * 24)));
+      completionPct = Math.min(100, Math.max(0, Math.round((submittedDays / totalDays) * 100)));
     }
   }
   return {

@@ -1,6 +1,25 @@
 import { supabase } from './supabase';
 import { LogStatus } from '@/types/log';
 
+function extractStoragePath(urlOrPath: string, bucket: string): string {
+  if (!urlOrPath) return '';
+  if (!urlOrPath.startsWith('http')) {
+    return urlOrPath.replace(new RegExp(`^${bucket}/`), '');
+  }
+
+  const markers = [
+    `/object/public/${bucket}/`,
+    `/object/sign/${bucket}/`,
+    `/object/${bucket}/`,
+  ];
+  const marker = markers.find((m) => urlOrPath.includes(m));
+  if (!marker) return '';
+
+  const after = urlOrPath.split(marker)[1] || '';
+  const path = after.split('?')[0] || '';
+  return decodeURIComponent(path);
+}
+
 interface CreateLogParams {
   studentId: string;
   date: string;
@@ -9,6 +28,7 @@ interface CreateLogParams {
   activitiesPerformed?: string;
   skillsLearned?: string;
   challengesFaced?: string;
+  hoursSpent?: number;
 }
 
 interface UpdateLogParams {
@@ -17,6 +37,7 @@ interface UpdateLogParams {
   activitiesPerformed?: string;
   skillsLearned?: string;
   challengesFaced?: string;
+  hoursSpent?: number;
   status?: LogStatus;
 }
 
@@ -32,6 +53,7 @@ export const logService = {
         activities_performed: params.activitiesPerformed,
         skills_learned: params.skillsLearned,
         challenges_faced: params.challengesFaced,
+        hours_spent: params.hoursSpent || 0,
         status: 'draft',
       })
       .select()
@@ -47,6 +69,7 @@ export const logService = {
     if (updates.activitiesPerformed !== undefined) dbUpdates.activities_performed = updates.activitiesPerformed;
     if (updates.skillsLearned !== undefined) dbUpdates.skills_learned = updates.skillsLearned;
     if (updates.challengesFaced !== undefined) dbUpdates.challenges_faced = updates.challengesFaced;
+    if (updates.hoursSpent !== undefined) dbUpdates.hours_spent = updates.hoursSpent;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
 
     const { data, error } = await supabase
@@ -98,7 +121,32 @@ export const logService = {
       .eq('id', logId)
       .single();
     if (error) throw error;
-    return data;
+
+    // Buckets are private; convert stored photo URLs/paths into short-lived signed URLs.
+    const row = data as Record<string, unknown>;
+    const photos = Array.isArray(row.log_photos) ? (row.log_photos as Array<Record<string, unknown>>) : [];
+    if (photos.length > 0) {
+      const signedPhotos = await Promise.all(
+        photos.map(async (p) => {
+          const originalUri = (p.uri as string) || '';
+          const path = extractStoragePath(originalUri, 'log-photos');
+          if (!path) return p;
+
+          const { data: signed, error: signErr } = await supabase.storage
+            .from('log-photos')
+            .createSignedUrl(path, 60 * 60);
+          if (signErr || !signed?.signedUrl) return p;
+
+          return {
+            ...p,
+            uri: signed.signedUrl,
+          };
+        }),
+      );
+      row.log_photos = signedPhotos;
+    }
+
+    return row;
   },
 
   async getPendingReviewLogs(mentorId: string) {
@@ -253,19 +301,25 @@ export const logService = {
     competencyRatings: Record<string, number>,
     isApproved: boolean,
     revisionNotes?: string,
+    areasOfExcellence?: string,
   ) {
+    const insertData: Record<string, unknown> = {
+      log_id: logId,
+      mentor_id: mentorId,
+      rating,
+      comments,
+      competency_ratings: competencyRatings,
+      is_approved: isApproved,
+      revision_required: !isApproved,
+      revision_notes: revisionNotes,
+    };
+    if (areasOfExcellence) {
+      insertData.areas_of_excellence = areasOfExcellence;
+    }
+
     const { data, error } = await supabase
       .from('mentor_feedbacks')
-      .insert({
-        log_id: logId,
-        mentor_id: mentorId,
-        rating,
-        comments,
-        competency_ratings: competencyRatings,
-        is_approved: isApproved,
-        revision_required: !isApproved,
-        revision_notes: revisionNotes,
-      })
+      .insert(insertData)
       .select()
       .single();
     if (error) throw error;

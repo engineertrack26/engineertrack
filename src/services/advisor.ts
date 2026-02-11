@@ -51,7 +51,7 @@ export const advisorService = {
           is_approved
         )
       `)
-      .eq('status', 'approved')
+      .in('status', ['submitted', 'approved'])
       .in('student_id', studentIds)
       .order('created_at', { ascending: true });
     if (error) throw error;
@@ -91,24 +91,44 @@ export const advisorService = {
       this.getValidatedLogsCount(advisorId),
     ]);
 
-    // Calculate average completion percentage across students
+    const studentIds = (students || []).map((s) => s.id);
+    const { data: logs } = studentIds.length
+      ? await supabase
+          .from('daily_logs')
+          .select('student_id, date, status')
+          .in('student_id', studentIds)
+      : { data: [] as Array<Record<string, unknown>> };
+
+    const submittedDaysByStudent = new Map<string, number>();
+    const seenDatesByStudent = new Map<string, Set<string>>();
+    (logs || []).forEach((l) => {
+      const row = l as Record<string, unknown>;
+      const sid = row.student_id as string;
+      const status = (row.status as string) || 'draft';
+      const date = row.date as string;
+      if (!sid || !date || status === 'draft') return;
+      if (!seenDatesByStudent.has(sid)) {
+        seenDatesByStudent.set(sid, new Set<string>());
+      }
+      seenDatesByStudent.get(sid)!.add(date);
+    });
+    seenDatesByStudent.forEach((dates, sid) => {
+      submittedDaysByStudent.set(sid, dates.size);
+    });
+
+    // Calculate average completion percentage across students based on submitted days
     const completionPercentages = (students || []).map((s) => {
       const row = s as Record<string, unknown>;
-      const totalXp = (row.total_xp as number) || 0;
-      const currentStreak = (row.current_streak as number) || 0;
-      const longestStreak = (row.longest_streak as number) || 0;
-      const hasActivity = totalXp > 0 || currentStreak > 0 || longestStreak > 0;
-      if (!hasActivity) return 0;
+      const submittedDays = submittedDaysByStudent.get(row.id as string) || 0;
       const start = row.internship_start_date as string | null;
       const end = row.internship_end_date as string | null;
-      if (!start || !end) return 0;
+      if (!start || !end || submittedDays <= 0) return 0;
       const startDate = new Date(start).getTime();
       const endDate = new Date(end).getTime();
-      const now = Date.now();
       const total = endDate - startDate;
-      if (total <= 0) return 100;
-      const elapsed = now - startDate;
-      return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+      if (total <= 0) return 0;
+      const totalDays = Math.max(1, Math.ceil(total / (1000 * 60 * 60 * 24)));
+      return Math.min(100, Math.max(0, Math.round((submittedDays / totalDays) * 100)));
     });
     const avgCompletion =
       completionPercentages.length > 0
@@ -120,7 +140,13 @@ export const advisorService = {
       pendingCount: pendingLogs?.length || 0,
       validatedThisWeek: validatedCount,
       avgCompletion,
-      students: students || [],
+      students: (students || []).map((s) => {
+        const row = s as Record<string, unknown>;
+        return {
+          ...row,
+          submitted_days: submittedDaysByStudent.get(row.id as string) || 0,
+        };
+      }),
       pendingLogs: pendingLogs || [],
     };
   },
@@ -291,7 +317,7 @@ export const advisorService = {
     // Get all logs for assigned students
     const { data: allLogs, error: logsError } = await supabase
       .from('daily_logs')
-      .select('id, status, student_id')
+      .select('id, status, student_id, date')
       .in('student_id', studentIds);
     if (logsError) throw logsError;
 
@@ -327,19 +353,22 @@ export const advisorService = {
       const studentLogs = (allLogs || []).filter(
         (l) => (l as Record<string, unknown>).student_id === row.id,
       );
-      const totalXp = (row.total_xp as number) || 0;
-      const currentStreak = (row.current_streak as number) || 0;
-      const longestStreak = (row.longest_streak as number) || 0;
-      const hasActivity = totalXp > 0 || currentStreak > 0 || longestStreak > 0;
       const start = row.internship_start_date as string | null;
       const end = row.internship_end_date as string | null;
       let completionPct = 0;
-      if (hasActivity && start && end) {
+      if (start && end) {
+        const submittedDays = new Set(
+          studentLogs
+            .filter((l) => ((l as Record<string, unknown>).status as string) !== 'draft')
+            .map((l) => (l as Record<string, unknown>).date as string)
+            .filter(Boolean),
+        ).size;
         const startDate = new Date(start).getTime();
         const endDate = new Date(end).getTime();
         const total = endDate - startDate;
         if (total > 0) {
-          completionPct = Math.min(100, Math.max(0, Math.round(((Date.now() - startDate) / total) * 100)));
+          const totalDays = Math.max(1, Math.ceil(total / (1000 * 60 * 60 * 24)));
+          completionPct = Math.min(100, Math.max(0, Math.round((submittedDays / totalDays) * 100)));
         }
       }
       return {

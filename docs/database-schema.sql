@@ -494,6 +494,10 @@ CREATE POLICY "daily_logs_update_student" ON daily_logs
   FOR UPDATE USING (
     auth.uid() = student_id
     AND status IN ('draft', 'needs_revision')
+  )
+  WITH CHECK (
+    auth.uid() = student_id
+    AND status IN ('draft', 'submitted', 'needs_revision')
   );
 
 -- Mentors can update status of assigned students' logs

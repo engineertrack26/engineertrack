@@ -32,23 +32,23 @@ interface StudentMonitorItem {
 
 function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
   const profile = row.profiles as Record<string, unknown> | null;
-  const totalXp = (row.total_xp as number) || 0;
-  const currentStreak = (row.current_streak as number) || 0;
-  const hasActivity = totalXp > 0 || currentStreak > 0;
+  const submittedDays = (row.submitted_days as number) || 0;
   const start = row.internship_start_date as string | null;
   const end = row.internship_end_date as string | null;
   let completionPct = 0;
   let daysCurrent = 0;
   let daysTotal = 0;
-  if (hasActivity && start && end) {
+  if (start && end) {
     const startDate = new Date(start).getTime();
     const endDate = new Date(end).getTime();
     const total = endDate - startDate;
     const msPerDay = 1000 * 60 * 60 * 24;
     daysTotal = Math.ceil(total / msPerDay);
-    daysCurrent = Math.min(daysTotal, Math.max(0, Math.ceil((Date.now() - startDate) / msPerDay)));
+    daysCurrent = Math.max(0, Math.min(daysTotal, submittedDays));
     if (total > 0) {
-      completionPct = Math.min(100, Math.max(0, Math.round(((Date.now() - startDate) / total) * 100)));
+      completionPct = daysTotal > 0
+        ? Math.min(100, Math.max(0, Math.round((daysCurrent / daysTotal) * 100)))
+        : 0;
     }
   }
   return {
@@ -77,9 +77,9 @@ export default function StudentMonitorScreen() {
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await advisorService.getAssignedStudents(user.id);
+      const result = await advisorService.getDashboardStats(user.id);
       setStudents(
-        (data || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
+        (result.students || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
       );
     } catch (err) {
       console.error('Student monitor load error:', err);
