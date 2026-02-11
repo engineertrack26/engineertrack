@@ -73,7 +73,13 @@ export default function RegisterScreen() {
   }
 
   async function handleRegister() {
-    if (!validate()) return;
+    if (!validate()) {
+      Alert.alert(
+        t('common.error'),
+        t('auth.fillAllFields') || 'Please fill in all required fields correctly.',
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -89,7 +95,7 @@ export default function RegisterScreen() {
       });
 
       if (session && user) {
-        const profile = await authService.getProfile(user.id);
+        const profile = await authService.getProfileWithRetry(user.id);
         setSession(session);
         setUser(profile);
         router.replace('/');

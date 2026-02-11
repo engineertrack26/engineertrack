@@ -11,7 +11,7 @@ import { colors } from '@/theme';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
-  const { setUser, setSession, setLoading } = useAuthStore();
+  const { setUser, setSession } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,7 +39,7 @@ export default function LoginScreen() {
     try {
       const { session, user } = await authService.signIn({ email: email.trim(), password });
       if (session && user) {
-        const profile = await authService.getProfile(user.id);
+        const profile = await authService.getProfileWithRetry(user.id);
         setSession(session);
         setUser(profile);
         router.replace('/');

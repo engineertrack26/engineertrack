@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { Session } from '@supabase/supabase-js';
 import { User, UserRole, SupportedLanguage } from '@/types/user';
 
 interface SignUpParams {
@@ -88,6 +89,21 @@ export const authService = {
     return profile;
   },
 
+  async getProfileWithRetry(userId: string, retries = 8, delayMs = 250) {
+    let lastError: unknown = null;
+    for (let i = 0; i < retries; i += 1) {
+      try {
+        return await this.getProfile(userId);
+      } catch (error) {
+        lastError = error;
+        if (i < retries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+    throw lastError;
+  },
+
   async getStudentProfile(userId: string) {
     const { data, error } = await supabase
       .from('student_profiles')
@@ -131,7 +147,7 @@ export const authService = {
     return this.updateProfile(userId, { language });
   },
 
-  onAuthStateChange(callback: (event: string, session: unknown) => void) {
+  onAuthStateChange(callback: (event: string, session: Session | null) => void) {
     return supabase.auth.onAuthStateChange(callback);
   },
 };
