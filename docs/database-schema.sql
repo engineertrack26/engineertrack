@@ -622,6 +622,13 @@ CREATE POLICY "xp_transactions_insert" ON xp_transactions
 CREATE POLICY "notifications_select" ON notifications
   FOR SELECT USING (auth.uid() = user_id);
 
+CREATE POLICY "notifications_insert" ON notifications
+  FOR INSERT WITH CHECK (
+    auth.uid() = user_id
+    OR is_mentor_of(user_id)
+    OR is_advisor_of(user_id)
+  );
+
 CREATE POLICY "notifications_update" ON notifications
   FOR UPDATE USING (auth.uid() = user_id);
 
