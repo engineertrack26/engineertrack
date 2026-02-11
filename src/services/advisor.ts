@@ -94,6 +94,11 @@ export const advisorService = {
     // Calculate average completion percentage across students
     const completionPercentages = (students || []).map((s) => {
       const row = s as Record<string, unknown>;
+      const totalXp = (row.total_xp as number) || 0;
+      const currentStreak = (row.current_streak as number) || 0;
+      const longestStreak = (row.longest_streak as number) || 0;
+      const hasActivity = totalXp > 0 || currentStreak > 0 || longestStreak > 0;
+      if (!hasActivity) return 0;
       const start = row.internship_start_date as string | null;
       const end = row.internship_end_date as string | null;
       if (!start || !end) return 0;
@@ -120,15 +125,94 @@ export const advisorService = {
     };
   },
 
-  async validateLog(logId: string) {
+  async validateLog(logId: string, notes?: string) {
+    const updateData: Record<string, unknown> = {
+      status: 'validated',
+      advisor_validated_at: new Date().toISOString(),
+    };
+    if (notes) {
+      updateData.advisor_notes = notes;
+    }
     const { data, error } = await supabase
       .from('daily_logs')
-      .update({ status: 'validated' })
+      .update(updateData)
       .eq('id', logId)
       .select()
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async sendBackToMentor(logId: string, notes: string) {
+    const { data, error } = await supabase
+      .from('daily_logs')
+      .update({
+        status: 'submitted',
+        advisor_notes: notes,
+      })
+      .eq('id', logId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getInactiveStudents(advisorId: string) {
+    const students = await this.getAssignedStudents(advisorId);
+    if (!students || students.length === 0) return [];
+
+    const studentIds = students.map((s) => s.id);
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - 3);
+
+    // Get the latest log date for each student
+    const { data: logs, error: logsError } = await supabase
+      .from('daily_logs')
+      .select('student_id, date')
+      .in('student_id', studentIds)
+      .order('date', { ascending: false });
+    if (logsError) throw logsError;
+
+    // Find the most recent log per student
+    const latestLogByStudent = new Map<string, string>();
+    (logs || []).forEach((l) => {
+      const row = l as Record<string, unknown>;
+      const sid = row.student_id as string;
+      if (!latestLogByStudent.has(sid)) {
+        latestLogByStudent.set(sid, row.date as string);
+      }
+    });
+
+    const inactiveStudents: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      daysSinceLastLog: number;
+    }[] = [];
+
+    students.forEach((s) => {
+      const row = s as Record<string, unknown>;
+      const profile = row.profiles as Record<string, unknown> | null;
+      const lastDate = latestLogByStudent.get(row.id as string);
+      let daysSince: number;
+      if (!lastDate) {
+        // No logs exist yet for this student.
+        daysSince = 999;
+      } else {
+        daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
+      }
+
+      if (daysSince >= 3) {
+        inactiveStudents.push({
+          id: row.id as string,
+          firstName: (profile?.first_name as string) || '',
+          lastName: (profile?.last_name as string) || '',
+          daysSinceLastLog: daysSince,
+        });
+      }
+    });
+
+    return inactiveStudents.sort((a, b) => b.daysSinceLastLog - a.daysSinceLastLog);
   },
 
   async getStudentDetailedProgress(studentId: string) {
@@ -243,10 +327,14 @@ export const advisorService = {
       const studentLogs = (allLogs || []).filter(
         (l) => (l as Record<string, unknown>).student_id === row.id,
       );
+      const totalXp = (row.total_xp as number) || 0;
+      const currentStreak = (row.current_streak as number) || 0;
+      const longestStreak = (row.longest_streak as number) || 0;
+      const hasActivity = totalXp > 0 || currentStreak > 0 || longestStreak > 0;
       const start = row.internship_start_date as string | null;
       const end = row.internship_end_date as string | null;
       let completionPct = 0;
-      if (start && end) {
+      if (hasActivity && start && end) {
         const startDate = new Date(start).getTime();
         const endDate = new Date(end).getTime();
         const total = endDate - startDate;
@@ -275,3 +363,4 @@ export const advisorService = {
     };
   },
 };
+

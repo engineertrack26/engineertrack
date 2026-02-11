@@ -43,10 +43,13 @@ interface PendingLogItem {
 
 function mapStudent(row: Record<string, unknown>): StudentItem {
   const profile = row.profiles as Record<string, unknown> | null;
+  const totalXp = (row.total_xp as number) || 0;
+  const currentStreak = (row.current_streak as number) || 0;
+  const hasActivity = totalXp > 0 || currentStreak > 0;
   const start = row.internship_start_date as string | null;
   const end = row.internship_end_date as string | null;
   let completionPct = 0;
-  if (start && end) {
+  if (hasActivity && start && end) {
     const startDate = new Date(start).getTime();
     const endDate = new Date(end).getTime();
     const total = endDate - startDate;
