@@ -38,10 +38,12 @@ function mapDbLog(row: Record<string, unknown>): DailyLog {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     status: (row.status as DailyLog['status']) || 'draft',
     photos: [],
     documents: [],
     revisionHistory: [],
+    advisorNotes: (row.advisor_notes as string) || undefined,
     xpEarned: (row.xp_earned as number) || 0,
     createdAt: (row.created_at as string) || '',
     updatedAt: (row.updated_at as string) || '',
@@ -76,6 +78,10 @@ export default function CreateLogScreen() {
 
   // New state for photos
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
+  // Time spent state
+  const [hoursSpent, setHoursSpent] = useState(0);
+  const [minutesSpent, setMinutesSpent] = useState(0);
 
   // New state for self-assessment
   const [competencyRatings, setCompetencyRatings] = useState<Record<string, number>>({});
@@ -125,6 +131,8 @@ export default function CreateLogScreen() {
         setActivities(log.activitiesPerformed);
         setSkills(log.skillsLearned);
         setChallenges(log.challengesFaced);
+        setHoursSpent(Math.floor(log.hoursSpent / 60));
+        setMinutesSpent(log.hoursSpent % 60);
       } else {
         // No log for today — reset form
         setExistingLog(null);
@@ -134,6 +142,8 @@ export default function CreateLogScreen() {
         setSkills('');
         setChallenges('');
         setPhotos([]);
+        setHoursSpent(0);
+        setMinutesSpent(0);
         setCompetencyRatings({});
         setReflectionNotes('');
       }
@@ -248,6 +258,7 @@ export default function CreateLogScreen() {
 
     setSaving(true);
     try {
+      const totalMinutes = hoursSpent * 60 + minutesSpent;
       if (existingLog) {
         const data = await logService.updateLog(existingLog.id, {
           title: title.trim(),
@@ -255,6 +266,7 @@ export default function CreateLogScreen() {
           activitiesPerformed: activities.trim(),
           skillsLearned: skills.trim(),
           challengesFaced: challenges.trim(),
+          hoursSpent: totalMinutes,
         });
         const updated = mapDbLog(data);
         setExistingLog(updated);
@@ -269,6 +281,7 @@ export default function CreateLogScreen() {
           activitiesPerformed: activities.trim(),
           skillsLearned: skills.trim(),
           challengesFaced: challenges.trim(),
+          hoursSpent: totalMinutes,
         });
         const newLog = mapDbLog(data);
         setExistingLog(newLog);
@@ -294,6 +307,7 @@ export default function CreateLogScreen() {
     setSubmitting(true);
     try {
       let logId: string;
+      const totalMinutes = hoursSpent * 60 + minutesSpent;
 
       // 1. Create or update log
       if (existingLog) {
@@ -303,6 +317,7 @@ export default function CreateLogScreen() {
           activitiesPerformed: activities.trim(),
           skillsLearned: skills.trim(),
           challengesFaced: challenges.trim(),
+          hoursSpent: totalMinutes,
         });
         logId = existingLog.id;
       } else {
@@ -314,6 +329,7 @@ export default function CreateLogScreen() {
           activitiesPerformed: activities.trim(),
           skillsLearned: skills.trim(),
           challengesFaced: challenges.trim(),
+          hoursSpent: totalMinutes,
         });
         logId = data.id;
         addLog(mapDbLog(data));
@@ -328,9 +344,11 @@ export default function CreateLogScreen() {
         }
       }
 
-      // 3. Save self-assessment if competencies are rated
+      // 3. Save self-assessment if user provided any assessment input
       const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
-      if (allRated) {
+      const hasAnyRating = Object.values(competencyRatings).some((score) => (score || 0) >= 1);
+      const hasReflection = reflectionNotes.trim().length > 0;
+      if (hasAnyRating || hasReflection) {
         try {
           await logService.saveSelfAssessment(logId, competencyRatings, reflectionNotes.trim());
         } catch (assessErr) {
@@ -530,6 +548,84 @@ export default function CreateLogScreen() {
             />
           </View>
 
+          {/* Personal Reflection / Mini Blog */}
+          {canEdit && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="journal" size={18} color={colors.text} />
+                <Text style={styles.sectionTitle}>Personal Reflection / Mini Blog</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.reflectionTextarea]}
+                placeholder="Reflect on your day... What went well? What would you do differently? Share your thoughts like a journal entry."
+                placeholderTextColor={colors.textDisabled}
+                value={reflectionNotes}
+                onChangeText={setReflectionNotes}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+              />
+            </View>
+          )}
+
+          {/* Time Spent Today */}
+          {canEdit && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="time" size={18} color={colors.text} />
+                <Text style={styles.sectionTitle}>Time Spent Today</Text>
+              </View>
+              <View style={styles.timePickerRow}>
+                <View style={styles.timePickerGroup}>
+                  <Text style={styles.timeLabel}>Hours</Text>
+                  <View style={styles.timeControl}>
+                    <TouchableOpacity
+                      style={styles.timeBtn}
+                      onPress={() => setHoursSpent((h) => Math.max(0, h - 1))}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="remove" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.timeValue}>{hoursSpent}</Text>
+                    <TouchableOpacity
+                      style={styles.timeBtn}
+                      onPress={() => setHoursSpent((h) => Math.min(12, h + 1))}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="add" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Text style={styles.timeSeparator}>:</Text>
+                <View style={styles.timePickerGroup}>
+                  <Text style={styles.timeLabel}>Minutes</Text>
+                  <View style={styles.timeControl}>
+                    <TouchableOpacity
+                      style={styles.timeBtn}
+                      onPress={() => setMinutesSpent((m) => (m <= 0 ? 45 : m - 15))}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="remove" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.timeValue}>{String(minutesSpent).padStart(2, '0')}</Text>
+                    <TouchableOpacity
+                      style={styles.timeBtn}
+                      onPress={() => setMinutesSpent((m) => (m >= 45 ? 0 : m + 15))}
+                      activeOpacity={0.6}
+                    >
+                      <Ionicons name="add" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              {(hoursSpent > 0 || minutesSpent > 0) && (
+                <Text style={styles.timeSummary}>
+                  Total: {hoursSpent}h {minutesSpent}m ({hoursSpent * 60 + minutesSpent} minutes)
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Photo Upload Section */}
           {canEdit && (
             <View style={styles.section}>
@@ -603,19 +699,6 @@ export default function CreateLogScreen() {
                 </View>
               ))}
 
-              <View style={styles.reflectionField}>
-                <Text style={styles.label}>Reflection Notes</Text>
-                <TextInput
-                  style={[styles.input, styles.multilineSmall]}
-                  placeholder="Reflect on your day, your strengths, and areas to improve..."
-                  placeholderTextColor={colors.textDisabled}
-                  value={reflectionNotes}
-                  onChangeText={setReflectionNotes}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
             </View>
           )}
 
@@ -902,6 +985,60 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Reflection / Mini Blog
+  reflectionTextarea: {
+    minHeight: 120,
+  },
+
+  // Time Picker
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  timePickerGroup: {
+    alignItems: 'center',
+  },
+  timeLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+  },
+  timeControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  timeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timeValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  timeSeparator: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  timeSummary: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+
   // Self-Assessment
   competencyRow: {
     flexDirection: 'row',
@@ -923,10 +1060,6 @@ const styles = StyleSheet.create({
   starButton: {
     padding: 2,
   },
-  reflectionField: {
-    marginTop: spacing.md,
-  },
-
   // Checklist
   checklistItem: {
     flexDirection: 'row',
