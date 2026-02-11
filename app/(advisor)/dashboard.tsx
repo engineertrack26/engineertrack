@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,7 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
+import { notificationService } from '@/services/notifications';
 import { StatCard } from '@/components/common';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
 interface StudentItem {
@@ -92,6 +95,12 @@ export default function AdvisorDashboard() {
   });
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [pendingLogs, setPendingLogs] = useState<PendingLogItem[]>([]);
+  const [inactiveStudents, setInactiveStudents] = useState<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    daysSinceLastLog: number;
+  }[]>([]);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -109,6 +118,14 @@ export default function AdvisorDashboard() {
       setPendingLogs(
         (result.pendingLogs || []).slice(0, 5).map((l) => mapPendingLog(l as unknown as Record<string, unknown>)),
       );
+
+      // Load inactive students
+      try {
+        const inactive = await advisorService.getInactiveStudents(user.id);
+        setInactiveStudents(inactive);
+      } catch {
+        setInactiveStudents([]);
+      }
     } catch (err) {
       console.error('Advisor dashboard load error:', err);
     } finally {
@@ -122,11 +139,39 @@ export default function AdvisorDashboard() {
     }, [loadData]),
   );
 
+  // Realtime: auto-refresh when daily_logs change
+  useRealtimeSubscription({
+    table: 'daily_logs',
+    event: '*',
+    enabled: !!user,
+    onPayload: () => {
+      loadData();
+    },
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
   }, [loadData]);
+
+  const handleSendReminder = async (studentId: string, studentName: string) => {
+    if (!user) return;
+    const advisorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your advisor';
+    try {
+      await notificationService.create(
+        studentId,
+        'Log Reminder',
+        `${advisorName} noticed you haven't submitted a log recently. Please submit your daily log.`,
+        'general',
+        {},
+      );
+      Alert.alert('Sent', `Reminder sent to ${studentName}.`);
+    } catch (err) {
+      console.warn('Reminder notification failed:', err);
+      Alert.alert('Error', 'Failed to send reminder.');
+    }
+  };
 
   const getInitials = (first: string, last: string) =>
     `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
@@ -164,7 +209,7 @@ export default function AdvisorDashboard() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.greeting} numberOfLines={1}>
-              Hello, {user?.firstName ? `Prof. ${user.firstName}` : 'Advisor'}
+              Hello, {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Advisor'}
             </Text>
             <Text style={styles.subtitle}>Advisor Dashboard</Text>
           </View>
@@ -210,6 +255,45 @@ export default function AdvisorDashboard() {
             />
           </View>
         </View>
+
+        {/* Intervention Alerts */}
+        {inactiveStudents.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                Intervention Alerts
+                <Text style={styles.alertCountBadge}> ({inactiveStudents.length})</Text>
+              </Text>
+            </View>
+            {inactiveStudents.map((student) => (
+              <View key={student.id} style={styles.alertCard}>
+                <View style={styles.alertIconWrap}>
+                  <Ionicons name="alert-circle" size={24} color={colors.error} />
+                </View>
+                <View style={styles.alertInfo}>
+                  <Text style={styles.alertName}>
+                    {student.firstName} {student.lastName}
+                  </Text>
+                  <Text style={styles.alertDesc}>
+                    {student.daysSinceLastLog >= 999
+                      ? 'Has never submitted a log'
+                      : `${student.daysSinceLastLog} days since last log`}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.reminderBtn}
+                  onPress={() =>
+                    handleSendReminder(student.id, `${student.firstName} ${student.lastName}`)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="notifications-outline" size={16} color="#fff" />
+                  <Text style={styles.reminderBtnText}>Remind</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Pending Validations */}
         <View style={styles.section}>
@@ -427,6 +511,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     fontWeight: '500',
+  },
+
+  // Intervention Alerts
+  alertCountBadge: {
+    color: colors.error,
+    fontWeight: '700',
+  },
+  alertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error + '08',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.error,
+  },
+  alertIconWrap: {
+    marginRight: spacing.sm,
+  },
+  alertInfo: {
+    flex: 1,
+  },
+  alertName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  alertDesc: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  reminderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginLeft: spacing.sm,
+  },
+  reminderBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
   },
 
   // Empty
