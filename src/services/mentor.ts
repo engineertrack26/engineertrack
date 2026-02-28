@@ -116,6 +116,14 @@ export const mentorService = {
       .eq('mentor_id', mentorId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data;
+
+    // Keep only the latest feedback per log (a log may have revision + approval records)
+    const seen = new Set<string>();
+    return (data || []).filter((row) => {
+      const logId = (row as Record<string, unknown>).log_id as string;
+      if (seen.has(logId)) return false;
+      seen.add(logId);
+      return true;
+    });
   },
 };
