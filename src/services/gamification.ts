@@ -5,6 +5,14 @@ import { pollService } from './polls';
 
 export const gamificationService = {
   async addXp(studentId: string, amount: number, reason: string, logId?: string) {
+    // Defense-in-depth: only the student themselves can earn XP for their own account.
+    // The RLS policy (auth.uid() = student_id) already enforces this at DB level,
+    // but we validate here too so callers get a clear error before hitting the DB.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== studentId) {
+      throw new Error('Cannot add XP for another user');
+    }
+
     // Insert XP transaction
     const { error: txError } = await supabase
       .from('xp_transactions')

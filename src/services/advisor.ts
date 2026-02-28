@@ -151,7 +151,37 @@ export const advisorService = {
     };
   },
 
+  // Defense-in-depth helper: verify current user is assigned as advisor
+  // to the student who owns the given log.
+  async _assertAdvisorOfLog(logId: string): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: log, error: logErr } = await supabase
+      .from('daily_logs')
+      .select('student_id')
+      .eq('id', logId)
+      .single();
+    if (logErr || !log) throw new Error('Log not found');
+
+    const studentId = (log as Record<string, unknown>).student_id as string;
+
+    const { data: sp, error: spErr } = await supabase
+      .from('student_profiles')
+      .select('advisor_id')
+      .eq('id', studentId)
+      .single();
+    if (spErr || !sp) throw new Error('Student profile not found');
+    if ((sp as Record<string, unknown>).advisor_id !== user.id) {
+      throw new Error('Unauthorized: not assigned to this student');
+    }
+
+    return studentId;
+  },
+
   async validateLog(logId: string, notes?: string) {
+    await this._assertAdvisorOfLog(logId);
+
     const updateData: Record<string, unknown> = {
       status: 'validated',
       advisor_validated_at: new Date().toISOString(),
@@ -170,6 +200,8 @@ export const advisorService = {
   },
 
   async sendBackToMentor(logId: string, notes: string) {
+    await this._assertAdvisorOfLog(logId);
+
     const { data, error } = await supabase
       .from('daily_logs')
       .update({

@@ -303,6 +303,30 @@ export const logService = {
     revisionNotes?: string,
     areasOfExcellence?: string,
   ) {
+    // Defense-in-depth: verify caller is the stated mentor,
+    // and that mentor is actually assigned to the log's student.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== mentorId) {
+      throw new Error('Unauthorized: mentor ID mismatch');
+    }
+
+    const { data: log, error: logErr } = await supabase
+      .from('daily_logs')
+      .select('student_id')
+      .eq('id', logId)
+      .single();
+    if (logErr || !log) throw new Error('Log not found');
+
+    const { data: sp, error: spErr } = await supabase
+      .from('student_profiles')
+      .select('mentor_id')
+      .eq('id', (log as Record<string, unknown>).student_id as string)
+      .single();
+    if (spErr || !sp) throw new Error('Student profile not found');
+    if ((sp as Record<string, unknown>).mentor_id !== user.id) {
+      throw new Error('Unauthorized: not assigned to this student');
+    }
+
     const insertData: Record<string, unknown> = {
       log_id: logId,
       mentor_id: mentorId,
