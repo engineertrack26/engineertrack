@@ -8,7 +8,6 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
-  ScrollView,
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -316,7 +315,7 @@ export default function UsersScreen() {
 
       {/* Department Filter */}
       {departments.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.departmentRow}>
+        <View style={styles.departmentRow}>
           {departments.map((dept) => (
             <TouchableOpacity
               key={dept.id}
@@ -328,7 +327,7 @@ export default function UsersScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       )}
 
       {/* Result count when searching */}
@@ -467,8 +466,11 @@ const styles = StyleSheet.create({
 
   // Department chips
   departmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
+    gap: spacing.xs,
   },
   departmentChip: {
     paddingVertical: spacing.xs + 2,
@@ -477,7 +479,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: spacing.sm,
   },
   departmentChipActive: {
     backgroundColor: ADMIN_COLOR,
