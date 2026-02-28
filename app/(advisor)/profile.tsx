@@ -253,7 +253,7 @@ export default function AdvisorProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.screenTitle}>{t('student.profile') || 'Profile'}</Text>
+        <Text style={styles.screenTitle}>{t('common.profile') || 'Profile'}</Text>
 
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
