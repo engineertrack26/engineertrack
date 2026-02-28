@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { logService } from '@/services/logs';
+import { studentCodeService } from '@/services/studentCode';
 import { DailyLog } from '@/types/log';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -61,6 +63,8 @@ export default function StudentListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [students, setStudents] = useState<StudentItem[]>([]);
+  const [codeInput, setCodeInput] = useState('');
+  const [linking, setLinking] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -115,6 +119,21 @@ export default function StudentListScreen() {
       Alert.alert('Error', 'Failed to load student details.');
     }
   }, []);
+
+  const handleLinkStudent = useCallback(async () => {
+    if (!user || !codeInput.trim()) return;
+    setLinking(true);
+    try {
+      const result = await studentCodeService.linkWithCode(codeInput.trim(), user.id, 'mentor');
+      Alert.alert('Success', `Linked to student: ${result.studentName}`);
+      setCodeInput('');
+      await loadData();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Invalid code.');
+    } finally {
+      setLinking(false);
+    }
+  }, [user, codeInput, loadData]);
 
   const getInitials = (first: string, last: string) =>
     `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
@@ -211,12 +230,43 @@ export default function StudentListScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
+        ListHeaderComponent={
+          <View style={styles.linkCard}>
+            <Text style={styles.linkCardTitle}>Link a Student</Text>
+            <Text style={styles.linkCardHint}>
+              Enter a student's 6-digit code to add them to your list.
+            </Text>
+            <View style={styles.linkRow}>
+              <TextInput
+                style={styles.linkInput}
+                value={codeInput}
+                onChangeText={setCodeInput}
+                placeholder="e.g. ABC123"
+                placeholderTextColor={colors.textDisabled}
+                autoCapitalize="characters"
+                maxLength={6}
+              />
+              <TouchableOpacity
+                style={[styles.linkBtn, !codeInput.trim() && { opacity: 0.5 }]}
+                disabled={!codeInput.trim() || linking}
+                onPress={handleLinkStudent}
+                activeOpacity={0.7}
+              >
+                {linking ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.linkBtnText}>Link</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No Students Assigned</Text>
+            <Text style={styles.emptyTitle}>No Students Yet</Text>
             <Text style={styles.emptyText}>
-              Students will appear here once they are assigned to you.
+              Use the code above to link your first student.
             </Text>
           </View>
         }
@@ -256,6 +306,58 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+
+  // Link Student
+  linkCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  linkCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  linkCardHint: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  linkInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 2,
+    backgroundColor: colors.background,
+  },
+  linkBtn: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  linkBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 
   // Card
