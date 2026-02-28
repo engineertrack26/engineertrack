@@ -189,8 +189,61 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 11. RPC: link student by code (institution-safe)
-CREATE OR REPLACE FUNCTION link_student_by_code(p_code TEXT, p_role TEXT) RETURNS TABLE (student_id UUID, student_name TEXT) LANGUAGE plpgsql SECURITY DEFINER AS $func$ DECLARE student_uuid UUID; caller_role TEXT; caller_institution UUID; student_institution UUID; BEGIN IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF; SELECT role, institution_id INTO caller_role, caller_institution FROM profiles WHERE id = auth.uid(); IF caller_role NOT IN ('mentor','advisor') THEN RAISE EXCEPTION 'Only mentor or advisor can link students'; END IF; SELECT sc.student_id INTO student_uuid FROM student_codes sc WHERE sc.code = upper(trim(p_code)) AND sc.is_active = true LIMIT 1; IF student_uuid IS NULL THEN RAISE EXCEPTION 'Invalid or expired student code'; END IF; SELECT institution_id INTO student_institution FROM profiles WHERE id = student_uuid; IF caller_institution IS NULL OR student_institution IS NULL OR caller_institution <> student_institution THEN RAISE EXCEPTION 'Institution mismatch'; END IF; IF caller_role = 'mentor' THEN UPDATE student_profiles SET mentor_id = auth.uid() WHERE id = student_uuid; ELSE UPDATE student_profiles SET advisor_id = auth.uid() WHERE id = student_uuid; END IF; RETURN QUERY SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')) FROM profiles p WHERE p.id = student_uuid; END; $func$;
+-- 11. RPC: link student by code
+-- Advisors must share the same institution as the student (university-side).
+-- Mentors are company supervisors and have no institution requirement;
+-- the student code itself is the security mechanism.
+CREATE OR REPLACE FUNCTION link_student_by_code(p_code TEXT, p_role TEXT)
+RETURNS TABLE (student_id UUID, student_name TEXT)
+LANGUAGE plpgsql SECURITY DEFINER AS $func$
+DECLARE
+  student_uuid UUID;
+  caller_role TEXT;
+  caller_institution UUID;
+  student_institution UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT role, institution_id INTO caller_role, caller_institution
+  FROM profiles WHERE id = auth.uid();
+
+  IF caller_role NOT IN ('mentor', 'advisor') THEN
+    RAISE EXCEPTION 'Only mentor or advisor can link students';
+  END IF;
+
+  SELECT sc.student_id INTO student_uuid
+  FROM student_codes sc
+  WHERE sc.code = upper(trim(p_code)) AND sc.is_active = true
+  LIMIT 1;
+
+  IF student_uuid IS NULL THEN
+    RAISE EXCEPTION 'Invalid or expired student code';
+  END IF;
+
+  -- Institution check: only enforced for advisors (university-side).
+  -- Mentors are company supervisors; no institution membership required.
+  IF caller_role = 'advisor' THEN
+    SELECT institution_id INTO student_institution
+    FROM profiles WHERE id = student_uuid;
+
+    IF caller_institution IS NULL OR student_institution IS NULL OR caller_institution <> student_institution THEN
+      RAISE EXCEPTION 'Institution mismatch';
+    END IF;
+  END IF;
+
+  IF caller_role = 'mentor' THEN
+    UPDATE student_profiles SET mentor_id = auth.uid() WHERE id = student_uuid;
+  ELSE
+    UPDATE student_profiles SET advisor_id = auth.uid() WHERE id = student_uuid;
+  END IF;
+
+  RETURN QUERY
+    SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
+    FROM profiles p WHERE p.id = student_uuid;
+END;
+$func$;
 
 -- 12. RPC: regenerate institution code (rate-limited to 24h)
 CREATE OR REPLACE FUNCTION regenerate_institution_code(p_institution_id UUID)
@@ -409,4 +462,59 @@ CREATE POLICY "profiles_select" ON profiles
 --
 --   RETURN NEW;
 -- END;
+
+-- ============================================================
+-- PATCH: Fix link_student_by_code — remove institution check for mentors
+-- Run this in Supabase SQL Editor to apply the fix.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION link_student_by_code(p_code TEXT, p_role TEXT)
+RETURNS TABLE (student_id UUID, student_name TEXT)
+LANGUAGE plpgsql SECURITY DEFINER AS $func$
+DECLARE
+  student_uuid UUID;
+  caller_role TEXT;
+  caller_institution UUID;
+  student_institution UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT role, institution_id INTO caller_role, caller_institution
+  FROM profiles WHERE id = auth.uid();
+
+  IF caller_role NOT IN ('mentor', 'advisor') THEN
+    RAISE EXCEPTION 'Only mentor or advisor can link students';
+  END IF;
+
+  SELECT sc.student_id INTO student_uuid
+  FROM student_codes sc
+  WHERE sc.code = upper(trim(p_code)) AND sc.is_active = true
+  LIMIT 1;
+
+  IF student_uuid IS NULL THEN
+    RAISE EXCEPTION 'Invalid or expired student code';
+  END IF;
+
+  IF caller_role = 'advisor' THEN
+    SELECT institution_id INTO student_institution
+    FROM profiles WHERE id = student_uuid;
+
+    IF caller_institution IS NULL OR student_institution IS NULL OR caller_institution <> student_institution THEN
+      RAISE EXCEPTION 'Institution mismatch';
+    END IF;
+  END IF;
+
+  IF caller_role = 'mentor' THEN
+    UPDATE student_profiles SET mentor_id = auth.uid() WHERE id = student_uuid;
+  ELSE
+    UPDATE student_profiles SET advisor_id = auth.uid() WHERE id = student_uuid;
+  END IF;
+
+  RETURN QUERY
+    SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
+    FROM profiles p WHERE p.id = student_uuid;
+END;
+$func$;
 -- $$ LANGUAGE plpgsql SECURITY DEFINER;
