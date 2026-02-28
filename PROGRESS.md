@@ -182,11 +182,11 @@
 ## Phase 6: Polish & Deployment - Detailed Checklist
 
 ### Incomplete Features (to finish before deployment)
-- [ ] Photo upload — wire "Attach Photo" in log creation to Supabase Storage
-- [ ] Document upload — wire "Attach Document" in log creation to Supabase Storage
-- [ ] Profile avatar upload — wire avatar change to Supabase Storage across all role profiles
-- [ ] Password change — add change password option to profile screens
-- [ ] Reports export — implement real PDF/CSV export for advisor reports
+- [x] Photo upload — wire "Attach Photo" in log creation to Supabase Storage
+- [x] Document upload — wire "Attach Document" in log creation to Supabase Storage
+- [x] Profile avatar upload — wire avatar change to Supabase Storage across all role profiles
+- [x] Password change — add change password option to profile screens (all 4 roles)
+- [x] Reports export — CSV export via Share API for advisor reports
 - [ ] Admin institution code flow — verify full institution code + student code linking works end-to-end
 
 ### i18n (all 7 languages)
@@ -224,3 +224,4 @@
 | 2026-02-07 | Session 5 | Phase 4 Mentor Features - mentor service + 5 screens (Dashboard, Student List, Review Log, Feedback, Profile) + layout update |
 | 2026-02-08 | Session 6 | Phase 4 Advisor Features - advisor service + 6 screens (Dashboard, Student Monitor, Validation, Reports, Profile, Notifications) + layout update |
 | 2026-02-11 | Session 7 | Phase 5 - Polls/Quiz, Push Notifications, Realtime hook, Leaderboard scoping, i18n fixes, register UX fix |
+| 2026-02-28 | Session 8 | Phase 6 Polish - Document upload UI, Password change (all 4 roles), Advisor reports CSV export |

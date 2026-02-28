@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
@@ -78,6 +79,9 @@ export default function CreateLogScreen() {
 
   // New state for photos
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
+  // Documents
+  const [documents, setDocuments] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
 
   // Time spent state
   const [hoursSpent, setHoursSpent] = useState(0);
@@ -142,6 +146,7 @@ export default function CreateLogScreen() {
         setSkills('');
         setChallenges('');
         setPhotos([]);
+        setDocuments([]);
         setHoursSpent(0);
         setMinutesSpent(0);
         setCompetencyRatings({});
@@ -239,6 +244,28 @@ export default function CreateLogScreen() {
 
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const pickDocument = async () => {
+    if (documents.length >= LIMITS.maxDocumentsPerLog) {
+      Alert.alert('Limit Reached', `Maximum ${LIMITS.maxDocumentsPerLog} documents per log.`);
+      return;
+    }
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        setDocuments((prev) => [...prev, ...result.assets]);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Could not open document picker.');
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Competency rating
@@ -341,6 +368,22 @@ export default function CreateLogScreen() {
           await logService.uploadPhoto(logId, user.id, photo.uri);
         } catch (photoErr) {
           console.warn('Photo upload failed:', photoErr);
+        }
+      }
+
+      // 2b. Upload documents
+      for (const doc of documents) {
+        try {
+          await logService.uploadDocument(
+            logId,
+            user.id,
+            doc.uri,
+            doc.name,
+            doc.mimeType || 'application/octet-stream',
+            doc.size || 0,
+          );
+        } catch (docErr) {
+          console.warn('Document upload failed:', docErr);
         }
       }
 
@@ -667,6 +710,34 @@ export default function CreateLogScreen() {
             </View>
           )}
 
+          {/* Document Upload Section */}
+          {canEdit && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="document-attach" size={18} color={colors.text} />
+                <Text style={styles.sectionTitle}>Documents</Text>
+                <Text style={styles.sectionCount}>{documents.length}/{LIMITS.maxDocumentsPerLog}</Text>
+              </View>
+
+              {documents.map((doc, index) => (
+                <View key={index} style={styles.docRow}>
+                  <Ionicons name="document-outline" size={20} color={colors.primary} />
+                  <Text style={styles.docName} numberOfLines={1}>{doc.name}</Text>
+                  <TouchableOpacity onPress={() => removeDocument(index)} activeOpacity={0.7} hitSlop={8}>
+                    <Ionicons name="close-circle" size={20} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {documents.length < LIMITS.maxDocumentsPerLog && (
+                <TouchableOpacity style={styles.docAddBtn} onPress={pickDocument} activeOpacity={0.7}>
+                  <Ionicons name="add" size={18} color={colors.primary} />
+                  <Text style={styles.docAddText}>Attach Document</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {/* Self-Assessment Section */}
           {canEdit && (
             <View style={styles.section}>
@@ -983,6 +1054,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.primary,
     marginTop: 2,
+  },
+
+  // Documents
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  docName: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  docAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '40',
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.sm,
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '06',
+  },
+  docAddText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '500',
   },
 
   // Reflection / Mini Blog

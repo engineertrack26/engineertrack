@@ -41,6 +41,10 @@ export default function AdminProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [regenerating, setRegenerating] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const LANGUAGES: { code: string; label: string }[] = [
     { code: 'en', label: 'English' },
@@ -179,6 +183,30 @@ export default function AdminProfileScreen() {
     if (!institution?.institutionCode) return;
     await Clipboard.setStringAsync(institution.institutionCode);
     Alert.alert('Copied!', 'Institution code copied to clipboard.');
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await authService.changePassword(newPassword);
+      Alert.alert('Success', 'Password changed successfully.');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordChange(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to change password.';
+      Alert.alert('Error', msg);
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const handleSignOut = () => {
@@ -363,6 +391,57 @@ export default function AdminProfileScreen() {
           </View>
         </View>
 
+        {/* Change Password */}
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.changePasswordToggle}
+            onPress={() => setShowPasswordChange((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="lock-closed-outline" size={20} color={ADMIN_COLOR} />
+            <Text style={styles.changePasswordLabel}>Change Password</Text>
+            <Ionicons
+              name={showPasswordChange ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+          {showPasswordChange && (
+            <View style={styles.changePasswordForm}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="New Password"
+                placeholderTextColor={colors.textDisabled}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm New Password"
+                placeholderTextColor={colors.textDisabled}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.passwordSaveBtn, changingPassword && { opacity: 0.6 }]}
+                onPress={handleChangePassword}
+                disabled={changingPassword}
+                activeOpacity={0.7}
+              >
+                {changingPassword ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.passwordSaveBtnText}>Update Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Sign Out */}
         <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
@@ -427,6 +506,14 @@ const styles = StyleSheet.create({
   settingsRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   settingsValue: { fontSize: 14, color: colors.textSecondary, fontWeight: '500' },
   comingSoon: { fontSize: 13, color: colors.textDisabled, fontStyle: 'italic' },
+
+  // Change Password
+  changePasswordToggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  changePasswordLabel: { flex: 1, fontSize: 15, color: colors.text, fontWeight: '500' },
+  changePasswordForm: { marginTop: spacing.md, gap: spacing.sm },
+  passwordInput: { borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, fontSize: 15, color: colors.text, backgroundColor: colors.background },
+  passwordSaveBtn: { backgroundColor: ADMIN_COLOR, paddingVertical: spacing.sm + 2, borderRadius: borderRadius.sm, alignItems: 'center' as const, marginTop: spacing.xs },
+  passwordSaveBtnText: { fontSize: 15, fontWeight: '600' as const, color: '#fff' },
 
   // Sign Out
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderWidth: 1.5, borderColor: colors.error, borderRadius: borderRadius.md, marginTop: spacing.sm },

@@ -6,6 +6,9 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
+  Share,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +57,7 @@ export default function ReportsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<ReportsData | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -82,6 +86,51 @@ export default function ReportsScreen() {
   const getInitials = (first: string, last: string) =>
     `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
 
+  const handleExportCSV = async () => {
+    if (!data) return;
+    setExporting(true);
+    try {
+      const lines: string[] = [];
+
+      // Summary section
+      lines.push('SUMMARY');
+      lines.push('Total Students,Total Logs,Approved Rate (%),Avg Mentor Score');
+      lines.push(
+        `${data.totalStudents},${data.totalLogs},${data.approvedRate},${data.avgMentorScore ? data.avgMentorScore.toFixed(1) : ''}`,
+      );
+      lines.push('');
+
+      // Status breakdown section
+      lines.push('LOG STATUS BREAKDOWN');
+      lines.push('Status,Count');
+      STATUS_CONFIG.forEach(({ key, label }) => {
+        const count = data.statusBreakdown[key as keyof typeof data.statusBreakdown] || 0;
+        lines.push(`${label},${count}`);
+      });
+      lines.push('');
+
+      // Student progress section
+      lines.push('STUDENT PROGRESS');
+      lines.push('Name,Total Logs,XP,Level,Completion (%)');
+      data.studentProgress.forEach((s) => {
+        const name = `${s.firstName} ${s.lastName}`.replace(/,/g, ' ');
+        lines.push(`${name},${s.totalLogs},${s.xp},${s.level},${s.completionPct}`);
+      });
+
+      const csvContent = lines.join('\n');
+
+      await Share.share({
+        message: csvContent,
+        title: 'InternTrack Reports',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Export failed.';
+      Alert.alert('Export Error', msg);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -106,7 +155,24 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
-        <Text style={styles.screenTitle}>Reports & Analytics</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.screenTitle}>Reports & Analytics</Text>
+          <TouchableOpacity
+            style={[styles.exportBtn, exporting && { opacity: 0.6 }]}
+            onPress={handleExportCSV}
+            disabled={exporting || !data}
+            activeOpacity={0.7}
+          >
+            {exporting ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="share-outline" size={18} color={colors.primary} />
+                <Text style={styles.exportBtnText}>Export</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Summary Stats */}
         <View style={styles.statsGrid}>
@@ -243,11 +309,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
   screenTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.lg,
+  },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.sm,
+  },
+  exportBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
   },
 
   // Stats
