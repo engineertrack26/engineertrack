@@ -187,6 +187,7 @@
 - [x] Profile avatar upload — wire avatar change to Supabase Storage across all role profiles
 - [x] Password change — add change password option to profile screens (all 4 roles)
 - [x] Reports export — CSV export via Share API for advisor reports
+- [x] Admin users page redesign — stats bar, role-colored cards, join date/dept info, tap-to-expand remove action
 - [ ] Admin institution code flow — verify full institution code + student code linking works end-to-end
 
 ### i18n (all 7 languages)
@@ -225,3 +226,4 @@
 | 2026-02-08 | Session 6 | Phase 4 Advisor Features - advisor service + 6 screens (Dashboard, Student Monitor, Validation, Reports, Profile, Notifications) + layout update |
 | 2026-02-11 | Session 7 | Phase 5 - Polls/Quiz, Push Notifications, Realtime hook, Leaderboard scoping, i18n fixes, register UX fix |
 | 2026-02-28 | Session 8 | Phase 6 Polish - Document upload UI, Password change (all 4 roles), Advisor reports CSV export |
+| 2026-02-28 | Session 9 | Security hardening (RLS fixes on earned_badges + polls, service-layer defense-in-depth), Admin users page redesign (stats bar, richer cards, remove-from-institution action, flexWrap department chips) |
