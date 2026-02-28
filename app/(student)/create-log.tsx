@@ -390,6 +390,8 @@ export default function CreateLogScreen() {
     }
 
     setSubmitting(true);
+    // Capture pre-submit status — revision resubmits must not earn XP again
+    const isRevisionResubmit = existingLog?.status === 'needs_revision';
     try {
       let logId: string;
       const totalMinutes = hoursSpent * 60 + minutesSpent;
@@ -463,28 +465,31 @@ export default function CreateLogScreen() {
       setExistingLog(mappedSubmitted);
       updateLogInStore(logId, mappedSubmitted);
 
-      // 5. Process gamification XP
-      try {
-        await gamificationService.processLogSubmission(user.id, logId);
-      } catch (xpErr) {
-        console.warn('XP processing failed:', xpErr);
-      }
-
-      // 6. Photo XP (per photo)
-      for (let i = 0; i < photos.length; i++) {
+      // 5–7. Gamification XP — skip entirely on revision resubmit
+      if (!isRevisionResubmit) {
+        // 5. Log submit XP
         try {
-          await gamificationService.addXp(user.id, POINT_VALUES.photoAttached, 'photo_attached', logId);
+          await gamificationService.processLogSubmission(user.id, logId);
         } catch (xpErr) {
-          console.warn('Photo XP failed:', xpErr);
+          console.warn('XP processing failed:', xpErr);
         }
-      }
 
-      // 7. Self-assessment XP
-      if (allRated) {
-        try {
-          await gamificationService.addXp(user.id, POINT_VALUES.selfAssessment, 'self_assessment', logId);
-        } catch (xpErr) {
-          console.warn('Self-assessment XP failed:', xpErr);
+        // 6. Photo XP (per newly added photo)
+        for (let i = 0; i < photos.length; i++) {
+          try {
+            await gamificationService.addXp(user.id, POINT_VALUES.photoAttached, 'photo_attached', logId);
+          } catch (xpErr) {
+            console.warn('Photo XP failed:', xpErr);
+          }
+        }
+
+        // 7. Self-assessment XP
+        if (allRated) {
+          try {
+            await gamificationService.addXp(user.id, POINT_VALUES.selfAssessment, 'self_assessment', logId);
+          } catch (xpErr) {
+            console.warn('Self-assessment XP failed:', xpErr);
+          }
         }
       }
 
