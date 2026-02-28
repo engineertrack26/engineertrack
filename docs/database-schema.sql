@@ -559,13 +559,30 @@ CREATE POLICY "log_documents_delete" ON log_documents
   );
 
 -- ---- SELF ASSESSMENTS ----
+-- SECURITY DEFINER wrapper to avoid RLS chain issue when daily_logs
+-- is queried inside the policy (plain student_id = auth.uid() comparison
+-- fails in RLS subquery context; SECURITY DEFINER bypasses this).
+CREATE OR REPLACE FUNCTION can_view_self_assessment(p_log_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_student_id UUID;
+BEGIN
+  SELECT student_id INTO v_student_id
+  FROM daily_logs
+  WHERE id = p_log_id;
+
+  IF v_student_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN v_student_id = auth.uid()
+    OR is_mentor_of(v_student_id)
+    OR is_advisor_of(v_student_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 CREATE POLICY "self_assessments_select" ON self_assessments
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM daily_logs WHERE daily_logs.id = log_id
-      AND (daily_logs.student_id = auth.uid()
-        OR is_mentor_of(daily_logs.student_id)
-        OR is_advisor_of(daily_logs.student_id)))
-  );
+  FOR SELECT USING (can_view_self_assessment(log_id));
 
 CREATE POLICY "self_assessments_insert" ON self_assessments
   FOR INSERT WITH CHECK (
