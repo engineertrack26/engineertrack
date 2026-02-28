@@ -24,7 +24,7 @@ import { useLogStore } from '@/store/logStore';
 import { logService } from '@/services/logs';
 import { gamificationService } from '@/services/gamification';
 import { Button } from '@/components/common';
-import { DailyLog } from '@/types/log';
+import { DailyLog, MentorFeedback } from '@/types/log';
 import { POINT_VALUES } from '@/types/gamification';
 import { LIMITS, COMPETENCIES } from '@/utils/constants';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -68,6 +68,7 @@ export default function CreateLogScreen() {
   const { addLog, updateLog: updateLogInStore } = useLogStore();
 
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
+  const [mentorFeedback, setMentorFeedback] = useState<MentorFeedback | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [activities, setActivities] = useState('');
@@ -138,10 +139,11 @@ export default function CreateLogScreen() {
         setHoursSpent(Math.floor(log.hoursSpent / 60));
         setMinutesSpent(log.hoursSpent % 60);
 
-        // Restore self-assessment if previously saved
+        // Restore self-assessment and mentor feedback
         try {
           const detail = await logService.getLogWithDetails(log.id);
           const row = detail as Record<string, unknown>;
+
           const assessments = Array.isArray(row.self_assessments) ? row.self_assessments : [];
           const sa = assessments[0] as Record<string, unknown> | undefined;
           if (sa?.competency_ratings) {
@@ -150,12 +152,33 @@ export default function CreateLogScreen() {
           if (sa?.reflection_notes) {
             setReflectionNotes((sa.reflection_notes as string) || '');
           }
+
+          const feedbacks = Array.isArray(row.mentor_feedbacks) ? row.mentor_feedbacks : [];
+          const fb = feedbacks[feedbacks.length - 1] as Record<string, unknown> | undefined;
+          if (fb) {
+            setMentorFeedback({
+              id: fb.id as string,
+              logId: fb.log_id as string,
+              mentorId: fb.mentor_id as string,
+              rating: fb.rating as number,
+              comments: (fb.comments as string) || '',
+              competencyRatings: (fb.competency_ratings as Record<string, number>) || {},
+              isApproved: fb.is_approved as boolean,
+              revisionRequired: fb.revision_required as boolean,
+              revisionNotes: (fb.revision_notes as string) || undefined,
+              areasOfExcellence: (fb.areas_of_excellence as string) || undefined,
+              createdAt: fb.created_at as string,
+            });
+          } else {
+            setMentorFeedback(null);
+          }
         } catch {
           // Non-critical — silently ignore
         }
       } else {
         // No log for today — reset form
         setExistingLog(null);
+        setMentorFeedback(null);
         setTitle('');
         setContent('');
         setActivities('');
@@ -488,6 +511,28 @@ export default function CreateLogScreen() {
               </View>
             )}
           </View>
+
+          {/* Mentor Revision Banner */}
+          {existingLog?.status === 'needs_revision' && mentorFeedback && (
+            <View style={styles.revisionBanner}>
+              <View style={styles.revisionBannerHeader}>
+                <Ionicons name="alert-circle" size={20} color="#b91c1c" />
+                <Text style={styles.revisionBannerTitle}>Mentor Requested Revision</Text>
+              </View>
+              {mentorFeedback.comments ? (
+                <View style={styles.revisionSection}>
+                  <Text style={styles.revisionSectionLabel}>Mentor Comment</Text>
+                  <Text style={styles.revisionSectionText}>{mentorFeedback.comments}</Text>
+                </View>
+              ) : null}
+              {mentorFeedback.revisionNotes ? (
+                <View style={styles.revisionSection}>
+                  <Text style={styles.revisionSectionLabel}>What to Fix</Text>
+                  <Text style={styles.revisionSectionText}>{mentorFeedback.revisionNotes}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
 
           {/* Point Preview Card */}
           {canEdit && (
@@ -921,6 +966,43 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: colors.textSecondary,
+  },
+
+  // Mentor Revision Banner
+  revisionBanner: {
+    backgroundColor: '#fef2f2',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  revisionBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  revisionBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#b91c1c',
+    marginLeft: spacing.xs,
+  },
+  revisionSection: {
+    marginTop: spacing.xs,
+  },
+  revisionSectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#7f1d1d',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  revisionSectionText: {
+    fontSize: 14,
+    color: '#450a0a',
+    lineHeight: 20,
   },
 
   // Points Preview Card
