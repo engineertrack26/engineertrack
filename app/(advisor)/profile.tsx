@@ -281,7 +281,7 @@ export default function AdvisorProfileScreen() {
         {/* User Info Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{t('student.personalInfo') || 'Personal Info'}</Text>
+            <Text style={styles.cardTitle}>Personal Info</Text>
             {!isEditing ? (
               <TouchableOpacity onPress={() => setIsEditing(true)} hitSlop={8}>
                 <Ionicons name="pencil" size={20} color={colors.primary} />
