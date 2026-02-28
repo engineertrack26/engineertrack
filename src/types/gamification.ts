@@ -80,6 +80,16 @@ export const BADGES: Badge[] = [
     requirement: 1,
     category: 'milestone',
   },
+  {
+    id: 'quiz_master',
+    key: 'quiz_master',
+    nameKey: 'badges.quizMaster.name',
+    descriptionKey: 'badges.quizMaster.description',
+    icon: 'school',
+    tier: 'silver',
+    requirement: 5,
+    category: 'engagement',
+  },
 ];
 
 export const POINT_VALUES = {
@@ -91,4 +101,6 @@ export const POINT_VALUES = {
   streakBonus: 5,
   qualityBonus: 15,
   revisionPenalty: -5,
+  pollCompleted: 15,
+  quizPerfectScore: 25,
 } as const;

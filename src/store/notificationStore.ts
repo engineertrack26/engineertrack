@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { AppNotification } from '@/types/notification';
 import { notificationService } from '@/services/notifications';
+import { supabase } from '@/services/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface NotificationState {
   notifications: AppNotification[];
@@ -11,6 +13,8 @@ interface NotificationState {
   fetchUnreadCount: (userId: string) => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: (userId: string) => Promise<void>;
+  subscribeToNotifications: (userId: string) => void;
+  unsubscribe: () => void;
   reset: () => void;
 }
 
@@ -26,6 +30,8 @@ function mapDbNotification(n: Record<string, unknown>): AppNotification {
     createdAt: (n.created_at as string) || '',
   };
 }
+
+let realtimeChannel: RealtimeChannel | null = null;
 
 const initialState = {
   notifications: [] as AppNotification[],
@@ -84,5 +90,46 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
-  reset: () => set(initialState),
+  subscribeToNotifications: (userId: string) => {
+    // Cleanup existing subscription
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+
+    const channel = supabase
+      .channel(`notifications-${userId}`)
+      .on(
+        'postgres_changes' as never,
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        } as never,
+        () => {
+          // Increment unread count on new notification
+          const { unreadCount } = get();
+          set({ unreadCount: unreadCount + 1 });
+        },
+      )
+      .subscribe();
+
+    realtimeChannel = channel;
+  },
+
+  unsubscribe: () => {
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  },
+
+  reset: () => {
+    if (realtimeChannel) {
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+    set(initialState);
+  },
 }));

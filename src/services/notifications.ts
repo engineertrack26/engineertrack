@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { NotificationType } from '@/types/notification';
+import { sendPushNotification } from './pushNotifications';
 
 export const notificationService = {
   async create(
@@ -19,6 +20,13 @@ export const notificationService = {
         data: data || {},
       });
     if (error) throw error;
+
+    // Also send a push notification (non-blocking)
+    try {
+      await sendPushNotification(userId, title, body, { type, ...data });
+    } catch {
+      // Push failure should not block DB notification
+    }
   },
 
   async getUnread(userId: string) {

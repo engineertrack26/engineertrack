@@ -23,6 +23,7 @@ import { logService } from '@/services/logs';
 import { gamificationService } from '@/services/gamification';
 import { notificationService } from '@/services/notifications';
 import { COMPETENCIES, LIMITS } from '@/utils/constants';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
 const REVISION_CHECKLIST = [
@@ -55,6 +56,7 @@ interface PendingLogItem {
   activitiesPerformed: string;
   skillsLearned: string;
   challengesFaced: string;
+  hoursSpent: number;
   createdAt: string;
   studentFirstName: string;
   studentLastName: string;
@@ -88,6 +90,7 @@ function mapPendingLog(row: Record<string, unknown>): PendingLogItem {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     createdAt: (row.created_at as string) || '',
     studentFirstName: (profile?.first_name as string) || '',
     studentLastName: (profile?.last_name as string) || '',
@@ -171,6 +174,7 @@ export default function ReviewLogScreen() {
   const [competencyRatings, setCompetencyRatings] = useState<Record<string, number>>({});
   const [overallRating, setOverallRating] = useState(0);
   const [comments, setComments] = useState('');
+  const [areasOfExcellence, setAreasOfExcellence] = useState('');
   const [revisionChecks, setRevisionChecks] = useState<Set<string>>(new Set());
   const [revisionNotes, setRevisionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +199,19 @@ export default function ReviewLogScreen() {
     }, [loadPendingLogs]),
   );
 
+  // Realtime: auto-refresh when new submissions arrive
+  useRealtimeSubscription({
+    table: 'daily_logs',
+    event: '*',
+    enabled: !!user,
+    onPayload: (payload) => {
+      const newRow = (payload as Record<string, unknown>).new as Record<string, unknown> | undefined;
+      if (newRow && newRow.status === 'submitted') {
+        loadPendingLogs();
+      }
+    },
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadPendingLogs();
@@ -208,6 +225,7 @@ export default function ReviewLogScreen() {
     setCompetencyRatings({});
     setOverallRating(0);
     setComments('');
+    setAreasOfExcellence('');
     setRevisionChecks(new Set());
     setRevisionNotes('');
     try {
@@ -291,6 +309,7 @@ export default function ReviewLogScreen() {
                 competencyRatings,
                 isApproved,
                 combinedRevisionNotes,
+                isApproved ? areasOfExcellence.trim() || undefined : undefined,
               );
 
               if (isApproved) {
@@ -433,6 +452,18 @@ export default function ReviewLogScreen() {
                     <Text style={styles.logSectionText}>{selectedLog.challengesFaced}</Text>
                   </View>
                 ) : null}
+
+                {selectedLog.hoursSpent > 0 && (
+                  <View style={styles.logSection}>
+                    <Text style={styles.logSectionLabel}>Time Spent</Text>
+                    <View style={styles.timeSpentDisplay}>
+                      <Ionicons name="time-outline" size={16} color={colors.primary} />
+                      <Text style={styles.timeSpentText}>
+                        {Math.floor(selectedLog.hoursSpent / 60)}h {selectedLog.hoursSpent % 60}m
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Photos */}
@@ -527,6 +558,22 @@ export default function ReviewLogScreen() {
                   multiline
                   textAlignVertical="top"
                 />
+
+                {/* Areas of Excellence (shown when no revision items are checked) */}
+                {revisionChecks.size === 0 && (
+                  <View style={styles.excellenceSection}>
+                    <Text style={styles.inputLabel}>Areas of Excellence</Text>
+                    <TextInput
+                      style={[styles.textArea, styles.excellenceInput]}
+                      value={areasOfExcellence}
+                      onChangeText={setAreasOfExcellence}
+                      placeholder="Note the student's areas of excellence (e.g., great problem-solving, excellent documentation)..."
+                      placeholderTextColor={colors.textDisabled}
+                      multiline
+                      textAlignVertical="top"
+                    />
+                  </View>
+                )}
 
                 {/* Revision Checklist */}
                 <View style={styles.revisionSection}>
@@ -931,6 +978,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+
+  // Time Spent Display
+  timeSpentDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  timeSpentText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+
+  // Areas of Excellence
+  excellenceSection: {
+    marginBottom: spacing.md,
+  },
+  excellenceInput: {
+    borderColor: colors.success + '40',
+    backgroundColor: colors.success + '06',
   },
 
   // Photos

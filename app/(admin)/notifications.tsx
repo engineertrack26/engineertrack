@@ -21,9 +21,11 @@ const ADMIN_COLOR = '#e65100';
 const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }> = {
   log_approved: { name: 'checkmark-circle', color: colors.success },
   log_revision_requested: { name: 'alert-circle', color: colors.error },
+  log_sent_back: { name: 'arrow-undo', color: colors.warning },
   new_feedback: { name: 'chatbubble-ellipses', color: colors.info },
   badge_earned: { name: 'trophy', color: colors.gamification.badge },
   level_up: { name: 'arrow-up-circle', color: colors.gamification.levelUp },
+  poll_available: { name: 'clipboard', color: colors.primary },
   general: { name: 'notifications', color: ADMIN_COLOR },
 };
 

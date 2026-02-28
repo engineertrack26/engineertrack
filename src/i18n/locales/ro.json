@@ -42,7 +42,8 @@
     "invalidCredentials": "Invalid email or password.",
     "emailRequired": "Email is required.",
     "passwordRequired": "Password is required.",
-    "passwordMismatch": "Passwords do not match."
+    "passwordMismatch": "Passwords do not match.",
+    "fillAllFields": "V\u0103 rug\u0103m s\u0103 completa\u021bi corect toate c\u00e2mpurile obligatorii."
   },
   "student": {
     "dashboard": "Dashboard",

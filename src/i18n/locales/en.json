@@ -42,7 +42,8 @@
     "invalidCredentials": "Invalid email or password.",
     "emailRequired": "Email is required.",
     "passwordRequired": "Password is required.",
-    "passwordMismatch": "Passwords do not match."
+    "passwordMismatch": "Passwords do not match.",
+    "fillAllFields": "Please fill in all required fields correctly."
   },
   "student": {
     "dashboard": "Dashboard",

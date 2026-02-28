@@ -18,6 +18,7 @@ import { useLogStore } from '@/store/logStore';
 import { logService } from '@/services/logs';
 import { LogCard } from '@/components/cards';
 import { DailyLog, LogStatus } from '@/types/log';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
 type FilterOption = 'all' | LogStatus;
@@ -41,10 +42,12 @@ function mapDbLog(row: Record<string, unknown>): DailyLog {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     status: (row.status as DailyLog['status']) || 'draft',
     photos: [],
     documents: [],
     revisionHistory: [],
+    advisorNotes: (row.advisor_notes as string) || undefined,
     xpEarned: (row.xp_earned as number) || 0,
     createdAt: (row.created_at as string) || '',
     updatedAt: (row.updated_at as string) || '',
@@ -75,6 +78,17 @@ export default function LogHistoryScreen() {
     loadLogs();
   }, [loadLogs]);
 
+  // Realtime: auto-refresh when log status changes
+  useRealtimeSubscription({
+    table: 'daily_logs',
+    filter: user ? `student_id=eq.${user.id}` : undefined,
+    event: 'UPDATE',
+    enabled: !!user,
+    onPayload: () => {
+      loadLogs();
+    },
+  });
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadLogs();
@@ -85,15 +99,25 @@ export default function LogHistoryScreen() {
     ? logs
     : logs.filter((log) => log.status === filter);
 
+  const formatTimeSpent = (totalMinutes: number) => {
+    if (totalMinutes <= 0) return '';
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  };
+
   const handleLogPress = (log: DailyLog) => {
     const date = new Date(log.date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
+    const timeStr = log.hoursSpent > 0 ? `\nTime Spent: ${formatTimeSpent(log.hoursSpent)}` : '';
     Alert.alert(
       log.title,
-      `Date: ${date}\nStatus: ${log.status.replace('_', ' ')}\n\n${log.content}${
+      `Date: ${date}\nStatus: ${log.status.replace('_', ' ')}${timeStr}\n\n${log.content}${
         log.xpEarned > 0 ? `\n\nXP Earned: +${log.xpEarned}` : ''
       }`,
     );

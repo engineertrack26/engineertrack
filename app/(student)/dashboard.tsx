@@ -15,6 +15,7 @@ import { AppNotification } from '@/types/notification';
 import { LogCard } from '@/components/cards';
 import { LEVELS } from '@/types/gamification';
 import { DailyLog } from '@/types/log';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
 function mapDbLog(row: Record<string, unknown>): DailyLog {
@@ -27,10 +28,12 @@ function mapDbLog(row: Record<string, unknown>): DailyLog {
     activitiesPerformed: (row.activities_performed as string) || '',
     skillsLearned: (row.skills_learned as string) || '',
     challengesFaced: (row.challenges_faced as string) || '',
+    hoursSpent: (row.hours_spent as number) || 0,
     status: (row.status as DailyLog['status']) || 'draft',
     photos: [],
     documents: [],
     revisionHistory: [],
+    advisorNotes: (row.advisor_notes as string) || undefined,
     xpEarned: (row.xp_earned as number) || 0,
     createdAt: (row.created_at as string) || '',
     updatedAt: (row.updated_at as string) || '',
@@ -142,6 +145,17 @@ export default function StudentDashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Realtime: auto-refresh when log status changes
+  useRealtimeSubscription({
+    table: 'daily_logs',
+    filter: user ? `student_id=eq.${user.id}` : undefined,
+    event: 'UPDATE',
+    enabled: !!user,
+    onPayload: () => {
+      loadData();
+    },
+  });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

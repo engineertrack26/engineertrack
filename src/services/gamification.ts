@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { POINT_VALUES, LEVELS } from '@/types/gamification';
 import { notificationService } from './notifications';
+import { pollService } from './polls';
 
 export const gamificationService = {
   async addXp(studentId: string, amount: number, reason: string, logId?: string) {
@@ -134,12 +135,17 @@ export const gamificationService = {
     return data;
   },
 
-  async getLeaderboard(limit = 20) {
-    const { data, error } = await supabase
+  async getLeaderboard(limit = 50, university?: string, department?: string) {
+    let query = supabase
       .from('leaderboard_public')
       .select('id, total_xp, current_level, current_streak, first_name, last_name, avatar_url')
       .order('total_xp', { ascending: false })
       .limit(limit);
+
+    if (university) query = query.eq('university', university);
+    if (department) query = query.eq('department', department);
+
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
@@ -151,5 +157,30 @@ export const gamificationService = {
 
   async processLogApproval(studentId: string, logId: string) {
     return this.addXp(studentId, POINT_VALUES.logApproved, 'log_approved', logId);
+  },
+
+  async processPollCompletion(
+    studentId: string,
+    pollId: string,
+    isQuiz: boolean,
+    isPerfectScore: boolean,
+  ) {
+    // Award base XP for completing a poll
+    await this.addXp(studentId, POINT_VALUES.pollCompleted, 'poll_completed');
+
+    // Bonus XP for perfect quiz score
+    if (isQuiz && isPerfectScore) {
+      await this.addXp(studentId, POINT_VALUES.quizPerfectScore, 'quiz_perfect_score');
+    }
+
+    // Check if eligible for quiz_master badge (5+ poll completions)
+    try {
+      const count = await pollService.getResponseCount(studentId);
+      if (count >= 5) {
+        await this.awardBadge(studentId, 'quiz_master');
+      }
+    } catch (e) {
+      console.warn('Quiz master badge check failed:', e);
+    }
   },
 };

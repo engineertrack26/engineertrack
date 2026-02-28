@@ -42,7 +42,8 @@
     "invalidCredentials": "Invalid email or password.",
     "emailRequired": "Email is required.",
     "passwordRequired": "Password is required.",
-    "passwordMismatch": "Passwords do not match."
+    "passwordMismatch": "Passwords do not match.",
+    "fillAllFields": "L\u00fctfen t\u00fcm zorunlu alanlar\u0131 do\u011fru \u015fekilde doldurun."
   },
   "student": {
     "dashboard": "Dashboard",

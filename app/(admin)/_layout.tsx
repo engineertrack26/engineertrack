@@ -13,9 +13,16 @@ export default function AdminLayout() {
   const institution = useAdminStore((s) => s.institution);
   const fetchInstitution = useAdminStore((s) => s.fetchInstitution);
 
+  const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
+  const unsubscribe = useNotificationStore((s) => s.unsubscribe);
+
   useEffect(() => {
-    if (user) fetchUnreadCount(user.id);
-  }, [user, fetchUnreadCount]);
+    if (user) {
+      fetchUnreadCount(user.id);
+      subscribeToNotifications(user.id);
+    }
+    return () => unsubscribe();
+  }, [user, fetchUnreadCount, subscribeToNotifications, unsubscribe]);
 
   useEffect(() => {
     if (user) fetchInstitution(user.id);

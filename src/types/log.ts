@@ -16,12 +16,14 @@ export interface DailyLog {
   activitiesPerformed: string;
   skillsLearned: string;
   challengesFaced: string;
+  hoursSpent: number;
   status: LogStatus;
   photos: LogPhoto[];
   documents: LogDocument[];
   selfAssessment?: SelfAssessment;
   mentorFeedback?: MentorFeedback;
   revisionHistory: RevisionItem[];
+  advisorNotes?: string;
   xpEarned: number;
   createdAt: string;
   updatedAt: string;
@@ -63,6 +65,7 @@ export interface MentorFeedback {
   isApproved: boolean;
   revisionRequired: boolean;
   revisionNotes?: string;
+  areasOfExcellence?: string;
   createdAt: string;
 }
 

@@ -1,9 +1,11 @@
 export type NotificationType =
   | 'log_approved'
   | 'log_revision_requested'
+  | 'log_sent_back'
   | 'new_feedback'
   | 'badge_earned'
   | 'level_up'
+  | 'poll_available'
   | 'general';
 
 export interface AppNotification {

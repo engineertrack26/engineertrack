@@ -10,9 +10,16 @@ export default function StudentLayout() {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
+  const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
+  const unsubscribe = useNotificationStore((s) => s.unsubscribe);
+
   useEffect(() => {
-    if (user) fetchUnreadCount(user.id);
-  }, [user, fetchUnreadCount]);
+    if (user) {
+      fetchUnreadCount(user.id);
+      subscribeToNotifications(user.id);
+    }
+    return () => unsubscribe();
+  }, [user, fetchUnreadCount, subscribeToNotifications, unsubscribe]);
 
   return (
     <Tabs
@@ -64,6 +71,15 @@ export default function StudentLayout() {
           title: 'Ranking',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="podium-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="polls"
+        options={{
+          title: 'Polls',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
         }}
       />
