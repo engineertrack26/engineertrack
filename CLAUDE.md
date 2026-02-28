@@ -17,14 +17,15 @@ npx expo install <pkg>  # Install SDK-compatible package
 - **Styling**: NativeWind (Tailwind CSS) + theme tokens
 - **State**: Zustand with domain-separated stores (auth, log, gamification, ui)
 - **Backend**: Supabase (auth, database, storage)
-- **i18n**: i18next + react-i18next (6 languages: en, tr, el, es, it, de)
+- **i18n**: i18next + react-i18next (7 languages: en, tr, el, it, ro, de, sr)
 - **Auth tokens**: expo-secure-store
 
 ## Route Groups
 - `app/(auth)/` - Login, Register, Forgot Password, Language Select
-- `app/(student)/` - Dashboard, Create Log, Log History, Achievements, Leaderboard
-- `app/(mentor)/` - Dashboard, Student List, Review Log, Feedback
-- `app/(advisor)/` - Dashboard, Student Monitor, Validation, Reports
+- `app/(student)/` - Dashboard, Create Log, Log History, Achievements, Leaderboard, Polls, Notifications, Profile
+- `app/(mentor)/` - Dashboard, Student List, Review Log, Feedback, Polls, Notifications, Profile
+- `app/(advisor)/` - Dashboard, Student Monitor, Validation, Reports, Polls, Notifications, Profile
+- `app/(admin)/` - Dashboard, Users, Reports, Notifications, Profile
 
 ## Path Aliases
 - `@/*` → `src/*`
@@ -40,9 +41,10 @@ npx expo install <pkg>  # Install SDK-compatible package
 - **i18n keys**: Dot notation (e.g., `common.save`, `student.dashboard`)
 
 ## User Roles
-1. **Student** - Creates daily logs, earns XP/badges, tracks progress
-2. **Mentor** (Company supervisor) - Reviews logs, gives feedback, rates competencies
-3. **Advisor** (University professor) - Validates logs, monitors compliance, generates reports
+1. **Student** - Creates daily logs, earns XP/badges, tracks progress, participates in polls
+2. **Mentor** (Company supervisor) - Reviews logs, gives feedback, rates competencies, creates polls
+3. **Advisor** (University professor) - Validates logs, monitors compliance, generates reports, creates polls
+4. **Admin** - Manages institutions, creates institution codes, monitors all users
 
 ## Important Files to Read First
 1. `PROGRESS.md` - Current development status

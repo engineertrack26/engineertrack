@@ -9,7 +9,7 @@
 | Phase 3 | Student Features | Complete |
 | Phase 4 | Mentor & Advisor Features + Realtime | Complete |
 | Phase 4.5 | Admin Role & Code-Based Linking | Complete |
-| Phase 5 | Gamification, i18n & Realtime | Not Started |
+| Phase 5 | Gamification, i18n & Realtime | Complete |
 | Phase 6 | Polish & Deployment | Not Started |
 
 ---
@@ -131,12 +131,85 @@
 
 ---
 
-## Phase 4-5: Realtime Features (Planned)
+## Phase 5: Gamification, i18n & Realtime - Detailed Checklist
 
-- [ ] Supabase Realtime subscriptions setup
-- [ ] Mentor: Anlık bildirim - öğrenci yeni log gönderdiğinde
-- [ ] Advisor: Dashboard canlı istatistikler (active students, pending validations)
-- [ ] Student: Log durumu değiştiğinde anlık güncelleme (approved/needs_revision)
+### Gamification
+- [x] XP system (log submit, log approved, streak, poll completion)
+- [x] Level progression (gamificationStore, level-up notification)
+- [x] Badges (earned_badges table, BadgeCard component)
+- [x] XP history (xp_transactions table)
+- [x] Leaderboard scoped to same university + department
+  - [x] `leaderboard_public` extended with university, faculty, department columns
+  - [x] Sync trigger updated to include new columns
+  - [x] `getLeaderboard(limit, university, department)` filter params
+  - [x] Leaderboard screen loads student profile, passes filter
+
+### Push Notifications
+- [x] `expo-notifications` + `expo-device` installed and configured
+- [x] `src/services/pushNotifications.ts` (register, saveToken, removeToken, sendPush, sendToMultiple)
+- [x] `docs/push-notifications-migration.sql` — `expo_push_token` column on profiles
+- [x] Root layout: token registration on login, foreground handler, tap-to-navigate
+- [x] Token cleared on logout (auth state change listener)
+- [x] Expo Go guard — no crash when running in Expo Go (SDK 53+ limitation)
+- [x] Notification service triggers push after every DB notification insert
+
+### Polls / Quiz
+- [x] `src/types/poll.ts` — Poll, PollOption, PollResponse types
+- [x] `src/services/polls.ts` — CRUD + response submit
+- [x] `docs/phase5-polls-realtime-migration.sql` — polls + poll_responses tables
+- [x] Student polls screen (`app/(student)/polls.tsx`)
+- [x] Mentor polls screen (`app/(mentor)/polls.tsx`)
+- [x] Advisor polls screen (`app/(advisor)/polls.tsx`)
+
+### Realtime
+- [x] `src/hooks/useRealtimeSubscription.ts` — generic Supabase Realtime hook
+- [x] Realtime wired into notification stores and dashboard screens
+
+### Notifications (DB + Push)
+- [x] `notificationStore.ts` updated with unread count, mark-read actions
+- [x] Notification screens updated across all 4 roles
+- [x] `docs/partial-features-migration.sql` — partial feature DB patches
+
+### i18n
+- [x] `auth.fillAllFields` key added to all 7 locales (en, tr, de, el, it, ro, sr)
+- [x] Register screen shows Alert on validation failure (no more silent no-op)
+
+### TypeScript
+- [x] `npx tsc --noEmit` passes with zero errors
+
+---
+
+## Phase 6: Polish & Deployment - Detailed Checklist
+
+### Incomplete Features (to finish before deployment)
+- [ ] Photo upload — wire "Attach Photo" in log creation to Supabase Storage
+- [ ] Document upload — wire "Attach Document" in log creation to Supabase Storage
+- [ ] Profile avatar upload — wire avatar change to Supabase Storage across all role profiles
+- [ ] Password change — add change password option to profile screens
+- [ ] Reports export — implement real PDF/CSV export for advisor reports
+- [ ] Admin institution code flow — verify full institution code + student code linking works end-to-end
+
+### i18n (all 7 languages)
+- [ ] Translate all locale files: tr, de, el, it, ro, sr (currently English placeholders)
+- [ ] Verify all i18n keys used in screens are present in every locale
+
+### Polish
+- [ ] App icon finalize (all sizes)
+- [ ] Splash screen finalize
+- [ ] Remove all console.log / debug statements
+- [ ] Error boundary for unexpected crashes
+- [ ] Empty state illustrations (replace placeholder text with visuals)
+
+### EAS Build & Deployment
+- [ ] Install `expo-dev-client` and create development build for push notification testing
+- [ ] Configure EAS project ID in `app.json` (required for production push tokens)
+- [ ] `eas build --profile preview --platform android` — internal testing APK
+- [ ] `eas build --profile preview --platform ios` — TestFlight build
+- [ ] Google Play Store: screenshots, description, privacy policy
+- [ ] Apple App Store: screenshots, description, privacy policy, review submission
+
+### TypeScript
+- [ ] `npx tsc --noEmit` passes with zero errors before each build
 
 ---
 
@@ -150,3 +223,4 @@
 | 2026-02-07 | Session 4 | Phase 3 Student Features - 5 UI components + 5 screens (Dashboard, Create Log, Log History, Achievements, Leaderboard) |
 | 2026-02-07 | Session 5 | Phase 4 Mentor Features - mentor service + 5 screens (Dashboard, Student List, Review Log, Feedback, Profile) + layout update |
 | 2026-02-08 | Session 6 | Phase 4 Advisor Features - advisor service + 6 screens (Dashboard, Student Monitor, Validation, Reports, Profile, Notifications) + layout update |
+| 2026-02-11 | Session 7 | Phase 5 - Polls/Quiz, Push Notifications, Realtime hook, Leaderboard scoping, i18n fixes, register UX fix |
