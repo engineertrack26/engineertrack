@@ -28,10 +28,11 @@
       "edgeToEdgeEnabled": true,
       "package": "com.engineertrack.app",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "NOTIFICATIONS"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -46,6 +47,13 @@
       "expo-secure-store",
       "expo-font",
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "572a3922-f6f2-4d4c-90af-21df8d0645f3"
+      }
+    },
+    "owner": "engineer-track"
   }
 }
