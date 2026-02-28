@@ -245,4 +245,12 @@ export const adminService = {
     if (error) throw error;
     return mapDepartment(data as Record<string, unknown>);
   },
+
+  async removeFromInstitution(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ institution_id: null, department_id: null })
+      .eq('id', userId);
+    if (error) throw error;
+  },
 };
