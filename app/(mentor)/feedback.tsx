@@ -164,8 +164,8 @@ export default function FeedbackScreen() {
         {/* Comments */}
         <Text style={styles.comments} numberOfLines={2}>{item.comments}</Text>
 
-        {/* Revision Notes */}
-        {item.revisionNotes ? (
+        {/* Revision Notes — only show if not yet approved */}
+        {!item.isApproved && item.revisionNotes ? (
           <View style={styles.revisionBox}>
             <Text style={styles.revisionLabel}>Revision Notes:</Text>
             <Text style={styles.revisionText} numberOfLines={2}>{item.revisionNotes}</Text>
