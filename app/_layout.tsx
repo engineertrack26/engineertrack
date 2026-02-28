@@ -9,6 +9,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import '@/i18n';
 import { useAuthStore } from '@/store/authStore';
+import { useLogStore } from '@/store/logStore';
+import { useGamificationStore } from '@/store/gamificationStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { authService } from '@/services/auth';
 import {
   registerForPushNotifications,
@@ -35,6 +38,9 @@ LogBox.ignoreLogs([
 
 export default function RootLayout() {
   const { setUser, setSession, setLoading, reset, isAuthenticated } = useAuthStore();
+  const resetLogStore = useLogStore((s) => s.reset);
+  const resetGamificationStore = useGamificationStore((s) => s.reset);
+  const resetNotificationStore = useNotificationStore((s) => s.reset);
   const segments = useSegments();
   const router = useRouter();
   const [appReady, setAppReady] = useState(false);
@@ -79,7 +85,11 @@ export default function RootLayout() {
           if (currentUser?.id) {
             removeToken(currentUser.id).catch(() => {});
           }
+          // Reset all stores so no previous user's data leaks to next user
           reset();
+          resetLogStore();
+          resetGamificationStore();
+          resetNotificationStore();
           setLoading(false);
           return;
         }
