@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -169,6 +170,9 @@ export default function ReviewLogScreen() {
   const [selectedLog, setSelectedLog] = useState<PendingLogItem | null>(null);
   const [logDetail, setLogDetail] = useState<LogDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Lightbox
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   // Review form state
   const [competencyRatings, setCompetencyRatings] = useState<Record<string, number>>({});
@@ -472,16 +476,53 @@ export default function ReviewLogScreen() {
                   <Text style={styles.cardTitle}>Photos ({logDetail.photos.length})</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
                     {logDetail.photos.map((photo) => (
-                      <View key={photo.id} style={styles.photoWrapper}>
+                      <TouchableOpacity
+                        key={photo.id}
+                        style={styles.photoWrapper}
+                        onPress={() => setLightboxUri(photo.uri)}
+                        activeOpacity={0.85}
+                      >
                         <Image source={{ uri: photo.uri }} style={styles.photo} />
+                        <View style={styles.photoZoomHint}>
+                          <Ionicons name="expand-outline" size={14} color="#fff" />
+                        </View>
                         {photo.caption ? (
                           <Text style={styles.photoCaption} numberOfLines={1}>{photo.caption}</Text>
                         ) : null}
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </ScrollView>
                 </View>
               )}
+
+              {/* Lightbox Modal */}
+              <Modal
+                visible={lightboxUri !== null}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setLightboxUri(null)}
+              >
+                <TouchableOpacity
+                  style={styles.lightboxOverlay}
+                  activeOpacity={1}
+                  onPress={() => setLightboxUri(null)}
+                >
+                  <TouchableOpacity activeOpacity={1}>
+                    <Image
+                      source={{ uri: lightboxUri ?? undefined }}
+                      style={styles.lightboxImage}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.lightboxClose}
+                    onPress={() => setLightboxUri(null)}
+                    hitSlop={12}
+                  >
+                    <Ionicons name="close-circle" size={36} color="#fff" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </Modal>
 
               {/* Competency Comparison — Side-by-Side */}
               <View style={[styles.card, styles.reviewFormCard]}>
@@ -1008,6 +1049,7 @@ const styles = StyleSheet.create({
   },
   photoWrapper: {
     marginRight: spacing.sm,
+    position: 'relative',
   },
   photo: {
     width: 120,
@@ -1015,11 +1057,37 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     backgroundColor: colors.border,
   },
+  photoZoomHint: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 10,
+    padding: 3,
+  },
   photoCaption: {
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 4,
     width: 120,
+  },
+
+  // Lightbox
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxImage: {
+    width: 360,
+    height: 480,
+    borderRadius: borderRadius.sm,
+  },
+  lightboxClose: {
+    position: 'absolute',
+    top: 52,
+    right: 20,
   },
 
   // Comparison table
