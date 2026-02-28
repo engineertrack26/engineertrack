@@ -80,9 +80,13 @@ export default function CreateLogScreen() {
 
   // New state for photos
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  // Already-uploaded photos restored from DB (needs_revision scenario)
+  const [savedPhotos, setSavedPhotos] = useState<Array<{id: string; uri: string}>>([]);
 
   // Documents
   const [documents, setDocuments] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
+  // Already-uploaded documents restored from DB (needs_revision scenario)
+  const [savedDocuments, setSavedDocuments] = useState<Array<{id: string; name: string; fileType: string}>>([]);
 
   // Time spent state
   const [hoursSpent, setHoursSpent] = useState(0);
@@ -104,22 +108,23 @@ export default function CreateLogScreen() {
   const canEdit = !existingLog || existingLog.status === 'draft' || existingLog.status === 'needs_revision';
 
   // Dynamic point calculation
+  const totalPhotoCount = photos.length + savedPhotos.length;
   const pointsPreview = useMemo(() => {
     const base = POINT_VALUES.dailyLogSubmit;
-    const photoPoints = photos.length * POINT_VALUES.photoAttached;
+    const photoPoints = totalPhotoCount * POINT_VALUES.photoAttached;
     const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
     const assessmentPoints = allRated ? POINT_VALUES.selfAssessment : 0;
     return { base, photoPoints, assessmentPoints, total: base + photoPoints + assessmentPoints };
-  }, [photos.length, competencyRatings]);
+  }, [totalPhotoCount, competencyRatings]);
 
   // Checklist state
   const checklist = useMemo(() => {
     const contentFilled = content.trim().length >= LIMITS.minLogContentLength;
-    const hasPhotos = photos.length > 0;
+    const hasPhotos = totalPhotoCount > 0;
     const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
     const hasReflection = reflectionNotes.trim().length > 0;
     return { contentFilled, hasPhotos, allRated, hasReflection };
-  }, [content, photos.length, competencyRatings, reflectionNotes]);
+  }, [content, totalPhotoCount, competencyRatings, reflectionNotes]);
 
   const allChecklistDone = checklist.contentFilled && checklist.hasPhotos && checklist.allRated && checklist.hasReflection;
 
@@ -172,6 +177,18 @@ export default function CreateLogScreen() {
           } else {
             setMentorFeedback(null);
           }
+
+          // Restore saved photos from DB
+          const dbPhotos = Array.isArray(row.log_photos) ? (row.log_photos as Array<Record<string, unknown>>) : [];
+          setSavedPhotos(dbPhotos.map((p) => ({ id: p.id as string, uri: p.uri as string })));
+
+          // Restore saved documents from DB
+          const dbDocs = Array.isArray(row.log_documents) ? (row.log_documents as Array<Record<string, unknown>>) : [];
+          setSavedDocuments(dbDocs.map((d) => ({
+            id: d.id as string,
+            name: (d.file_name as string) || 'Document',
+            fileType: (d.file_type as string) || '',
+          })));
         } catch {
           // Non-critical — silently ignore
         }
@@ -185,7 +202,9 @@ export default function CreateLogScreen() {
         setSkills('');
         setChallenges('');
         setPhotos([]);
+        setSavedPhotos([]);
         setDocuments([]);
+        setSavedDocuments([]);
         setHoursSpent(0);
         setMinutesSpent(0);
         setCompetencyRatings({});
@@ -222,12 +241,12 @@ export default function CreateLogScreen() {
 
   // Photo picker
   const pickPhotos = async (source: 'camera' | 'gallery') => {
-    if (photos.length >= LIMITS.maxPhotosPerLog) {
+    if (totalPhotoCount >= LIMITS.maxPhotosPerLog) {
       Alert.alert('Limit Reached', `Maximum ${LIMITS.maxPhotosPerLog} photos per log.`);
       return;
     }
 
-    const remaining = LIMITS.maxPhotosPerLog - photos.length;
+    const remaining = LIMITS.maxPhotosPerLog - totalPhotoCount;
 
     if (source === 'camera') {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -547,9 +566,9 @@ export default function CreateLogScreen() {
                   <Text style={styles.pointsLabel}>Log Submit</Text>
                   <Text style={styles.pointsValue}>+{pointsPreview.base}</Text>
                 </View>
-                {photos.length > 0 && (
+                {totalPhotoCount > 0 && (
                   <View style={styles.pointsRow}>
-                    <Text style={styles.pointsLabel}>Photos ({photos.length}x)</Text>
+                    <Text style={styles.pointsLabel}>Photos ({totalPhotoCount}x)</Text>
                     <Text style={styles.pointsValue}>+{pointsPreview.photoPoints}</Text>
                   </View>
                 )}
@@ -736,7 +755,7 @@ export default function CreateLogScreen() {
               <View style={styles.sectionHeader}>
                 <Ionicons name="camera" size={18} color={colors.text} />
                 <Text style={styles.sectionTitle}>Photos</Text>
-                <Text style={styles.sectionCount}>{photos.length}/{LIMITS.maxPhotosPerLog}</Text>
+                <Text style={styles.sectionCount}>{totalPhotoCount}/{LIMITS.maxPhotosPerLog}</Text>
               </View>
 
               <ScrollView
@@ -745,6 +764,14 @@ export default function CreateLogScreen() {
                 style={styles.photoScroll}
                 contentContainerStyle={styles.photoScrollContent}
               >
+                {savedPhotos.map((photo) => (
+                  <View key={photo.id} style={styles.photoThumb}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                    <View style={styles.savedBadge}>
+                      <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    </View>
+                  </View>
+                ))}
                 {photos.map((photo, index) => (
                   <View key={index} style={styles.photoThumb}>
                     <Image source={{ uri: photo.uri }} style={styles.photoImage} />
@@ -757,7 +784,7 @@ export default function CreateLogScreen() {
                     </TouchableOpacity>
                   </View>
                 ))}
-                {photos.length < LIMITS.maxPhotosPerLog && (
+                {totalPhotoCount < LIMITS.maxPhotosPerLog && (
                   <TouchableOpacity
                     style={styles.photoAdd}
                     onPress={showPhotoOptions}
@@ -777,8 +804,16 @@ export default function CreateLogScreen() {
               <View style={styles.sectionHeader}>
                 <Ionicons name="document-attach" size={18} color={colors.text} />
                 <Text style={styles.sectionTitle}>Documents</Text>
-                <Text style={styles.sectionCount}>{documents.length}/{LIMITS.maxDocumentsPerLog}</Text>
+                <Text style={styles.sectionCount}>{documents.length + savedDocuments.length}/{LIMITS.maxDocumentsPerLog}</Text>
               </View>
+
+              {savedDocuments.map((doc) => (
+                <View key={doc.id} style={styles.docRow}>
+                  <Ionicons name="document-outline" size={20} color={colors.success} />
+                  <Text style={styles.docName} numberOfLines={1}>{doc.name}</Text>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                </View>
+              ))}
 
               {documents.map((doc, index) => (
                 <View key={index} style={styles.docRow}>
@@ -790,7 +825,7 @@ export default function CreateLogScreen() {
                 </View>
               ))}
 
-              {documents.length < LIMITS.maxDocumentsPerLog && (
+              {documents.length + savedDocuments.length < LIMITS.maxDocumentsPerLog && (
                 <TouchableOpacity style={styles.docAddBtn} onPress={pickDocument} activeOpacity={0.7}>
                   <Ionicons name="add" size={18} color={colors.primary} />
                   <Text style={styles.docAddText}>Attach Document</Text>
@@ -1131,6 +1166,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   photoRemove: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.full,
+  },
+  savedBadge: {
     position: 'absolute',
     top: 2,
     right: 2,
