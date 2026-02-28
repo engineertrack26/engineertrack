@@ -573,6 +573,12 @@ CREATE POLICY "self_assessments_insert" ON self_assessments
       AND daily_logs.student_id = auth.uid())
   );
 
+CREATE POLICY "self_assessments_update" ON self_assessments
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM daily_logs WHERE daily_logs.id = log_id
+      AND daily_logs.student_id = auth.uid())
+  );
+
 -- ---- MENTOR FEEDBACKS ----
 CREATE POLICY "mentor_feedbacks_select" ON mentor_feedbacks
   FOR SELECT USING (

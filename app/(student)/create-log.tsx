@@ -137,6 +137,22 @@ export default function CreateLogScreen() {
         setChallenges(log.challengesFaced);
         setHoursSpent(Math.floor(log.hoursSpent / 60));
         setMinutesSpent(log.hoursSpent % 60);
+
+        // Restore self-assessment if previously saved
+        try {
+          const detail = await logService.getLogWithDetails(log.id);
+          const row = detail as Record<string, unknown>;
+          const assessments = Array.isArray(row.self_assessments) ? row.self_assessments : [];
+          const sa = assessments[0] as Record<string, unknown> | undefined;
+          if (sa?.competency_ratings) {
+            setCompetencyRatings((sa.competency_ratings as Record<string, number>) || {});
+          }
+          if (sa?.reflection_notes) {
+            setReflectionNotes((sa.reflection_notes as string) || '');
+          }
+        } catch {
+          // Non-critical — silently ignore
+        }
       } else {
         // No log for today — reset form
         setExistingLog(null);
