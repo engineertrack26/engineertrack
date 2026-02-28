@@ -101,15 +101,39 @@ CREATE POLICY "Creators can manage their polls"
   USING (creator_id = auth.uid())
   WITH CHECK (creator_id = auth.uid());
 
+-- Security fix: restrict poll visibility by target_role and institution
+-- A user can see an active poll only if:
+--   1. Their role matches the poll's target_role (or target_role = 'all')
+--   2. The poll belongs to their institution (or has no institution restriction)
 CREATE POLICY "Users can view active polls"
   ON polls FOR SELECT
-  USING (is_active = TRUE);
+  USING (
+    is_active = TRUE
+    AND (
+      target_role = 'all'
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+          AND profiles.role = polls.target_role
+      )
+    )
+    AND (
+      polls.institution_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM profiles p
+        WHERE p.id = auth.uid()
+          AND p.institution_id = polls.institution_id
+      )
+    )
+  );
 
--- Questions: viewable if poll is viewable, manageable by poll creator
+-- Questions: viewable only if the parent poll is visible to the user (inherits poll RLS via subquery)
 CREATE POLICY "Users can view poll questions"
   ON poll_questions FOR SELECT
   USING (EXISTS (
-    SELECT 1 FROM polls WHERE polls.id = poll_questions.poll_id
+    SELECT 1 FROM polls
+    WHERE polls.id = poll_questions.poll_id
+      AND polls.is_active = TRUE
   ));
 
 CREATE POLICY "Poll creators can manage questions"
@@ -121,13 +145,14 @@ CREATE POLICY "Poll creators can manage questions"
     SELECT 1 FROM polls WHERE polls.id = poll_questions.poll_id AND polls.creator_id = auth.uid()
   ));
 
--- Options: viewable if question is viewable, manageable by poll creator
+-- Options: viewable only if the parent poll is active and visible to the user
 CREATE POLICY "Users can view poll options"
   ON poll_options FOR SELECT
   USING (EXISTS (
     SELECT 1 FROM poll_questions pq
     JOIN polls p ON p.id = pq.poll_id
     WHERE pq.id = poll_options.question_id
+      AND p.is_active = TRUE
   ));
 
 CREATE POLICY "Poll creators can manage options"
@@ -156,6 +181,54 @@ CREATE POLICY "Poll creators can view responses"
   ON poll_responses FOR SELECT
   USING (EXISTS (
     SELECT 1 FROM polls WHERE polls.id = poll_responses.poll_id AND polls.creator_id = auth.uid()
+  ));
+
+-- ============================================================
+-- SECURITY PATCH: Re-apply fixed RLS policies
+-- Run this block in Supabase SQL Editor if the
+-- tables were already created (to update in-place)
+-- ============================================================
+
+DROP POLICY IF EXISTS "Users can view active polls" ON polls;
+CREATE POLICY "Users can view active polls"
+  ON polls FOR SELECT
+  USING (
+    is_active = TRUE
+    AND (
+      target_role = 'all'
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+          AND profiles.role = polls.target_role
+      )
+    )
+    AND (
+      polls.institution_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM profiles p
+        WHERE p.id = auth.uid()
+          AND p.institution_id = polls.institution_id
+      )
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can view poll questions" ON poll_questions;
+CREATE POLICY "Users can view poll questions"
+  ON poll_questions FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM polls
+    WHERE polls.id = poll_questions.poll_id
+      AND polls.is_active = TRUE
+  ));
+
+DROP POLICY IF EXISTS "Users can view poll options" ON poll_options;
+CREATE POLICY "Users can view poll options"
+  ON poll_options FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM poll_questions pq
+    JOIN polls p ON p.id = pq.poll_id
+    WHERE pq.id = poll_options.question_id
+      AND p.is_active = TRUE
   ));
 
 -- ============================================================

@@ -605,8 +605,13 @@ CREATE POLICY "revision_history_insert" ON revision_history
   );
 
 -- ---- EARNED BADGES ----
+-- Security fix: restrict badge visibility — only the student, their mentor, or their advisor
 CREATE POLICY "earned_badges_select" ON earned_badges
-  FOR SELECT USING (true);
+  FOR SELECT USING (
+    auth.uid() = student_id
+    OR is_mentor_of(student_id)
+    OR is_advisor_of(student_id)
+  );
 
 CREATE POLICY "earned_badges_insert" ON earned_badges
   FOR INSERT WITH CHECK (auth.uid() = student_id);
@@ -723,4 +728,18 @@ CREATE POLICY "avatars_delete_own" ON storage.objects
   FOR DELETE USING (
     bucket_id = 'avatars'
     AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+-- ============================================
+-- SECURITY PATCH: Re-apply fixed RLS policies
+-- Run this block in Supabase SQL Editor if the
+-- schema was already applied (to update in-place)
+-- ============================================
+
+DROP POLICY IF EXISTS "earned_badges_select" ON earned_badges;
+CREATE POLICY "earned_badges_select" ON earned_badges
+  FOR SELECT USING (
+    auth.uid() = student_id
+    OR is_mentor_of(student_id)
+    OR is_advisor_of(student_id)
   );
