@@ -114,7 +114,6 @@ export const logService = {
         *,
         log_photos (*),
         log_documents (*),
-        self_assessments (*),
         mentor_feedbacks (*),
         revision_history (*)
       `)
@@ -122,8 +121,16 @@ export const logService = {
       .single();
     if (error) throw error;
 
+    // Fetch self_assessments separately to avoid PostgREST nested join RLS issues
+    const { data: saData } = await supabase
+      .from('self_assessments')
+      .select('*')
+      .eq('log_id', logId)
+      .maybeSingle();
+
     // Buckets are private; convert stored photo URLs/paths into short-lived signed URLs.
     const row = data as Record<string, unknown>;
+    row.self_assessments = saData ? [saData] : [];
     const photos = Array.isArray(row.log_photos) ? (row.log_photos as Array<Record<string, unknown>>) : [];
     if (photos.length > 0) {
       const signedPhotos = await Promise.all(
