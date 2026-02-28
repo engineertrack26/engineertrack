@@ -188,7 +188,7 @@
 - [x] Password change — add change password option to profile screens (all 4 roles)
 - [x] Reports export — CSV export via Share API for advisor reports
 - [x] Admin users page redesign — stats bar, role-colored cards, join date/dept info, tap-to-expand remove action
-- [ ] Admin institution code flow — verify full institution code + student code linking works end-to-end
+- [x] Admin institution code flow — institution code + student code linking works end-to-end (mentor & advisor)
 
 ### i18n (all 7 languages)
 - [ ] Translate all locale files: tr, de, el, it, ro, sr (currently English placeholders)
@@ -227,3 +227,4 @@
 | 2026-02-11 | Session 7 | Phase 5 - Polls/Quiz, Push Notifications, Realtime hook, Leaderboard scoping, i18n fixes, register UX fix |
 | 2026-02-28 | Session 8 | Phase 6 Polish - Document upload UI, Password change (all 4 roles), Advisor reports CSV export |
 | 2026-02-28 | Session 9 | Security hardening (RLS fixes on earned_badges + polls, service-layer defense-in-depth), Admin users page redesign (stats bar, richer cards, remove-from-institution action, flexWrap department chips) |
+| 2026-02-28 | Session 10 | Mentor UX fixes: Link Student moved to student-list page, i18n key fixes across all role profiles (mentor/advisor/admin), mentor Institution Mismatch bug fixed (SQL patch — skip institution check for mentors), photo lightbox in review-log, self-assessment data persistence on create-log refocus, self-assessment visible to mentor (separate Supabase query bypassing PostgREST nested join RLS issue) |
