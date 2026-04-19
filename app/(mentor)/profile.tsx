@@ -35,6 +35,9 @@ export default function MentorProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -402,33 +405,69 @@ export default function MentorProfileScreen() {
           </TouchableOpacity>
           {showPasswordChange && (
             <View style={styles.changePasswordForm}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Current Password"
-                placeholderTextColor={colors.textDisabled}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="New Password"
-                placeholderTextColor={colors.textDisabled}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Confirm New Password"
-                placeholderTextColor={colors.textDisabled}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
+              <View style={styles.passwordInput}>
+                <TextInput
+                  style={styles.passwordInputField}
+                  placeholder="Current Password"
+                  placeholderTextColor={colors.textDisabled}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry={!showCurrentPwd}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowCurrentPwd((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showCurrentPwd ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textDisabled}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.passwordInput}>
+                <TextInput
+                  style={styles.passwordInputField}
+                  placeholder="New Password"
+                  placeholderTextColor={colors.textDisabled}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry={!showNewPwd}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPwd((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showNewPwd ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textDisabled}
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.passwordInput}>
+                <TextInput
+                  style={styles.passwordInputField}
+                  placeholder="Confirm New Password"
+                  placeholderTextColor={colors.textDisabled}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPwd}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPwd((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name={showConfirmPwd ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textDisabled}
+                  />
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={[styles.passwordSaveBtn, changingPassword && { opacity: 0.6 }]}
                 onPress={handleChangePassword}
@@ -676,14 +715,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   passwordInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
+    backgroundColor: colors.background,
+  },
+  passwordInputField: {
+    flex: 1,
     paddingVertical: spacing.sm,
     fontSize: 15,
     color: colors.text,
-    backgroundColor: colors.background,
   },
   passwordSaveBtn: {
     backgroundColor: colors.primary,
