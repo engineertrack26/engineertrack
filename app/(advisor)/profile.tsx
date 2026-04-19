@@ -43,6 +43,7 @@ export default function AdvisorProfileScreen() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
@@ -199,6 +200,14 @@ export default function AdvisorProfileScreen() {
   };
 
   const handleChangePassword = async () => {
+    if (!user?.email) {
+      Alert.alert('Error', 'User email not found.');
+      return;
+    }
+    if (!currentPassword) {
+      Alert.alert('Error', 'Current password is required.');
+      return;
+    }
     if (newPassword.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters.');
       return;
@@ -209,8 +218,9 @@ export default function AdvisorProfileScreen() {
     }
     setChangingPassword(true);
     try {
-      await authService.changePassword(newPassword);
+      await authService.changePassword(user.email, currentPassword, newPassword);
       Alert.alert('Success', 'Password changed successfully.');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setShowPasswordChange(false);
@@ -494,6 +504,15 @@ export default function AdvisorProfileScreen() {
           </TouchableOpacity>
           {showPasswordChange && (
             <View style={styles.changePasswordForm}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Current Password"
+                placeholderTextColor={colors.textDisabled}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
               <TextInput
                 style={styles.passwordInput}
                 placeholder="New Password"

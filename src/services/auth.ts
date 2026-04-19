@@ -147,7 +147,13 @@ export const authService = {
     return this.updateProfile(userId, { language });
   },
 
-  async changePassword(newPassword: string) {
+  async changePassword(email: string, currentPassword: string, newPassword: string) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+    if (signInError) throw signInError;
+
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw error;
   },
