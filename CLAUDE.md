@@ -29,7 +29,7 @@ npx expo install <pkg>  # Install SDK-compatible package
 
 ## Path Aliases
 - `@/*` → `src/*`
-- `@components/*`, `@screens/*`, `@services/*`, `@store/*`
+- `@components/*`, `@services/*`, `@store/*`
 - `@hooks/*`, `@utils/*`, `@i18n/*`, `@theme/*`, `@types/*`, `@assets/*`
 
 ## Conventions

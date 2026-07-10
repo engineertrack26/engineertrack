@@ -13,7 +13,6 @@ module.exports = function (api) {
           alias: {
             '@': './src',
             '@components': './src/components',
-            '@screens': './src/screens',
             '@services': './src/services',
             '@store': './src/store',
             '@hooks': './src/hooks',
