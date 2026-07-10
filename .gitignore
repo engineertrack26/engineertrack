@@ -3,6 +3,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-export-check/
 dist/
 web-build/
 expo-env.d.ts
@@ -51,3 +52,7 @@ coverage/
 
 # OS
 Thumbs.db
+nul
+
+# Claude Code local state
+.claude/
