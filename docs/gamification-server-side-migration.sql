@@ -119,7 +119,6 @@ DECLARE
   v_photos INTEGER;
   v_prev_date DATE;
   v_streak INTEGER;
-  v_longest INTEGER;
 BEGIN
   -- A) First-time submission: draft -> submitted (or inserted as submitted).
   --    Revision resubmits (needs_revision -> revised) earn nothing, and the
