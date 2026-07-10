@@ -21,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { logService } from '@/services/logs';
-import { gamificationService } from '@/services/gamification';
 import { notificationService } from '@/services/notifications';
 import { COMPETENCIES, LIMITS } from '@/utils/constants';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
@@ -316,16 +315,8 @@ export default function ReviewLogScreen() {
                 isApproved ? areasOfExcellence.trim() || undefined : undefined,
               );
 
-              if (isApproved) {
-                try {
-                  await gamificationService.processLogApproval(
-                    selectedLog.studentId,
-                    selectedLog.id,
-                  );
-                } catch (xpErr) {
-                  console.warn('XP processing failed (RLS?):', xpErr);
-                }
-              }
+              // Approval XP is awarded to the student server-side by a
+              // database trigger on the status change to 'approved'.
 
               // Send notification to student
               const mentorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your mentor';

@@ -22,7 +22,6 @@ import { useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { logService } from '@/services/logs';
-import { gamificationService } from '@/services/gamification';
 import { Button } from '@/components/common';
 import { DailyLog, MentorFeedback } from '@/types/log';
 import { POINT_VALUES } from '@/types/gamification';
@@ -465,33 +464,9 @@ export default function CreateLogScreen() {
       setExistingLog(mappedSubmitted);
       updateLogInStore(logId, mappedSubmitted);
 
-      // 5–7. Gamification XP — skip entirely on revision resubmit
-      if (!isRevisionResubmit) {
-        // 5. Log submit XP
-        try {
-          await gamificationService.processLogSubmission(user.id, logId);
-        } catch (xpErr) {
-          console.warn('XP processing failed:', xpErr);
-        }
-
-        // 6. Photo XP (per newly added photo)
-        for (let i = 0; i < photos.length; i++) {
-          try {
-            await gamificationService.addXp(user.id, POINT_VALUES.photoAttached, 'photo_attached', logId);
-          } catch (xpErr) {
-            console.warn('Photo XP failed:', xpErr);
-          }
-        }
-
-        // 7. Self-assessment XP
-        if (allRated) {
-          try {
-            await gamificationService.addXp(user.id, POINT_VALUES.selfAssessment, 'self_assessment', logId);
-          } catch (xpErr) {
-            console.warn('Self-assessment XP failed:', xpErr);
-          }
-        }
-      }
+      // 5. Gamification XP is awarded server-side by a database trigger on
+      // the status transition (submit + photo + self-assessment bonuses).
+      // Revision resubmits earn nothing — the trigger only pays draft→submitted.
 
       Alert.alert('Submitted', 'Your log has been submitted for review!');
     } catch (err: unknown) {

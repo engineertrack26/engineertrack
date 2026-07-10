@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { pollService } from '@/services/polls';
-import { gamificationService } from '@/services/gamification';
 import { Poll, PollQuestion } from '@/types/poll';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -94,11 +93,8 @@ export default function StudentPollsScreen() {
       const isQuiz = selectedPoll.pollType === 'quiz';
       const isPerfect = score === 100;
 
-      try {
-        await gamificationService.processPollCompletion(user.id, selectedPoll.id, isQuiz, isPerfect);
-      } catch (e) {
-        console.warn('Gamification processing failed:', e);
-      }
+      // Poll XP (+ perfect-quiz bonus and quiz_master badge) is awarded
+      // server-side by a database trigger on the poll_responses insert.
 
       let msg = 'Your response has been submitted! +15 XP';
       if (isQuiz && score !== undefined) {
