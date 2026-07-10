@@ -1,6 +1,6 @@
 import '../global.css';
 import { useEffect, useRef, useState } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot, useRouter, useSegments, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { LogBox } from 'react-native';
@@ -18,6 +18,7 @@ import {
   saveTokenToProfile,
   removeToken,
 } from '@/services/pushNotifications';
+import { ErrorFallback } from '@/components/common/ErrorFallback';
 
 // Show notifications when app is in the foreground
 Notifications.setNotificationHandler({
@@ -31,6 +32,11 @@ Notifications.setNotificationHandler({
 });
 
 SplashScreen.preventAutoHideAsync();
+
+// Global error boundary — catches render errors anywhere in the route tree
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  return <ErrorFallback {...props} />;
+}
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated and will be removed in a future release',

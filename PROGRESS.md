@@ -197,8 +197,8 @@
 ### Polish
 - [ ] App icon finalize (all sizes)
 - [ ] Splash screen finalize
-- [ ] Remove all console.log / debug statements
-- [ ] Error boundary for unexpected crashes
+- [x] Remove all console.log / debug statements (babel strips console.log in production; error/warn kept)
+- [x] Error boundary for unexpected crashes (ErrorFallback + expo-router ErrorBoundary export in root layout)
 - [ ] Empty state illustrations (replace placeholder text with visuals)
 
 ### EAS Build & Deployment

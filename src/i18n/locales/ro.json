@@ -29,7 +29,9 @@
     "tryAgain": "Please try again.",
     "markAllRead": "Mark all read",
     "noNotifications": "No Notifications",
-    "noNotificationsDesc": "You're all caught up! Check back later."
+    "noNotificationsDesc": "You're all caught up! Check back later.",
+    "somethingWentWrong": "Something went wrong",
+    "somethingWentWrongDesc": "An unexpected error occurred. Please try again."
   },
   "auth": {
     "login": "Login",
