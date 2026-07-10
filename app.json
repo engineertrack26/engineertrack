@@ -46,7 +46,8 @@
       "expo-localization",
       "expo-secure-store",
       "expo-font",
-      "expo-router"
+      "expo-router",
+      "@sentry/react-native"
     ],
     "extra": {
       "router": {},

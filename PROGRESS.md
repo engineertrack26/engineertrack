@@ -196,14 +196,15 @@
 - [x] Device language used on first launch; saved profile language applied after login (en force removed)
 
 ### Polish
-- [ ] App icon finalize (all sizes)
-- [ ] Splash screen finalize
+- [x] App icon finalize (all sizes) — branded mark generated via scripts/generate-icons.js
+- [x] Splash screen finalize (glyph on brand blue)
 - [x] Remove all console.log / debug statements (babel strips console.log in production; error/warn kept)
 - [x] Error boundary for unexpected crashes (ErrorFallback + expo-router ErrorBoundary export in root layout)
-- [ ] Empty state illustrations (replace placeholder text with visuals)
+- [x] Empty states — icon + title + description pattern verified across all list screens
+- [x] Sentry crash reporting wired (no-op without EXPO_PUBLIC_SENTRY_DSN; boundary errors captured)
 
 ### EAS Build & Deployment
-- [ ] Install `expo-dev-client` and create development build for push notification testing
+- [x] Install `expo-dev-client` — development build for push notification testing: `eas build --profile development --platform android`
 - [ ] Configure EAS project ID in `app.json` (required for production push tokens)
 - [ ] `eas build --profile preview --platform android` — internal testing APK
 - [ ] `eas build --profile preview --platform ios` — TestFlight build

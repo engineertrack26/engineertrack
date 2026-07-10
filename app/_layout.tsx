@@ -7,6 +7,7 @@ import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 import type { User } from '@/types/user';
 import { useAuthStore } from '@/store/authStore';
@@ -34,8 +35,23 @@ Notifications.setNotificationHandler({
 
 SplashScreen.preventAutoHideAsync();
 
+// Crash reporting — no-op unless a DSN is configured (EXPO_PUBLIC_SENTRY_DSN)
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (sentryDsn) {
+  try {
+    Sentry.init({ dsn: sentryDsn, enabled: !__DEV__ });
+  } catch (e) {
+    console.warn('Sentry init failed:', e);
+  }
+}
+
 // Global error boundary — catches render errors anywhere in the route tree
 export function ErrorBoundary(props: ErrorBoundaryProps) {
+  useEffect(() => {
+    if (sentryDsn) {
+      Sentry.captureException(props.error);
+    }
+  }, [props.error]);
   return <ErrorFallback {...props} />;
 }
 
