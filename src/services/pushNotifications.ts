@@ -25,12 +25,12 @@ async function setupAndroidChannel() {
 export async function registerForPushNotifications(): Promise<string | null> {
   // Push notifications are not supported in Expo Go (SDK 53+)
   if (Constants.appOwnership === 'expo') {
-    console.log('Push notifications are not supported in Expo Go. Use a development build.');
+    console.warn('Push notifications are not supported in Expo Go. Use a development build.');
     return null;
   }
 
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
+    console.warn('Push notifications require a physical device');
     return null;
   }
 
@@ -45,7 +45,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('Push notification permission denied');
+    console.warn('Push notification permission denied');
     return null;
   }
 

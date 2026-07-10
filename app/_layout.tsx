@@ -64,7 +64,7 @@ export default function RootLayout() {
               await saveTokenToProfile(session.user.id, pushToken);
             }
           } catch (err) {
-            console.log('Push notification setup failed:', err);
+            console.warn('Push notification setup failed:', err);
           }
         }
       } catch {
@@ -102,7 +102,7 @@ export default function RootLayout() {
             setSession(session);
             setUser(profile);
           } catch (err) {
-            console.log('Auth state profile sync failed:', err);
+            console.warn('Auth state profile sync failed:', err);
           } finally {
             setLoading(false);
           }
