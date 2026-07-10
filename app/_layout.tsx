@@ -7,7 +7,8 @@ import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import '@/i18n';
+import i18n from '@/i18n';
+import type { User } from '@/types/user';
 import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
@@ -38,6 +39,14 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
   return <ErrorFallback {...props} />;
 }
 
+// Apply the user's saved language preference (falls back to device language
+// from i18n init when the profile has none)
+function applyUserLanguage(profile: User | null) {
+  if (profile?.language && profile.language !== i18n.language) {
+    i18n.changeLanguage(profile.language).catch(() => {});
+  }
+}
+
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated and will be removed in a future release',
 ]);
@@ -62,6 +71,7 @@ export default function RootLayout() {
           const profile = await authService.getProfileWithRetry(session.user.id);
           setSession(session);
           setUser(profile);
+          applyUserLanguage(profile);
 
           // Register for push notifications
           try {
@@ -107,6 +117,7 @@ export default function RootLayout() {
             const profile = await authService.getProfileWithRetry(uid);
             setSession(session);
             setUser(profile);
+            applyUserLanguage(profile);
           } catch (err) {
             console.warn('Auth state profile sync failed:', err);
           } finally {

@@ -191,8 +191,9 @@
 - [x] Admin institution code flow — institution code + student code linking works end-to-end (mentor & advisor)
 
 ### i18n (all 7 languages)
-- [ ] Translate all locale files: tr, de, el, it, ro, sr (currently English placeholders)
-- [ ] Verify all i18n keys used in screens are present in every locale
+- [x] Translate all locale files: tr, de, el, it, ro, sr
+- [x] Verify all i18n keys used in screens are present in every locale (key parity script-checked)
+- [x] Device language used on first launch; saved profile language applied after login (en force removed)
 
 ### Polish
 - [ ] App icon finalize (all sizes)
