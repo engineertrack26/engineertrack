@@ -76,7 +76,7 @@ export default function RegisterScreen() {
     if (!validate()) {
       Alert.alert(
         t('common.error'),
-        t('auth.fillAllFields') || 'Please fill in all required fields correctly.',
+        t('auth.fillAllFields', 'Please fill in all required fields correctly.'),
       );
       return;
     }

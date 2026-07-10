@@ -109,9 +109,9 @@ export default function AdminNotificationsScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="notifications-off-outline" size={64} color={colors.textDisabled} />
-        <Text style={styles.emptyTitle}>{t('common.noNotifications') || 'No Notifications'}</Text>
+        <Text style={styles.emptyTitle}>{t('common.noNotifications', 'No Notifications')}</Text>
         <Text style={styles.emptyDesc}>
-          {t('common.noNotificationsDesc') || "You're all caught up! Check back later."}
+          {t('common.noNotificationsDesc', "You're all caught up! Check back later.")}
         </Text>
       </View>
     );
@@ -121,10 +121,10 @@ export default function AdminNotificationsScreen() {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>{t('common.notifications') || 'Notifications'}</Text>
+        <Text style={styles.screenTitle}>{t('common.notifications', 'Notifications')}</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={handleMarkAllRead} hitSlop={8}>
-            <Text style={styles.markAllRead}>{t('common.markAllRead') || 'Mark all read'}</Text>
+            <Text style={styles.markAllRead}>{t('common.markAllRead', 'Mark all read')}</Text>
           </TouchableOpacity>
         )}
       </View>

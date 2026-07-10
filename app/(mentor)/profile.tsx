@@ -70,8 +70,8 @@ export default function MentorProfileScreen() {
         }
       },
     }));
-    buttons.push({ text: t('common.cancel') || 'Cancel', onPress: async () => {} });
-    Alert.alert(t('common.language') || 'Language', undefined, buttons);
+    buttons.push({ text: t('common.cancel', 'Cancel'), onPress: async () => {} });
+    Alert.alert(t('common.language', 'Language'), undefined, buttons);
   };
 
   const initials = `${(user?.firstName || '')[0] || ''}${(user?.lastName || '')[0] || ''}`.toUpperCase();
@@ -80,18 +80,18 @@ export default function MentorProfileScreen() {
     if (!user) return;
 
     Alert.alert(
-      t('common.selectPhoto') || 'Select Photo',
+      t('common.selectPhoto', 'Select Photo'),
       undefined,
       [
         {
-          text: t('common.camera') || 'Camera',
+          text: t('common.camera', 'Camera'),
           onPress: () => launchPicker('camera'),
         },
         {
-          text: t('common.gallery') || 'Gallery',
+          text: t('common.gallery', 'Gallery'),
           onPress: () => launchPicker('gallery'),
         },
-        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
       ],
     );
   }, [user, t]);
@@ -157,7 +157,7 @@ export default function MentorProfileScreen() {
       setUser({ ...user, avatarUrl: urlData.publicUrl });
     } catch (err) {
       console.error('Avatar upload error:', err);
-      Alert.alert(t('common.error') || 'Error', t('common.tryAgain') || 'Please try again.');
+      Alert.alert(t('common.error', 'Error'), t('common.tryAgain', 'Please try again.'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -168,7 +168,7 @@ export default function MentorProfileScreen() {
     const trimmedFirst = firstName.trim();
     const trimmedLast = lastName.trim();
     if (!trimmedFirst) {
-      Alert.alert(t('common.error') || 'Error', 'First name is required.');
+      Alert.alert(t('common.error', 'Error'), 'First name is required.');
       return;
     }
 
@@ -182,7 +182,7 @@ export default function MentorProfileScreen() {
       setIsEditing(false);
     } catch (err) {
       console.error('Update name error:', err);
-      Alert.alert(t('common.error') || 'Error', t('common.tryAgain') || 'Please try again.');
+      Alert.alert(t('common.error', 'Error'), t('common.tryAgain', 'Please try again.'));
     } finally {
       setSaving(false);
     }
@@ -229,12 +229,12 @@ export default function MentorProfileScreen() {
 
   const handleSignOut = () => {
     Alert.alert(
-      t('auth.signOut') || 'Sign Out',
-      t('auth.signOutConfirm') || 'Are you sure you want to sign out?',
+      t('auth.signOut', 'Sign Out'),
+      t('auth.signOutConfirm', 'Are you sure you want to sign out?'),
       [
-        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: t('auth.signOut') || 'Sign Out',
+          text: t('auth.signOut', 'Sign Out'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -258,7 +258,7 @@ export default function MentorProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.screenTitle}>{t('common.profile') || 'Profile'}</Text>
+        <Text style={styles.screenTitle}>{t('common.profile', 'Profile')}</Text>
 
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
@@ -280,7 +280,7 @@ export default function MentorProfileScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.avatarHint}>{t('common.tapToChange') || 'Tap to change photo'}</Text>
+          <Text style={styles.avatarHint}>{t('common.tapToChange', 'Tap to change photo')}</Text>
         </View>
 
         {/* User Info Card */}
@@ -294,13 +294,13 @@ export default function MentorProfileScreen() {
             ) : (
               <View style={styles.editActions}>
                 <TouchableOpacity onPress={handleCancelEdit} style={styles.cancelBtn}>
-                  <Text style={styles.cancelText}>{t('common.cancel') || 'Cancel'}</Text>
+                  <Text style={styles.cancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleSaveName} disabled={saving} style={styles.saveBtn}>
                   {saving ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.saveText}>{t('common.save') || 'Save'}</Text>
+                    <Text style={styles.saveText}>{t('common.save', 'Save')}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -309,13 +309,13 @@ export default function MentorProfileScreen() {
 
           {/* First Name */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('auth.firstName') || 'First Name'}</Text>
+            <Text style={styles.infoLabel}>{t('auth.firstName', 'First Name')}</Text>
             {isEditing ? (
               <TextInput
                 style={styles.infoInput}
                 value={firstName}
                 onChangeText={setFirstName}
-                placeholder={t('auth.firstName') || 'First Name'}
+                placeholder={t('auth.firstName', 'First Name')}
                 placeholderTextColor={colors.textDisabled}
               />
             ) : (
@@ -325,13 +325,13 @@ export default function MentorProfileScreen() {
 
           {/* Last Name */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('auth.lastName') || 'Last Name'}</Text>
+            <Text style={styles.infoLabel}>{t('auth.lastName', 'Last Name')}</Text>
             {isEditing ? (
               <TextInput
                 style={styles.infoInput}
                 value={lastName}
                 onChangeText={setLastName}
-                placeholder={t('auth.lastName') || 'Last Name'}
+                placeholder={t('auth.lastName', 'Last Name')}
                 placeholderTextColor={colors.textDisabled}
               />
             ) : (
@@ -341,13 +341,13 @@ export default function MentorProfileScreen() {
 
           {/* Email */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('auth.email') || 'Email'}</Text>
+            <Text style={styles.infoLabel}>{t('auth.email', 'Email')}</Text>
             <Text style={styles.infoValue}>{user?.email || '-'}</Text>
           </View>
 
           {/* Role */}
           <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.infoLabel}>{t('common.role') || 'Role'}</Text>
+            <Text style={styles.infoLabel}>{t('common.role', 'Role')}</Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>Mentor</Text>
             </View>
@@ -356,7 +356,7 @@ export default function MentorProfileScreen() {
 
         {/* Settings Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('common.settings') || 'Settings'}</Text>
+          <Text style={styles.cardTitle}>{t('common.settings', 'Settings')}</Text>
 
           {/* Language */}
           <TouchableOpacity
@@ -366,7 +366,7 @@ export default function MentorProfileScreen() {
           >
             <View style={styles.settingsLeft}>
               <Ionicons name="language-outline" size={22} color={colors.primary} />
-              <Text style={styles.settingsLabel}>{t('common.language') || 'Language'}</Text>
+              <Text style={styles.settingsLabel}>{t('common.language', 'Language')}</Text>
             </View>
             <View style={styles.settingsRight}>
               <Text style={styles.settingsValue}>
@@ -380,7 +380,7 @@ export default function MentorProfileScreen() {
           <View style={[styles.settingsRow, { borderBottomWidth: 0, opacity: 0.5 }]}>
             <View style={styles.settingsLeft}>
               <Ionicons name="color-palette-outline" size={22} color={colors.primary} />
-              <Text style={styles.settingsLabel}>{t('common.theme') || 'Theme'}</Text>
+              <Text style={styles.settingsLabel}>{t('common.theme', 'Theme')}</Text>
             </View>
             <View style={styles.settingsRight}>
               <Text style={styles.comingSoon}>Coming Soon</Text>
@@ -487,7 +487,7 @@ export default function MentorProfileScreen() {
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.7}>
           <Ionicons name="log-out-outline" size={22} color={colors.error} />
-          <Text style={styles.signOutText}>{t('auth.signOut') || 'Sign Out'}</Text>
+          <Text style={styles.signOutText}>{t('auth.signOut', 'Sign Out')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: spacing.xl }} />

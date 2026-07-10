@@ -19,7 +19,17 @@
     "notifications": "Notifications",
     "profile": "Profile",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "selectPhoto": "Select Photo",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "tapToChange": "Tap to change photo",
+    "role": "Role",
+    "theme": "Theme",
+    "tryAgain": "Please try again.",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No Notifications",
+    "noNotificationsDesc": "You're all caught up! Check back later."
   },
   "auth": {
     "login": "Login",
@@ -43,7 +53,9 @@
     "emailRequired": "Email is required.",
     "passwordRequired": "Password is required.",
     "passwordMismatch": "Passwords do not match.",
-    "fillAllFields": "Bitte f\u00fcllen Sie alle Pflichtfelder korrekt aus."
+    "fillAllFields": "Bitte füllen Sie alle Pflichtfelder korrekt aus.",
+    "signOut": "Sign Out",
+    "signOutConfirm": "Are you sure you want to sign out?"
   },
   "student": {
     "dashboard": "Dashboard",
@@ -85,7 +97,9 @@
     "internshipStartDate": "Start Date",
     "internshipEndDate": "End Date",
     "saveInternshipInfo": "Save Internship Info",
-    "internshipInfoSaved": "Internship information saved."
+    "internshipInfoSaved": "Internship information saved.",
+    "profile": "Profile",
+    "personalInfo": "Personal Info"
   },
   "gamification": {
     "points": "Points",

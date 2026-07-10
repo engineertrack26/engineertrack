@@ -69,7 +69,7 @@ export default function InternshipFormScreen() {
 
   const validate = () => {
     const newErrors: FormErrors = {};
-    const requiredMessage = t('common.required') || 'Required';
+    const requiredMessage = t('common.required', 'Required');
 
     if (!university.trim()) newErrors.university = requiredMessage;
     if (!department.trim()) newErrors.department = requiredMessage;
@@ -102,15 +102,15 @@ export default function InternshipFormScreen() {
       });
 
       Alert.alert(
-        t('common.save') || 'Save',
-        t('student.internshipInfoSaved') || 'Internship information saved.',
+        t('common.save', 'Save'),
+        t('student.internshipInfoSaved', 'Internship information saved.'),
       );
 
       const returnTo = params.return || 'profile';
       router.replace(`/(student)/${returnTo}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('common.error') || 'Error';
-      Alert.alert(t('common.error') || 'Error', message);
+      const message = err instanceof Error ? err.message : t('common.error', 'Error');
+      Alert.alert(t('common.error', 'Error'), message);
     } finally {
       setSaving(false);
     }
@@ -120,7 +120,7 @@ export default function InternshipFormScreen() {
     return (
       <ScreenWrapper>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('common.loading') || 'Loading...'}</Text>
+          <Text style={styles.loadingText}>{t('common.loading', 'Loading...')}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -130,46 +130,45 @@ export default function InternshipFormScreen() {
     <ScreenWrapper>
       <View style={styles.header}>
         <Text style={styles.title}>
-          {t('student.internshipFormTitle') || 'Internship Information'}
+          {t('student.internshipFormTitle', 'Internship Information')}
         </Text>
         <Text style={styles.subtitle}>
-          {t('student.internshipFormSubtitle') ||
-            'Complete your school and workplace details to continue.'}
+          {t('student.internshipFormSubtitle', 'Complete your school and workplace details to continue.')}
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('student.schoolInfo') || 'School Information'}</Text>
+        <Text style={styles.cardTitle}>{t('student.schoolInfo', 'School Information')}</Text>
 
         <Input
-          label={t('student.universityName') || 'University Name'}
-          placeholder={t('student.universityName') || 'University Name'}
+          label={t('student.universityName', 'University Name')}
+          placeholder={t('student.universityName', 'University Name')}
           value={university}
           onChangeText={setUniversity}
           error={errors.university}
         />
         <Input
-          label={t('student.facultyName') || 'Faculty'}
-          placeholder={t('student.facultyName') || 'Faculty'}
+          label={t('student.facultyName', 'Faculty')}
+          placeholder={t('student.facultyName', 'Faculty')}
           value={faculty}
           onChangeText={setFaculty}
         />
         <Input
-          label={t('student.departmentName') || 'Department'}
-          placeholder={t('student.departmentName') || 'Department'}
+          label={t('student.departmentName', 'Department')}
+          placeholder={t('student.departmentName', 'Department')}
           value={department}
           onChangeText={setDepartment}
           error={errors.department}
         />
         <Input
-          label={t('student.departmentBranch') || 'Department Branch (Optional)'}
-          placeholder={t('student.departmentBranch') || 'Department Branch'}
+          label={t('student.departmentBranch', 'Department Branch (Optional)')}
+          placeholder={t('student.departmentBranch', 'Department Branch')}
           value={departmentBranch}
           onChangeText={setDepartmentBranch}
         />
         <Input
-          label={t('student.studentId') || 'Student ID'}
-          placeholder={t('student.studentId') || 'Student ID'}
+          label={t('student.studentId', 'Student ID')}
+          placeholder={t('student.studentId', 'Student ID')}
           value={studentId}
           onChangeText={setStudentId}
           error={errors.studentId}
@@ -178,25 +177,25 @@ export default function InternshipFormScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>
-          {t('student.internshipWorkplace') || 'Internship Workplace'}
+          {t('student.internshipWorkplace', 'Internship Workplace')}
         </Text>
 
         <Input
-          label={t('student.companyName') || 'Company Name'}
-          placeholder={t('student.companyName') || 'Company Name'}
+          label={t('student.companyName', 'Company Name')}
+          placeholder={t('student.companyName', 'Company Name')}
           value={companyName}
           onChangeText={setCompanyName}
           error={errors.companyName}
         />
         <Input
-          label={t('student.companyAddress') || 'Company Address'}
-          placeholder={t('student.companyAddress') || 'Company Address'}
+          label={t('student.companyAddress', 'Company Address')}
+          placeholder={t('student.companyAddress', 'Company Address')}
           value={companyAddress}
           onChangeText={setCompanyAddress}
         />
         <Input
-          label={t('student.companySector') || 'Company Field / Sector'}
-          placeholder={t('student.companySector') || 'Company Field / Sector'}
+          label={t('student.companySector', 'Company Field / Sector')}
+          placeholder={t('student.companySector', 'Company Field / Sector')}
           value={companySector}
           onChangeText={setCompanySector}
         />
@@ -204,7 +203,7 @@ export default function InternshipFormScreen() {
         <View style={styles.row}>
           <View style={styles.col}>
             <Input
-              label={t('student.internshipStartDate') || 'Start Date'}
+              label={t('student.internshipStartDate', 'Start Date')}
               placeholder="YYYY-MM-DD"
               value={internshipStartDate}
               onChangeText={setInternshipStartDate}
@@ -214,7 +213,7 @@ export default function InternshipFormScreen() {
           </View>
           <View style={styles.col}>
             <Input
-              label={t('student.internshipEndDate') || 'End Date'}
+              label={t('student.internshipEndDate', 'End Date')}
               placeholder="YYYY-MM-DD"
               value={internshipEndDate}
               onChangeText={setInternshipEndDate}
@@ -226,7 +225,7 @@ export default function InternshipFormScreen() {
       </View>
 
       <Button
-        title={t('student.saveInternshipInfo') || 'Save Internship Info'}
+        title={t('student.saveInternshipInfo', 'Save Internship Info')}
         onPress={handleSave}
         loading={saving}
         style={styles.saveButton}
