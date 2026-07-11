@@ -57,7 +57,8 @@
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
     "fillAllFields": "Bitte füllen Sie alle Pflichtfelder korrekt aus.",
     "signOut": "Abmelden",
-    "signOutConfirm": "Möchten Sie sich wirklich abmelden?"
+    "signOutConfirm": "Möchten Sie sich wirklich abmelden?",
+    "admin": "Administrator"
   },
   "student": {
     "dashboard": "Übersicht",

@@ -57,7 +57,8 @@
     "passwordMismatch": "Le password non coincidono.",
     "fillAllFields": "Compila correttamente tutti i campi obbligatori.",
     "signOut": "Esci",
-    "signOutConfirm": "Sei sicuro di voler uscire?"
+    "signOutConfirm": "Sei sicuro di voler uscire?",
+    "admin": "Amministratore"
   },
   "student": {
     "dashboard": "Pannello",

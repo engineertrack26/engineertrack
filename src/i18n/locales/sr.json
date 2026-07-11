@@ -57,7 +57,8 @@
     "passwordMismatch": "Lozinke se ne poklapaju.",
     "fillAllFields": "Molimo ispravno popunite sva obavezna polja.",
     "signOut": "Odjava",
-    "signOutConfirm": "Da li ste sigurni da želite da se odjavite?"
+    "signOutConfirm": "Da li ste sigurni da želite da se odjavite?",
+    "admin": "Administrator"
   },
   "student": {
     "dashboard": "Kontrolna tabla",

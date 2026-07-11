@@ -57,7 +57,8 @@
     "passwordMismatch": "Parolele nu coincid.",
     "fillAllFields": "Te rugăm să completezi corect toate câmpurile obligatorii.",
     "signOut": "Deconectare",
-    "signOutConfirm": "Sigur vrei să te deconectezi?"
+    "signOutConfirm": "Sigur vrei să te deconectezi?",
+    "admin": "Administrator"
   },
   "student": {
     "dashboard": "Panou",

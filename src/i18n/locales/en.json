@@ -57,7 +57,8 @@
     "passwordMismatch": "Passwords do not match.",
     "fillAllFields": "Please fill in all required fields correctly.",
     "signOut": "Sign Out",
-    "signOutConfirm": "Are you sure you want to sign out?"
+    "signOutConfirm": "Are you sure you want to sign out?",
+    "admin": "Admin"
   },
   "student": {
     "dashboard": "Dashboard",

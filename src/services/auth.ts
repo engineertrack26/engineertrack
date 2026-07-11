@@ -130,10 +130,22 @@ export const authService = {
     return data;
   },
 
+  // Update-then-insert instead of upsert: PostgREST upsert puts `id` in the
+  // ON CONFLICT UPDATE SET list, which requires an UPDATE(id) column grant
+  // that the gamification lockdown intentionally does not give.
   async upsertStudentProfile(userId: string, updates: Record<string, unknown>) {
+    const { data: updated, error: updateError } = await supabase
+      .from('student_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .maybeSingle();
+    if (updateError) throw updateError;
+    if (updated) return updated;
+
     const { data, error } = await supabase
       .from('student_profiles')
-      .upsert({ id: userId, ...updates }, { onConflict: 'id' })
+      .insert({ id: userId, ...updates })
       .select()
       .single();
     if (error) throw error;

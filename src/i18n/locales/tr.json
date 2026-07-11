@@ -57,7 +57,8 @@
     "passwordMismatch": "Şifreler eşleşmiyor.",
     "fillAllFields": "Lütfen tüm zorunlu alanları doğru şekilde doldurun.",
     "signOut": "Çıkış Yap",
-    "signOutConfirm": "Çıkış yapmak istediğinizden emin misiniz?"
+    "signOutConfirm": "Çıkış yapmak istediğinizden emin misiniz?",
+    "admin": "Yönetici"
   },
   "student": {
     "dashboard": "Ana Sayfa",
