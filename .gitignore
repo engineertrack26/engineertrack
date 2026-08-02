@@ -56,3 +56,6 @@ nul
 
 # Claude Code local state
 .claude/
+
+# Subagent-driven development scratch (ledgers, briefs, review packages)
+.superpowers/
