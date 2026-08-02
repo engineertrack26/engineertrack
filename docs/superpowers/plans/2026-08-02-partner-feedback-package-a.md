@@ -2749,6 +2749,8 @@ Run `npx expo start --clear` and confirm each of these. Record the actual result
 2. Second sign-in → straight to dashboard, no gate.
 3. New registration → button disabled until the box is checked → policy screen opens and returns → registration completes with **no** consent gate.
 4. Login and Register screens both show the branded mark.
+4b. Each of the four role profile screens (student, mentor, advisor, admin) shows a Privacy Policy
+    row that opens the policy in the current interface language, and back returns to the profile.
 5. Student without a department → short code plus the explanatory note.
 6. Student joins a department → composite code plus institution · department.
 7. Mentor links with the **full composite** code → success.
