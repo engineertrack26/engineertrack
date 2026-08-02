@@ -244,7 +244,33 @@ Expected: `consent_version | text` and `consented_at | timestamp with time zone`
 SELECT record_consent('');
 ```
 
+Expected: ERROR `NOT_AUTHENTICATED`. The Supabase SQL editor runs as `postgres` with no JWT, so
+`auth.uid()` is NULL and the function's *first* guard fires. This confirms the function exists and
+is callable — it does not exercise the empty-version guard.
+
+To reach the second guard, supply a JWT claim inside a transaction that is rolled back:
+
+```sql
+BEGIN;
+SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000000"}', true);
+SELECT record_consent('');
+ROLLBACK;
+```
+
 Expected: ERROR `INVALID_CONSENT_VERSION`.
+
+Then verify the trigger's normalisation truth table directly, without needing a real signup:
+
+```sql
+SELECT
+  v                                        AS input,
+  NULLIF(trim(v), '')                      AS consent_version,
+  NULLIF(trim(v), '') IS NOT NULL          AS consented_at_set
+FROM (VALUES (NULL), (''), ('   '), ('1.0')) AS t(v);
+```
+
+Expected: only the `'1.0'` row has a non-null `consent_version` and `consented_at_set = true`;
+the other three rows are NULL / false.
 
 - [ ] **Step 5: Commit**
 
