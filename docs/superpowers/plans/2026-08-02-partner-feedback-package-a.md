@@ -617,6 +617,7 @@ git commit -m "feat: add privacy policy screen and legal namespace in seven loca
 - Create: `app/(auth)/consent.tsx`
 - Modify: `app/(auth)/_layout.tsx` (register the screen, disable the gesture)
 - Modify: `app/index.tsx:17-32` (insert the gate before the role switch)
+- Modify: `app/_layout.tsx:192-204` (exempt consent and privacy-policy from the protected-routing bounce-back)
 
 **Interfaces:**
 - Consumes: `isConsentCurrent` (Task 1), `PRIVACY_POLICY_VERSION` and `authService.recordConsent` (Task 3), `legal.privacy.*` (Task 4)
@@ -788,12 +789,66 @@ Then, between the `!isAuthenticated` check (line 17-19) and the `switch (user?.r
   }
 ```
 
-- [ ] **Step 4: Verify types compile**
+- [ ] **Step 4: Exempt the consent and policy routes from the protected-routing bounce-back**
+
+`app/_layout.tsx` already has a protected-routing effect that pushes any authenticated user out
+of the `(auth)` group:
+
+```tsx
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/');
+    }
+```
+
+Left alone, this fights the gate from Step 3 in an infinite loop: `app/index.tsx` redirects the
+user to `/(auth)/consent`, the effect sees an authenticated user inside `(auth)` and replaces
+back to `/`, the gate redirects again, forever. The consent screen never stays mounted, so it
+can never be accepted.
+
+The same collision silently breaks the privacy-policy row added in Task 4 — that route is also
+under `(auth)` and is opened from all four authenticated profile screens, so it bounces straight
+back to the dashboard.
+
+Both routes must stay inside `(auth)`: the policy screen is also linked from the **register**
+screen in Task 6, where the user is not authenticated, so moving it out of the group would trip
+the `!isAuthenticated && !inAuthGroup` branch instead. Exempt them by name.
+
+Add at module scope in `app/_layout.tsx`, above the component:
+
+```tsx
+// Routes inside (auth) that an ALREADY authenticated user is legitimately on:
+// the consent gate that app/index.tsx sends them to, and the privacy policy,
+// which every role's profile links to. Without this exemption the bounce-back
+// below fights the consent gate in an infinite redirect loop.
+const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy'];
+```
+
+and change the effect body to:
+
+```tsx
+    const inAuthGroup = segments[0] === '(auth)';
+    const isSharedAuthRoute = AUTHENTICATED_AUTH_ROUTES.includes(segments[1] as string);
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup && !isSharedAuthRoute) {
+      router.replace('/');
+    }
+```
+
+Leave the effect's dependency array and the rest of the file unchanged.
+
+
+- [ ] **Step 5: Verify types compile**
 
 Run: `npx tsc --noEmit`
 Expected: no output
 
-- [ ] **Step 5: Verify in the emulator**
+- [ ] **Step 6: Verify in the emulator**
 
 Run `npx expo start --clear`, then:
 1. Sign in as an existing demo student. Expected: the consent screen appears instead of the dashboard.
@@ -806,10 +861,10 @@ Run `npx expo start --clear`, then:
 SELECT email, consent_version, consented_at FROM profiles WHERE consent_version IS NOT NULL;
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/(auth)/consent.tsx app/(auth)/_layout.tsx app/index.tsx
+git add app/(auth)/consent.tsx app/(auth)/_layout.tsx app/index.tsx app/_layout.tsx
 git commit -m "feat: gate the app behind a versioned consent screen"
 ```
 
