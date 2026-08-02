@@ -2,6 +2,8 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
+import { isConsentCurrent } from '@/utils/consent';
+import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
 
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -16,6 +18,10 @@ export default function Index() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
+  }
+
+  if (!isConsentCurrent(user?.consentVersion, PRIVACY_POLICY_VERSION)) {
+    return <Redirect href="/(auth)/consent" />;
   }
 
   switch (user?.role) {

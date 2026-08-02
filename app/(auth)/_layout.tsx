@@ -8,6 +8,7 @@ export default function AuthLayout() {
       <Stack.Screen name="forgot-password" />
       <Stack.Screen name="language-select" />
       <Stack.Screen name="privacy-policy" />
+      <Stack.Screen name="consent" options={{ gestureEnabled: false }} />
     </Stack>
   );
 }
