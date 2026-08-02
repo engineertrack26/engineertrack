@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,6 +125,11 @@ export default function RegisterScreen() {
     <ScreenWrapper>
       <View style={styles.container}>
         <View style={styles.header}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoMark}
+            resizeMode="contain"
+          />
           <Text style={styles.logo}>EngineerTrack</Text>
           <Text style={styles.subtitle}>{t('auth.register')}</Text>
         </View>
@@ -294,6 +299,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     color: colors.primary,
+    marginBottom: 8,
+  },
+  logoMark: {
+    width: 64,
+    height: 64,
     marginBottom: 8,
   },
   subtitle: {
