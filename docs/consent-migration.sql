@@ -29,6 +29,7 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION record_consent(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION record_consent(TEXT) TO authenticated;
 
 -- 3. Capture consent at signup, atomically with profile creation.
@@ -51,9 +52,9 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'language', 'en'),
-    NEW.raw_user_meta_data->>'consent_version',
+    NULLIF(trim(NEW.raw_user_meta_data->>'consent_version'), ''),
     CASE
-      WHEN NEW.raw_user_meta_data->>'consent_version' IS NOT NULL THEN now()
+      WHEN NULLIF(trim(NEW.raw_user_meta_data->>'consent_version'), '') IS NOT NULL THEN now()
       ELSE NULL
     END
   );
