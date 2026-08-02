@@ -71,6 +71,10 @@ export default function RegisterScreen() {
       }
     }
 
+    if (!consentAccepted) {
+      newErrors.consent = t('legal.privacy.consentCheckbox');
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -251,6 +255,7 @@ export default function RegisterScreen() {
               <Text style={styles.consentLink}>{t('legal.privacy.readPolicy')}</Text>
             </TouchableOpacity>
           </View>
+          {errors.consent && <Text style={styles.errorText}>{errors.consent}</Text>}
 
           <Button
             title={t('auth.register')}
@@ -367,6 +372,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     marginTop: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 4,
+    marginLeft: 30,
   },
   footer: {
     flexDirection: 'row',
