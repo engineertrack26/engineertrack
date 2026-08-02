@@ -45,6 +45,13 @@ export const LIMITS = {
 
 export const INTERVENTION_THRESHOLD_DAYS = 3;
 
+/**
+ * Bumping this invalidates every stored consent and re-prompts all users.
+ * Change it whenever the text under `legal.privacy` in the locale files changes
+ * in substance.
+ */
+export const PRIVACY_POLICY_VERSION = '1.0';
+
 export const COMPETENCY_RUBRIC: Record<string, { description: string; levels: string[] }> = {
   technical_skills: {
     description: 'Ability to apply engineering knowledge and tools effectively.',

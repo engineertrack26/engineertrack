@@ -10,6 +10,7 @@ export interface User {
   lastName: string;
   language: SupportedLanguage;
   avatarUrl?: string;
+  consentVersion?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -13,6 +13,7 @@ interface SignUpParams {
   role: UserRole;
   language: SupportedLanguage;
   eduEmail?: string;
+  consentVersion?: string;
 }
 
 export function isEduEmail(email: string): boolean {
@@ -39,7 +40,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 }
 
 export const authService = {
-  async signUp({ email, password, firstName, lastName, role, language, eduEmail }: SignUpParams) {
+  async signUp({ email, password, firstName, lastName, role, language, eduEmail, consentVersion }: SignUpParams) {
     const metadata: Record<string, unknown> = {
       first_name: firstName,
       last_name: lastName,
@@ -48,6 +49,9 @@ export const authService = {
     };
     if (role === 'admin' && eduEmail) {
       metadata.edu_email = eduEmail;
+    }
+    if (consentVersion) {
+      metadata.consent_version = consentVersion;
     }
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -99,6 +103,7 @@ export const authService = {
       lastName: (row.last_name as string) || '',
       language: ((row.language as string) || 'en') as SupportedLanguage,
       avatarUrl: (row.avatar_url as string) || undefined,
+      consentVersion: (row.consent_version as string) || undefined,
       createdAt: (row.created_at as string) || '',
       updatedAt: (row.updated_at as string) || '',
     };
@@ -173,6 +178,11 @@ export const authService = {
 
   async updateLanguage(userId: string, language: SupportedLanguage) {
     return this.updateProfile(userId, { language });
+  },
+
+  async recordConsent(version: string) {
+    const { error } = await supabase.rpc('record_consent', { p_version: version });
+    if (error) throw error;
   },
 
   async changePassword(_email: string, _currentPassword: string, newPassword: string) {
