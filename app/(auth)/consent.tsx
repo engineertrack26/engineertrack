@@ -85,6 +85,7 @@ export default function ConsentScreen() {
           title={t('auth.signOut')}
           onPress={handleSignOut}
           variant="ghost"
+          disabled={isSubmitting}
         />
       </View>
     </ScreenWrapper>

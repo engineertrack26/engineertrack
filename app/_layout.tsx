@@ -67,6 +67,12 @@ LogBox.ignoreLogs([
   'SafeAreaView has been deprecated and will be removed in a future release',
 ]);
 
+// Routes inside (auth) that an ALREADY authenticated user is legitimately on:
+// the consent gate that app/index.tsx sends them to, and the privacy policy,
+// which every role's profile links to. Without this exemption the bounce-back
+// below fights the consent gate in an infinite redirect loop.
+const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy'];
+
 export default function RootLayout() {
   const { setUser, setSession, setLoading, reset, isAuthenticated } = useAuthStore();
   const resetLogStore = useLogStore((s) => s.reset);
@@ -195,10 +201,11 @@ export default function RootLayout() {
     if (!appReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isSharedAuthRoute = AUTHENTICATED_AUTH_ROUTES.includes((segments as string[])[1]);
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if (isAuthenticated && inAuthGroup && !isSharedAuthRoute) {
       router.replace('/');
     }
   }, [isAuthenticated, appReady, segments]);
