@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { authService, isEduEmail } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
+import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
 import type { UserRole, SupportedLanguage } from '@/types/user';
 
 const ROLES: { key: UserRole; icon: string; color?: string }[] = [
@@ -30,6 +32,7 @@ export default function RegisterScreen() {
   const [eduEmail, setEduEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -91,6 +94,7 @@ export default function RegisterScreen() {
         lastName: lastName.trim(),
         role,
         language: currentLang,
+        consentVersion: PRIVACY_POLICY_VERSION,
         eduEmail: role === 'admin' ? eduEmail.trim() : undefined,
       });
 
@@ -224,10 +228,35 @@ export default function RegisterScreen() {
             />
           )}
 
+          <View style={styles.consentRow}>
+            <TouchableOpacity
+              onPress={() => setConsentAccepted((value) => !value)}
+              style={styles.checkbox}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: consentAccepted }}
+            >
+              <Ionicons
+                name={consentAccepted ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={consentAccepted ? colors.primary : colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.consentTextWrap}
+              onPress={() => router.push('/(auth)/privacy-policy')}
+            >
+              <Text style={styles.consentText}>
+                {t('legal.privacy.consentCheckbox')}
+              </Text>
+              <Text style={styles.consentLink}>{t('legal.privacy.readPolicy')}</Text>
+            </TouchableOpacity>
+          </View>
+
           <Button
             title={t('auth.register')}
             onPress={handleRegister}
             loading={isSubmitting}
+            disabled={!consentAccepted}
             style={styles.registerButton}
           />
         </View>
@@ -315,6 +344,29 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: 4,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 16,
+  },
+  checkbox: {
+    paddingTop: 1,
+  },
+  consentTextWrap: {
+    flex: 1,
+  },
+  consentText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+  },
+  consentLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 2,
   },
   footer: {
     flexDirection: 'row',
