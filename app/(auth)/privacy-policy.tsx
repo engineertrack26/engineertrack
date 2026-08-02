@@ -22,8 +22,11 @@ function Section({ title, body }: { title: string; body: string }) {
 export default function PrivacyPolicyScreen() {
   const { t } = useTranslation();
 
+  // scroll={false}: ScreenWrapper scrolls by default, and a ScrollView nested
+  // in a same-axis ScrollView does not scroll reliably on Android — which on a
+  // legal notice means the user cannot reach the end of the text.
   return (
-    <ScreenWrapper>
+    <ScreenWrapper scroll={false}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -31,7 +34,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.headerTitle}>{t('legal.privacy.title')}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollBody} contentContainerStyle={styles.content}>
         <Text style={styles.version}>
           {t('legal.privacy.versionLabel', { version: PRIVACY_POLICY_VERSION })}
         </Text>
@@ -85,6 +88,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+  },
+  scrollBody: {
+    flex: 1,
   },
   content: {
     paddingBottom: 40,
