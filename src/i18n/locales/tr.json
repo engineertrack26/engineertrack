@@ -176,5 +176,33 @@
       "name": "Kusursuz Sicil",
       "description": "Gönderilen tüm günlükler revizyonsuz onaylandı"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Gizlilik Politikası ve Veri Koruma Bildirimi",
+      "versionLabel": "Sürüm {{version}}",
+      "intro": "EngineerTrack, şirket mentorunuzun ve üniversite danışmanınızın stajınızı inceleyip onaylayabilmesi için staj etkinliklerinizi kaydeder. Bu bildirim, neyi sakladığımızı, neden sakladığımızı ve bu veriler üzerindeki haklarınızı açıklar. Uygulamanın tüm kullanıcıları için geçerlidir.",
+      "dataWeCollectTitle": "Topladığımız veriler",
+      "dataWeCollect": "Hesap bilgileri: ad ve soyad, e-posta adresi, rol ve arayüz dili.\nKurum bilgileri: üniversite, fakülte, bölüm, öğrenci numarası ile katıldığınız kurum ve bölüm kodları.\nİşyeri bilgileri: şirket adı, adresi, sektörü ve staj başlangıç ve bitiş tarihleri.\nStaj kayıtları: günlük kayıt girişleriniz, kaydettiğiniz saatler, öz değerlendirme puanlarınız ve yüklediğiniz fotoğraf ve belgeler.\nMentor ve danışman girdileri: yetkinlik değerlendirmeleri, yazılı geri bildirimler, onay ve doğrulama kararları.\nİlerleme verileri: XP, seviye, seri ve rozetler.\nTeknik veriler: yalnızca bildirimleri cihazınıza iletmek için kullanılan push bildirim jetonu.",
+      "notCollectedTitle": "Toplamadığımız veriler",
+      "notCollected": "Konumunuzu, kişilerinizi, reklam amaçlı cihaz kimliklerinizi veya uygulama dışındaki davranışlarınıza yönelik herhangi bir analitik izlemeyi toplamayız. Hiçbir veriyi satmayız ve reklamverenlerle paylaşmayız.",
+      "whyWeCollectTitle": "Neden topluyoruz",
+      "whyWeCollect": "Stajınızı kaydetmenizi ve mentorunuz ile danışmanınızın bunu inceleyip değerlendirmesini ve onaylamasını sağlamak için — bu, kaydolduğunuz temel hizmettir.\nÜniversitenizin stajınızı notlandırması veya belgelendirmesi için ihtiyaç duyduğu raporları hazırlamak için.\nMotivasyon özelliklerini (XP, seviyeler, rozetler ve yalnızca kendi bölümünüz içindeki liderlik tablosu) çalıştırmak için.\nGeri bildirim, onay ve doğrulamalarla ilgili bildirimler göndermek için.",
+      "sharingTitle": "Verilerinizi kim görebilir",
+      "sharing": "Günlük kayıtlarınız, yüklemeleriniz ve öz değerlendirmeleriniz, hesabınıza bağlı mentor ve danışman ile kurumunuzun yöneticisi tarafından görülebilir. Diğer öğrenciler yalnızca kendi bölümünüzün liderlik tablosunda adınızı ve puanınızı görür. Kurumunuz dışından hiç kimse kayıtlarınızı göremez.",
+      "retentionTitle": "Ne kadar süre saklıyoruz",
+      "retention": "Staj kayıtları, kurumunuzun stajı belgelendirmek için ihtiyaç duyduğu süre boyunca saklanır ve bu amaç sona erdiğinde talep üzerine silinir. Hesap bilgileri, hesabınızı silmemizi istediğiniz tarihe kadar saklanır.",
+      "yourRightsTitle": "Haklarınız",
+      "yourRights": "Hakkınızda tuttuğumuz verileri görmeyi, yanlış olan bilgileri düzeltmeyi, verilerinizin silinmesini veya bir kopyasını almayı talep edebilirsiniz. Ayrıca bu rızayı geri çekebilirsiniz; ancak bunu yapmanız, staj verilerini kaydetmek ve incelemek uygulamanın tek işlevi olduğundan, uygulamanın artık kullanılamayacağı anlamına gelir.",
+      "contactTitle": "İletişim",
+      "contact": "Bu haklardan herhangi birini kullanmak için uygulama üzerinden kurumunuzun yöneticisiyle iletişime geçin veya kurumunuz tarafından yayımlanan adresten EngineerTrack proje ekibine yazın.",
+      "consentCheckbox": "Gizlilik Politikası ve Veri Koruma Bildirimi'ni okudum ve kabul ediyorum.",
+      "readPolicy": "Gizlilik Politikasını Oku",
+      "accept": "Kabul Et",
+      "updatedTitle": "Gizlilik Politikamız güncellendi",
+      "updatedBody": "EngineerTrack'i kullanmaya devam etmek için lütfen güncellenmiş bildirimi inceleyip kabul edin.",
+      "acceptFailed": "Onayınızı kaydedemedik. Bağlantınızı kontrol edip tekrar deneyin."
+    }
   }
 }

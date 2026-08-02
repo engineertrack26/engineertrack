@@ -176,5 +176,33 @@
       "name": "Besprekoran Učinak",
       "description": "Svi poslati dnevnici odobreni bez dorade"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Politika privatnosti i obaveštenje o zaštiti podataka",
+      "versionLabel": "Verzija {{version}}",
+      "intro": "EngineerTrack beleži vaše aktivnosti tokom stručne prakse kako bi vaš mentor iz kompanije i univerzitetski koordinator mogli da ih pregledaju i potvrde. Ovo obaveštenje objašnjava šta čuvamo, zašto to čuvamo i koja prava imate nad tim podacima. Odnosi se na sve korisnike aplikacije.",
+      "dataWeCollectTitle": "Podaci koje prikupljamo",
+      "dataWeCollect": "Podaci o nalogu: ime i prezime, imejl adresa, uloga i jezik interfejsa.\nPodaci o instituciji: univerzitet, fakultet, odsek, broj indeksa, kao i kodovi institucije i odseka sa kojima ste se pridružili.\nPodaci o radnom mestu: naziv kompanije, adresa, delatnost i datumi početka i završetka prakse.\nZapisi o praksi: vaši dnevni unosi, evidentirani sati, rezultati samoprocene, kao i fotografije i dokumenti koje otpremite.\nDoprinos mentora i koordinatora: ocene kompetencija, pisane povratne informacije, odluke o odobravanju i potvrđivanju.\nPodaci o napretku: XP, nivo, nizovi uzastopnih dana i značke.\nTehnički podaci: token za push obaveštenja koji se koristi isključivo za dostavljanje obaveštenja na vaš uređaj.",
+      "notCollectedTitle": "Šta ne prikupljamo",
+      "notCollected": "Ne prikupljamo vašu lokaciju, kontakte, identifikatore uređaja u reklamne svrhe, niti bilo kakvo analitičko praćenje vašeg ponašanja van aplikacije. Ne prodajemo nikakve podatke i ne delimo ih sa oglašivačima.",
+      "whyWeCollectTitle": "Zašto ih prikupljamo",
+      "whyWeCollect": "Da biste mogli da evidentirate svoju praksu, a vaš mentor i koordinator da je pregledaju, ocene i potvrde — ovo je osnovna usluga za koju ste se prijavili.\nDa bismo izradili izveštaje koji su potrebni vašem univerzitetu za ocenjivanje ili sertifikaciju prakse.\nDa bismo omogućili funkcionisanje elemenata motivacije (XP, nivoi, značke i rang-lista u okviru vašeg sopstvenog odseka).\nDa bismo vam slali obaveštenja o povratnim informacijama, odobrenjima i potvrdama.",
+      "sharingTitle": "Ko može da vidi vaše podatke",
+      "sharing": "Vaši dnevni unosi, otpremljeni fajlovi i samoprocene vidljivi su mentoru i koordinatoru povezanim sa vašim nalogom, kao i administratoru vaše institucije. Ostali studenti vide samo vaše ime i rezultat na rang-listi vašeg odseka. Niko van vaše institucije ne može da vidi vaše podatke.",
+      "retentionTitle": "Koliko dugo ih čuvamo",
+      "retention": "Zapisi o praksi čuvaju se onoliko dugo koliko je vašoj instituciji potrebno da sertifikuje praksu i brišu se na zahtev nakon što ta svrha bude ispunjena. Podaci o nalogu čuvaju se dok ne zatražite brisanje naloga.",
+      "yourRightsTitle": "Vaša prava",
+      "yourRights": "Možete zatražiti uvid u podatke koje čuvamo o vama, ispravku netačnih informacija, brisanje vaših podataka ili njihovu kopiju. Takođe možete povući ovu saglasnost, iako to znači da aplikacija više neće moći da se koristi, s obzirom na to da su beleženje i pregled podataka o praksi njena jedina funkcija.",
+      "contactTitle": "Kontakt",
+      "contact": "Da biste ostvarili bilo koje od ovih prava, obratite se administratoru svoje institucije putem aplikacije ili pišite timu projekta EngineerTrack na adresu koju je objavila vaša institucija.",
+      "consentCheckbox": "Pročitao/la sam i prihvatam Politiku privatnosti i obaveštenje o zaštiti podataka.",
+      "readPolicy": "Pročitaj Politiku privatnosti",
+      "accept": "Prihvati",
+      "updatedTitle": "Naša Politika privatnosti je ažurirana",
+      "updatedBody": "Molimo vas da pregledate i prihvatite ažurirano obaveštenje kako biste nastavili da koristite EngineerTrack.",
+      "acceptFailed": "Nismo uspeli da zabeležimo vaše prihvatanje. Proverite vezu i pokušajte ponovo."
+    }
   }
 }

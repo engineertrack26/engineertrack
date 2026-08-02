@@ -176,5 +176,33 @@
       "name": "Perfect Record",
       "description": "All submitted logs approved without revision"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Privacy Policy and Data Protection Notice",
+      "versionLabel": "Version {{version}}",
+      "intro": "EngineerTrack records your internship activity so that your company mentor and university advisor can review and validate it. This notice explains what we store, why we store it, and the rights you have over it. It applies to all users of the app.",
+      "dataWeCollectTitle": "Data we collect",
+      "dataWeCollect": "Account details: first and last name, e-mail address, role, and interface language.\nInstitution details: university, faculty, department, student number, and the institution and department codes you join with.\nWorkplace details: company name, address, sector, and internship start and end dates.\nInternship records: your daily log entries, the hours you record, your self-assessment scores, and the photos and documents you upload.\nMentor and advisor input: competency ratings, written feedback, approval and validation decisions.\nProgress data: XP, level, streaks, and badges.\nTechnical data: a push notification token used only to deliver notifications to your device.",
+      "notCollectedTitle": "What we do not collect",
+      "notCollected": "We do not collect your location, your contacts, your device identifiers for advertising, or any analytics tracking of your behaviour outside the app. We do not sell any data and we do not share it with advertisers.",
+      "whyWeCollectTitle": "Why we collect it",
+      "whyWeCollect": "To let you record your internship and to let your mentor and advisor review, rate, and validate it — this is the core service you signed up for.\nTo produce the reports your university needs to grade or certify your internship.\nTo operate the motivation features (XP, levels, badges, and the leaderboard within your own department).\nTo send you notifications about feedback, approvals, and validations.",
+      "sharingTitle": "Who can see your data",
+      "sharing": "Your daily logs, uploads, and self-assessments are visible to the mentor and advisor linked to your account, and to the administrator of your institution. Other students see only your first name and score on the leaderboard for your own department. Nobody outside your institution can see your records.",
+      "retentionTitle": "How long we keep it",
+      "retention": "Internship records are kept for as long as your institution needs them to certify the internship, and are deleted on request once that purpose ends. Account details are kept until you ask us to delete your account.",
+      "yourRightsTitle": "Your rights",
+      "yourRights": "You may ask to see the data we hold about you, to correct anything inaccurate, to have your data deleted, or to receive a copy of it. You may also withdraw this consent, though doing so means the app can no longer be used, because recording and reviewing internship data is its only function.",
+      "contactTitle": "Contact",
+      "contact": "To exercise any of these rights, contact the administrator of your institution through the app, or write to the EngineerTrack project team at the address published by your institution.",
+      "consentCheckbox": "I have read and accept the Privacy Policy and Data Protection Notice.",
+      "readPolicy": "Read the Privacy Policy",
+      "accept": "Accept",
+      "updatedTitle": "Our Privacy Policy has been updated",
+      "updatedBody": "Please review and accept the updated notice to continue using EngineerTrack.",
+      "acceptFailed": "We could not record your acceptance. Check your connection and try again."
+    }
   }
 }

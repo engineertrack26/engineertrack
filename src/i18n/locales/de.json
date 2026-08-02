@@ -176,5 +176,33 @@
       "name": "Makellose Bilanz",
       "description": "Alle eingereichten Einträge ohne Überarbeitung genehmigt"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Datenschutzerklärung und Hinweis zum Datenschutz",
+      "versionLabel": "Version {{version}}",
+      "intro": "EngineerTrack erfasst Ihre Praktikumsaktivitäten, damit Ihr betrieblicher Mentor und Ihr universitärer Betreuer sie überprüfen und bestätigen können. Dieser Hinweis erklärt, welche Daten wir speichern, warum wir sie speichern und welche Rechte Sie in Bezug darauf haben. Er gilt für alle Nutzer der App.",
+      "dataWeCollectTitle": "Daten, die wir erheben",
+      "dataWeCollect": "Kontodaten: Vor- und Nachname, E-Mail-Adresse, Rolle und Oberflächensprache.\nInstitutionsdaten: Universität, Fakultät, Fachbereich, Matrikelnummer sowie die Institutions- und Fachbereichscodes, mit denen Sie beigetreten sind.\nArbeitsplatzdaten: Firmenname, Adresse, Branche sowie Beginn- und Enddatum des Praktikums.\nPraktikumsaufzeichnungen: Ihre täglichen Eintragungen, die erfassten Stunden, Ihre Selbsteinschätzungswerte sowie die von Ihnen hochgeladenen Fotos und Dokumente.\nBeiträge von Mentor und Betreuer: Kompetenzbewertungen, schriftliches Feedback, Genehmigungs- und Validierungsentscheidungen.\nFortschrittsdaten: XP, Level, Serien (Streaks) und Abzeichen.\nTechnische Daten: ein Push-Benachrichtigungs-Token, das ausschließlich zur Zustellung von Benachrichtigungen an Ihr Gerät verwendet wird.",
+      "notCollectedTitle": "Was wir nicht erheben",
+      "notCollected": "Wir erheben weder Ihren Standort noch Ihre Kontakte, keine Geräteidentifikatoren zu Werbezwecken und kein Analyse-Tracking Ihres Verhaltens außerhalb der App. Wir verkaufen keine Daten und geben sie nicht an Werbetreibende weiter.",
+      "whyWeCollectTitle": "Warum wir sie erheben",
+      "whyWeCollect": "Damit Sie Ihr Praktikum dokumentieren können und Ihr Mentor sowie Ihr Betreuer es überprüfen, bewerten und bestätigen können — dies ist der Kerndienst, für den Sie sich angemeldet haben.\nUm die Berichte zu erstellen, die Ihre Universität zur Benotung oder Zertifizierung Ihres Praktikums benötigt.\nUm die Motivationsfunktionen zu betreiben (XP, Level, Abzeichen und die Rangliste innerhalb Ihres eigenen Fachbereichs).\nUm Ihnen Benachrichtigungen zu Feedback, Genehmigungen und Bestätigungen zu senden.",
+      "sharingTitle": "Wer Ihre Daten sehen kann",
+      "sharing": "Ihre täglichen Einträge, hochgeladenen Dateien und Selbsteinschätzungen sind für den mit Ihrem Konto verknüpften Mentor und Betreuer sowie für den Administrator Ihrer Institution sichtbar. Andere Studierende sehen in der Rangliste ihres eigenen Fachbereichs nur Ihren Vornamen und Ihre Punktzahl. Niemand außerhalb Ihrer Institution kann Ihre Daten einsehen.",
+      "retentionTitle": "Wie lange wir sie aufbewahren",
+      "retention": "Praktikumsaufzeichnungen werden so lange aufbewahrt, wie Ihre Institution sie zur Zertifizierung des Praktikums benötigt, und auf Anfrage gelöscht, sobald dieser Zweck erfüllt ist. Kontodaten werden aufbewahrt, bis Sie uns bitten, Ihr Konto zu löschen.",
+      "yourRightsTitle": "Ihre Rechte",
+      "yourRights": "Sie können Einsicht in die über Sie gespeicherten Daten verlangen, unrichtige Angaben berichtigen lassen, die Löschung Ihrer Daten verlangen oder eine Kopie davon erhalten. Sie können diese Einwilligung außerdem widerrufen; dies bedeutet jedoch, dass die App nicht mehr genutzt werden kann, da die Erfassung und Überprüfung von Praktikumsdaten ihre einzige Funktion ist.",
+      "contactTitle": "Kontakt",
+      "contact": "Um eines dieser Rechte auszuüben, wenden Sie sich über die App an den Administrator Ihrer Institution oder schreiben Sie an das EngineerTrack-Projektteam unter der von Ihrer Institution veröffentlichten Adresse.",
+      "consentCheckbox": "Ich habe die Datenschutzerklärung und den Hinweis zum Datenschutz gelesen und akzeptiere sie.",
+      "readPolicy": "Datenschutzerklärung lesen",
+      "accept": "Akzeptieren",
+      "updatedTitle": "Unsere Datenschutzerklärung wurde aktualisiert",
+      "updatedBody": "Bitte überprüfen und akzeptieren Sie den aktualisierten Hinweis, um EngineerTrack weiterhin zu nutzen.",
+      "acceptFailed": "Wir konnten Ihre Zustimmung nicht speichern. Überprüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    }
   }
 }

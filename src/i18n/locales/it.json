@@ -176,5 +176,33 @@
       "name": "Percorso Impeccabile",
       "description": "Tutti i diari inviati approvati senza revisione"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Informativa sulla Privacy e Protezione dei Dati",
+      "versionLabel": "Versione {{version}}",
+      "intro": "EngineerTrack registra le attività del tuo tirocinio affinché il tuo tutor aziendale e il tuo relatore universitario possano esaminarle e convalidarle. Questa informativa spiega quali dati conserviamo, perché li conserviamo e quali diritti hai su di essi. Si applica a tutti gli utenti dell'app.",
+      "dataWeCollectTitle": "Dati che raccogliamo",
+      "dataWeCollect": "Dati dell'account: nome e cognome, indirizzo e-mail, ruolo e lingua dell'interfaccia.\nDati dell'istituto: università, facoltà, dipartimento, numero di matricola, nonché i codici dell'istituto e del dipartimento con cui hai effettuato l'iscrizione.\nDati del luogo di lavoro: nome dell'azienda, indirizzo, settore e date di inizio e fine del tirocinio.\nRegistri del tirocinio: le tue voci di diario giornaliero, le ore registrate, i punteggi di autovalutazione e le foto e i documenti caricati.\nContributi di tutor e relatore: valutazioni delle competenze, feedback scritti, decisioni di approvazione e convalida.\nDati sui progressi: XP, livello, serie di giorni consecutivi e badge.\nDati tecnici: un token di notifica push utilizzato esclusivamente per inviare notifiche al tuo dispositivo.",
+      "notCollectedTitle": "Cosa non raccogliamo",
+      "notCollected": "Non raccogliamo la tua posizione, i tuoi contatti, gli identificativi del dispositivo a fini pubblicitari, né alcun tracciamento analitico del tuo comportamento al di fuori dell'app. Non vendiamo alcun dato e non lo condividiamo con inserzionisti.",
+      "whyWeCollectTitle": "Perché li raccogliamo",
+      "whyWeCollect": "Per consentirti di registrare il tuo tirocinio e permettere al tuo tutor e al tuo relatore di esaminarlo, valutarlo e convalidarlo: questo è il servizio principale a cui hai aderito.\nPer produrre i report di cui la tua università ha bisogno per valutare o certificare il tuo tirocinio.\nPer far funzionare le funzionalità motivazionali (XP, livelli, badge e classifica all'interno del tuo dipartimento).\nPer inviarti notifiche su feedback, approvazioni e convalide.",
+      "sharingTitle": "Chi può vedere i tuoi dati",
+      "sharing": "I tuoi diari giornalieri, i file caricati e le autovalutazioni sono visibili al tutor e al relatore collegati al tuo account, nonché all'amministratore del tuo istituto. Gli altri studenti vedono solo il tuo nome e il tuo punteggio nella classifica del tuo dipartimento. Nessuno al di fuori del tuo istituto può vedere i tuoi dati.",
+      "retentionTitle": "Per quanto tempo li conserviamo",
+      "retention": "I registri del tirocinio vengono conservati per il tempo necessario al tuo istituto per certificare il tirocinio e vengono cancellati su richiesta una volta terminato tale scopo. I dati dell'account vengono conservati finché non richiedi la cancellazione del tuo account.",
+      "yourRightsTitle": "I tuoi diritti",
+      "yourRights": "Puoi chiedere di vedere i dati che conserviamo su di te, correggere eventuali informazioni inesatte, ottenere la cancellazione dei tuoi dati o riceverne una copia. Puoi inoltre revocare questo consenso, anche se ciò comporta l'impossibilità di continuare a utilizzare l'app, poiché la registrazione e la revisione dei dati del tirocinio ne costituiscono l'unica funzione.",
+      "contactTitle": "Contatti",
+      "contact": "Per esercitare uno qualsiasi di questi diritti, contatta l'amministratore del tuo istituto tramite l'app, oppure scrivi al team del progetto EngineerTrack all'indirizzo pubblicato dal tuo istituto.",
+      "consentCheckbox": "Ho letto e accetto l'Informativa sulla Privacy e Protezione dei Dati.",
+      "readPolicy": "Leggi l'Informativa sulla Privacy",
+      "accept": "Accetta",
+      "updatedTitle": "La nostra Informativa sulla Privacy è stata aggiornata",
+      "updatedBody": "Ti preghiamo di rivedere e accettare l'informativa aggiornata per continuare a utilizzare EngineerTrack.",
+      "acceptFailed": "Non siamo riusciti a registrare la tua accettazione. Controlla la connessione e riprova."
+    }
   }
 }

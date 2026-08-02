@@ -176,5 +176,33 @@
       "name": "Palmares Perfect",
       "description": "Toate jurnalele trimise au fost aprobate fără revizuire"
     }
+  },
+  "legal": {
+    "privacy": {
+      "_status": "DRAFT — requires legal review before release",
+      "title": "Politica de Confidențialitate și Notificarea privind Protecția Datelor",
+      "versionLabel": "Versiunea {{version}}",
+      "intro": "EngineerTrack înregistrează activitatea dumneavoastră de practică pentru ca mentorul din cadrul companiei și coordonatorul universitar să o poată revizui și valida. Această notificare explică ce date stocăm, de ce le stocăm și ce drepturi aveți asupra lor. Se aplică tuturor utilizatorilor aplicației.",
+      "dataWeCollectTitle": "Datele pe care le colectăm",
+      "dataWeCollect": "Detalii despre cont: prenume și nume, adresă de e-mail, rol și limba interfeței.\nDetalii despre instituție: universitate, facultate, departament, număr matricol, precum și codurile instituției și ale departamentului cu care v-ați înscris.\nDetalii despre locul de muncă: numele companiei, adresa, sectorul de activitate și datele de început și de sfârșit ale practicii.\nÎnregistrări de practică: intrările dumneavoastră zilnice, orele înregistrate, punctajele de autoevaluare, precum și fotografiile și documentele încărcate.\nContribuția mentorului și a coordonatorului: evaluări ale competențelor, feedback scris, decizii de aprobare și validare.\nDate privind progresul: XP, nivel, serii de zile consecutive și insigne.\nDate tehnice: un token de notificare push, utilizat exclusiv pentru a trimite notificări către dispozitivul dumneavoastră.",
+      "notCollectedTitle": "Ce nu colectăm",
+      "notCollected": "Nu colectăm locația dumneavoastră, contactele, identificatorii dispozitivului în scopuri publicitare și nici nu urmărim analitic comportamentul dumneavoastră în afara aplicației. Nu vindem date și nu le partajăm cu agenții de publicitate.",
+      "whyWeCollectTitle": "De ce le colectăm",
+      "whyWeCollect": "Pentru a vă permite să vă înregistrați practica și pentru a permite mentorului și coordonatorului dumneavoastră să o revizuiască, să o evalueze și să o valideze — acesta este serviciul de bază pentru care v-ați înscris.\nPentru a genera rapoartele de care universitatea dumneavoastră are nevoie pentru a nota sau certifica practica.\nPentru a face funcționale elementele de motivare (XP, niveluri, insigne și clasamentul din cadrul propriului dumneavoastră departament).\nPentru a vă trimite notificări privind feedback-ul, aprobările și validările.",
+      "sharingTitle": "Cine vă poate vedea datele",
+      "sharing": "Înregistrările zilnice, fișierele încărcate și autoevaluările dumneavoastră sunt vizibile mentorului și coordonatorului asociați contului dumneavoastră, precum și administratorului instituției dumneavoastră. Ceilalți studenți văd doar prenumele și punctajul dumneavoastră în clasamentul propriului departament. Nimeni din afara instituției dumneavoastră nu vă poate vedea înregistrările.",
+      "retentionTitle": "Cât timp le păstrăm",
+      "retention": "Înregistrările de practică sunt păstrate atât timp cât instituția dumneavoastră are nevoie de ele pentru a certifica practica și sunt șterse la cerere odată ce acest scop a fost îndeplinit. Detaliile contului sunt păstrate până când solicitați ștergerea contului.",
+      "yourRightsTitle": "Drepturile dumneavoastră",
+      "yourRights": "Puteți solicita să vedeți datele pe care le deținem despre dumneavoastră, să corectați orice informație inexactă, să solicitați ștergerea datelor sau să primiți o copie a acestora. De asemenea, vă puteți retrage acest consimțământ, deși acest lucru înseamnă că aplicația nu va mai putea fi utilizată, întrucât înregistrarea și revizuirea datelor de practică reprezintă singura sa funcție.",
+      "contactTitle": "Contact",
+      "contact": "Pentru a vă exercita oricare dintre aceste drepturi, contactați administratorul instituției dumneavoastră prin intermediul aplicației sau scrieți echipei proiectului EngineerTrack la adresa publicată de instituția dumneavoastră.",
+      "consentCheckbox": "Am citit și accept Politica de Confidențialitate și Notificarea privind Protecția Datelor.",
+      "readPolicy": "Citește Politica de Confidențialitate",
+      "accept": "Accept",
+      "updatedTitle": "Politica noastră de Confidențialitate a fost actualizată",
+      "updatedBody": "Vă rugăm să revizuiți și să acceptați notificarea actualizată pentru a continua să utilizați EngineerTrack.",
+      "acceptFailed": "Nu am putut înregistra acceptul dumneavoastră. Verificați conexiunea și încercați din nou."
+    }
   }
 }

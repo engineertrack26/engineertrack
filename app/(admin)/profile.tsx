@@ -393,7 +393,7 @@ export default function AdminProfileScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
             </View>
           </TouchableOpacity>
-          <View style={[styles.settingsRow, { borderBottomWidth: 0, opacity: 0.5 }]}>
+          <View style={[styles.settingsRow, { opacity: 0.5 }]}>
             <View style={styles.settingsLeft}>
               <Ionicons name="color-palette-outline" size={22} color={ADMIN_COLOR} />
               <Text style={styles.settingsLabel}>{t('common.theme', 'Theme')}</Text>
@@ -402,6 +402,21 @@ export default function AdminProfileScreen() {
               <Text style={styles.comingSoon}>Coming Soon</Text>
             </View>
           </View>
+
+          {/* Privacy Policy */}
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 0 }]}
+            onPress={() => router.push('/(auth)/privacy-policy')}
+            activeOpacity={0.6}
+          >
+            <View style={styles.settingsLeft}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={ADMIN_COLOR} />
+              <Text style={styles.settingsLabel}>{t('legal.privacy.title')}</Text>
+            </View>
+            <View style={styles.settingsRight}>
+              <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Change Password */}
