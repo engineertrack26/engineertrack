@@ -2132,16 +2132,21 @@ git commit -m "feat: show the composite student code on the student profile"
 
 ---
 
-### Task 12: Reusable join issue reporting dialog
+### Task 12: Reusable reporting dialog and code error alert
 
 **Files:**
 - Create: `src/components/common/JoinIssueDialog.tsx`
+- Create: `src/utils/codeErrorAlert.ts`
 
 **Interfaces:**
-- Consumes: `joinIssueService.report` (Task 10), `errors.report*` keys (Task 10)
-- Produces: `<JoinIssueDialog visible attemptedCode reason onClose />`
+- Consumes: `joinIssueService.report` and `RpcError` (Task 10), `errors.*` keys (Task 10)
+- Produces:
+  - `<JoinIssueDialog visible attemptedCode reason onClose />`
+  - `showCodeErrorAlert({ t, error, attemptedCode, onReport }): void`
 
-Building this once keeps the four call sites in Tasks 13 and 14 identical — the spec requires the same form on both the department-join and student-link surfaces.
+Both pieces exist so the four call sites in Task 13 are one line each. The alert helper also
+keeps the error-code-to-reason mapping in one place: adding a new RPC error later touches one
+file, not four screens.
 
 - [ ] **Step 1: Create the component**
 
@@ -2269,44 +2274,121 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify types compile**
+- [ ] **Step 2: Create the shared code error alert**
+
+```ts
+// src/utils/codeErrorAlert.ts
+import { Alert } from 'react-native';
+import type { TFunction } from 'i18next';
+import { RpcError } from '@/services/rpcError';
+import type { JoinIssueReason } from '@/services/joinIssue';
+
+/**
+ * Which RPC errors a user can report, and under which reason code.
+ * INSTITUTION_MISMATCH is deliberately absent: an advisor linking a student
+ * from another institution is the rule working correctly, not a fault to report.
+ */
+const REPORTABLE: Record<string, JoinIssueReason> = {
+  INVALID_CODE: 'INVALID_CODE',
+  EXPIRED_CODE: 'INVALID_CODE',
+  INVALID_CODE_FORMAT: 'INVALID_CODE',
+  CODE_SEGMENT_MISMATCH: 'CODE_SEGMENT_MISMATCH',
+  EMAIL_DOMAIN_BLOCKED: 'EMAIL_DOMAIN_BLOCKED',
+};
+
+/**
+ * Single place where a failed code operation becomes a translated alert,
+ * with a "Report a problem" action when the failure is reportable.
+ *
+ * Lives in utils rather than components because it is not a component, and it
+ * is not covered by Jest — jest.config.js only matches src/**\/__tests__, so
+ * importing react-native here never reaches the test runner.
+ */
+export function showCodeErrorAlert(params: {
+  t: TFunction;
+  error: unknown;
+  attemptedCode: string;
+  onReport: (report: { code: string; reason: JoinIssueReason }) => void;
+}): void {
+  const { t, error, attemptedCode, onReport } = params;
+
+  if (!(error instanceof RpcError)) {
+    Alert.alert(t('common.error'), t('errors.unknown'));
+    return;
+  }
+
+  const message = t(error.info.key, error.info.params);
+  const reason = REPORTABLE[error.info.code];
+
+  if (!reason) {
+    Alert.alert(t('common.error'), message);
+    return;
+  }
+
+  Alert.alert(t('common.error'), message, [
+    { text: t('common.cancel'), style: 'cancel' },
+    {
+      text: t('errors.reportProblem'),
+      onPress: () => onReport({ code: attemptedCode.trim(), reason }),
+    },
+  ]);
+}
+```
+
+- [ ] **Step 3: Verify types compile**
 
 Run: `npx tsc --noEmit`
 Expected: no output
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/components/common/JoinIssueDialog.tsx
-git commit -m "feat: add reusable join issue reporting dialog"
+git add src/components/common/JoinIssueDialog.tsx src/utils/codeErrorAlert.ts
+git commit -m "feat: add join issue dialog and shared code error alert"
 ```
 
 ---
 
-### Task 13: Wire translated errors and reporting into the four code entry points
+### Task 13: Wire errors, shape validation, and reporting into the four code entry points
 
 **Files:**
-- Modify: `app/(student)/profile.tsx:513-545` (Join Department card)
-- Modify: `app/(advisor)/profile.tsx:365-395` (Join Department card), `:412-445` (Link Student card)
-- Modify: `app/(mentor)/student-list.tsx:127` (link handler) and its render
+- Modify: `app/(student)/profile.tsx` (Join Department card, ~line 513)
+- Modify: `app/(advisor)/profile.tsx` (Join Department card, ~line 365; Link Student card, ~line 412)
+- Modify: `app/(mentor)/student-list.tsx` (link handler, ~line 127, and its render)
+- Modify: `src/i18n/locales/*.json` (two student keys)
 
 **Interfaces:**
-- Consumes: `RpcError` (Task 10), `JoinIssueDialog` (Task 12), `errors.*` keys (Task 10)
+- Consumes: `showCodeErrorAlert` and `JoinIssueDialog` (Task 12), `parseStudentCode` (Task 8)
 - Produces: nothing
 
-Each of the four call sites gets the same three changes. The pattern is written out once here and repeated verbatim per site — do not abbreviate when applying it.
+Every call site is now one line of error handling. The 20-line alert block lives in
+`showCodeErrorAlert`; do not inline it here.
 
-- [ ] **Step 1: Add the shared state and imports to each screen**
+**State names in the existing screens** (verified — use these exact names):
+`app/(student)/profile.tsx:43` → `deptCodeInput` · `app/(advisor)/profile.tsx:33` →
+`studentCodeInput`, `:35` → `deptCodeInput` · `app/(mentor)/student-list.tsx` → `codeInput`.
 
-For each of `app/(student)/profile.tsx`, `app/(advisor)/profile.tsx`, and `app/(mentor)/student-list.tsx`, add:
+- [ ] **Step 1: Add the two i18n keys**
+
+Add to `student` in `src/i18n/locales/en.json`, then translate into `tr`, `el`, `it`, `ro`, `de`, `sr`:
+
+```json
+"codeInputHint": "Enter the full code or just the last 6 characters.",
+"codeInputInvalid": "That is not a valid code shape. Use the full code (8_6_6 characters) or the 6-character student code."
+```
+
+- [ ] **Step 2: Add the shared imports and state to each of the three screens**
+
+In `app/(student)/profile.tsx`, `app/(advisor)/profile.tsx`, and `app/(mentor)/student-list.tsx`:
 
 ```tsx
-import { RpcError } from '@/services/rpcError';
 import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
+import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
 import type { JoinIssueReason } from '@/services/joinIssue';
 ```
 
-and this state:
+and this state (one copy per screen, even where the screen has two call sites — the dialog shows
+whichever failure happened most recently):
 
 ```tsx
   const [issueReport, setIssueReport] = useState<{
@@ -2315,39 +2397,35 @@ and this state:
   } | null>(null);
 ```
 
-Note: `app/(advisor)/profile.tsx` has two call sites and needs only one copy of this state — the dialog is shown for whichever failed most recently.
+The two link screens additionally need:
 
-- [ ] **Step 2: Replace the student's Join Department error handling**
+```tsx
+import { parseStudentCode } from '@/utils/codes';
+```
 
-In `app/(student)/profile.tsx`, replace the `catch` of the join handler with:
+- [ ] **Step 3: Replace the catch in all four handlers**
+
+The same two lines go in every one of the four handlers — the student join handler, the advisor
+join handler, the advisor link handler, and the mentor link handler. Substitute the screen's own
+input state name for `<INPUT_STATE>` per the table above:
 
 ```tsx
               } catch (error) {
-                if (error instanceof RpcError) {
-                  const { key, params, code } = error.info;
-                  Alert.alert(t('common.error'), t(key, params), [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('errors.reportProblem'),
-                      onPress: () =>
-                        setIssueReport({
-                          code: deptCodeInput.trim(),
-                          reason:
-                            code === 'EMAIL_DOMAIN_BLOCKED'
-                              ? 'EMAIL_DOMAIN_BLOCKED'
-                              : 'INVALID_CODE',
-                        }),
-                    },
-                  ]);
-                } else {
-                  Alert.alert(t('common.error'), t('errors.unknown'));
-                }
+                showCodeErrorAlert({
+                  t,
+                  error,
+                  attemptedCode: <INPUT_STATE>,
+                  onReport: setIssueReport,
+                });
               }
 ```
 
-- [ ] **Step 3: Mount the dialog on the student profile**
+`onReport: setIssueReport` works directly because `showCodeErrorAlert` calls it with exactly
+`{ code, reason }`.
 
-Immediately before the closing tag of the screen's root element in `app/(student)/profile.tsx`, add:
+- [ ] **Step 4: Mount the dialog on all three screens**
+
+Immediately before the closing tag of each screen's root element:
 
 ```tsx
       <JoinIssueDialog
@@ -2358,60 +2436,41 @@ Immediately before the closing tag of the screen's root element in `app/(student
       />
 ```
 
-- [ ] **Step 4: Repeat for the advisor's Join Department card**
+- [ ] **Step 5: Add client-side shape validation to the two link screens**
 
-In `app/(advisor)/profile.tsx`, apply the identical `catch` replacement from Step 2 to the join handler at line 388, and mount the dialog exactly as in Step 3.
+This is the UX half of the split the Global Constraints describe: shape here, identity in the RPC.
+A wrong-shaped code is rejected instantly instead of costing a round trip.
 
-- [ ] **Step 5: Repeat for the advisor's Link Student card**
-
-In `app/(advisor)/profile.tsx`, replace the `catch` of the link handler at line 435 with:
-
-```tsx
-              } catch (error) {
-                if (error instanceof RpcError) {
-                  const { key, params, code } = error.info;
-                  Alert.alert(t('common.error'), t(key, params), [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('errors.reportProblem'),
-                      onPress: () =>
-                        setIssueReport({
-                          code: studentCodeInput.trim(),
-                          reason:
-                            code === 'CODE_SEGMENT_MISMATCH'
-                              ? 'CODE_SEGMENT_MISMATCH'
-                              : 'INVALID_CODE',
-                        }),
-                    },
-                  ]);
-                } else {
-                  Alert.alert(t('common.error'), t('errors.unknown'));
-                }
-              }
-```
-
-The advisor screen's link input state is `studentCodeInput` (`app/(advisor)/profile.tsx:33`);
-its department input is `deptCodeInput` (`:35`), the same name the student profile uses (`:43`).
-
-- [ ] **Step 6: Repeat for the mentor's link handler**
-
-In `app/(mentor)/student-list.tsx`, apply the Step 5 `catch` replacement to the handler around line 127 (using `codeInput` as the state name), and mount the dialog as in Step 3.
-
-- [ ] **Step 7: Add the input hint to both link inputs**
-
-Add this i18n key to `student` in all seven locales:
-
-```json
-"codeInputHint": "Enter the full code or just the last 6 characters."
-```
-
-Render it under the code `TextInput` on both `app/(mentor)/student-list.tsx` and `app/(advisor)/profile.tsx`:
+In `app/(mentor)/student-list.tsx` and `app/(advisor)/profile.tsx`, derive the shape from the
+current input during render:
 
 ```tsx
-              <Text style={styles.codeHint}>{t('student.codeInputHint')}</Text>
+  const codeShape = parseStudentCode(<INPUT_STATE>);
+  const isCodeShapeValid = codeShape.kind !== 'invalid';
 ```
 
-with:
+Render this under the link `TextInput`, showing the error hint only once the user has typed
+something:
+
+```tsx
+              <Text style={styles.codeHint}>
+                {<INPUT_STATE>.trim() && !isCodeShapeValid
+                  ? t('student.codeInputInvalid')
+                  : t('student.codeInputHint')}
+              </Text>
+```
+
+and gate the link button on the shape as well as on emptiness:
+
+```tsx
+                disabled={!<INPUT_STATE>.trim() || !isCodeShapeValid}
+```
+
+Match the existing button's disabled pattern in each file — the mentor screen uses a `disabled`
+prop, the advisor screen dims via `style={[styles.linkBtn, !cond && { opacity: 0.5 }]}`; keep
+whichever that file already does and extend its condition.
+
+Add the hint style to both files:
 
 ```tsx
   codeHint: {
@@ -2421,20 +2480,32 @@ with:
   },
 ```
 
-- [ ] **Step 8: Set `autoCapitalize="characters"` on both link inputs**
+- [ ] **Step 6: Set input casing on both link inputs**
 
-Add `autoCapitalize="characters"` and `autoCorrect={false}` to the code `TextInput` on both link screens so a pasted lowercase code looks right while typing. The RPC normalises regardless; this is cosmetic.
+Add `autoCapitalize="characters"` and `autoCorrect={false}` to the code `TextInput` on both link
+screens so a typed code looks right while entering. The RPC normalises regardless; this is
+cosmetic.
 
-- [ ] **Step 9: Verify types compile**
+- [ ] **Step 7: Verify types compile**
 
 Run: `npx tsc --noEmit`
 Expected: no output
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 8: Verify the helpers are actually used**
+
+```bash
+grep -rn "showCodeErrorAlert\|parseStudentCode" app/ | sort
+```
+
+Expected: `showCodeErrorAlert` imported and called in all three screens (four call sites);
+`parseStudentCode` imported and called in the two link screens. No screen may contain an inline
+`error instanceof RpcError` block.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add app/(student)/profile.tsx app/(advisor)/profile.tsx app/(mentor)/student-list.tsx src/i18n/locales
-git commit -m "feat: translate code errors and offer issue reporting at every code entry point"
+git commit -m "feat: translate code errors, validate code shape, and offer issue reporting"
 ```
 
 ---
