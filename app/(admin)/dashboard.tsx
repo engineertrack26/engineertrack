@@ -83,17 +83,17 @@ export default function AdminDashboard() {
   const copyCode = async () => {
     if (!institution?.institutionCode) return;
     await Clipboard.setStringAsync(institution.institutionCode);
-    Alert.alert('Copied!', 'Institution code copied to clipboard.');
+    Alert.alert(t('admin.copied'), t('admin.institutionCodeCopied'));
   };
 
   const handleCreateInstitution = async () => {
     if (!user) return;
     if (!setupName.trim()) {
-      Alert.alert('Error', 'Institution name is required.');
+      Alert.alert(t('common.error'), t('admin.institutionNameRequired'));
       return;
     }
     if (!setupCountry.trim()) {
-      Alert.alert('Error', 'Country is required.');
+      Alert.alert(t('common.error'), t('admin.countryRequired'));
       return;
     }
     setCreatingInstitution(true);
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
       setInstitution(inst);
       setShowSetup(false);
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create institution.');
+      Alert.alert(t('common.error'), err.message || t('admin.createInstitutionFailed'));
     } finally {
       setCreatingInstitution(false);
     }
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
   const handleCreateDepartment = async () => {
     if (!institution) return;
     if (!deptName.trim()) {
-      Alert.alert('Error', 'Department name is required.');
+      Alert.alert(t('common.error'), t('admin.departmentNameRequired'));
       return;
     }
     setCreatingDepartment(true);
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
       setDepartments((prev) => [...prev, { id: dept.id, name: dept.name, departmentCode: dept.departmentCode }]);
       setDeptName('');
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create department.');
+      Alert.alert(t('common.error'), err.message || t('admin.createDepartmentFailed'));
     } finally {
       setCreatingDepartment(false);
     }
@@ -171,10 +171,10 @@ export default function AdminDashboard() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.greeting} numberOfLines={1}>
-              Hello, {user?.firstName || 'Admin'}
+              {t('admin.greeting', { name: user?.firstName || t('admin.fallbackName') })}
             </Text>
             <Text style={styles.subtitle}>
-              {institution ? institution.name : 'Admin Dashboard'}
+              {institution ? institution.name : t('admin.dashboard')}
             </Text>
           </View>
           <TouchableOpacity
@@ -190,16 +190,14 @@ export default function AdminDashboard() {
         {!institution && !showSetup && (
           <View style={styles.setupCard}>
             <Ionicons name="business-outline" size={48} color={ADMIN_COLOR} />
-            <Text style={styles.setupTitle}>Set Up Your Institution</Text>
-            <Text style={styles.setupText}>
-              Create your institution to generate a code for advisors and students.
-            </Text>
+            <Text style={styles.setupTitle}>{t('admin.setupTitle')}</Text>
+            <Text style={styles.setupText}>{t('admin.setupText')}</Text>
             <TouchableOpacity
               style={styles.setupButton}
               onPress={() => setShowSetup(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.setupButtonText}>Create Institution</Text>
+              <Text style={styles.setupButtonText}>{t('admin.createInstitution')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -207,9 +205,9 @@ export default function AdminDashboard() {
         {/* Institution Setup Form */}
         {!institution && showSetup && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Create Institution</Text>
+            <Text style={styles.formTitle}>{t('admin.createInstitution')}</Text>
 
-            <Text style={styles.formLabel}>Institution Name *</Text>
+            <Text style={styles.formLabel}>{t('admin.institutionName')} *</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="business-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <View style={{ flex: 1 }}>
@@ -217,28 +215,32 @@ export default function AdminDashboard() {
                   style={styles.inputText}
                   value={setupName}
                   onChangeText={setSetupName}
-                  placeholder="e.g. Istanbul Technical University"
+                  placeholder={t('admin.institutionNamePlaceholder')}
                   placeholderTextColor={colors.textDisabled}
                 />
               </View>
             </View>
 
-            <Text style={styles.formLabel}>Type</Text>
+            <Text style={styles.formLabel}>{t('admin.institutionType')}</Text>
             <View style={styles.typeRow}>
-              {(['university', 'vocational_school', 'other'] as const).map((t) => (
+              {(['university', 'vocational_school', 'other'] as const).map((option) => (
                 <TouchableOpacity
-                  key={t}
-                  style={[styles.typeChip, setupType === t && styles.typeChipActive]}
-                  onPress={() => setSetupType(t)}
+                  key={option}
+                  style={[styles.typeChip, setupType === option && styles.typeChipActive]}
+                  onPress={() => setSetupType(option)}
                 >
-                  <Text style={[styles.typeChipText, setupType === t && styles.typeChipTextActive]}>
-                    {t === 'university' ? 'University' : t === 'vocational_school' ? 'Vocational' : 'Other'}
+                  <Text style={[styles.typeChipText, setupType === option && styles.typeChipTextActive]}>
+                    {option === 'university'
+                      ? t('admin.typeUniversity')
+                      : option === 'vocational_school'
+                        ? t('admin.typeVocational')
+                        : t('admin.typeOther')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.formLabel}>Country *</Text>
+            <Text style={styles.formLabel}>{t('admin.country')} *</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="globe-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <View style={{ flex: 1 }}>
@@ -246,7 +248,7 @@ export default function AdminDashboard() {
                   style={styles.inputText}
                   value={setupCountry}
                   onChangeText={setSetupCountry}
-                  placeholder="e.g. Turkey"
+                  placeholder={t('admin.countryPlaceholder')}
                   placeholderTextColor={colors.textDisabled}
                 />
               </View>
@@ -275,7 +277,7 @@ export default function AdminDashboard() {
                 style={styles.cancelFormBtn}
                 onPress={() => setShowSetup(false)}
               >
-                <Text style={styles.cancelFormText}>Cancel</Text>
+                <Text style={styles.cancelFormText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.createFormBtn}
@@ -285,7 +287,7 @@ export default function AdminDashboard() {
                 {creatingInstitution ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.createFormText}>Create</Text>
+                  <Text style={styles.createFormText}>{t('admin.create')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -301,13 +303,11 @@ export default function AdminDashboard() {
           >
             <View style={styles.codeCardHeader}>
               <Ionicons name="key-outline" size={22} color={ADMIN_COLOR} />
-              <Text style={styles.codeCardTitle}>Institution Code</Text>
+              <Text style={styles.codeCardTitle}>{t('admin.institutionCode')}</Text>
               <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
             </View>
             <Text style={styles.codeText}>{institution.institutionCode}</Text>
-            <Text style={styles.codeHint}>
-              Share this code with advisors and students to join your institution
-            </Text>
+            <Text style={styles.codeHint}>{t('admin.institutionCodeHint')}</Text>
           </TouchableOpacity>
         )}
 
@@ -356,18 +356,16 @@ export default function AdminDashboard() {
         {institution && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Departments</Text>
+              <Text style={styles.cardTitle}>{t('admin.departments')}</Text>
             </View>
-            <Text style={styles.linkHint}>
-              Create departments to generate codes for users to join specific areas.
-            </Text>
+            <Text style={styles.linkHint}>{t('admin.departmentsHint')}</Text>
 
             <View style={styles.linkRow}>
               <TextInput
                 style={styles.linkInput}
                 value={deptName}
                 onChangeText={setDeptName}
-                placeholder="e.g. Computer Engineering"
+                placeholder={t('admin.departmentNamePlaceholder')}
                 placeholderTextColor={colors.textDisabled}
               />
               <TouchableOpacity
@@ -379,7 +377,7 @@ export default function AdminDashboard() {
                 {creatingDepartment ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.linkBtnText}>Add</Text>
+                  <Text style={styles.linkBtnText}>{t('admin.addDepartment')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -390,12 +388,14 @@ export default function AdminDashboard() {
                   <View key={d.id} style={styles.departmentRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.departmentName}>{d.name}</Text>
-                      <Text style={styles.departmentHint}>Code: {d.departmentCode}</Text>
+                      <Text style={styles.departmentHint}>
+                        {t('admin.departmentCode', { code: d.departmentCode })}
+                      </Text>
                     </View>
                     <TouchableOpacity
                       onPress={async () => {
                         await Clipboard.setStringAsync(d.departmentCode);
-                        Alert.alert('Copied!', 'Department code copied to clipboard.');
+                        Alert.alert(t('admin.copied'), t('admin.departmentCodeCopied'));
                       }}
                     >
                       <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
@@ -412,14 +412,14 @@ export default function AdminDashboard() {
           <View style={styles.statsGrid}>
             <View style={styles.statsRow}>
               <StatCard
-                title="Total Students"
+                title={t('admin.totalStudents')}
                 value={stats.totalStudents}
                 icon="people"
                 color={ADMIN_COLOR}
               />
               <View style={{ width: spacing.sm }} />
               <StatCard
-                title="Active Internships"
+                title={t('admin.activeInternships')}
                 value={stats.activeInternships}
                 icon="briefcase"
                 color={colors.success}
@@ -427,14 +427,14 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.statsRow}>
               <StatCard
-                title="Total Advisors"
+                title={t('admin.totalAdvisors')}
                 value={stats.totalAdvisors}
                 icon="school"
                 color={colors.info}
               />
               <View style={{ width: spacing.sm }} />
               <StatCard
-                title="Completion Rate"
+                title={t('admin.completionRate')}
                 value={`${stats.completionRate}%`}
                 icon="trending-up"
                 color={colors.warning}
@@ -446,7 +446,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         {institution && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionTitle}>{t('admin.quickActions')}</Text>
             <View style={styles.quickActions}>
               <TouchableOpacity
                 style={styles.actionCard}
@@ -456,7 +456,7 @@ export default function AdminDashboard() {
                 <View style={[styles.actionIcon, { backgroundColor: ADMIN_COLOR + '15' }]}>
                   <Ionicons name="people" size={22} color={ADMIN_COLOR} />
                 </View>
-                <Text style={styles.actionLabel}>View Users</Text>
+                <Text style={styles.actionLabel}>{t('admin.viewUsers')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -467,7 +467,7 @@ export default function AdminDashboard() {
                 <View style={[styles.actionIcon, { backgroundColor: colors.info + '15' }]}>
                   <Ionicons name="bar-chart" size={22} color={colors.info} />
                 </View>
-                <Text style={styles.actionLabel}>Reports</Text>
+                <Text style={styles.actionLabel}>{t('admin.reports')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -478,7 +478,7 @@ export default function AdminDashboard() {
                 <View style={[styles.actionIcon, { backgroundColor: colors.success + '15' }]}>
                   <Ionicons name="share-social" size={22} color={colors.success} />
                 </View>
-                <Text style={styles.actionLabel}>Share Code</Text>
+                <Text style={styles.actionLabel}>{t('admin.shareCode')}</Text>
               </TouchableOpacity>
             </View>
           </View>
