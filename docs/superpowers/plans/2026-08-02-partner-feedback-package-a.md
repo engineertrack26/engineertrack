@@ -2370,7 +2370,7 @@ file, not four screens.
 
 ```tsx
 // src/components/common/JoinIssueDialog.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet, TextInput, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -2389,6 +2389,14 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
   const [note, setNote] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // Task 13 mounts this dialog persistently on each screen and only flips
+  // `visible`, so component state survives between openings. Without this, a
+  // note typed for one code and then cancelled would still be sitting there
+  // the next time a DIFFERENT code fails — and would be sent attached to it.
+  useEffect(() => {
+    if (visible) setNote('');
+  }, [visible]);
+
   async function handleSend() {
     setIsSending(true);
     try {
@@ -2397,13 +2405,16 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
         reason,
         note,
       });
-      setNote('');
-      onClose();
+      // Close on acknowledgement rather than before the alert. Presenting an
+      // Alert while a Modal is mid-dismissal is swallowed on iOS, which would
+      // silently drop the only confirmation the user gets that their report
+      // was sent.
       Alert.alert(
         t('errors.reportTitle'),
         routedToAdmin
           ? t('errors.reportSentRouted')
           : t('errors.reportSentStored'),
+        [{ text: t('common.done'), onPress: onClose }],
       );
     } catch {
       Alert.alert(t('common.error'), t('errors.reportFailed'));
@@ -2433,7 +2444,12 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
           />
 
           <View style={styles.actions}>
-            <Button title={t('common.cancel')} onPress={onClose} variant="ghost" />
+            <Button
+              title={t('common.cancel')}
+              onPress={onClose}
+              variant="ghost"
+              disabled={isSending}
+            />
             <Button
               title={t('errors.reportSend')}
               onPress={handleSend}
