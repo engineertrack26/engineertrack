@@ -204,5 +204,26 @@
       "updatedBody": "Molimo vas da pregledate i prihvatite ažurirano obaveštenje kako biste nastavili da koristite EngineerTrack.",
       "acceptFailed": "Nismo uspeli da zabeležimo vaše prihvatanje. Proverite vezu i pokušajte ponovo."
     }
+  },
+  "errors": {
+    "unknown": "Nešto je pošlo naopako. Molimo pokušajte ponovo.",
+    "notAuthenticated": "Vaša sesija je istekla. Molimo prijavite se ponovo.",
+    "roleNotAllowed": "Vaša uloga ne može da izvrši ovu radnju.",
+    "invalidCode": "Ovaj kod nije važeći. Proverite ga sa osobom koja vam ga je dala.",
+    "expiredCode": "Ovaj kod više nije aktivan. Zamolite studenta da podeli svoj trenutni kod.",
+    "invalidCodeFormat": "Ovo ne izgleda kao važeći kod. Unesite ceo kod ili samo poslednjih 6 karaktera.",
+    "codeSegmentMismatch": "Ovaj kod se ne poklapa sa institucijom i odsekom studenta.",
+    "institutionMismatch": "Ovaj student pripada drugoj instituciji.",
+    "emailDomainBlocked": "Ova institucija dozvoljava samo sledeće imejl domene: {{domains}}",
+    "reportRateLimited": "Upravo ste poslali nekoliko prijava. Sačekajte nekoliko minuta pre slanja sledeće.",
+    "noteTooLong": "Vaša napomena je predugačka. Molimo ograničite je na 500 karaktera.",
+    "reportProblem": "Prijavi problem",
+    "reportTitle": "Prijavi problem sa pridruživanjem",
+    "reportNoteLabel": "Šta se dogodilo?",
+    "reportNotePlaceholder": "Na primer: moj savetnik mi je dao ovaj kod danas.",
+    "reportSend": "Pošalji",
+    "reportSentRouted": "Vaša prijava je poslata administratoru vaše institucije.",
+    "reportSentStored": "Vaša prijava je zabeležena. Molimo kontaktirajte i osobu koja vam je dala kod.",
+    "reportFailed": "Nismo uspeli da pošaljemo vašu prijavu. Proverite vezu i pokušajte ponovo."
   }
 }

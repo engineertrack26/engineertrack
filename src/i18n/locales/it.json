@@ -204,5 +204,26 @@
       "updatedBody": "Ti preghiamo di rivedere e accettare l'informativa aggiornata per continuare a utilizzare EngineerTrack.",
       "acceptFailed": "Non siamo riusciti a registrare la tua accettazione. Controlla la connessione e riprova."
     }
+  },
+  "errors": {
+    "unknown": "Qualcosa è andato storto. Riprova.",
+    "notAuthenticated": "La tua sessione è scaduta. Accedi di nuovo.",
+    "roleNotAllowed": "Il tuo ruolo non può eseguire questa azione.",
+    "invalidCode": "Questo codice non è valido. Verificalo con chi te lo ha fornito.",
+    "expiredCode": "Questo codice non è più attivo. Chiedi allo studente di condividere il suo codice attuale.",
+    "invalidCodeFormat": "Questo non sembra un codice valido. Inserisci il codice completo oppure solo gli ultimi 6 caratteri.",
+    "codeSegmentMismatch": "Questo codice non corrisponde all'istituto e al dipartimento dello studente.",
+    "institutionMismatch": "Questo studente appartiene a un istituto diverso.",
+    "emailDomainBlocked": "Questo istituto consente solo questi domini e-mail: {{domains}}",
+    "reportRateLimited": "Hai appena inviato diverse segnalazioni. Attendi qualche minuto prima di inviarne un'altra.",
+    "noteTooLong": "La tua nota è troppo lunga. Mantienila entro 500 caratteri.",
+    "reportProblem": "Segnala un problema",
+    "reportTitle": "Segnala un problema di adesione",
+    "reportNoteLabel": "Cosa è successo?",
+    "reportNotePlaceholder": "Ad esempio: il mio tutor mi ha dato questo codice oggi.",
+    "reportSend": "Invia",
+    "reportSentRouted": "La tua segnalazione è stata inviata all'amministratore del tuo istituto.",
+    "reportSentStored": "La tua segnalazione è stata registrata. Contatta anche chi ti ha fornito il codice.",
+    "reportFailed": "Non siamo riusciti a inviare la tua segnalazione. Controlla la connessione e riprova."
   }
 }

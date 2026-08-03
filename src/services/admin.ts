@@ -12,6 +12,7 @@ function mapInstitution(row: Record<string, unknown>): Institution {
     country: (row.country as string) || '',
     adminId: (row.admin_id as string) || '',
     institutionCode: (row.institution_code as string) || '',
+    allowedEmailDomains: (row.allowed_email_domains as string[]) || [],
     createdAt: (row.created_at as string) || '',
     updatedAt: (row.updated_at as string) || '',
   };

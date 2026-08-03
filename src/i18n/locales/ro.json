@@ -204,5 +204,26 @@
       "updatedBody": "Vă rugăm să revizuiți și să acceptați notificarea actualizată pentru a continua să utilizați EngineerTrack.",
       "acceptFailed": "Nu am putut înregistra acceptul dumneavoastră. Verificați conexiunea și încercați din nou."
     }
+  },
+  "errors": {
+    "unknown": "Ceva n-a mers bine. Te rugăm să încerci din nou.",
+    "notAuthenticated": "Sesiunea ta a expirat. Te rugăm să te autentifici din nou.",
+    "roleNotAllowed": "Rolul tău nu poate efectua această acțiune.",
+    "invalidCode": "Acest cod nu este valid. Verifică-l cu persoana care ți l-a dat.",
+    "expiredCode": "Acest cod nu mai este activ. Cere-i studentului să îți transmită codul actual.",
+    "invalidCodeFormat": "Acesta nu pare a fi un cod valid. Introdu codul complet sau doar ultimele 6 caractere.",
+    "codeSegmentMismatch": "Acest cod nu corespunde instituției și departamentului studentului.",
+    "institutionMismatch": "Acest student aparține unei alte instituții.",
+    "emailDomainBlocked": "Această instituție permite doar aceste domenii de e-mail: {{domains}}",
+    "reportRateLimited": "Ai trimis mai multe raportări chiar acum. Te rugăm să aștepți câteva minute înainte de a trimite alta.",
+    "noteTooLong": "Nota ta este prea lungă. Te rugăm să o păstrezi sub 500 de caractere.",
+    "reportProblem": "Raportează o problemă",
+    "reportTitle": "Raportează o problemă de înscriere",
+    "reportNoteLabel": "Ce s-a întâmplat?",
+    "reportNotePlaceholder": "De exemplu: îndrumătorul meu mi-a dat acest cod astăzi.",
+    "reportSend": "Trimite",
+    "reportSentRouted": "Raportarea ta a fost trimisă administratorului instituției tale.",
+    "reportSentStored": "Raportarea ta a fost înregistrată. Te rugăm să contactezi și persoana care ți-a dat codul.",
+    "reportFailed": "Nu am putut trimite raportarea ta. Verifică conexiunea și încearcă din nou."
   }
 }

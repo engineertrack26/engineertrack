@@ -3,3 +3,5 @@ export { authService } from './auth';
 export { logService } from './logs';
 export { gamificationService } from './gamification';
 export { departmentCodeService } from './departmentCode';
+export { joinIssueService } from './joinIssue';
+export { RpcError } from './rpcError';

@@ -33,4 +33,11 @@ describe('mapRpcError', () => {
   it('falls back for an undefined message', () => {
     expect(mapRpcError(undefined)).toEqual({ code: 'UNKNOWN', key: 'errors.unknown' });
   });
+
+  it('maps the report rate limit code', () => {
+    expect(mapRpcError('REPORT_RATE_LIMITED')).toEqual({
+      code: 'REPORT_RATE_LIMITED',
+      key: 'errors.reportRateLimited',
+    });
+  });
 });

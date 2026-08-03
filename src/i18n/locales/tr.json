@@ -204,5 +204,26 @@
       "updatedBody": "EngineerTrack'i kullanmaya devam etmek için lütfen güncellenmiş bildirimi inceleyip kabul edin.",
       "acceptFailed": "Onayınızı kaydedemedik. Bağlantınızı kontrol edip tekrar deneyin."
     }
+  },
+  "errors": {
+    "unknown": "Bir şeyler ters gitti. Lütfen tekrar deneyin.",
+    "notAuthenticated": "Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.",
+    "roleNotAllowed": "Rolünüz bu işlemi gerçekleştiremez.",
+    "invalidCode": "Bu kod geçerli değil. Kodu size veren kişiyle kontrol edin.",
+    "expiredCode": "Bu kod artık aktif değil. Öğrenciden güncel kodunu paylaşmasını isteyin.",
+    "invalidCodeFormat": "Bu geçerli bir kod gibi görünmüyor. Kodun tamamını veya yalnızca son 6 karakterini girin.",
+    "codeSegmentMismatch": "Bu kod, öğrencinin kurumu ve bölümüyle eşleşmiyor.",
+    "institutionMismatch": "Bu öğrenci farklı bir kuruma bağlı.",
+    "emailDomainBlocked": "Bu kurum yalnızca şu e-posta alan adlarına izin veriyor: {{domains}}",
+    "reportRateLimited": "Az önce birkaç rapor gönderdiniz. Bir sonrakini göndermeden önce birkaç dakika bekleyin.",
+    "noteTooLong": "Notunuz çok uzun. Lütfen 500 karakterin altında tutun.",
+    "reportProblem": "Bir sorunu bildir",
+    "reportTitle": "Katılım sorununu bildir",
+    "reportNoteLabel": "Ne oldu?",
+    "reportNotePlaceholder": "Örneğin: danışmanım bu kodu bana bugün verdi.",
+    "reportSend": "Gönder",
+    "reportSentRouted": "Raporunuz kurumunuzun yöneticisine gönderildi.",
+    "reportSentStored": "Raporunuz kaydedildi. Lütfen kodu size veren kişiyle de iletişime geçin.",
+    "reportFailed": "Raporunuzu gönderemedik. Bağlantınızı kontrol edip tekrar deneyin."
   }
 }

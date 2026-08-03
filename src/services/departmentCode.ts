@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { RpcError } from './rpcError';
 import type { Department } from '@/types/institution';
 
 function mapDepartment(row: Record<string, unknown>): Department {
@@ -17,7 +18,7 @@ export const departmentCodeService = {
     const { data, error } = await supabase.rpc('validate_department_code', {
       p_code: code.toUpperCase().trim(),
     });
-    if (error) throw error;
+    if (error) throw new RpcError(error.message);
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return null;
     return mapDepartment(row as Record<string, unknown>);
@@ -27,9 +28,9 @@ export const departmentCodeService = {
     const { data, error } = await supabase.rpc('join_department_by_code', {
       p_code: code.toUpperCase().trim(),
     });
-    if (error) throw error;
+    if (error) throw new RpcError(error.message);
     const row = Array.isArray(data) ? data[0] : data;
-    if (!row) throw new Error('Invalid department code');
+    if (!row) throw new RpcError('INVALID_CODE');
     return mapDepartment(row as Record<string, unknown>);
   },
 };

@@ -204,5 +204,26 @@
       "updatedBody": "Please review and accept the updated notice to continue using EngineerTrack.",
       "acceptFailed": "We could not record your acceptance. Check your connection and try again."
     }
+  },
+  "errors": {
+    "unknown": "Something went wrong. Please try again.",
+    "notAuthenticated": "Your session expired. Please sign in again.",
+    "roleNotAllowed": "Your role cannot perform this action.",
+    "invalidCode": "This code is not valid. Check it with the person who gave it to you.",
+    "expiredCode": "This code is no longer active. Ask the student to share their current code.",
+    "invalidCodeFormat": "That does not look like a valid code. Enter the full code or just the last 6 characters.",
+    "codeSegmentMismatch": "This code does not match the student's institution and department.",
+    "institutionMismatch": "This student belongs to a different institution.",
+    "emailDomainBlocked": "This institution only allows these e-mail domains: {{domains}}",
+    "reportRateLimited": "You have sent several reports just now. Please wait a few minutes before sending another.",
+    "noteTooLong": "Your note is too long. Please keep it under 500 characters.",
+    "reportProblem": "Report a problem",
+    "reportTitle": "Report a join problem",
+    "reportNoteLabel": "What happened?",
+    "reportNotePlaceholder": "For example: my advisor gave me this code today.",
+    "reportSend": "Send",
+    "reportSentRouted": "Your report has been sent to your institution's administrator.",
+    "reportSentStored": "Your report has been recorded. Please also contact whoever gave you the code.",
+    "reportFailed": "We could not send your report. Check your connection and try again."
   }
 }

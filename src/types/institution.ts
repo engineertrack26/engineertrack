@@ -10,6 +10,7 @@ export interface Institution {
   country: string;
   adminId: string;
   institutionCode: string;
+  allowedEmailDomains: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -54,4 +55,13 @@ export interface MemberWithProfile {
   avatarUrl?: string;
   departmentId?: string;
   createdAt: string;
+}
+
+export interface StudentCodeDetails {
+  code: string;
+  compositeCode: string | null;
+  institutionCode?: string;
+  departmentCode?: string;
+  institutionName?: string;
+  departmentName?: string;
 }
