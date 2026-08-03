@@ -2736,6 +2736,29 @@ Add `autoCapitalize="characters"` and `autoCorrect={false}` to the code `TextInp
 screens so a typed code looks right while entering. The RPC normalises regardless; this is
 cosmetic.
 
+- [ ] **Step 6b: Retire the "6-digit code" sentences the new hint contradicts**
+
+Both link cards carry a hardcoded English sentence that predates this work and
+is now wrong — the input accepts a 22-character composite code as well:
+
+- `app/(advisor)/profile.tsx:432` — "Enter a student's 6-digit code to link to their account as an advisor."
+- `app/(mentor)/student-list.tsx:255` — "Enter a student's 6-digit code to add them to your list."
+
+Each now sits directly above a translated `codeHint` saying "Enter the full code
+or just the last 6 characters", so the screen contradicts itself on the exact
+point partners asked us to clarify. Reword each to drop the false specific while
+keeping the sentence's purpose:
+
+- advisor → `Link a student to your account as their advisor.`
+- mentor → `Link a student to add them to your list.`
+
+Leave them hardcoded English. The surrounding cards are untranslated too; this
+step corrects a falsehood, it does not take on that pre-existing debt.
+
+The `placeholder="e.g. ABC123"` on both inputs stays — the short form really is
+accepted, so it is incomplete rather than wrong, and a 22-character example
+would not fit the field.
+
 - [ ] **Step 7: Verify types compile**
 
 Run: `npx tsc --noEmit`
