@@ -31,7 +31,11 @@
     "noNotifications": "Bildirim Yok",
     "noNotificationsDesc": "Her şey güncel! Daha sonra tekrar kontrol edin.",
     "somethingWentWrong": "Bir şeyler ters gitti",
-    "somethingWentWrongDesc": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+    "somethingWentWrongDesc": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+    "allowedEmailDomains": "İzin verilen e-posta alan adları (isteğe bağlı)",
+    "allowedEmailDomainsHint": "Virgülle ayırın, örneğin: btu.edu.tr, ogr.btu.edu.tr. Herhangi bir adrese izin vermek için boş bırakın. Alt alan adları otomatik olarak eşleşmez — her birini ayrı ayrı ekleyin.",
+    "allowedEmailDomainsNone": "Herhangi bir e-posta adresi kabul edilir.",
+    "allowedEmailDomainsSaved": "İzin verilen e-posta alan adları güncellendi."
   },
   "auth": {
     "login": "Giriş Yap",

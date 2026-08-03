@@ -31,7 +31,11 @@
     "noNotifications": "Keine Benachrichtigungen",
     "noNotificationsDesc": "Alles erledigt! Schauen Sie später wieder vorbei.",
     "somethingWentWrong": "Etwas ist schiefgelaufen",
-    "somethingWentWrongDesc": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+    "somethingWentWrongDesc": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "allowedEmailDomains": "Zulässige E-Mail-Domains (optional)",
+    "allowedEmailDomainsHint": "Durch Komma getrennt, zum Beispiel: btu.edu.tr, ogr.btu.edu.tr. Leer lassen, um jede Adresse zuzulassen. Subdomains werden nicht automatisch zugeordnet — fügen Sie jede einzeln hinzu.",
+    "allowedEmailDomainsNone": "Jede E-Mail-Adresse wird akzeptiert.",
+    "allowedEmailDomainsSaved": "Zulässige E-Mail-Domains aktualisiert."
   },
   "auth": {
     "login": "Anmelden",

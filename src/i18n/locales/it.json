@@ -31,7 +31,11 @@
     "noNotifications": "Nessuna notifica",
     "noNotificationsDesc": "Sei aggiornato! Ricontrolla più tardi.",
     "somethingWentWrong": "Qualcosa è andato storto",
-    "somethingWentWrongDesc": "Si è verificato un errore imprevisto. Riprova per favore."
+    "somethingWentWrongDesc": "Si è verificato un errore imprevisto. Riprova per favore.",
+    "allowedEmailDomains": "Domini e-mail consentiti (facoltativo)",
+    "allowedEmailDomainsHint": "Separati da virgola, ad esempio: btu.edu.tr, ogr.btu.edu.tr. Lascia vuoto per consentire qualsiasi indirizzo. I sottodomini non vengono associati automaticamente: aggiungi ciascuno separatamente.",
+    "allowedEmailDomainsNone": "Viene accettato qualsiasi indirizzo e-mail.",
+    "allowedEmailDomainsSaved": "Domini e-mail consentiti aggiornati."
   },
   "auth": {
     "login": "Accedi",

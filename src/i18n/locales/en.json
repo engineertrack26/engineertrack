@@ -31,7 +31,11 @@
     "noNotifications": "No Notifications",
     "noNotificationsDesc": "You're all caught up! Check back later.",
     "somethingWentWrong": "Something went wrong",
-    "somethingWentWrongDesc": "An unexpected error occurred. Please try again."
+    "somethingWentWrongDesc": "An unexpected error occurred. Please try again.",
+    "allowedEmailDomains": "Allowed e-mail domains (optional)",
+    "allowedEmailDomainsHint": "Comma-separated, for example: btu.edu.tr, ogr.btu.edu.tr. Leave empty to allow any address. Subdomains are not matched automatically — add each one.",
+    "allowedEmailDomainsNone": "Any e-mail address is accepted.",
+    "allowedEmailDomainsSaved": "Allowed e-mail domains updated."
   },
   "auth": {
     "login": "Login",

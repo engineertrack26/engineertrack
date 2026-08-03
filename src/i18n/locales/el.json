@@ -31,7 +31,11 @@
     "noNotifications": "Καμία ειδοποίηση",
     "noNotificationsDesc": "Είστε πλήρως ενημερωμένοι! Ελέγξτε ξανά αργότερα.",
     "somethingWentWrong": "Κάτι πήγε στραβά",
-    "somethingWentWrongDesc": "Παρουσιάστηκε ένα απρόσμενο σφάλμα. Παρακαλώ δοκιμάστε ξανά."
+    "somethingWentWrongDesc": "Παρουσιάστηκε ένα απρόσμενο σφάλμα. Παρακαλώ δοκιμάστε ξανά.",
+    "allowedEmailDomains": "Επιτρεπόμενοι τομείς e-mail (προαιρετικό)",
+    "allowedEmailDomainsHint": "Χωρισμένοι με κόμμα, για παράδειγμα: btu.edu.tr, ogr.btu.edu.tr. Αφήστε κενό για να επιτρέπεται οποιαδήποτε διεύθυνση. Οι υποτομείς δεν αντιστοιχίζονται αυτόματα — προσθέστε κάθε έναν ξεχωριστά.",
+    "allowedEmailDomainsNone": "Γίνεται αποδεκτή οποιαδήποτε διεύθυνση e-mail.",
+    "allowedEmailDomainsSaved": "Οι επιτρεπόμενοι τομείς e-mail ενημερώθηκαν."
   },
   "auth": {
     "login": "Σύνδεση",

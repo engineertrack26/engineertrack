@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -21,11 +22,13 @@ import { adminService } from '@/services/admin';
 import { StatCard } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { InstitutionType } from '@/types/institution';
+import { normalizeDomainList } from '@/utils/emailDomain';
 
 const ADMIN_COLOR = '#e65100';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { institution, stats, setInstitution } = useAdminStore();
 
@@ -35,10 +38,17 @@ export default function AdminDashboard() {
   const [setupName, setSetupName] = useState('');
   const [setupType, setSetupType] = useState<InstitutionType>('university');
   const [setupCountry, setSetupCountry] = useState('');
+  const [setupDomains, setSetupDomains] = useState('');
   const [creatingInstitution, setCreatingInstitution] = useState(false);
   const [departments, setDepartments] = useState<{ id: string; name: string; departmentCode: string }[]>([]);
   const [deptName, setDeptName] = useState('');
   const [creatingDepartment, setCreatingDepartment] = useState(false);
+  const [domainsInput, setDomainsInput] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
+
+  useEffect(() => {
+    setDomainsInput((institution?.allowedEmailDomains || []).join(', '));
+  }, [institution?.id, institution?.allowedEmailDomains]);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -92,6 +102,7 @@ export default function AdminDashboard() {
         name: setupName.trim(),
         type: setupType,
         country: setupCountry.trim(),
+        allowedEmailDomains: normalizeDomainList(setupDomains),
       });
       setInstitution(inst);
       setShowSetup(false);
@@ -101,6 +112,22 @@ export default function AdminDashboard() {
       setCreatingInstitution(false);
     }
   };
+
+  async function handleSaveDomains() {
+    if (!institution) return;
+    setSavingDomains(true);
+    try {
+      const domains = normalizeDomainList(domainsInput);
+      await adminService.updateAllowedEmailDomains(institution.id, domains);
+      setInstitution({ ...institution, allowedEmailDomains: domains });
+      setDomainsInput(domains.join(', '));
+      Alert.alert(t('common.done'), t('common.allowedEmailDomainsSaved'));
+    } catch (err: any) {
+      Alert.alert(t('common.error'), err.message || t('errors.unknown'));
+    } finally {
+      setSavingDomains(false);
+    }
+  }
 
   const handleCreateDepartment = async () => {
     if (!institution) return;
@@ -225,6 +252,24 @@ export default function AdminDashboard() {
               </View>
             </View>
 
+            <Text style={styles.formLabel}>{t('common.allowedEmailDomains')}</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.inputText}
+                  value={setupDomains}
+                  onChangeText={setSetupDomains}
+                  placeholder="btu.edu.tr, ogr.btu.edu.tr"
+                  placeholderTextColor={colors.textDisabled}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                />
+              </View>
+            </View>
+            <Text style={styles.formHint}>{t('common.allowedEmailDomainsHint')}</Text>
+
             <View style={styles.formActions}>
               <TouchableOpacity
                 style={styles.cancelFormBtn}
@@ -264,6 +309,47 @@ export default function AdminDashboard() {
               Share this code with advisors and students to join your institution
             </Text>
           </TouchableOpacity>
+        )}
+
+        {/* Allowed E-mail Domains */}
+        {institution && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{t('common.allowedEmailDomains')}</Text>
+            </View>
+            <Text style={styles.linkHint}>{t('common.allowedEmailDomainsHint')}</Text>
+
+            <View style={styles.linkRow}>
+              <TextInput
+                style={styles.linkInput}
+                value={domainsInput}
+                onChangeText={setDomainsInput}
+                placeholder="btu.edu.tr, ogr.btu.edu.tr"
+                placeholderTextColor={colors.textDisabled}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+              <TouchableOpacity
+                style={styles.linkBtn}
+                disabled={savingDomains}
+                onPress={handleSaveDomains}
+                activeOpacity={0.7}
+              >
+                {savingDomains ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.linkBtnText}>{t('common.save')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {(institution.allowedEmailDomains || []).length === 0 && (
+              <Text style={styles.departmentHint}>
+                {t('common.allowedEmailDomainsNone')}
+              </Text>
+            )}
+          </View>
         )}
 
         {/* Department Codes */}
@@ -515,6 +601,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
+  },
+  formHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    lineHeight: 16,
   },
   inputText: {
     fontSize: 15,

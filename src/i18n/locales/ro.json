@@ -31,7 +31,11 @@
     "noNotifications": "Nicio notificare",
     "noNotificationsDesc": "Ești la zi! Revino mai târziu.",
     "somethingWentWrong": "Ceva n-a mers bine",
-    "somethingWentWrongDesc": "A apărut o eroare neașteptată. Te rugăm să încerci din nou."
+    "somethingWentWrongDesc": "A apărut o eroare neașteptată. Te rugăm să încerci din nou.",
+    "allowedEmailDomains": "Domenii de e-mail permise (opțional)",
+    "allowedEmailDomainsHint": "Separate prin virgulă, de exemplu: btu.edu.tr, ogr.btu.edu.tr. Lasă gol pentru a permite orice adresă. Subdomeniile nu sunt potrivite automat — adaugă fiecare în parte.",
+    "allowedEmailDomainsNone": "Este acceptată orice adresă de e-mail.",
+    "allowedEmailDomainsSaved": "Domeniile de e-mail permise au fost actualizate."
   },
   "auth": {
     "login": "Autentificare",

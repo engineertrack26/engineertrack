@@ -52,6 +52,7 @@ export const adminService = {
       department?: string;
       city?: string;
       country: string;
+      allowedEmailDomains?: string[];
     },
   ): Promise<Institution> {
     const { data: row, error } = await supabase
@@ -64,6 +65,7 @@ export const adminService = {
         department: data.department || null,
         city: data.city || null,
         country: data.country,
+        allowed_email_domains: data.allowedEmailDomains || [],
       })
       .select()
       .single();
@@ -124,6 +126,14 @@ export const adminService = {
       .single();
     if (error) throw error;
     return mapInstitution(data as Record<string, unknown>);
+  },
+
+  async updateAllowedEmailDomains(institutionId: string, domains: string[]) {
+    const { error } = await supabase
+      .from('institutions')
+      .update({ allowed_email_domains: domains })
+      .eq('id', institutionId);
+    if (error) throw error;
   },
 
   async regenerateInstitutionCode(institutionId: string): Promise<string> {

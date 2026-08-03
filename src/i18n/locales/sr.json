@@ -31,7 +31,11 @@
     "noNotifications": "Nema obaveštenja",
     "noNotificationsDesc": "Sve je ažurno! Proverite ponovo kasnije.",
     "somethingWentWrong": "Nešto je pošlo naopako",
-    "somethingWentWrongDesc": "Došlo je do neočekivane greške. Molimo pokušajte ponovo."
+    "somethingWentWrongDesc": "Došlo je do neočekivane greške. Molimo pokušajte ponovo.",
+    "allowedEmailDomains": "Dozvoljeni imejl domeni (opciono)",
+    "allowedEmailDomainsHint": "Odvojeni zapetom, na primer: btu.edu.tr, ogr.btu.edu.tr. Ostavite prazno da dozvolite bilo koju adresu. Poddomeni se ne poklapaju automatski — dodajte svaki posebno.",
+    "allowedEmailDomainsNone": "Prihvata se bilo koja imejl adresa.",
+    "allowedEmailDomainsSaved": "Dozvoljeni imejl domeni su ažurirani."
   },
   "auth": {
     "login": "Prijava",
