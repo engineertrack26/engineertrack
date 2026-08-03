@@ -2980,6 +2980,13 @@ Run `npx expo start --clear` and confirm each of these. Record the actual result
 7. Mentor links with the **full composite** code → success.
 8. Mentor links with the **last 6 characters** only → success.
 9. Mentor links with a wrong institution segment → translated `codeSegmentMismatch` message, with a "Report a problem" action.
+9b. Tap "Report a problem" on that alert → the report dialog actually appears. **Check this on iOS
+    specifically.** The dialog is a `Modal` opened from an `Alert` callback, i.e. presented while the
+    alert is still dismissing — the same class of collision that swallows the success alert in the
+    other direction. If the dialog fails to appear on the first tap, that is the cause.
+9c. With the dialog open, tap into the note field → the Send button stays visible above the keyboard.
+9d. Type a note, Cancel, then trigger a *different* failing code and reopen the dialog → the note
+    field is empty, not carrying the previous text.
 10. Admin sets `example.invalid` as the allowed domain → a student join is blocked with the translated message naming the domain.
 11. From that blocked join, send a report → the admin receives a notification.
 12. Confirm the stored report:
