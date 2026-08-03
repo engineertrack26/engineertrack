@@ -429,7 +429,7 @@ export default function AdvisorProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Link Student</Text>
           <Text style={styles.linkHint}>
-            Enter a student's 6-digit code to link to their account as an advisor.
+            Link a student to your account as their advisor.
           </Text>
           <View style={styles.linkRow}>
             <TextInput

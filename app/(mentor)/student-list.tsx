@@ -252,7 +252,7 @@ export default function StudentListScreen() {
           <View style={styles.linkCard}>
             <Text style={styles.linkCardTitle}>Link a Student</Text>
             <Text style={styles.linkCardHint}>
-              Enter a student's 6-digit code to add them to your list.
+              Link a student to add them to your list.
             </Text>
             <View style={styles.linkRow}>
               <TextInput
