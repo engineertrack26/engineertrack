@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { authService, isEduEmail } from '@/services/auth';
+import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
@@ -29,7 +29,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
-  const [eduEmail, setEduEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
@@ -63,14 +62,6 @@ export default function RegisterScreen() {
       newErrors.confirmPassword = t('auth.passwordMismatch');
     }
 
-    if (role === 'admin') {
-      if (!eduEmail.trim()) {
-        newErrors.eduEmail = 'Educational email is required for admin';
-      } else if (!isEduEmail(eduEmail)) {
-        newErrors.eduEmail = 'Must be a .edu or .edu.tr email address';
-      }
-    }
-
     if (!consentAccepted) {
       newErrors.consent = t('legal.privacy.consentCheckbox');
     }
@@ -99,7 +90,6 @@ export default function RegisterScreen() {
         role,
         language: currentLang,
         consentVersion: PRIVACY_POLICY_VERSION,
-        eduEmail: role === 'admin' ? eduEmail.trim() : undefined,
       });
 
       if (session && user) {
@@ -221,21 +211,6 @@ export default function RegisterScreen() {
               );
             })}
           </View>
-
-          {/* Admin .edu Email */}
-          {role === 'admin' && (
-            <Input
-              label="Educational Email (.edu)"
-              icon="school-outline"
-              placeholder="admin@university.edu"
-              value={eduEmail}
-              onChangeText={setEduEmail}
-              error={errors.eduEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          )}
 
           <View style={styles.consentRow}>
             <TouchableOpacity

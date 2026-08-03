@@ -12,13 +12,7 @@ interface SignUpParams {
   lastName: string;
   role: UserRole;
   language: SupportedLanguage;
-  eduEmail?: string;
   consentVersion?: string;
-}
-
-export function isEduEmail(email: string): boolean {
-  const lower = email.toLowerCase().trim();
-  return lower.endsWith('.edu') || lower.endsWith('.edu.tr');
 }
 
 interface SignInParams {
@@ -40,16 +34,13 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 }
 
 export const authService = {
-  async signUp({ email, password, firstName, lastName, role, language, eduEmail, consentVersion }: SignUpParams) {
+  async signUp({ email, password, firstName, lastName, role, language, consentVersion }: SignUpParams) {
     const metadata: Record<string, unknown> = {
       first_name: firstName,
       last_name: lastName,
       role,
       language,
     };
-    if (role === 'admin' && eduEmail) {
-      metadata.edu_email = eduEmail;
-    }
     if (consentVersion) {
       metadata.consent_version = consentVersion;
     }
