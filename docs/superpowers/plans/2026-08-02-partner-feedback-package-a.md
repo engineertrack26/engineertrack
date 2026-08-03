@@ -3018,75 +3018,48 @@ git commit -m "feat: let admins set allowed e-mail domains for their institution
 
 - [ ] **Step 1: Write the verification script**
 
-```sql
--- docs/join-hardening-verification.sql
--- Run in the Supabase SQL editor after applying join-hardening-migration.sql.
--- Every block raises an exception if the behaviour is wrong, so a clean run
--- means every assertion held.
+Create `docs/join-hardening-verification.sql` as four submissions. Two properties of the Supabase SQL editor dictate the shape, and both were established empirically — do not "simplify" past them:
 
-DO $$
-DECLARE
-  ok BOOLEAN;
-BEGIN
-  -- 1. The column exists and defaults to an empty array (= no restriction).
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'institutions' AND column_name = 'allowed_email_domains'
-  ) INTO ok;
-  IF NOT ok THEN RAISE EXCEPTION 'FAIL: allowed_email_domains missing'; END IF;
+1. **Each submission gets its own connection.** A `set_config(..., false)` in one submission is gone by the next. A naive script that borrows an identity in one submission and then runs `SELECT link_student_by_code('H94FQ', 'mentor');` in another gets `NOT_AUTHENTICATED` every time, which proves nothing about the code being tested. The borrowed identity and the call under test must share ONE submission, inside an explicit transaction, with `is_local = true`.
+2. **Named dollar tags are mis-parsed.** `DO $probe$ ... $probe$` fails with `42601 mismatched parentheses`. Only the anonymous `$$` form works.
 
-  -- 2. The reports table exists.
-  IF to_regclass('public.join_issue_reports') IS NULL THEN
-    RAISE EXCEPTION 'FAIL: join_issue_reports missing';
-  END IF;
+Each part collects outcomes into a temp `probe (step, result)` table and ends with `SELECT * FROM probe ORDER BY step;`, so results arrive as a readable table rather than as NOTICEs. Each case sits in its own `BEGIN ... EXCEPTION WHEN OTHERS` subtransaction, so a caught failure rolls back only that case and the run continues.
 
-  -- 3. The reports table is append-only: no UPDATE or DELETE policy.
-  SELECT NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'join_issue_reports' AND cmd IN ('UPDATE', 'DELETE')
-  ) INTO ok;
-  IF NOT ok THEN RAISE EXCEPTION 'FAIL: join_issue_reports is mutable'; END IF;
+- **Part A — schema assertions.** A `DO $$ ... $$;` block followed by `SELECT 'PASS: schema assertions held' AS result;`. Asserts: `institutions.allowed_email_domains` exists; `join_issue_reports` exists; it has no UPDATE or DELETE policy; **it has no INSERT policy** — `report_join_issue` is `SECURITY DEFINER` and writes as the owner, so an INSERT policy would let PostgREST bypass the RPC and make the rate limit and note cap decorative; and all five functions exist, reported by name via `string_agg` so a failure says which.
+- **Part B — format rejection and report abuse limits.** `BEGIN; CREATE TEMP TABLE probe ...; DO $$ ... $$; SELECT * FROM probe ORDER BY step; ROLLBACK;`. Borrows a **mentor or advisor** identity — `link_student_by_code` checks role before code shape, so a student would return `ROLE_NOT_ALLOWED` and prove nothing. Loops `FOREACH c IN ARRAY ARRAY['7BW8HH29_H94FQV', 'A_B_C_D', 'H94FQ', '']`, then exercises `report_join_issue`: an unknown reason, a 501-character note, a 500-character note, two more, and a fourth. Deletes the actor's existing reports first so the five-minute window starts from a known baseline; the `ROLLBACK` restores them.
+- **Part C — the domain rule.** Same shape. Picks any department and a profile with a single-`@` address, then rewrites `institutions.allowed_email_domains` per case: `'{}'` → accepted; `'{example.invalid}'` → `EMAIL_DOMAIN_BLOCKED:example.invalid`; `ARRAY[upper(actor_domain)]` → accepted; and a profile e-mail rewritten to `a@b@c.invalid` against `'{c.invalid}'` → blocked.
+- **Part D — cleanup confirmation.** `SELECT name, allowed_email_domains FROM institutions ORDER BY created_at;`.
 
-  -- 4. All five functions are present.
-  SELECT count(*) = 5 INTO ok FROM pg_proc
-  WHERE proname IN (
-    'get_my_student_code', 'link_student_by_code',
-    'join_department_by_code', 'report_join_issue', 'record_consent'
-  );
-  IF NOT ok THEN RAISE EXCEPTION 'FAIL: expected five functions'; END IF;
+Part C rewrites a real institution's rule and a real profile's e-mail, so the `ROLLBACK` is load-bearing rather than tidiness. Part D exists to prove it ran.
 
-  RAISE NOTICE 'PASS: schema assertions held';
-END $$;
+- [ ] **Step 2: Run Part A**
 
--- 5. Format rejection: each of these must raise INVALID_CODE_FORMAT.
---    Run them one at a time and confirm the error text.
--- SELECT link_student_by_code('7BW8HH29_H94FQV', 'mentor');   -- two segments
--- SELECT link_student_by_code('A_B_C_D', 'mentor');           -- four segments
--- SELECT link_student_by_code('H94FQ', 'mentor');             -- short, wrong length
--- SELECT link_student_by_code('', 'mentor');                  -- empty
+Expected: one row, `PASS: schema assertions held`. Any failure raises and names what is missing.
 
--- 6. Domain rule. Replace the UUID with a real institution, then:
---    a) with an empty array, a join must succeed
---    b) after setting a domain that does not match the test user, the same
---       join must raise EMAIL_DOMAIN_BLOCKED:<domains>
--- UPDATE institutions SET allowed_email_domains = '{}' WHERE id = '<uuid>';
--- UPDATE institutions SET allowed_email_domains = '{example.invalid}' WHERE id = '<uuid>';
-```
+- [ ] **Step 3: Run Part B**
 
-- [ ] **Step 2: Run the schema assertions**
+Submit `BEGIN` through `ROLLBACK` in one go. Expected result table:
 
-Paste the `DO $$ ... $$;` block into the Supabase SQL editor.
-Expected: `NOTICE: PASS: schema assertions held`, no exception.
+| step | result |
+|---|---|
+| 01–04 format | `INVALID_CODE_FORMAT` |
+| 05 reason | `INVALID_REASON` |
+| 06 note cap | `NOTE_TOO_LONG` |
+| 07–09 rate | `accepted` |
+| 10 rate | `REPORT_RATE_LIMITED` |
 
-- [ ] **Step 3: Run the format rejection checks**
+- [ ] **Step 4: Run Parts C and D**
 
-Run each commented `SELECT link_student_by_code(...)` from block 5 individually.
-Expected: every one raises `INVALID_CODE_FORMAT`.
+Expected:
 
-- [ ] **Step 4: Run the domain rule checks**
+| step | result |
+|---|---|
+| 11 empty list | `accepted` |
+| 12 blocked | `EMAIL_DOMAIN_BLOCKED:example.invalid` |
+| 13 case-insensitive | `accepted` |
+| 14 malformed e-mail | `EMAIL_DOMAIN_BLOCKED:c.invalid` |
 
-Follow block 6 against a real institution and a test student account.
-Expected: empty array joins successfully; a non-matching domain raises `EMAIL_DOMAIN_BLOCKED:example.invalid`.
+Row 13 is the regression test for the case-sensitivity bug the Task 9 review caught. Part D must show every institution holding its real domain list — if any reads `{example.invalid}` or `{c.invalid}`, the `ROLLBACK` did not run and that institution needs fixing by hand before anything else.
 
 - [ ] **Step 5: Run the full automated suite**
 
@@ -3119,7 +3092,10 @@ Run `npx expo start --clear` and confirm each of these. Record the actual result
 9c. With the dialog open, tap into the note field → the Send button stays visible above the keyboard.
 9d. Type a note, Cancel, then trigger a *different* failing code and reopen the dialog → the note
     field is empty, not carrying the previous text.
-10. Admin sets `example.invalid` as the allowed domain → a student join is blocked with the translated message naming the domain.
+10. Admin sets `example.invalid` as the allowed domain **from the dashboard card** → a student join is blocked with the translated message naming the domain.
+10b. The admin dashboard's allowed-domains card is pre-filled with what is already stored, not blank.
+10c. Type `BTU.EDU.TR , , btu.edu.tr` and Save → the field rewrites itself to the normalised `btu.edu.tr`, confirming the save round-tripped rather than merely appearing to.
+10d. **Clear the field entirely and Save** → the restriction is removed and a previously blocked student can join. This is the escape hatch for a typo'd domain; without it the setting fails closed with no in-app remedy.
 11. From that blocked join, send a report → the admin receives a notification.
 12. Confirm the stored report:
 
