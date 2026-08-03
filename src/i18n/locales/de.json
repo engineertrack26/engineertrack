@@ -105,7 +105,9 @@
     "personalInfo": "Persönliche Daten",
     "myStudentCode": "Mein Studentencode",
     "studentCodeHint": "Teilen Sie diesen Code mit Ihrem Mentor und Betreuer, damit sie ihn mit Ihrem Konto verknüpfen können.",
-    "studentCodeNoDepartment": "Ihr Code enthält Ihre Institutionsdaten, sobald Sie einem Fachbereich beitreten."
+    "studentCodeNoDepartment": "Ihr Code enthält Ihre Institutionsdaten, sobald Sie einem Fachbereich beitreten.",
+    "studentCodeCopiedTitle": "Kopiert",
+    "studentCodeCopied": "Ihr Studentencode wurde in die Zwischenablage kopiert."
   },
   "gamification": {
     "points": "Punkte",

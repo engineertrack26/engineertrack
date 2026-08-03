@@ -571,8 +571,12 @@ export default function ProfileScreen() {
                   await Clipboard.setStringAsync(
                     studentCode.compositeCode || studentCode.code,
                   );
-                  Alert.alert(t('common.done'), t('student.myStudentCode'));
+                  Alert.alert(
+                    t('student.studentCodeCopiedTitle'),
+                    t('student.studentCodeCopied'),
+                  );
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.codeDisplayText}>
                   {studentCode.compositeCode || studentCode.code}

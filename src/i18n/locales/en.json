@@ -105,7 +105,9 @@
     "personalInfo": "Personal Info",
     "myStudentCode": "My Student Code",
     "studentCodeHint": "Share this code with your mentor and advisor so they can link to your account.",
-    "studentCodeNoDepartment": "Your code will include your institution details once you join a department."
+    "studentCodeNoDepartment": "Your code will include your institution details once you join a department.",
+    "studentCodeCopiedTitle": "Copied",
+    "studentCodeCopied": "Your student code has been copied to the clipboard."
   },
   "gamification": {
     "points": "Points",

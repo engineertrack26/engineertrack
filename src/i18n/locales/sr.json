@@ -105,7 +105,9 @@
     "personalInfo": "Lični podaci",
     "myStudentCode": "Moj studentski kod",
     "studentCodeHint": "Podelite ovaj kod sa svojim mentorom i savetnikom kako bi mogli da ga povežu sa vašim nalogom.",
-    "studentCodeNoDepartment": "Vaš kod će sadržati podatke o vašoj instituciji čim se pridružite odseku."
+    "studentCodeNoDepartment": "Vaš kod će sadržati podatke o vašoj instituciji čim se pridružite odseku.",
+    "studentCodeCopiedTitle": "Kopirano",
+    "studentCodeCopied": "Vaš studentski kod je kopiran u privremenu memoriju."
   },
   "gamification": {
     "points": "Poeni",
