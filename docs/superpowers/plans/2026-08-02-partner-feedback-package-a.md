@@ -1503,15 +1503,16 @@ CREATE TABLE IF NOT EXISTS join_issue_reports (
   reason_code     TEXT NOT NULL,
   note            TEXT,
   institution_id  UUID REFERENCES institutions(id) ON DELETE SET NULL,
-  created_at      TIMESTAMPTZ DEFAULT now()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE join_issue_reports ENABLE ROW LEVEL SECURITY;
 
+-- No INSERT policy: report_join_issue is the only write path. It is
+-- SECURITY DEFINER and runs as the table owner, so it bypasses RLS. Handing
+-- clients a direct INSERT would let them skip the RPC's rate limit and note
+-- cap and flood the table straight through PostgREST.
 DROP POLICY IF EXISTS "own reports insert" ON join_issue_reports;
-CREATE POLICY "own reports insert" ON join_issue_reports
-  FOR INSERT TO authenticated
-  WITH CHECK (reporter_id = auth.uid());
 
 DROP POLICY IF EXISTS "own reports select" ON join_issue_reports;
 CREATE POLICY "own reports select" ON join_issue_reports
@@ -1729,9 +1730,23 @@ BEGIN
   -- An empty array means no restriction.
   IF allowed IS NOT NULL AND array_length(allowed, 1) > 0 THEN
     SELECT lower(p.email) INTO caller_email FROM profiles p WHERE p.id = auth.uid();
-    caller_domain := split_part(coalesce(caller_email, ''), '@', 2);
 
-    IF caller_domain = '' OR NOT (caller_domain = ANY (allowed)) THEN
+    -- Guard the shape before trusting split_part: with more than one '@',
+    -- split_part returns a middle segment, so `a@allowed.tr@evil.com` would
+    -- pass a check on a domain that is not the real mailbox domain.
+    IF caller_email IS NULL OR caller_email !~ '^[^@]+@[^@]+$' THEN
+      RAISE EXCEPTION 'EMAIL_DOMAIN_BLOCKED:%', array_to_string(allowed, ',');
+    END IF;
+
+    caller_domain := split_part(caller_email, '@', 2);
+
+    -- Compare against a lower-cased projection of the stored array: an admin
+    -- who saves 'BTU.EDU.TR' must not lock out '@btu.edu.tr' users. The
+    -- exception payload still shows `allowed` as stored, so the message
+    -- matches what the admin typed.
+    IF caller_domain = '' OR NOT EXISTS (
+      SELECT 1 FROM unnest(allowed) AS d WHERE lower(d) = caller_domain
+    ) THEN
       RAISE EXCEPTION 'EMAIL_DOMAIN_BLOCKED:%', array_to_string(allowed, ',');
     END IF;
   END IF;
@@ -1769,6 +1784,7 @@ DECLARE
   inst_id      UUID;
   admin_uuid   UUID;
   reporter_name TEXT;
+  recent_count INTEGER;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'NOT_AUTHENTICATED';
@@ -1776,6 +1792,25 @@ BEGIN
 
   IF p_reason NOT IN ('INVALID_CODE', 'EMAIL_DOMAIN_BLOCKED', 'CODE_SEGMENT_MISMATCH') THEN
     RAISE EXCEPTION 'INVALID_REASON';
+  END IF;
+
+  -- Abuse protection. This RPC writes an append-only row AND pushes a
+  -- notification to a named institution admin, so an unbounded caller can
+  -- spam a real person. Three reports per five minutes sits far above honest
+  -- use (a confused student retries a code two or three times) and far below
+  -- anything useful as a flood. The RAISE aborts the transaction, so the
+  -- rejected attempt leaves no row behind.
+  SELECT count(*) INTO recent_count
+  FROM join_issue_reports r
+  WHERE r.reporter_id = auth.uid()
+    AND r.created_at > now() - interval '5 minutes';
+
+  IF recent_count >= 3 THEN
+    RAISE EXCEPTION 'REPORT_RATE_LIMITED';
+  END IF;
+
+  IF char_length(trim(coalesce(p_note, ''))) > 500 THEN
+    RAISE EXCEPTION 'NOTE_TOO_LONG';
   END IF;
 
   raw_code := upper(regexp_replace(coalesce(p_code, ''), '\s', '', 'g'));
@@ -1894,6 +1929,8 @@ Add this top-level `errors` object to `src/i18n/locales/en.json`:
   "codeSegmentMismatch": "This code does not match the student's institution and department.",
   "institutionMismatch": "This student belongs to a different institution.",
   "emailDomainBlocked": "This institution only allows these e-mail domains: {{domains}}",
+  "reportRateLimited": "You have sent several reports just now. Please wait a few minutes before sending another.",
+  "noteTooLong": "Your note is too long. Please keep it under 500 characters.",
   "reportProblem": "Report a problem",
   "reportTitle": "Report a join problem",
   "reportNoteLabel": "What happened?",
@@ -1923,6 +1960,23 @@ for loc in ['tr','el','it','ro','de','sr']:
 ```
 
 Expected: `none` for all six.
+
+- [ ] **Step 3b: Map the two abuse-protection codes**
+
+Task 9's fix round added `REPORT_RATE_LIMITED` and `NOTE_TOO_LONG` to
+`report_join_issue`. Without a mapping they fall through to `errors.unknown`,
+which tells a rate-limited user nothing about waiting. Add both to `ERROR_KEYS`
+in `src/utils/rpcErrors.ts`, after `EMAIL_DOMAIN_BLOCKED`:
+
+```ts
+  REPORT_RATE_LIMITED: 'errors.reportRateLimited',
+  NOTE_TOO_LONG: 'errors.noteTooLong',
+```
+
+Add one case to `src/utils/__tests__/rpcErrors.test.ts` asserting
+`mapRpcError('REPORT_RATE_LIMITED')` returns
+`{ code: 'REPORT_RATE_LIMITED', key: 'errors.reportRateLimited' }`, then run
+`npx jest src/utils/__tests__/rpcErrors.test.ts`.
 
 - [ ] **Step 4: Extend the institution types**
 
@@ -2297,6 +2351,7 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            maxLength={500}
           />
 
           <View style={styles.actions}>
