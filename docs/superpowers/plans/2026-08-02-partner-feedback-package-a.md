@@ -2777,8 +2777,14 @@ Add to `common` in `src/i18n/locales/en.json` and translate into the other six:
 
 ```json
 "allowedEmailDomains": "Allowed e-mail domains (optional)",
-"allowedEmailDomainsHint": "Comma-separated, for example: btu.edu.tr, ogr.btu.edu.tr. Leave empty to allow any address. Subdomains are not matched automatically — add each one."
+"allowedEmailDomainsHint": "Comma-separated, for example: btu.edu.tr, ogr.btu.edu.tr. Leave empty to allow any address. Subdomains are not matched automatically — add each one.",
+"allowedEmailDomainsNone": "Any e-mail address is accepted.",
+"allowedEmailDomainsSaved": "Allowed e-mail domains updated."
 ```
+
+The last two belong to Step 4b's edit card. Note this screen is otherwise
+hardcoded English — that is pre-existing debt, not something this task widens.
+New strings still go through `t()`; do not convert the surrounding labels.
 
 - [ ] **Step 2: Accept the domains in the service**
 
@@ -2849,6 +2855,106 @@ In `handleCreateInstitution`, add to the `adminService.createInstitution(user.id
         allowedEmailDomains: normalizeDomainList(setupDomains),
 ```
 
+- [ ] **Step 4b: Let the admin edit the list after creation**
+
+Without this, the setting is write-once. It also fails CLOSED: an admin who
+mistypes `btu.edu.rt` locks every student in that institution out of joining a
+department, with no in-app way back — the only remedy would be someone with SQL
+access to the production database. That is why `updateAllowedEmailDomains`
+exists in Step 2; this step is what calls it.
+
+Mirror the existing **Departments** card (`app/(admin)/dashboard.tsx:268-320`)
+rather than inventing a layout — it already has the label / hint / input-with-button
+/ list shape this needs, and reuses `styles.card`, `cardHeader`, `cardTitle`,
+`linkHint`, `linkRow`, `linkInput`, `linkBtn`, `linkBtnText`.
+
+Add state next to the other institution-scoped state:
+
+```tsx
+  const [domainsInput, setDomainsInput] = useState('');
+  const [savingDomains, setSavingDomains] = useState(false);
+```
+
+Seed it whenever the loaded institution changes, so the field opens showing what
+is actually stored rather than blank:
+
+```tsx
+  useEffect(() => {
+    setDomainsInput((institution?.allowedEmailDomains || []).join(', '));
+  }, [institution?.id, institution?.allowedEmailDomains]);
+```
+
+Add the handler:
+
+```tsx
+  async function handleSaveDomains() {
+    if (!institution) return;
+    setSavingDomains(true);
+    try {
+      const domains = normalizeDomainList(domainsInput);
+      await adminService.updateAllowedEmailDomains(institution.id, domains);
+      setInstitution({ ...institution, allowedEmailDomains: domains });
+      setDomainsInput(domains.join(', '));
+      Alert.alert(t('common.done'), t('common.allowedEmailDomainsSaved'));
+    } catch (err: any) {
+      Alert.alert(t('common.error'), err.message || t('errors.unknown'));
+    } finally {
+      setSavingDomains(false);
+    }
+  }
+```
+
+Writing the normalised list back into the input is deliberate: the admin sees
+exactly what was stored, so a stray `@`, duplicate or stray case is visibly
+corrected rather than silently differing from what they typed.
+
+Render the card immediately after the Institution Code card and before the
+Departments card:
+
+```tsx
+        {institution && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{t('common.allowedEmailDomains')}</Text>
+            </View>
+            <Text style={styles.linkHint}>{t('common.allowedEmailDomainsHint')}</Text>
+
+            <View style={styles.linkRow}>
+              <TextInput
+                style={styles.linkInput}
+                value={domainsInput}
+                onChangeText={setDomainsInput}
+                placeholder="btu.edu.tr, ogr.btu.edu.tr"
+                placeholderTextColor={colors.textDisabled}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.linkBtn}
+                disabled={savingDomains}
+                onPress={handleSaveDomains}
+                activeOpacity={0.7}
+              >
+                {savingDomains ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.linkBtnText}>{t('common.save')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {(institution.allowedEmailDomains || []).length === 0 && (
+              <Text style={styles.linkHint}>
+                {t('common.allowedEmailDomainsNone')}
+              </Text>
+            )}
+          </View>
+        )}
+```
+
+Note the Save button is NOT gated on the input being non-empty: clearing the
+field is the legitimate way to remove every restriction.
+
 - [ ] **Step 5: Verify types compile**
 
 Run: `npx tsc --noEmit`
@@ -2857,7 +2963,10 @@ Expected: no output
 - [ ] **Step 6: Verify in the emulator**
 
 1. Register a fresh admin and create an institution with `btu.edu.tr` in the domains field.
-2. Confirm in Supabase:
+2. Edit the domain list on the dashboard to `btu.edu.tr, ogr.btu.edu.tr`, save, and reload the
+   screen — the saved value must come back.
+3. Clear the field entirely, save, and confirm the "any address is accepted" line appears.
+4. Confirm in Supabase:
 
 ```sql
 SELECT name, allowed_email_domains FROM institutions ORDER BY created_at DESC LIMIT 1;
