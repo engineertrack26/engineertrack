@@ -215,6 +215,7 @@
     "codeSegmentMismatch": "This code does not match the student's institution and department.",
     "institutionMismatch": "This student belongs to a different institution.",
     "emailDomainBlocked": "This institution only allows these e-mail domains: {{domains}}",
+    "invalidReason": "We could not send your report because the problem type was not recognized. Please try again.",
     "reportRateLimited": "You have sent several reports just now. Please wait a few minutes before sending another.",
     "noteTooLong": "Your note is too long. Please keep it under 500 characters.",
     "reportProblem": "Report a problem",

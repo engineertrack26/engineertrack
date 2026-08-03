@@ -40,4 +40,18 @@ describe('mapRpcError', () => {
       key: 'errors.reportRateLimited',
     });
   });
+
+  it('maps the note-too-long code', () => {
+    expect(mapRpcError('NOTE_TOO_LONG')).toEqual({
+      code: 'NOTE_TOO_LONG',
+      key: 'errors.noteTooLong',
+    });
+  });
+
+  it('maps the invalid reason code', () => {
+    expect(mapRpcError('INVALID_REASON')).toEqual({
+      code: 'INVALID_REASON',
+      key: 'errors.invalidReason',
+    });
+  });
 });

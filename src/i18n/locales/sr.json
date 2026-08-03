@@ -215,6 +215,7 @@
     "codeSegmentMismatch": "Ovaj kod se ne poklapa sa institucijom i odsekom studenta.",
     "institutionMismatch": "Ovaj student pripada drugoj instituciji.",
     "emailDomainBlocked": "Ova institucija dozvoljava samo sledeće imejl domene: {{domains}}",
+    "invalidReason": "Nismo uspeli da pošaljemo vašu prijavu jer tip problema nije prepoznat. Molimo pokušajte ponovo.",
     "reportRateLimited": "Upravo ste poslali nekoliko prijava. Sačekajte nekoliko minuta pre slanja sledeće.",
     "noteTooLong": "Vaša napomena je predugačka. Molimo ograničite je na 500 karaktera.",
     "reportProblem": "Prijavi problem",

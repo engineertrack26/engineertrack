@@ -13,6 +13,7 @@ const ERROR_KEYS: Record<string, string> = {
   CODE_SEGMENT_MISMATCH: 'errors.codeSegmentMismatch',
   INSTITUTION_MISMATCH: 'errors.institutionMismatch',
   EMAIL_DOMAIN_BLOCKED: 'errors.emailDomainBlocked',
+  INVALID_REASON: 'errors.invalidReason',
   REPORT_RATE_LIMITED: 'errors.reportRateLimited',
   NOTE_TOO_LONG: 'errors.noteTooLong',
 };

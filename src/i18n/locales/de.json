@@ -215,6 +215,7 @@
     "codeSegmentMismatch": "Dieser Code stimmt nicht mit der Institution und dem Fachbereich des Studenten überein.",
     "institutionMismatch": "Dieser Student gehört zu einer anderen Institution.",
     "emailDomainBlocked": "Diese Institution erlaubt nur folgende E-Mail-Domains: {{domains}}",
+    "invalidReason": "Wir konnten Ihre Meldung nicht senden, da die Art des Problems nicht erkannt wurde. Bitte versuchen Sie es erneut.",
     "reportRateLimited": "Sie haben gerade mehrere Meldungen gesendet. Bitte warten Sie einige Minuten, bevor Sie eine weitere senden.",
     "noteTooLong": "Ihre Notiz ist zu lang. Bitte halten Sie sie unter 500 Zeichen.",
     "reportProblem": "Problem melden",

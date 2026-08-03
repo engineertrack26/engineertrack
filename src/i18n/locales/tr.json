@@ -215,6 +215,7 @@
     "codeSegmentMismatch": "Bu kod, öğrencinin kurumu ve bölümüyle eşleşmiyor.",
     "institutionMismatch": "Bu öğrenci farklı bir kuruma bağlı.",
     "emailDomainBlocked": "Bu kurum yalnızca şu e-posta alan adlarına izin veriyor: {{domains}}",
+    "invalidReason": "Sorun türü tanınmadığı için raporunuzu gönderemedik. Lütfen tekrar deneyin.",
     "reportRateLimited": "Az önce birkaç rapor gönderdiniz. Bir sonrakini göndermeden önce birkaç dakika bekleyin.",
     "noteTooLong": "Notunuz çok uzun. Lütfen 500 karakterin altında tutun.",
     "reportProblem": "Bir sorunu bildir",

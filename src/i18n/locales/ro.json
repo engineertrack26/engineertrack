@@ -215,6 +215,7 @@
     "codeSegmentMismatch": "Acest cod nu corespunde instituției și departamentului studentului.",
     "institutionMismatch": "Acest student aparține unei alte instituții.",
     "emailDomainBlocked": "Această instituție permite doar aceste domenii de e-mail: {{domains}}",
+    "invalidReason": "Nu am putut trimite raportarea ta deoarece tipul problemei nu a fost recunoscut. Te rugăm să încerci din nou.",
     "reportRateLimited": "Ai trimis mai multe raportări chiar acum. Te rugăm să aștepți câteva minute înainte de a trimite alta.",
     "noteTooLong": "Nota ta este prea lungă. Te rugăm să o păstrezi sub 500 de caractere.",
     "reportProblem": "Raportează o problemă",
