@@ -102,7 +102,10 @@
     "saveInternshipInfo": "Salvează datele stagiului",
     "internshipInfoSaved": "Datele stagiului au fost salvate.",
     "profile": "Profil",
-    "personalInfo": "Date personale"
+    "personalInfo": "Date personale",
+    "myStudentCode": "Codul meu de student",
+    "studentCodeHint": "Distribuie acest cod mentorului și coordonatorului tău, ca să îl poată asocia contului tău.",
+    "studentCodeNoDepartment": "Codul tău va include detaliile instituției tale de îndată ce te alături unui departament."
   },
   "gamification": {
     "points": "Puncte",

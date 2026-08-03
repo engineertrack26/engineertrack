@@ -102,7 +102,10 @@
     "saveInternshipInfo": "Save Internship Info",
     "internshipInfoSaved": "Internship information saved.",
     "profile": "Profile",
-    "personalInfo": "Personal Info"
+    "personalInfo": "Personal Info",
+    "myStudentCode": "My Student Code",
+    "studentCodeHint": "Share this code with your mentor and advisor so they can link to your account.",
+    "studentCodeNoDepartment": "Your code will include your institution details once you join a department."
   },
   "gamification": {
     "points": "Points",

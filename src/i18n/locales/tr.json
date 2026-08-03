@@ -102,7 +102,10 @@
     "saveInternshipInfo": "Staj Bilgilerini Kaydet",
     "internshipInfoSaved": "Staj bilgileri kaydedildi.",
     "profile": "Profil",
-    "personalInfo": "Kişisel Bilgiler"
+    "personalInfo": "Kişisel Bilgiler",
+    "myStudentCode": "Öğrenci Kodum",
+    "studentCodeHint": "Hesabınızla eşleştirebilmeleri için bu kodu mentorunuz ve danışmanınızla paylaşın.",
+    "studentCodeNoDepartment": "Bir bölüme katıldığınızda kodunuz kurum bilgilerinizi de içerecektir."
   },
   "gamification": {
     "points": "Puan",

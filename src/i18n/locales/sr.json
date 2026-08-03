@@ -102,7 +102,10 @@
     "saveInternshipInfo": "Sačuvaj podatke o praksi",
     "internshipInfoSaved": "Podaci o praksi su sačuvani.",
     "profile": "Profil",
-    "personalInfo": "Lični podaci"
+    "personalInfo": "Lični podaci",
+    "myStudentCode": "Moj studentski kod",
+    "studentCodeHint": "Podelite ovaj kod sa svojim mentorom i savetnikom kako bi mogli da ga povežu sa vašim nalogom.",
+    "studentCodeNoDepartment": "Vaš kod će sadržati podatke o vašoj instituciji čim se pridružite odseku."
   },
   "gamification": {
     "points": "Poeni",

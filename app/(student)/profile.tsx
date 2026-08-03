@@ -23,7 +23,7 @@ import { studentCodeService } from '@/services/studentCode';
 import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
-import type { StudentCode } from '@/types/institution';
+import type { StudentCodeDetails } from '@/types/institution';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   const [deptCodeInput, setDeptCodeInput] = useState('');
   const [joiningDepartment, setJoiningDepartment] = useState(false);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [studentCode, setStudentCode] = useState<StudentCode | null>(null);
+  const [studentCode, setStudentCode] = useState<StudentCodeDetails | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [linkedUsers, setLinkedUsers] = useState<{
     mentor: { id: string; firstName: string; lastName: string } | null;
@@ -100,7 +100,7 @@ export default function ProfileScreen() {
       setStudentProfile(data || null);
 
       // Load student code
-      const code = await studentCodeService.getMyCode(user.id);
+      const code = await studentCodeService.getMyCodeDetails();
       setStudentCode(code);
 
       // Load linked mentor/advisor
@@ -559,22 +559,36 @@ export default function ProfileScreen() {
 
         {/* My Student Code Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>My Student Code</Text>
+          <Text style={styles.cardTitle}>{t('student.myStudentCode')}</Text>
           <Text style={styles.codeHintText}>
-            Share this code with your mentor and advisor so they can link to your account.
+            {t('student.studentCodeHint')}
           </Text>
           {studentCode ? (
-            <TouchableOpacity
-              style={styles.codeDisplayRow}
-              onPress={async () => {
-                await Clipboard.setStringAsync(studentCode.code);
-                Alert.alert('Copied!', 'Student code copied to clipboard.');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.codeDisplayText}>{studentCode.code}</Text>
-              <Ionicons name="copy-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.codeDisplay}
+                onPress={async () => {
+                  await Clipboard.setStringAsync(
+                    studentCode.compositeCode || studentCode.code,
+                  );
+                  Alert.alert(t('common.done'), t('student.myStudentCode'));
+                }}
+              >
+                <Text style={styles.codeDisplayText}>
+                  {studentCode.compositeCode || studentCode.code}
+                </Text>
+              </TouchableOpacity>
+
+              {studentCode.compositeCode ? (
+                <Text style={styles.codeMeta}>
+                  {studentCode.institutionName} · {studentCode.departmentName}
+                </Text>
+              ) : (
+                <Text style={styles.codeMeta}>
+                  {t('student.studentCodeNoDepartment')}
+                </Text>
+              )}
+            </>
           ) : (
             <TouchableOpacity
               style={styles.generateCodeBtn}
@@ -582,8 +596,8 @@ export default function ProfileScreen() {
                 if (!user) return;
                 setGeneratingCode(true);
                 try {
-                  const code = await studentCodeService.generateCode(user.id);
-                  setStudentCode(code);
+                  await studentCodeService.generateCode(user.id);
+                  await loadStudentProfile();
                 } catch (err: any) {
                   Alert.alert('Error', err.message || 'Failed to generate code.');
                 } finally {
@@ -1019,7 +1033,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     lineHeight: 18,
   },
-  codeDisplayRow: {
+  codeDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1034,6 +1048,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
     letterSpacing: 3,
+  },
+  codeMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
   },
   generateCodeBtn: {
     flexDirection: 'row',

@@ -102,7 +102,10 @@
     "saveInternshipInfo": "Salva dati tirocinio",
     "internshipInfoSaved": "Dati del tirocinio salvati.",
     "profile": "Profilo",
-    "personalInfo": "Dati personali"
+    "personalInfo": "Dati personali",
+    "myStudentCode": "Il mio codice studente",
+    "studentCodeHint": "Condividi questo codice con il tuo tutor e il tuo relatore, così potranno collegarlo al tuo account.",
+    "studentCodeNoDepartment": "Il tuo codice includerà i dati del tuo istituto non appena ti unirai a un dipartimento."
   },
   "gamification": {
     "points": "Punti",
