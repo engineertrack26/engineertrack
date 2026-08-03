@@ -1883,87 +1883,76 @@ Expected: one row `allowed_email_domains`, and `join_issue_reports`.
 
 The Supabase SQL editor runs as `postgres` with no JWT, so `auth.uid()` is NULL
 and every one of these functions raises `NOT_AUTHENTICATED` before reaching the
-logic under test. To reach it, borrow a real user's identity inside a
-transaction that is rolled back, and capture each `SQLERRM` into a temp table
-so the results come back as rows instead of notices.
+logic under test. Two constraints discovered while running this, both the hard
+way:
+
+- The editor runs each **separate submission** on its own connection, so a
+  session-level `set_config(..., false)` is gone by the next query. The identity
+  and the call under test must travel in the SAME submission, inside one
+  explicit transaction, with `set_config(..., true)`.
+- The editor mis-parses a `DO` block quoted with a **named** tag (`$probe$`),
+  failing with `42601 mismatched parentheses`. Plain multi-statement batches are
+  fine. Do not reach for a `DO` block here — it is not needed.
+
+Each probe below ends in a deliberate error, which aborts the transaction, so
+none of them leaves a row behind. Run them one at a time.
+
+**A. Note cap**
 
 ```sql
 BEGIN;
 
-CREATE TEMP TABLE probe (step TEXT, result TEXT);
+SELECT set_config('request.jwt.claims',
+                  json_build_object('sub', (SELECT id::text FROM profiles LIMIT 1))::text,
+                  true);
 
-DO $probe$
-DECLARE
-  mentor_id UUID;
-  any_id    UUID;
-BEGIN
-  SELECT id INTO mentor_id FROM profiles WHERE role = 'mentor' LIMIT 1;
-  SELECT id INTO any_id    FROM profiles LIMIT 1;
-
-  -- 1. Composite code with two segments instead of three.
-  IF mentor_id IS NULL THEN
-    INSERT INTO probe VALUES ('format', 'SKIPPED: no mentor profile');
-  ELSE
-    PERFORM set_config('request.jwt.claims',
-                       json_build_object('sub', mentor_id::text)::text, true);
-    BEGIN
-      PERFORM link_student_by_code('7BW8HH29_H94FQV', 'mentor');
-      INSERT INTO probe VALUES ('format', 'UNEXPECTED: no error');
-    EXCEPTION WHEN others THEN
-      INSERT INTO probe VALUES ('format', SQLERRM);
-    END;
-  END IF;
-
-  PERFORM set_config('request.jwt.claims',
-                     json_build_object('sub', any_id::text)::text, true);
-
-  -- 2. Note longer than 500 characters.
-  BEGIN
-    PERFORM report_join_issue('ABC123', 'INVALID_CODE', repeat('x', 501));
-    INSERT INTO probe VALUES ('note_cap', 'UNEXPECTED: no error');
-  EXCEPTION WHEN others THEN
-    INSERT INTO probe VALUES ('note_cap', SQLERRM);
-  END;
-
-  -- 3. A 500-character note is still accepted.
-  BEGIN
-    PERFORM report_join_issue('ABC123', 'INVALID_CODE', repeat('x', 500));
-    INSERT INTO probe VALUES ('note_500', 'accepted');
-  EXCEPTION WHEN others THEN
-    INSERT INTO probe VALUES ('note_500', 'UNEXPECTED: ' || SQLERRM);
-  END;
-
-  -- 4. Two more reports (2nd and 3rd in the window) still go through.
-  PERFORM report_join_issue('ABC123', 'INVALID_CODE', NULL);
-  PERFORM report_join_issue('ABC123', 'INVALID_CODE', NULL);
-
-  -- 5. The fourth inside five minutes is refused.
-  BEGIN
-    PERFORM report_join_issue('ABC123', 'INVALID_CODE', NULL);
-    INSERT INTO probe VALUES ('rate_limit', 'UNEXPECTED: no error');
-  EXCEPTION WHEN others THEN
-    INSERT INTO probe VALUES ('rate_limit', SQLERRM);
-  END;
-END
-$probe$;
-
-SELECT * FROM probe ORDER BY step;
+SELECT report_join_issue('ABC123', 'INVALID_CODE', repeat('x', 501));
 
 ROLLBACK;
 ```
 
-Expected four rows:
+Expected: `ERROR P0001: NOTE_TOO_LONG`.
 
-| step | result |
-|---|---|
-| `format` | `INVALID_CODE_FORMAT` |
-| `note_500` | `accepted` |
-| `note_cap` | `NOTE_TOO_LONG` |
-| `rate_limit` | `REPORT_RATE_LIMITED` |
+**B. Composite code format rejection**
 
-The `ROLLBACK` discards the temp table, the four report rows, and the admin
-notifications they generated, so the probe leaves nothing behind. If `format`
-comes back `SKIPPED`, that assertion moves to Task 15's verification pass.
+```sql
+BEGIN;
+
+SELECT set_config('request.jwt.claims',
+                  json_build_object('sub', (SELECT id::text FROM profiles WHERE role = 'mentor' LIMIT 1))::text,
+                  true);
+
+SELECT link_student_by_code('7BW8HH29_H94FQV', 'mentor');
+
+ROLLBACK;
+```
+
+Expected: `ERROR P0001: INVALID_CODE_FORMAT` — the two-segment form is rejected
+before any lookup.
+
+**C. Rate limit**
+
+```sql
+BEGIN;
+
+SELECT set_config('request.jwt.claims',
+                  json_build_object('sub', (SELECT id::text FROM profiles LIMIT 1))::text,
+                  true);
+
+SELECT report_join_issue('ABC123', 'INVALID_CODE', repeat('x', 500));
+SELECT report_join_issue('ABC123', 'INVALID_CODE', NULL);
+SELECT report_join_issue('ABC123', 'INVALID_CODE', NULL);
+SELECT report_join_issue('ABC123', 'INVALID_CODE', NULL);
+
+ROLLBACK;
+```
+
+Expected: `ERROR P0001: REPORT_RATE_LIMITED`.
+
+That one message carries two assertions: the fourth call was refused, and
+reaching the fourth at all proves the first three were accepted — including the
+exactly-500-character note, which would otherwise have failed with
+`NOTE_TOO_LONG` on the first call.
 
 - [ ] **Step 5: Commit**
 
