@@ -2247,8 +2247,15 @@ Add to the `student` object in `src/i18n/locales/en.json`, then translate into t
 ```json
 "myStudentCode": "My Student Code",
 "studentCodeHint": "Share this code with your mentor and advisor so they can link to your account.",
-"studentCodeNoDepartment": "Your code will include your institution details once you join a department."
+"studentCodeNoDepartment": "Your code will include your institution details once you join a department.",
+"studentCodeCopiedTitle": "Copied",
+"studentCodeCopied": "Your student code has been copied to the clipboard."
 ```
+
+The last two replace a hardcoded English `Alert.alert('Copied!', 'Student code
+copied to clipboard.')` that the card already had. Translating it is the point —
+but the message must keep saying what happened. Reusing `student.myStudentCode`
+as the body would leave the user staring at an alert that says "My Student Code".
 
 - [ ] **Step 2: Switch the profile to the detailed loader**
 
@@ -2279,11 +2286,15 @@ Replace the card body that currently renders `studentCode.code` with:
             <>
               <TouchableOpacity
                 style={styles.codeDisplay}
+                activeOpacity={0.7}
                 onPress={async () => {
                   await Clipboard.setStringAsync(
                     studentCode.compositeCode || studentCode.code,
                   );
-                  Alert.alert(t('common.done'), t('student.myStudentCode'));
+                  Alert.alert(
+                    t('student.studentCodeCopiedTitle'),
+                    t('student.studentCodeCopied'),
+                  );
                 }}
               >
                 <Text style={styles.codeDisplayText}>
