@@ -107,7 +107,9 @@
     "studentCodeHint": "Teilen Sie diesen Code mit Ihrem Mentor und Betreuer, damit sie ihn mit Ihrem Konto verknüpfen können.",
     "studentCodeNoDepartment": "Ihr Code enthält Ihre Institutionsdaten, sobald Sie einem Fachbereich beitreten.",
     "studentCodeCopiedTitle": "Kopiert",
-    "studentCodeCopied": "Ihr Studentencode wurde in die Zwischenablage kopiert."
+    "studentCodeCopied": "Ihr Studentencode wurde in die Zwischenablage kopiert.",
+    "codeInputHint": "Geben Sie den vollständigen Code oder nur die letzten 6 Zeichen ein.",
+    "codeInputInvalid": "Das ist keine gültige Code-Form. Verwenden Sie den vollständigen Code (8_6_6 Zeichen) oder den 6-stelligen Studentencode."
   },
   "gamification": {
     "points": "Punkte",

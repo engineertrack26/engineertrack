@@ -24,6 +24,9 @@ import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { StudentCodeDetails } from '@/types/institution';
+import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
+import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
+import type { JoinIssueReason } from '@/services/joinIssue';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -42,6 +45,10 @@ export default function ProfileScreen() {
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
   const [deptCodeInput, setDeptCodeInput] = useState('');
   const [joiningDepartment, setJoiningDepartment] = useState(false);
+  const [issueReport, setIssueReport] = useState<{
+    code: string;
+    reason: JoinIssueReason;
+  } | null>(null);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<StudentCodeDetails | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
@@ -537,8 +544,13 @@ export default function ProfileScreen() {
                   setDepartmentName(dept.name);
                   Alert.alert('Success', `Joined department: ${dept.name}`);
                   setDeptCodeInput('');
-                } catch (err: any) {
-                  Alert.alert('Error', err.message || 'Invalid department code.');
+                } catch (error) {
+                  showCodeErrorAlert({
+                    t,
+                    error,
+                    attemptedCode: deptCodeInput,
+                    onReport: setIssueReport,
+                  });
                 } finally {
                   setJoiningDepartment(false);
                 }
@@ -803,6 +815,13 @@ export default function ProfileScreen() {
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
+
+      <JoinIssueDialog
+        visible={issueReport !== null}
+        attemptedCode={issueReport?.code || ''}
+        reason={issueReport?.reason || 'INVALID_CODE'}
+        onClose={() => setIssueReport(null)}
+      />
     </SafeAreaView>
   );
 }

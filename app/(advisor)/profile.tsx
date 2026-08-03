@@ -22,6 +22,10 @@ import { studentCodeService } from '@/services/studentCode';
 import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
+import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
+import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
+import type { JoinIssueReason } from '@/services/joinIssue';
+import { parseStudentCode } from '@/utils/codes';
 
 export default function AdvisorProfileScreen() {
   const { t } = useTranslation();
@@ -35,6 +39,13 @@ export default function AdvisorProfileScreen() {
   const [deptCodeInput, setDeptCodeInput] = useState('');
   const [joiningDepartment, setJoiningDepartment] = useState(false);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
+  const [issueReport, setIssueReport] = useState<{
+    code: string;
+    reason: JoinIssueReason;
+  } | null>(null);
+
+  const codeShape = parseStudentCode(studentCodeInput);
+  const isCodeShapeValid = codeShape.kind !== 'invalid';
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -389,8 +400,13 @@ export default function AdvisorProfileScreen() {
                   setDepartmentName(dept.name);
                   Alert.alert('Success', `Joined department: ${dept.name}`);
                   setDeptCodeInput('');
-                } catch (err: any) {
-                  Alert.alert('Error', err.message || 'Invalid department code.');
+                } catch (error) {
+                  showCodeErrorAlert({
+                    t,
+                    error,
+                    attemptedCode: deptCodeInput,
+                    onReport: setIssueReport,
+                  });
                 } finally {
                   setJoiningDepartment(false);
                 }
@@ -423,11 +439,15 @@ export default function AdvisorProfileScreen() {
               placeholder="e.g. ABC123"
               placeholderTextColor={colors.textDisabled}
               autoCapitalize="characters"
-              maxLength={6}
+              autoCorrect={false}
+              maxLength={22}
             />
             <TouchableOpacity
-              style={[styles.linkBtn, !studentCodeInput.trim() && { opacity: 0.5 }]}
-              disabled={!studentCodeInput.trim() || linkingStudent}
+              style={[
+                styles.linkBtn,
+                (!studentCodeInput.trim() || !isCodeShapeValid) && { opacity: 0.5 },
+              ]}
+              disabled={!studentCodeInput.trim() || !isCodeShapeValid || linkingStudent}
               onPress={async () => {
                 if (!user || !studentCodeInput.trim()) return;
                 setLinkingStudent(true);
@@ -439,8 +459,13 @@ export default function AdvisorProfileScreen() {
                   );
                   Alert.alert('Success', `Linked to student: ${result.studentName}`);
                   setStudentCodeInput('');
-                } catch (err: any) {
-                  Alert.alert('Error', err.message || 'Invalid code.');
+                } catch (error) {
+                  showCodeErrorAlert({
+                    t,
+                    error,
+                    attemptedCode: studentCodeInput,
+                    onReport: setIssueReport,
+                  });
                 } finally {
                   setLinkingStudent(false);
                 }
@@ -454,6 +479,11 @@ export default function AdvisorProfileScreen() {
               )}
             </TouchableOpacity>
           </View>
+          <Text style={styles.codeHint}>
+            {studentCodeInput.trim() && !isCodeShapeValid
+              ? t('student.codeInputInvalid')
+              : t('student.codeInputHint')}
+          </Text>
         </View>
 
         {/* Settings Card */}
@@ -609,6 +639,13 @@ export default function AdvisorProfileScreen() {
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
+
+      <JoinIssueDialog
+        visible={issueReport !== null}
+        attemptedCode={issueReport?.code || ''}
+        reason={issueReport?.reason || 'INVALID_CODE'}
+        onClose={() => setIssueReport(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -822,6 +859,11 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '500',
     marginTop: spacing.sm,
+  },
+  codeHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
 
   // Settings

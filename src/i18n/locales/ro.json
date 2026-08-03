@@ -107,7 +107,9 @@
     "studentCodeHint": "Distribuie acest cod mentorului și coordonatorului tău, ca să îl poată asocia contului tău.",
     "studentCodeNoDepartment": "Codul tău va include detaliile instituției tale de îndată ce te alături unui departament.",
     "studentCodeCopiedTitle": "Copiat",
-    "studentCodeCopied": "Codul tău de student a fost copiat în clipboard."
+    "studentCodeCopied": "Codul tău de student a fost copiat în clipboard.",
+    "codeInputHint": "Introdu codul complet sau doar ultimele 6 caractere.",
+    "codeInputInvalid": "Aceasta nu este o formă de cod validă. Folosește codul complet (8_6_6 caractere) sau codul de student de 6 caractere."
   },
   "gamification": {
     "points": "Puncte",

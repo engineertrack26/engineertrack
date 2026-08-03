@@ -13,12 +13,17 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { logService } from '@/services/logs';
 import { studentCodeService } from '@/services/studentCode';
 import { DailyLog } from '@/types/log';
 import { colors, spacing, borderRadius } from '@/theme';
+import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
+import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
+import type { JoinIssueReason } from '@/services/joinIssue';
+import { parseStudentCode } from '@/utils/codes';
 
 interface StudentItem {
   id: string;
@@ -58,6 +63,7 @@ function getInternshipProgress(start?: string, end?: string): { current: number;
 }
 
 export default function StudentListScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
@@ -65,6 +71,13 @@ export default function StudentListScreen() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [codeInput, setCodeInput] = useState('');
   const [linking, setLinking] = useState(false);
+  const [issueReport, setIssueReport] = useState<{
+    code: string;
+    reason: JoinIssueReason;
+  } | null>(null);
+
+  const codeShape = parseStudentCode(codeInput);
+  const isCodeShapeValid = codeShape.kind !== 'invalid';
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -128,12 +141,17 @@ export default function StudentListScreen() {
       Alert.alert('Success', `Linked to student: ${result.studentName}`);
       setCodeInput('');
       await loadData();
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Invalid code.');
+    } catch (error) {
+      showCodeErrorAlert({
+        t,
+        error,
+        attemptedCode: codeInput,
+        onReport: setIssueReport,
+      });
     } finally {
       setLinking(false);
     }
-  }, [user, codeInput, loadData]);
+  }, [user, codeInput, loadData, t]);
 
   const getInitials = (first: string, last: string) =>
     `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
@@ -244,11 +262,15 @@ export default function StudentListScreen() {
                 placeholder="e.g. ABC123"
                 placeholderTextColor={colors.textDisabled}
                 autoCapitalize="characters"
-                maxLength={6}
+                autoCorrect={false}
+                maxLength={22}
               />
               <TouchableOpacity
-                style={[styles.linkBtn, !codeInput.trim() && { opacity: 0.5 }]}
-                disabled={!codeInput.trim() || linking}
+                style={[
+                  styles.linkBtn,
+                  (!codeInput.trim() || !isCodeShapeValid) && { opacity: 0.5 },
+                ]}
+                disabled={!codeInput.trim() || !isCodeShapeValid || linking}
                 onPress={handleLinkStudent}
                 activeOpacity={0.7}
               >
@@ -259,6 +281,11 @@ export default function StudentListScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            <Text style={styles.codeHint}>
+              {codeInput.trim() && !isCodeShapeValid
+                ? t('student.codeInputInvalid')
+                : t('student.codeInputHint')}
+            </Text>
           </View>
         }
         ListEmptyComponent={
@@ -270,6 +297,13 @@ export default function StudentListScreen() {
             </Text>
           </View>
         }
+      />
+
+      <JoinIssueDialog
+        visible={issueReport !== null}
+        attemptedCode={issueReport?.code || ''}
+        reason={issueReport?.reason || 'INVALID_CODE'}
+        onClose={() => setIssueReport(null)}
       />
     </SafeAreaView>
   );
@@ -358,6 +392,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  codeHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
   },
 
   // Card

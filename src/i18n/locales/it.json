@@ -107,7 +107,9 @@
     "studentCodeHint": "Condividi questo codice con il tuo tutor e il tuo relatore, così potranno collegarlo al tuo account.",
     "studentCodeNoDepartment": "Il tuo codice includerà i dati del tuo istituto non appena ti unirai a un dipartimento.",
     "studentCodeCopiedTitle": "Copiato",
-    "studentCodeCopied": "Il tuo codice studente è stato copiato negli appunti."
+    "studentCodeCopied": "Il tuo codice studente è stato copiato negli appunti.",
+    "codeInputHint": "Inserisci il codice completo oppure solo gli ultimi 6 caratteri.",
+    "codeInputInvalid": "Questa non è una forma di codice valida. Usa il codice completo (8_6_6 caratteri) oppure il codice studente di 6 caratteri."
   },
   "gamification": {
     "points": "Punti",

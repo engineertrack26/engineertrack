@@ -107,7 +107,9 @@
     "studentCodeHint": "Podelite ovaj kod sa svojim mentorom i savetnikom kako bi mogli da ga povežu sa vašim nalogom.",
     "studentCodeNoDepartment": "Vaš kod će sadržati podatke o vašoj instituciji čim se pridružite odseku.",
     "studentCodeCopiedTitle": "Kopirano",
-    "studentCodeCopied": "Vaš studentski kod je kopiran u privremenu memoriju."
+    "studentCodeCopied": "Vaš studentski kod je kopiran u privremenu memoriju.",
+    "codeInputHint": "Unesite ceo kod ili samo poslednjih 6 karaktera.",
+    "codeInputInvalid": "To nije važeći oblik koda. Koristite ceo kod (8_6_6 karaktera) ili 6-karakterni studentski kod."
   },
   "gamification": {
     "points": "Poeni",

@@ -107,7 +107,9 @@
     "studentCodeHint": "Share this code with your mentor and advisor so they can link to your account.",
     "studentCodeNoDepartment": "Your code will include your institution details once you join a department.",
     "studentCodeCopiedTitle": "Copied",
-    "studentCodeCopied": "Your student code has been copied to the clipboard."
+    "studentCodeCopied": "Your student code has been copied to the clipboard.",
+    "codeInputHint": "Enter the full code or just the last 6 characters.",
+    "codeInputInvalid": "That is not a valid code shape. Use the full code (8_6_6 characters) or the 6-character student code."
   },
   "gamification": {
     "points": "Points",
