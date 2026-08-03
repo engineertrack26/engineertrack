@@ -178,9 +178,12 @@ BEGIN
     RAISE EXCEPTION 'Invalid institution code';
   END IF;
 
-  UPDATE profiles
+  -- `p.` is load-bearing: RETURNS TABLE declares an OUT parameter named `id`,
+  -- so an unqualified `WHERE id = ...` raises 42702. See
+  -- docs/join-ambiguous-id-fix.sql.
+  UPDATE profiles p
   SET institution_id = inst_id
-  WHERE id = auth.uid();
+  WHERE p.id = auth.uid();
 
   RETURN QUERY
     SELECT i.id, i.name, i.type, i.faculty, i.department, i.city, i.country
@@ -327,10 +330,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid department code';
   END IF;
 
-  UPDATE profiles
+  -- `p.` is load-bearing: RETURNS TABLE declares an OUT parameter named `id`,
+  -- so an unqualified `WHERE id = ...` raises 42702. See
+  -- docs/join-ambiguous-id-fix.sql.
+  UPDATE profiles p
   SET institution_id = inst_id,
       department_id = dept_id
-  WHERE id = auth.uid();
+  WHERE p.id = auth.uid();
 
   RETURN QUERY
     SELECT d.id, d.institution_id, d.name, d.department_code

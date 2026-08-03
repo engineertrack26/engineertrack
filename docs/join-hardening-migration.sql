@@ -269,10 +269,15 @@ BEGIN
     END IF;
   END IF;
 
-  UPDATE profiles
+  -- `p.` is load-bearing. RETURNS TABLE declares an OUT parameter named `id`,
+  -- so an unqualified `WHERE id = ...` is ambiguous between that variable and
+  -- profiles.id, and PostgreSQL raises 42702 rather than picking one. Only the
+  -- accepting path reaches this statement, so an unqualified version fails
+  -- exactly when a join should have succeeded and never when one is rejected.
+  UPDATE profiles p
   SET institution_id = inst_id,
       department_id  = dept_id
-  WHERE id = auth.uid();
+  WHERE p.id = auth.uid();
 
   RETURN QUERY
     SELECT d.id, d.institution_id, d.name, d.department_code
