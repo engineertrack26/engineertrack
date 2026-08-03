@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
@@ -31,6 +32,7 @@ interface ReportsData {
 }
 
 export default function AdminReportsScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { institution } = useAdminStore();
 
@@ -76,9 +78,9 @@ export default function AdminReportsScreen() {
   }
 
   const roleItems = [
-    { key: 'students', label: 'Students', color: colors.primary, icon: 'school' as const },
-    { key: 'advisors', label: 'Advisors', color: colors.info, icon: 'clipboard' as const },
-    { key: 'mentors', label: 'Mentors', color: colors.secondary, icon: 'people' as const },
+    { key: 'students', label: t('admin.roleStudents'), color: colors.primary, icon: 'school' as const },
+    { key: 'advisors', label: t('admin.roleAdvisors'), color: colors.info, icon: 'clipboard' as const },
+    { key: 'mentors', label: t('admin.roleMentors'), color: colors.secondary, icon: 'people' as const },
   ];
 
   const totalMembers = data
@@ -95,14 +97,12 @@ export default function AdminReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[ADMIN_COLOR]} />
         }
       >
-        <Text style={styles.screenTitle}>Reports & Analytics</Text>
+        <Text style={styles.screenTitle}>{t('admin.reportsTitle')}</Text>
 
         {!institution ? (
           <View style={styles.emptyCard}>
             <Ionicons name="business-outline" size={48} color={colors.textDisabled} />
-            <Text style={styles.emptyText}>
-              Create an institution from the dashboard to see reports.
-            </Text>
+            <Text style={styles.emptyText}>{t('admin.reportsEmpty')}</Text>
           </View>
         ) : (
           <>
@@ -110,14 +110,14 @@ export default function AdminReportsScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statsRow}>
                 <StatCard
-                  title="Total Students"
+                  title={t('admin.totalStudents')}
                   value={data?.totalStudents || 0}
                   icon="people"
                   color={ADMIN_COLOR}
                 />
                 <View style={{ width: spacing.sm }} />
                 <StatCard
-                  title="Active Internships"
+                  title={t('admin.activeInternships')}
                   value={data?.activeInternships || 0}
                   icon="briefcase"
                   color={colors.success}
@@ -125,14 +125,14 @@ export default function AdminReportsScreen() {
               </View>
               <View style={styles.statsRow}>
                 <StatCard
-                  title="Total Advisors"
+                  title={t('admin.totalAdvisors')}
                   value={data?.totalAdvisors || 0}
                   icon="school"
                   color={colors.info}
                 />
                 <View style={{ width: spacing.sm }} />
                 <StatCard
-                  title="Completion Rate"
+                  title={t('admin.completionRate')}
                   value={`${data?.completionRate || 0}%`}
                   icon="trending-up"
                   color={colors.warning}
@@ -142,7 +142,7 @@ export default function AdminReportsScreen() {
 
             {/* Role Breakdown */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Member Breakdown</Text>
+              <Text style={styles.sectionTitle}>{t('admin.memberBreakdown')}</Text>
               <View style={styles.breakdownCard}>
                 {/* Color bar */}
                 {totalMembers > 0 && (
@@ -180,28 +180,28 @@ export default function AdminReportsScreen() {
 
             {/* Institution Info */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Institution Info</Text>
+              <Text style={styles.sectionTitle}>{t('admin.institutionInfo')}</Text>
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Name</Text>
+                  <Text style={styles.infoLabel}>{t('admin.infoName')}</Text>
                   <Text style={styles.infoValue}>{institution.name}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Type</Text>
+                  <Text style={styles.infoLabel}>{t('admin.infoType')}</Text>
                   <Text style={styles.infoValue}>
                     {institution.type === 'university'
-                      ? 'University'
+                      ? t('admin.typeUniversity')
                       : institution.type === 'vocational_school'
-                        ? 'Vocational School'
-                        : 'Other'}
+                        ? t('admin.typeVocationalSchool')
+                        : t('admin.typeOther')}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Country</Text>
+                  <Text style={styles.infoLabel}>{t('admin.infoCountry')}</Text>
                   <Text style={styles.infoValue}>{institution.country || '-'}</Text>
                 </View>
                 <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                  <Text style={styles.infoLabel}>Institution Code</Text>
+                  <Text style={styles.infoLabel}>{t('admin.institutionCode')}</Text>
                   <Text style={[styles.infoValue, { color: ADMIN_COLOR, fontWeight: '700' }]}>
                     {institution.institutionCode}
                   </Text>

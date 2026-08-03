@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAdminStore } from '@/store/adminStore';
@@ -22,26 +23,29 @@ const ADMIN_COLOR = '#e65100';
 
 type RoleKey = 'student' | 'mentor' | 'advisor' | 'admin';
 
-const ROLE_CONFIG: Record<RoleKey, { color: string; icon: keyof typeof Ionicons.glyphMap; label: string }> = {
-  student: { color: colors.primary, icon: 'school-outline', label: 'Student' },
-  mentor: { color: colors.secondary, icon: 'briefcase-outline', label: 'Mentor' },
-  advisor: { color: colors.info, icon: 'glasses-outline', label: 'Advisor' },
-  admin: { color: ADMIN_COLOR, icon: 'shield-checkmark-outline', label: 'Admin' },
+// The role badge reuses the singular role names the auth screens already
+// translate, so a role is never named two different ways in one app.
+const ROLE_CONFIG: Record<RoleKey, { color: string; icon: keyof typeof Ionicons.glyphMap; labelKey: string }> = {
+  student: { color: colors.primary, icon: 'school-outline', labelKey: 'auth.student' },
+  mentor: { color: colors.secondary, icon: 'briefcase-outline', labelKey: 'auth.mentor' },
+  advisor: { color: colors.info, icon: 'glasses-outline', labelKey: 'auth.advisor' },
+  admin: { color: ADMIN_COLOR, icon: 'shield-checkmark-outline', labelKey: 'auth.admin' },
 };
 
-const SEGMENTS = [
-  { key: 'all', label: 'All' },
-  { key: 'student', label: 'Students' },
-  { key: 'advisor', label: 'Advisors' },
-  { key: 'mentor', label: 'Mentors' },
+const SEGMENT_KEYS = [
+  { key: 'all', labelKey: 'admin.segmentAll' },
+  { key: 'student', labelKey: 'admin.roleStudents' },
+  { key: 'advisor', labelKey: 'admin.roleAdvisors' },
+  { key: 'mentor', labelKey: 'admin.roleMentors' },
 ];
 
-function formatJoinDate(dateStr: string): string {
+function formatJoinDate(dateStr: string, language: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(language, { month: 'short', year: 'numeric' });
 }
 
 export default function UsersScreen() {
+  const { t, i18n } = useTranslation();
   const { institution } = useAdminStore();
 
   const [loading, setLoading] = useState(true);
@@ -64,10 +68,10 @@ export default function UsersScreen() {
         adminService.getDepartments(institution.id),
         adminService.getInstitutionMembers(institution.id),
       ]);
-      setDepartments([
-        { id: 'all', name: 'All Departments' },
-        ...deptList.map((d) => ({ id: d.id, name: d.name })),
-      ]);
+      // Only real departments live in state. The "all" chip is rendered
+      // separately so its label follows the interface language without a
+      // refetch, and so getDeptName can never resolve to a fake row.
+      setDepartments(deptList.map((d) => ({ id: d.id, name: d.name })));
       setAllMembers(data);
     } catch (err) {
       console.error('Users load error:', err);
@@ -118,12 +122,12 @@ export default function UsersScreen() {
 
   const handleRemove = (item: MemberWithProfile) => {
     Alert.alert(
-      'Remove from Institution',
-      `Remove ${item.firstName} ${item.lastName} from your institution? They will lose access to all institutional features.`,
+      t('admin.removeFromInstitution'),
+      t('admin.removeConfirm', { name: `${item.firstName} ${item.lastName}` }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('admin.remove'),
           style: 'destructive',
           onPress: async () => {
             setRemoving(item.id);
@@ -132,7 +136,7 @@ export default function UsersScreen() {
               setAllMembers((prev) => prev.filter((m) => m.id !== item.id));
               setExpandedId(null);
             } catch {
-              Alert.alert('Error', 'Failed to remove user. Please try again.');
+              Alert.alert(t('common.error'), t('admin.removeFailed'));
             } finally {
               setRemoving(null);
             }
@@ -143,7 +147,10 @@ export default function UsersScreen() {
   };
 
   const renderItem = ({ item }: { item: MemberWithProfile }) => {
-    const cfg = ROLE_CONFIG[item.role as RoleKey] ?? { color: colors.textSecondary, icon: 'person-outline' as keyof typeof Ionicons.glyphMap, label: item.role };
+    const cfg = ROLE_CONFIG[item.role as RoleKey];
+    const roleColor = cfg?.color ?? colors.textSecondary;
+    const roleIcon = cfg?.icon ?? ('person-outline' as keyof typeof Ionicons.glyphMap);
+    const roleLabel = cfg ? t(cfg.labelKey) : item.role;
     const deptName = getDeptName(item.departmentId);
     const isExpanded = expandedId === item.id;
     const isRemoving = removing === item.id;
@@ -155,14 +162,14 @@ export default function UsersScreen() {
         activeOpacity={0.85}
       >
         {/* Left role stripe */}
-        <View style={[styles.roleStripe, { backgroundColor: cfg.color }]} />
+        <View style={[styles.roleStripe, { backgroundColor: roleColor }]} />
 
         <View style={styles.cardContent}>
           {/* Main row */}
           <View style={styles.cardTopRow}>
             {/* Avatar */}
-            <View style={[styles.memberAvatar, { backgroundColor: cfg.color + '18' }]}>
-              <Text style={[styles.memberInitials, { color: cfg.color }]}>
+            <View style={[styles.memberAvatar, { backgroundColor: roleColor + '18' }]}>
+              <Text style={[styles.memberInitials, { color: roleColor }]}>
                 {getInitials(item.firstName, item.lastName)}
               </Text>
             </View>
@@ -173,9 +180,9 @@ export default function UsersScreen() {
                 <Text style={styles.memberName} numberOfLines={1}>
                   {item.firstName} {item.lastName}
                 </Text>
-                <View style={[styles.roleBadge, { backgroundColor: cfg.color + '15' }]}>
-                  <Ionicons name={cfg.icon} size={11} color={cfg.color} />
-                  <Text style={[styles.roleBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+                <View style={[styles.roleBadge, { backgroundColor: roleColor + '15' }]}>
+                  <Ionicons name={roleIcon} size={11} color={roleColor} />
+                  <Text style={[styles.roleBadgeText, { color: roleColor }]}>{roleLabel}</Text>
                 </View>
               </View>
 
@@ -190,7 +197,7 @@ export default function UsersScreen() {
                   </>
                 )}
                 <Ionicons name="calendar-outline" size={11} color={colors.textDisabled} />
-                <Text style={styles.metaText}>Joined {formatJoinDate(item.createdAt)}</Text>
+                <Text style={styles.metaText}>{t('admin.joined', { date: formatJoinDate(item.createdAt, i18n.language) })}</Text>
               </View>
             </View>
 
@@ -216,7 +223,7 @@ export default function UsersScreen() {
                 ) : (
                   <>
                     <Ionicons name="person-remove-outline" size={15} color={colors.error} />
-                    <Text style={styles.removeBtnText}>Remove from Institution</Text>
+                    <Text style={styles.removeBtnText}>{t('admin.removeFromInstitution')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -232,11 +239,9 @@ export default function UsersScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-        <Text style={styles.emptyTitle}>No Users Found</Text>
+        <Text style={styles.emptyTitle}>{t('admin.noUsersFound')}</Text>
         <Text style={styles.emptyDesc}>
-          {institution
-            ? 'No members match your current filters.'
-            : 'Create an institution first from the dashboard.'}
+          {institution ? t('admin.noUsersMatch') : t('admin.noInstitutionYet')}
         </Text>
       </View>
     );
@@ -246,8 +251,8 @@ export default function UsersScreen() {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Users</Text>
-        <Text style={styles.memberCount}>{allMembers.length} total</Text>
+        <Text style={styles.screenTitle}>{t('admin.usersTitle')}</Text>
+        <Text style={styles.memberCount}>{t('admin.totalCount', { count: allMembers.length })}</Text>
       </View>
 
       {/* Stats bar */}
@@ -256,19 +261,19 @@ export default function UsersScreen() {
           <View style={styles.statItem}>
             <View style={[styles.statDot, { backgroundColor: colors.primary }]} />
             <Text style={styles.statNum}>{stats.students}</Text>
-            <Text style={styles.statLabel}>Students</Text>
+            <Text style={styles.statLabel}>{t('admin.roleStudents')}</Text>
           </View>
           <View style={styles.statSep} />
           <View style={styles.statItem}>
             <View style={[styles.statDot, { backgroundColor: colors.info }]} />
             <Text style={styles.statNum}>{stats.advisors}</Text>
-            <Text style={styles.statLabel}>Advisors</Text>
+            <Text style={styles.statLabel}>{t('admin.roleAdvisors')}</Text>
           </View>
           <View style={styles.statSep} />
           <View style={styles.statItem}>
             <View style={[styles.statDot, { backgroundColor: colors.secondary }]} />
             <Text style={styles.statNum}>{stats.mentors}</Text>
-            <Text style={styles.statLabel}>Mentors</Text>
+            <Text style={styles.statLabel}>{t('admin.roleMentors')}</Text>
           </View>
         </View>
       )}
@@ -278,7 +283,7 @@ export default function UsersScreen() {
         <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name or email..."
+          placeholder={t('admin.searchPlaceholder')}
           placeholderTextColor={colors.textDisabled}
           value={search}
           onChangeText={setSearch}
@@ -294,7 +299,7 @@ export default function UsersScreen() {
 
       {/* Segment Tabs */}
       <View style={styles.segmentRow}>
-        {SEGMENTS.map((seg) => {
+        {SEGMENT_KEYS.map((seg) => {
           const count = seg.key === 'student' ? stats.students
             : seg.key === 'advisor' ? stats.advisors
             : seg.key === 'mentor' ? stats.mentors
@@ -306,7 +311,7 @@ export default function UsersScreen() {
               onPress={() => setSegment(seg.key)}
             >
               <Text style={[styles.segmentText, segment === seg.key && styles.segmentTextActive]}>
-                {seg.label}{count !== null ? ` (${count})` : ''}
+                {t(seg.labelKey)}{count !== null ? ` (${count})` : ''}
               </Text>
             </TouchableOpacity>
           );
@@ -314,9 +319,9 @@ export default function UsersScreen() {
       </View>
 
       {/* Department Filter */}
-      {departments.length > 1 && (
+      {departments.length > 0 && (
         <View style={styles.departmentRow}>
-          {departments.map((dept) => (
+          {[{ id: 'all', name: t('admin.allDepartments') }, ...departments].map((dept) => (
             <TouchableOpacity
               key={dept.id}
               style={[styles.departmentChip, departmentId === dept.id && styles.departmentChipActive]}
@@ -332,7 +337,7 @@ export default function UsersScreen() {
 
       {/* Result count when searching */}
       {(search.trim() || segment !== 'all' || departmentId !== 'all') && !loading && (
-        <Text style={styles.resultCount}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.resultCount}>{t('admin.resultCount', { count: filtered.length })}</Text>
       )}
 
       {/* Members List */}

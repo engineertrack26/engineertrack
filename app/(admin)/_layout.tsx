@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
@@ -7,6 +8,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { useAdminStore } from '@/store/adminStore';
 
 export default function AdminLayout() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
@@ -39,7 +41,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: t('admin.tabDashboard'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -48,7 +50,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="users"
         options={{
-          title: 'Users',
+          title: t('admin.tabUsers'),
           href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
@@ -58,7 +60,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          title: 'Reports',
+          title: t('admin.tabReports'),
           href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart-outline" size={size} color={color} />
@@ -68,7 +70,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Alerts',
+          title: t('admin.tabAlerts'),
           href: institution ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
@@ -80,7 +82,7 @@ export default function AdminLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('admin.tabProfile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
