@@ -3016,7 +3016,7 @@ git commit -m "feat: let admins set allowed e-mail domains for their institution
 - Consumes: everything above
 - Produces: a repeatable database verification script
 
-- [ ] **Step 1: Write the verification script**
+- [x] **Step 1: Write the verification script**
 
 Create `docs/join-hardening-verification.sql` as four submissions. Two properties of the Supabase SQL editor dictate the shape, and both were established empirically — do not "simplify" past them:
 
@@ -3032,11 +3032,11 @@ Each part collects outcomes into a temp `probe (step, result)` table and ends wi
 
 Part C rewrites a real institution's rule and a real profile's e-mail, so the `ROLLBACK` is load-bearing rather than tidiness. Part D exists to prove it ran.
 
-- [ ] **Step 2: Run Part A**
+- [x] **Step 2: Run Part A**
 
 Expected: one row, `PASS: schema assertions held`. Any failure raises and names what is missing.
 
-- [ ] **Step 3: Run Part B**
+- [x] **Step 3: Run Part B**
 
 Submit `BEGIN` through `ROLLBACK` in one go. Expected result table:
 
@@ -3048,7 +3048,7 @@ Submit `BEGIN` through `ROLLBACK` in one go. Expected result table:
 | 07–09 rate | `accepted` |
 | 10 rate | `REPORT_RATE_LIMITED` |
 
-- [ ] **Step 4: Run Parts C and D**
+- [x] **Step 4: Run Parts C and D**
 
 Expected:
 
@@ -3061,7 +3061,7 @@ Expected:
 
 Row 13 is the regression test for the case-sensitivity bug the Task 9 review caught. Part D must show every institution holding its real domain list — if any reads `{example.invalid}` or `{c.invalid}`, the `ROLLBACK` did not run and that institution needs fixing by hand before anything else.
 
-- [ ] **Step 5: Run the full automated suite**
+- [x] **Step 5: Run the full automated suite**
 
 ```bash
 npm test
@@ -3106,7 +3106,7 @@ FROM join_issue_reports ORDER BY created_at DESC LIMIT 5;
 
 13. Switch the app language to Turkish and repeat steps 9 and 10 → both messages appear in Turkish, not as raw keys.
 
-- [ ] **Step 7: Update the progress log**
+- [x] **Step 7: Update the progress log**
 
 Add a row to the Session Log table in `PROGRESS.md`:
 
