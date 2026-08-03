@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Modal, View, Text, StyleSheet, TextInput, Alert } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { joinIssueService, type JoinIssueReason } from '@/services/joinIssue';
@@ -53,7 +62,10 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView
+        style={styles.backdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.card}>
           <Text style={styles.title}>{t('errors.reportTitle')}</Text>
           <Text style={styles.meta}>{attemptedCode}</Text>
@@ -85,7 +97,7 @@ export function JoinIssueDialog({ visible, attemptedCode, reason, onClose }: Pro
             />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
