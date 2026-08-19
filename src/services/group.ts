@@ -130,7 +130,7 @@ export const groupService = {
   async getMyGroup(studentId: string): Promise<GroupSummary | null> {
     const { data, error } = await supabase
       .from('group_memberships')
-      .select('group:internship_groups(id, name, term, advisor:profiles_public!internship_groups_advisor_id_fkey(first_name, last_name))')
+      .select('group:internship_groups(id, name, term, advisor_id)')
       .eq('student_id', studentId)
       .is('left_at', null)
       .maybeSingle();
@@ -138,12 +138,31 @@ export const groupService = {
     if (!data) return null;
 
     const g = ((data as Record<string, unknown>).group || {}) as Record<string, unknown>;
-    const a = (g.advisor || {}) as Record<string, unknown>;
+
+    // Two queries rather than an embed, for two independent reasons. There is
+    // no foreign key from internship_groups to profiles_public, so PostgREST
+    // cannot resolve that relationship in one hop. And the student cannot read
+    // the advisor's `profiles` row at all — profiles_select has no disjunct
+    // covering it — so profiles_public is the only readable source for the
+    // advisor's name.
+    let advisorName = '';
+    const advisorId = g.advisor_id as string | undefined;
+    if (advisorId) {
+      const { data: adv, error: advError } = await supabase
+        .from('profiles_public')
+        .select('first_name, last_name')
+        .eq('id', advisorId)
+        .maybeSingle();
+      if (advError) throw advError;
+      const a = (adv || {}) as Record<string, unknown>;
+      advisorName = `${(a.first_name as string) || ''} ${(a.last_name as string) || ''}`.trim();
+    }
+
     return {
       id: (g.id as string) || '',
       name: (g.name as string) || '',
       term: (g.term as string) || undefined,
-      advisorName: `${(a.first_name as string) || ''} ${(a.last_name as string) || ''}`.trim(),
+      advisorName,
     };
   },
 };
