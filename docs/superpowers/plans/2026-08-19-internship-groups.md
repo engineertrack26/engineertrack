@@ -1605,19 +1605,36 @@ grep -rn "institutionId\|departmentId\|adminService\|useAdminStore\|allowedEmail
 
 Expected: `tsc` silent and `grep` empty. Any hit is a live reference to something deleted — fix it here rather than leaving it for the final review.
 
-- [ ] **Step 6: Delete the obsolete SQL docs**
+- [ ] **Step 6: Annotate the superseded SQL docs — do NOT delete them**
 
-These describe an schema that no longer exists and would mislead anyone rebuilding the database:
+`docs/*.sql` is a chronological migration log: a database is rebuilt by running the files in order. Deleting the old ones breaks that, and `docs/admin-migration.sql` in particular is not safe to remove — alongside the institution tables it defines two things that **survive**:
 
-```bash
-git rm docs/join-hardening-migration.sql docs/join-hardening-verification.sql docs/join-ambiguous-id-fix.sql docs/admin-migration.sql
-```
+- `generate_random_code(length INT)` at line 7, which the new `internship_groups.join_code` default depends on;
+- the `student_codes` table at line 63, still the mentor's linking mechanism.
 
-`docs/database-schema.sql` stays — it defines the tables that survive. Add a line at its top:
+So annotate instead of deleting. Add at the top of `docs/admin-migration.sql`:
 
 ```sql
--- Superseded in part by docs/internship-groups-migration.sql (2026-08-19),
--- which retired the institution/department hierarchy and the admin role.
+-- PARTLY SUPERSEDED by docs/internship-groups-migration.sql (2026-08-19),
+-- which drops institutions, departments, admin_profiles, the admin role and
+-- the institution/department RPCs defined below. Still authoritative for
+-- generate_random_code() and the student_codes table, both of which survive —
+-- do not delete this file.
+```
+
+And at the top of `docs/join-hardening-migration.sql` and `docs/join-ambiguous-id-fix.sql`:
+
+```sql
+-- SUPERSEDED by docs/internship-groups-migration.sql (2026-08-19). Everything
+-- below operates on institutions, departments or join_issue_reports, all of
+-- which that migration drops. Kept as history: the docs/ SQL files are a
+-- chronological log, and a rebuild runs them in order.
+```
+
+Delete only `docs/join-hardening-verification.sql` — it is a test script for behaviour that no longer exists, not a migration, so nothing rebuilds from it:
+
+```bash
+git rm docs/join-hardening-verification.sql
 ```
 
 - [ ] **Step 7: Run everything and commit**
