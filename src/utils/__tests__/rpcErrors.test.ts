@@ -54,4 +54,18 @@ describe('mapRpcError', () => {
       key: 'errors.invalidReason',
     });
   });
+
+  it('maps GROUP_ARCHIVED', () => {
+    expect(mapRpcError('GROUP_ARCHIVED')).toEqual({
+      code: 'GROUP_ARCHIVED',
+      key: 'errors.groupArchived',
+    });
+  });
+
+  it('maps GROUP_NOT_FOUND', () => {
+    expect(mapRpcError('GROUP_NOT_FOUND')).toEqual({
+      code: 'GROUP_NOT_FOUND',
+      key: 'errors.groupNotFound',
+    });
+  });
 });

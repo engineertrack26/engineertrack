@@ -113,7 +113,14 @@
     "studentCodeCopiedTitle": "Copied",
     "studentCodeCopied": "Your student code has been copied to the clipboard.",
     "codeInputHint": "Enter the full code or just the last 6 characters.",
-    "codeInputInvalid": "That is not a valid code shape. Use the full code (8_6_6 characters) or the 6-character student code."
+    "codeInputInvalid": "That is not a valid code shape. Use the full code (8_6_6 characters) or the 6-character student code.",
+    "joinGroup": "Join your advisor's group",
+    "joinGroupHint": "Enter the code your advisor gave you.",
+    "groupCodePlaceholder": "6-character code",
+    "join": "Join",
+    "joinedGroup": "You joined {{name}}.",
+    "myGroup": "My group",
+    "noGroupYet": "You have not joined a group yet."
   },
   "gamification": {
     "points": "Points",
@@ -152,7 +159,27 @@
     "overallProgress": "Overall Progress",
     "complianceRate": "Compliance Rate",
     "flaggedLogs": "Flagged Logs",
-    "exportReport": "Export Report"
+    "exportReport": "Export Report",
+    "myGroups": "My Groups",
+    "noGroups": "You have no groups yet. Create one and share its code with your students.",
+    "createGroup": "Create group",
+    "groupName": "Group name",
+    "groupNamePlaceholder": "e.g. Computer Eng. Summer Internship",
+    "groupTerm": "Term (optional)",
+    "groupTermPlaceholder": "e.g. 2026 Fall",
+    "groupNameRequired": "A group name is required.",
+    "joinCode": "Join code",
+    "joinCodeCopied": "Join code copied to clipboard.",
+    "joinCodeHint": "Share this code with your students so they can join this group.",
+    "memberCount": "{{count}} students",
+    "viewStudents": "View students",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "archived": "Archived",
+    "archiveConfirm": "Archive {{name}}? Its code stops working and no new students can join. Existing members and their history are kept.",
+    "removeStudent": "Remove from group",
+    "removeStudentConfirm": "Remove {{name}} from this group? Their logs and history are kept.",
+    "removeStudentDone": "Student removed from the group."
   },
   "admin": {
     "activeInternships": "Active Internships",
@@ -306,6 +333,8 @@
     "reportSend": "Send",
     "reportSentRouted": "Your report has been sent to your institution's administrator.",
     "reportSentStored": "Your report has been recorded. Please also contact whoever gave you the code.",
-    "reportFailed": "We could not send your report. Check your connection and try again."
+    "reportFailed": "We could not send your report. Check your connection and try again.",
+    "groupArchived": "That group has been archived and is no longer accepting students.",
+    "groupNotFound": "No group found with that code. Check it with your advisor."
   }
 }

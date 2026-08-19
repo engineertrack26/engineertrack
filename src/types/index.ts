@@ -4,3 +4,4 @@ export * from './gamification';
 export * from './navigation';
 export * from './notification';
 export * from './institution';
+export * from './group';

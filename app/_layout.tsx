@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useGroupStore } from '@/store/groupStore';
 import { authService } from '@/services/auth';
 import {
   registerForPushNotifications,
@@ -78,6 +79,7 @@ export default function RootLayout() {
   const resetLogStore = useLogStore((s) => s.reset);
   const resetGamificationStore = useGamificationStore((s) => s.reset);
   const resetNotificationStore = useNotificationStore((s) => s.reset);
+  const resetGroupStore = useGroupStore((s) => s.reset);
   const segments = useSegments();
   const router = useRouter();
   const [appReady, setAppReady] = useState(false);
@@ -128,6 +130,7 @@ export default function RootLayout() {
           resetLogStore();
           resetGamificationStore();
           resetNotificationStore();
+          resetGroupStore();
           setLoading(false);
           return;
         }
