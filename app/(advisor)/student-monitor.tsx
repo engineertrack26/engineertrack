@@ -164,7 +164,7 @@ export default function StudentMonitorScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerContainer}>
           <Text style={styles.screenTitle} numberOfLines={1}>
-            {activeGroup?.name || 'Student Monitor'}
+            {activeGroup?.name || t('advisor.studentMonitor')}
           </Text>
           <Text style={styles.countText}>{members.length} student{members.length !== 1 ? 's' : ''}</Text>
         </View>
@@ -202,9 +202,9 @@ export default function StudentMonitorScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-              <Text style={styles.emptyTitle}>No Students Yet</Text>
+              <Text style={styles.emptyTitle}>{t('advisor.noStudentsYet')}</Text>
               <Text style={styles.emptyText}>
-                Share this group's join code with your students so they can join.
+                {t('advisor.noStudentsYetHint')}
               </Text>
             </View>
           }

@@ -179,7 +179,9 @@
     "archiveConfirm": "Archive {{name}}? Its code stops working and no new students can join. Existing members and their history are kept.",
     "removeStudent": "Remove from group",
     "removeStudentConfirm": "Remove {{name}} from this group? Their logs and history are kept.",
-    "removeStudentDone": "Student removed from the group."
+    "removeStudentDone": "Student removed from the group.",
+    "noStudentsYet": "No Students Yet",
+    "noStudentsYetHint": "Share this group's join code with your students so they can join."
   },
   "admin": {
     "activeInternships": "Active Internships",
