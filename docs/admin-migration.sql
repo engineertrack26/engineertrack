@@ -1,3 +1,9 @@
+-- PARTLY SUPERSEDED by docs/internship-groups-migration.sql (2026-08-19),
+-- which drops institutions, departments, admin_profiles, the admin role and
+-- the institution/department RPCs defined below. Still authoritative for
+-- generate_random_code() and the student_codes table, both of which survive —
+-- do not delete this file.
+
 -- ============================================
 -- EngineerTrack: Admin Role & Code-Based Linking
 -- Run this in Supabase SQL Editor

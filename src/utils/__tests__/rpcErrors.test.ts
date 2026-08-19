@@ -8,21 +8,6 @@ describe('mapRpcError', () => {
     });
   });
 
-  it('maps a code carrying a detail payload', () => {
-    expect(mapRpcError('EMAIL_DOMAIN_BLOCKED:btu.edu.tr,ogr.btu.edu.tr')).toEqual({
-      code: 'EMAIL_DOMAIN_BLOCKED',
-      key: 'errors.emailDomainBlocked',
-      params: { domains: 'btu.edu.tr, ogr.btu.edu.tr' },
-    });
-  });
-
-  it('ignores the Postgres error prefix Supabase prepends', () => {
-    expect(mapRpcError('  CODE_SEGMENT_MISMATCH  ')).toEqual({
-      code: 'CODE_SEGMENT_MISMATCH',
-      key: 'errors.codeSegmentMismatch',
-    });
-  });
-
   it('falls back to a generic key for an unrecognised message', () => {
     expect(mapRpcError('some database explosion')).toEqual({
       code: 'UNKNOWN',
@@ -34,24 +19,10 @@ describe('mapRpcError', () => {
     expect(mapRpcError(undefined)).toEqual({ code: 'UNKNOWN', key: 'errors.unknown' });
   });
 
-  it('maps the report rate limit code', () => {
-    expect(mapRpcError('REPORT_RATE_LIMITED')).toEqual({
-      code: 'REPORT_RATE_LIMITED',
-      key: 'errors.reportRateLimited',
-    });
-  });
-
-  it('maps the note-too-long code', () => {
-    expect(mapRpcError('NOTE_TOO_LONG')).toEqual({
-      code: 'NOTE_TOO_LONG',
-      key: 'errors.noteTooLong',
-    });
-  });
-
-  it('maps the invalid reason code', () => {
-    expect(mapRpcError('INVALID_REASON')).toEqual({
-      code: 'INVALID_REASON',
-      key: 'errors.invalidReason',
+  it('ignores the Postgres error prefix Supabase prepends', () => {
+    expect(mapRpcError('  INVALID_CODE_FORMAT  ')).toEqual({
+      code: 'INVALID_CODE_FORMAT',
+      key: 'errors.invalidCodeFormat',
     });
   });
 

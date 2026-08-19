@@ -1,7 +1,6 @@
 export interface RpcErrorInfo {
   code: string;
   key: string;
-  params?: Record<string, string>;
 }
 
 const ERROR_KEYS: Record<string, string> = {
@@ -10,12 +9,6 @@ const ERROR_KEYS: Record<string, string> = {
   INVALID_CODE: 'errors.invalidCode',
   EXPIRED_CODE: 'errors.expiredCode',
   INVALID_CODE_FORMAT: 'errors.invalidCodeFormat',
-  CODE_SEGMENT_MISMATCH: 'errors.codeSegmentMismatch',
-  INSTITUTION_MISMATCH: 'errors.institutionMismatch',
-  EMAIL_DOMAIN_BLOCKED: 'errors.emailDomainBlocked',
-  INVALID_REASON: 'errors.invalidReason',
-  REPORT_RATE_LIMITED: 'errors.reportRateLimited',
-  NOTE_TOO_LONG: 'errors.noteTooLong',
   GROUP_ARCHIVED: 'errors.groupArchived',
   GROUP_NOT_FOUND: 'errors.groupNotFound',
 };
@@ -26,18 +19,10 @@ const ERROR_KEYS: Record<string, string> = {
  */
 export function mapRpcError(message?: string): RpcErrorInfo {
   const raw = (message || '').trim();
-  const [code, detail] = raw.split(':', 2);
+  const [code] = raw.split(':', 2);
   const key = ERROR_KEYS[code];
 
   if (!key) return { code: 'UNKNOWN', key: 'errors.unknown' };
-
-  if (code === 'EMAIL_DOMAIN_BLOCKED' && detail) {
-    return {
-      code,
-      key,
-      params: { domains: detail.split(',').map((d) => d.trim()).join(', ') },
-    };
-  }
 
   return { code, key };
 }

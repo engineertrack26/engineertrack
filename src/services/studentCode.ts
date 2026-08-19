@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import { RpcError } from './rpcError';
-import type { StudentCode } from '@/types/institution';
+
+export interface StudentCode {
+  id: string;
+  studentId: string;
+  code: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 function mapStudentCode(row: Record<string, unknown>): StudentCode {
   return {

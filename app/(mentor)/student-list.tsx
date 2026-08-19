@@ -20,10 +20,8 @@ import { logService } from '@/services/logs';
 import { studentCodeService } from '@/services/studentCode';
 import { DailyLog } from '@/types/log';
 import { colors, spacing, borderRadius } from '@/theme';
-import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
-import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
-import type { JoinIssueReason } from '@/services/joinIssue';
 import { parseStudentCode } from '@/utils/codes';
+import { mapRpcError } from '@/utils/rpcErrors';
 
 interface StudentItem {
   id: string;
@@ -71,10 +69,6 @@ export default function StudentListScreen() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [codeInput, setCodeInput] = useState('');
   const [linking, setLinking] = useState(false);
-  const [issueReport, setIssueReport] = useState<{
-    code: string;
-    reason: JoinIssueReason;
-  } | null>(null);
 
   const codeShape = parseStudentCode(codeInput);
   const codeLooksValid = codeShape.kind === 'valid';
@@ -141,13 +135,9 @@ export default function StudentListScreen() {
       Alert.alert('Success', `Linked to student: ${result.studentName}`);
       setCodeInput('');
       await loadData();
-    } catch (error) {
-      showCodeErrorAlert({
-        t,
-        error,
-        attemptedCode: codeInput,
-        onReport: setIssueReport,
-      });
+    } catch (error: any) {
+      const info = mapRpcError(error?.message);
+      Alert.alert(t('common.error'), t(info.key));
     } finally {
       setLinking(false);
     }
@@ -297,13 +287,6 @@ export default function StudentListScreen() {
             </Text>
           </View>
         }
-      />
-
-      <JoinIssueDialog
-        visible={issueReport !== null}
-        attemptedCode={issueReport?.code || ''}
-        reason={issueReport?.reason || 'INVALID_CODE'}
-        onClose={() => setIssueReport(null)}
       />
     </SafeAreaView>
   );

@@ -16,7 +16,6 @@ const ROLES: { key: UserRole; icon: string; color?: string }[] = [
   { key: 'student', icon: '🎓' },
   { key: 'mentor', icon: '👨‍🏫' },
   { key: 'advisor', icon: '📋' },
-  { key: 'admin', icon: '🏛️', color: '#e65100' },
 ];
 
 export default function RegisterScreen() {

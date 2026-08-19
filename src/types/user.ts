@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'mentor' | 'advisor' | 'admin';
+export type UserRole = 'student' | 'mentor' | 'advisor';
 
 export type SupportedLanguage = 'en' | 'tr' | 'sr' | 'el' | 'it' | 'ro' | 'de';
 

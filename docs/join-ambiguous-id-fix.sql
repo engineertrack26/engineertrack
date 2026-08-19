@@ -1,3 +1,8 @@
+-- SUPERSEDED by docs/internship-groups-migration.sql (2026-08-19). Everything
+-- below operates on institutions, departments or join_issue_reports, all of
+-- which that migration drops. Kept as history: the docs/ SQL files are a
+-- chronological log, and a rebuild runs them in order.
+
 -- docs/join-ambiguous-id-fix.sql
 --
 -- Fixes 42702 "column reference \"id\" is ambiguous" in the two join RPCs.
