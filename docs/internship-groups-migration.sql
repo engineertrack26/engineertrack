@@ -172,6 +172,27 @@ ALTER TABLE leaderboard_public DROP COLUMN IF EXISTS department;
 -- ============================================
 -- 5. Retire the institution hierarchy
 -- ============================================
+-- The profiles_select policy (docs/admin-migration.sql:433-439) calls
+-- is_admin_of_institution(id). Postgres records a hard dependency from a
+-- policy's qual to the functions it calls, so DROP FUNCTION without CASCADE
+-- fails and halts the whole script before the table drops. Replace the policy
+-- first, minus the admin disjunct — there are no admins any more.
+DROP POLICY IF EXISTS "profiles_select" ON profiles;
+CREATE POLICY "profiles_select" ON profiles
+  FOR SELECT USING (
+    auth.uid() = id
+    OR is_mentor_of(id)
+    OR is_advisor_of(id)
+  );
+
+-- These two read profiles.institution_id and join institutions/departments,
+-- so they break the moment the columns below are dropped. Dropping rather
+-- than leaving them broken also lets docs/internship-groups-rpcs.sql recreate
+-- get_my_student_code with a one-column result: CREATE OR REPLACE cannot
+-- change a function's return type, so it MUST be dropped first.
+DROP FUNCTION IF EXISTS get_my_student_code();
+DROP FUNCTION IF EXISTS link_student_by_code(TEXT, TEXT);
+
 DROP FUNCTION IF EXISTS report_join_issue(TEXT, TEXT, TEXT);
 DROP FUNCTION IF EXISTS join_institution_by_code(TEXT);
 DROP FUNCTION IF EXISTS validate_institution_code(TEXT);
