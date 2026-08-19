@@ -1636,6 +1636,31 @@ grep -rn "institution\|adminStore\|JoinIssueDialog\|codeErrorAlert\|emailDomain\
 
 Remove every line that names a deleted module.
 
+- [ ] **Step 4b: Detach `app/(mentor)/student-list.tsx` from the deleted modules**
+
+This file is not in the delete list but holds six live references to things this task removes, so it must be edited here or the build breaks. Delete these imports:
+
+```ts
+import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
+import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
+import type { JoinIssueReason } from '@/services/joinIssue';
+```
+
+Delete the `issueReport` state declaration (around line 74) and the whole `<JoinIssueDialog … />` element (around lines 302-306).
+
+Replace the `catch` block in the link handler (around line 144) with the same pattern Task 4 used on the student side:
+
+```tsx
+    } catch (error: any) {
+      const info = mapRpcError(error?.message);
+      Alert.alert(t('common.error'), t(info.key));
+    } finally {
+```
+
+adding `import { mapRpcError } from '@/utils/rpcErrors';` if it is not already there. Every error `link_student_by_code` can now raise — `NOT_AUTHENTICATED`, `ROLE_NOT_ALLOWED`, `INVALID_CODE_FORMAT`, `INVALID_CODE`, `EXPIRED_CODE` — already has a key in `en.json`; verify that before you finish.
+
+While you are in this file: line 141's `Alert.alert('Success', \`Linked to student: ${result.studentName}\`)` is a pre-existing hardcoded string. Leave it. The human paused that retrofit and it is not one of this plan's new strings.
+
 - [ ] **Step 5: Sweep for orphaned references**
 
 ```bash
