@@ -130,7 +130,7 @@ export const groupService = {
   async getMyGroup(studentId: string): Promise<GroupSummary | null> {
     const { data, error } = await supabase
       .from('group_memberships')
-      .select('group:internship_groups(id, name, term, advisor:profiles!internship_groups_advisor_id_fkey(first_name, last_name))')
+      .select('group:internship_groups(id, name, term, advisor:profiles_public!internship_groups_advisor_id_fkey(first_name, last_name))')
       .eq('student_id', studentId)
       .is('left_at', null)
       .maybeSingle();

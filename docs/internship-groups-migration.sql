@@ -177,12 +177,29 @@ ALTER TABLE leaderboard_public DROP COLUMN IF EXISTS department;
 -- policy's qual to the functions it calls, so DROP FUNCTION without CASCADE
 -- fails and halts the whole script before the table drops. Replace the policy
 -- first, minus the admin disjunct — there are no admins any more.
+--
+-- Mirrors is_advisor_of, but keyed on group membership rather than
+-- student_profiles.advisor_id. student_profiles has NOT NULL columns and its
+-- row only appears once the student completes the internship form, so
+-- advisor_id is still unset for a student who has just joined a group.
+CREATE OR REPLACE FUNCTION is_group_advisor_of(target UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM group_memberships m
+    JOIN internship_groups g ON g.id = m.group_id
+    WHERE m.student_id = target
+      AND m.left_at IS NULL
+      AND g.advisor_id = auth.uid()
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 DROP POLICY IF EXISTS "profiles_select" ON profiles;
 CREATE POLICY "profiles_select" ON profiles
   FOR SELECT USING (
     auth.uid() = id
     OR is_mentor_of(id)
     OR is_advisor_of(id)
+    OR is_group_advisor_of(id)
   );
 
 -- These two read profiles.institution_id and join institutions/departments,
