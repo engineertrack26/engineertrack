@@ -1613,6 +1613,21 @@ Also delete the `EMAIL_DOMAIN_BLOCKED` special case in the body of `mapRpcError`
 
 Delete the matching cases from `src/utils/__tests__/rpcErrors.test.ts`.
 
+- [ ] **Step 3b: Retire the stale and orphaned i18n strings**
+
+Two `en.json` entries describe the deleted model. The first is actively misleading — it is on screen right now, telling mentors a format that no longer works:
+
+- `student.codeInputInvalid` currently reads `"Use the full code (8_6_6 characters) or the 6-character student code."` and is still rendered by `app/(mentor)/student-list.tsx:285`. Replace the value with `"Enter the student's 6-character code."` — keep the key, it is still used.
+- `student.studentCodeNoDepartment` (`"Your code will include your institution details once you join a department"`) has no remaining reference. Delete the key.
+
+Then confirm nothing else points at a deleted concept:
+
+```bash
+grep -niE "institution|department|composite|8_6_6" src/i18n/locales/en.json
+```
+
+Every surviving hit must be a string a live screen still uses. Report any you are unsure about rather than guessing — `student_profiles.department` is a real surviving column, so some "department" wording is legitimate.
+
 - [ ] **Step 4: Fix the barrels**
 
 ```bash
