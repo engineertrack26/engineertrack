@@ -18,14 +18,12 @@ import * as ImagePicker from 'expo-image-picker';
 import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
-import { studentCodeService } from '@/services/studentCode';
 import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
 import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
 import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
 import type { JoinIssueReason } from '@/services/joinIssue';
-import { parseStudentCode } from '@/utils/codes';
 
 export default function AdvisorProfileScreen() {
   const { t } = useTranslation();
@@ -34,8 +32,6 @@ export default function AdvisorProfileScreen() {
   const setUser = useAuthStore((s) => s.setUser);
   const reset = useAuthStore((s) => s.reset);
 
-  const [studentCodeInput, setStudentCodeInput] = useState('');
-  const [linkingStudent, setLinkingStudent] = useState(false);
   const [deptCodeInput, setDeptCodeInput] = useState('');
   const [joiningDepartment, setJoiningDepartment] = useState(false);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
@@ -43,9 +39,6 @@ export default function AdvisorProfileScreen() {
     code: string;
     reason: JoinIssueReason;
   } | null>(null);
-
-  const codeShape = parseStudentCode(studentCodeInput);
-  const isCodeShapeValid = codeShape.kind !== 'invalid';
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -423,67 +416,6 @@ export default function AdvisorProfileScreen() {
           {departmentName && (
             <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
           )}
-        </View>
-
-        {/* Link Student Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Link Student</Text>
-          <Text style={styles.linkHint}>
-            Link a student to your account as their advisor.
-          </Text>
-          <View style={styles.linkRow}>
-            <TextInput
-              style={styles.linkInput}
-              value={studentCodeInput}
-              onChangeText={setStudentCodeInput}
-              placeholder="e.g. ABC123"
-              placeholderTextColor={colors.textDisabled}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={22}
-            />
-            <TouchableOpacity
-              style={[
-                styles.linkBtn,
-                (!studentCodeInput.trim() || !isCodeShapeValid) && { opacity: 0.5 },
-              ]}
-              disabled={!studentCodeInput.trim() || !isCodeShapeValid || linkingStudent}
-              onPress={async () => {
-                if (!user || !studentCodeInput.trim()) return;
-                setLinkingStudent(true);
-                try {
-                  const result = await studentCodeService.linkWithCode(
-                    studentCodeInput.trim(),
-                    user.id,
-                    'advisor',
-                  );
-                  Alert.alert('Success', `Linked to student: ${result.studentName}`);
-                  setStudentCodeInput('');
-                } catch (error) {
-                  showCodeErrorAlert({
-                    t,
-                    error,
-                    attemptedCode: studentCodeInput,
-                    onReport: setIssueReport,
-                  });
-                } finally {
-                  setLinkingStudent(false);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              {linkingStudent ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.linkBtnText}>Link</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.codeHint}>
-            {studentCodeInput.trim() && !isCodeShapeValid
-              ? t('student.codeInputInvalid')
-              : t('student.codeInputHint')}
-          </Text>
         </View>
 
         {/* Settings Card */}

@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
-import { buildCompositeStudentCode } from '@/utils/codes';
 import { RpcError } from './rpcError';
-import type { StudentCode, StudentCodeDetails } from '@/types/institution';
+import type { StudentCode } from '@/types/institution';
 
 function mapStudentCode(row: Record<string, unknown>): StudentCode {
   return {
@@ -44,24 +43,12 @@ export const studentCodeService = {
     return mapStudentCode(data as Record<string, unknown>);
   },
 
-  async getMyCodeDetails(): Promise<StudentCodeDetails | null> {
+  async getMyCodeDetails(): Promise<{ code: string } | null> {
     const { data, error } = await supabase.rpc('get_my_student_code');
     if (error) throw new RpcError(error.message);
     const row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
     if (!row) return null;
-
-    const code = (row.code as string) || '';
-    const institutionCode = (row.institution_code as string) || undefined;
-    const departmentCode = (row.department_code as string) || undefined;
-
-    return {
-      code,
-      compositeCode: buildCompositeStudentCode(institutionCode, departmentCode, code),
-      institutionCode,
-      departmentCode,
-      institutionName: (row.institution_name as string) || undefined,
-      departmentName: (row.department_name as string) || undefined,
-    };
+    return { code: (row.code as string) || '' };
   },
 
   async deactivateCode(codeId: string): Promise<void> {

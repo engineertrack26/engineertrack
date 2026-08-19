@@ -20,13 +20,11 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { studentCodeService } from '@/services/studentCode';
-import { departmentCodeService } from '@/services/departmentCode';
+import { groupService } from '@/services/group';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
-import type { StudentCodeDetails } from '@/types/institution';
-import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
-import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
-import type { JoinIssueReason } from '@/services/joinIssue';
+import { mapRpcError } from '@/utils/rpcErrors';
+import type { GroupSummary } from '@/types/group';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -43,14 +41,10 @@ export default function ProfileScreen() {
   const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
   const [studentProfile, setStudentProfile] = useState<Record<string, unknown> | null>(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
-  const [deptCodeInput, setDeptCodeInput] = useState('');
-  const [joiningDepartment, setJoiningDepartment] = useState(false);
-  const [issueReport, setIssueReport] = useState<{
-    code: string;
-    reason: JoinIssueReason;
-  } | null>(null);
-  const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [studentCode, setStudentCode] = useState<StudentCodeDetails | null>(null);
+  const [groupCodeInput, setGroupCodeInput] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [myGroup, setMyGroup] = useState<GroupSummary | null>(null);
+  const [studentCode, setStudentCode] = useState<{ code: string } | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
   const [linkedUsers, setLinkedUsers] = useState<{
     mentor: { id: string; firstName: string; lastName: string } | null;
@@ -109,6 +103,10 @@ export default function ProfileScreen() {
       // Load student code
       const code = await studentCodeService.getMyCodeDetails();
       setStudentCode(code);
+
+      // Load the student's group, if any
+      const group = await groupService.getMyGroup(user.id);
+      setMyGroup(group);
 
       // Load linked mentor/advisor
       const linked = await studentCodeService.getLinkedUsers(user.id);
@@ -517,56 +515,51 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Join Department Card */}
+        {/* Join Group Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Join Department</Text>
+          <Text style={styles.cardTitle}>{t('student.joinGroup')}</Text>
           <Text style={styles.linkHint}>
-            Enter the department code provided by your institution admin.
+            {t('student.joinGroupHint')}
           </Text>
           <View style={styles.linkRow}>
             <TextInput
               style={styles.linkInput}
-              value={deptCodeInput}
-              onChangeText={setDeptCodeInput}
-              placeholder="e.g. ABCD12"
+              value={groupCodeInput}
+              onChangeText={setGroupCodeInput}
+              placeholder={t('student.groupCodePlaceholder')}
               placeholderTextColor={colors.textDisabled}
               autoCapitalize="characters"
               maxLength={6}
             />
             <TouchableOpacity
-              style={[styles.linkBtn, !deptCodeInput.trim() && { opacity: 0.5 }]}
-              disabled={!deptCodeInput.trim() || joiningDepartment}
+              style={[styles.linkBtn, !groupCodeInput.trim() && { opacity: 0.5 }]}
+              disabled={!groupCodeInput.trim() || joining}
               onPress={async () => {
-                if (!user || !deptCodeInput.trim()) return;
-                setJoiningDepartment(true);
+                setJoining(true);
                 try {
-                  const dept = await departmentCodeService.joinDepartment(deptCodeInput.trim());
-                  setDepartmentName(dept.name);
-                  Alert.alert('Success', `Joined department: ${dept.name}`);
-                  setDeptCodeInput('');
-                } catch (error) {
-                  showCodeErrorAlert({
-                    t,
-                    error,
-                    attemptedCode: deptCodeInput,
-                    onReport: setIssueReport,
-                  });
+                  const group = await groupService.joinByCode(groupCodeInput.trim());
+                  setGroupCodeInput('');
+                  await loadStudentProfile();
+                  Alert.alert(
+                    t('common.done'),
+                    t('student.joinedGroup', { name: group.name }),
+                  );
+                } catch (error: any) {
+                  const info = mapRpcError(error?.message);
+                  Alert.alert(t('common.error'), t(info.key));
                 } finally {
-                  setJoiningDepartment(false);
+                  setJoining(false);
                 }
               }}
               activeOpacity={0.7}
             >
-              {joiningDepartment ? (
+              {joining ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.linkBtnText}>Join</Text>
+                <Text style={styles.linkBtnText}>{t('student.join')}</Text>
               )}
             </TouchableOpacity>
           </View>
-          {departmentName && (
-            <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
-          )}
         </View>
 
         {/* My Student Code Card */}
@@ -580,9 +573,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.codeDisplay}
                 onPress={async () => {
-                  await Clipboard.setStringAsync(
-                    studentCode.compositeCode || studentCode.code,
-                  );
+                  await Clipboard.setStringAsync(studentCode.code);
                   Alert.alert(
                     t('student.studentCodeCopiedTitle'),
                     t('student.studentCodeCopied'),
@@ -590,19 +581,15 @@ export default function ProfileScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.codeDisplayText}>
-                  {studentCode.compositeCode || studentCode.code}
-                </Text>
+                <Text style={styles.codeText}>{studentCode.code}</Text>
               </TouchableOpacity>
 
-              {studentCode.compositeCode ? (
-                <Text style={styles.codeMeta}>
-                  {studentCode.institutionName} · {studentCode.departmentName}
+              {myGroup ? (
+                <Text style={styles.codeSubtitle}>
+                  {myGroup.name}{myGroup.term ? ` · ${myGroup.term}` : ''}
                 </Text>
               ) : (
-                <Text style={styles.codeMeta}>
-                  {t('student.studentCodeNoDepartment')}
-                </Text>
+                <Text style={styles.codeSubtitle}>{t('student.noGroupYet')}</Text>
               )}
             </>
           ) : (
@@ -815,13 +802,6 @@ export default function ProfileScreen() {
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
-
-      <JoinIssueDialog
-        visible={issueReport !== null}
-        attemptedCode={issueReport?.code || ''}
-        reason={issueReport?.reason || 'INVALID_CODE'}
-        onClose={() => setIssueReport(null)}
-      />
     </SafeAreaView>
   );
 }
@@ -1042,12 +1022,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  institutionInfo: {
-    fontSize: 13,
-    color: colors.success,
-    fontWeight: '500',
-    marginTop: spacing.sm,
-  },
 
   // Student Code
   codeHintText: {
@@ -1066,13 +1040,13 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     marginBottom: spacing.sm,
   },
-  codeDisplayText: {
+  codeText: {
     fontSize: 28,
     fontWeight: '800',
     color: colors.primary,
     letterSpacing: 3,
   },
-  codeMeta: {
+  codeSubtitle: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 6,

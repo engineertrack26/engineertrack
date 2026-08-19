@@ -77,7 +77,7 @@ export default function StudentListScreen() {
   } | null>(null);
 
   const codeShape = parseStudentCode(codeInput);
-  const isCodeShapeValid = codeShape.kind !== 'invalid';
+  const codeLooksValid = codeShape.kind === 'valid';
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -263,14 +263,14 @@ export default function StudentListScreen() {
                 placeholderTextColor={colors.textDisabled}
                 autoCapitalize="characters"
                 autoCorrect={false}
-                maxLength={22}
+                maxLength={6}
               />
               <TouchableOpacity
                 style={[
                   styles.linkBtn,
-                  (!codeInput.trim() || !isCodeShapeValid) && { opacity: 0.5 },
+                  (!codeInput.trim() || !codeLooksValid) && { opacity: 0.5 },
                 ]}
-                disabled={!codeInput.trim() || !isCodeShapeValid || linking}
+                disabled={!codeInput.trim() || !codeLooksValid || linking}
                 onPress={handleLinkStudent}
                 activeOpacity={0.7}
               >
@@ -282,7 +282,7 @@ export default function StudentListScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.codeHint}>
-              {codeInput.trim() && !isCodeShapeValid
+              {codeInput.trim() && !codeLooksValid
                 ? t('student.codeInputInvalid')
                 : t('student.codeInputHint')}
             </Text>

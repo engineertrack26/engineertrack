@@ -11,7 +11,7 @@ interface CreateQuestionInput {
 
 interface CreatePollInput {
   creatorId: string;
-  institutionId?: string;
+  groupId?: string;
   title: string;
   description?: string;
   pollType: Poll['pollType'];
@@ -23,7 +23,7 @@ function mapPoll(row: Record<string, unknown>): Poll {
   return {
     id: row.id as string,
     creatorId: (row.creator_id as string) || '',
-    institutionId: (row.institution_id as string) || undefined,
+    groupId: (row.group_id as string) || undefined,
     title: (row.title as string) || '',
     description: (row.description as string) || undefined,
     pollType: (row.poll_type as Poll['pollType']) || 'survey',
@@ -64,7 +64,7 @@ export const pollService = {
       .from('polls')
       .insert({
         creator_id: poll.creatorId,
-        institution_id: poll.institutionId || null,
+        group_id: poll.groupId || null,
         title: poll.title,
         description: poll.description || null,
         poll_type: poll.pollType,

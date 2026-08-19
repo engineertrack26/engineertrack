@@ -35,18 +35,11 @@ export const gamificationService = {
     return data;
   },
 
-  async getLeaderboard(limit = 50, university?: string, department?: string) {
-    let query = supabase
-      .from('leaderboard_public')
-      .select('id, total_xp, current_level, current_streak, first_name, last_name, avatar_url')
-      .order('total_xp', { ascending: false })
-      .limit(limit);
-
-    if (university) query = query.eq('university', university);
-    if (department) query = query.eq('department', department);
-
-    const { data, error } = await query;
+  async getGroupLeaderboard(limit = 50) {
+    const { data, error } = await supabase.rpc('get_my_group_leaderboard', {
+      p_limit: limit,
+    });
     if (error) throw error;
-    return data;
+    return data || [];
   },
 };

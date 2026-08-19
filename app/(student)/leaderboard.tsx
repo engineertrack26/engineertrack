@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
-import { authService } from '@/services/auth';
 import { LeaderboardRow } from '@/components/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -41,22 +40,7 @@ export default function LeaderboardScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      // Get the current student's university and department for scoped filtering
-      let university: string | undefined;
-      let department: string | undefined;
-      if (user?.id) {
-        try {
-          const sp = await authService.getStudentProfile(user.id);
-          if (sp) {
-            university = (sp as Record<string, unknown>).university as string;
-            department = (sp as Record<string, unknown>).department as string;
-          }
-        } catch {
-          // If profile not found, fall back to unfiltered
-        }
-      }
-
-      const data = await gamificationService.getLeaderboard(50, university, department);
+      const data = await gamificationService.getGroupLeaderboard(50);
       const mapped = (data || []).map((item: Record<string, unknown>) => {
         return {
           id: item.id as string,

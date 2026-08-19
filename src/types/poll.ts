@@ -21,7 +21,7 @@ export interface PollQuestion {
 export interface Poll {
   id: string;
   creatorId: string;
-  institutionId?: string;
+  groupId?: string;
   title: string;
   description?: string;
   pollType: PollType;
