@@ -39,14 +39,15 @@ export default function AdvisorLayout() {
         }}
       />
       <Tabs.Screen
-        name="student-monitor"
+        name="groups"
         options={{
-          title: 'Monitor',
+          title: 'Groups',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="eye-outline" size={size} color={color} />
+            <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="student-monitor" options={{ href: null }} />
       <Tabs.Screen
         name="validation"
         options={{

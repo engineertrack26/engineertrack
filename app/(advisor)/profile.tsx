@@ -18,12 +18,8 @@ import * as ImagePicker from 'expo-image-picker';
 import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
-import { departmentCodeService } from '@/services/departmentCode';
 import { supabase } from '@/services/supabase';
 import { colors, spacing, borderRadius } from '@/theme';
-import { JoinIssueDialog } from '@/components/common/JoinIssueDialog';
-import { showCodeErrorAlert } from '@/utils/codeErrorAlert';
-import type { JoinIssueReason } from '@/services/joinIssue';
 
 export default function AdvisorProfileScreen() {
   const { t } = useTranslation();
@@ -31,14 +27,6 @@ export default function AdvisorProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const reset = useAuthStore((s) => s.reset);
-
-  const [deptCodeInput, setDeptCodeInput] = useState('');
-  const [joiningDepartment, setJoiningDepartment] = useState(false);
-  const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [issueReport, setIssueReport] = useState<{
-    code: string;
-    reason: JoinIssueReason;
-  } | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName || '');
@@ -366,58 +354,6 @@ export default function AdvisorProfileScreen() {
           </View>
         </View>
 
-        {/* Join Department Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Join Department</Text>
-          <Text style={styles.linkHint}>
-            Enter the department code provided by your institution admin.
-          </Text>
-          <View style={styles.linkRow}>
-            <TextInput
-              style={styles.linkInput}
-              value={deptCodeInput}
-              onChangeText={setDeptCodeInput}
-              placeholder="e.g. ABCD12"
-              placeholderTextColor={colors.textDisabled}
-              autoCapitalize="characters"
-              maxLength={6}
-            />
-            <TouchableOpacity
-              style={[styles.linkBtn, !deptCodeInput.trim() && { opacity: 0.5 }]}
-              disabled={!deptCodeInput.trim() || joiningDepartment}
-              onPress={async () => {
-                if (!user || !deptCodeInput.trim()) return;
-                setJoiningDepartment(true);
-                try {
-                  const dept = await departmentCodeService.joinDepartment(deptCodeInput.trim());
-                  setDepartmentName(dept.name);
-                  Alert.alert('Success', `Joined department: ${dept.name}`);
-                  setDeptCodeInput('');
-                } catch (error) {
-                  showCodeErrorAlert({
-                    t,
-                    error,
-                    attemptedCode: deptCodeInput,
-                    onReport: setIssueReport,
-                  });
-                } finally {
-                  setJoiningDepartment(false);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              {joiningDepartment ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.linkBtnText}>Join</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          {departmentName && (
-            <Text style={styles.institutionInfo}>Current: {departmentName}</Text>
-          )}
-        </View>
-
         {/* Settings Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t('common.settings', 'Settings')}</Text>
@@ -571,13 +507,6 @@ export default function AdvisorProfileScreen() {
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
-
-      <JoinIssueDialog
-        visible={issueReport !== null}
-        attemptedCode={issueReport?.code || ''}
-        reason={issueReport?.reason || 'INVALID_CODE'}
-        onClose={() => setIssueReport(null)}
-      />
     </SafeAreaView>
   );
 }
@@ -747,55 +676,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.info,
     fontWeight: '600',
-  },
-
-  // Link Student / Institution
-  linkHint: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    lineHeight: 18,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  linkInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: 2,
-    backgroundColor: colors.background,
-  },
-  linkBtn: {
-    backgroundColor: colors.info,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 70,
-  },
-  linkBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  institutionInfo: {
-    fontSize: 13,
-    color: colors.success,
-    fontWeight: '500',
-    marginTop: spacing.sm,
-  },
-  codeHint: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
   },
 
   // Settings

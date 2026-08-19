@@ -6,14 +6,21 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { useGroupStore } from '@/store/groupStore';
 import { advisorService } from '@/services/advisor';
+import { groupService } from '@/services/group';
 import { ProgressBar } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
+import type { GroupMember } from '@/types/group';
 
 interface StudentMonitorItem {
   id: string;
@@ -68,25 +75,40 @@ function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
 }
 
 export default function StudentMonitorScreen() {
+  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const groups = useGroupStore((s) => s.groups);
+  const fetchGroups = useGroupStore((s) => s.fetchGroups);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [students, setStudents] = useState<StudentMonitorItem[]>([]);
+  const [members, setMembers] = useState<GroupMember[]>([]);
+
+  const activeGroup = groupId ? groups.find((g) => g.id === groupId) : undefined;
 
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const result = await advisorService.getDashboardStats(user.id);
-      setStudents(
-        (result.students || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
-      );
+      if (groupId) {
+        const [groupMembers] = await Promise.all([
+          groupService.listMembers(groupId),
+          groups.length === 0 ? fetchGroups(user.id) : Promise.resolve(),
+        ]);
+        setMembers(groupMembers);
+      } else {
+        const result = await advisorService.getDashboardStats(user.id);
+        setStudents(
+          (result.students || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
+        );
+      }
     } catch (err) {
       console.error('Student monitor load error:', err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, groupId, groups.length, fetchGroups]);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,12 +125,90 @@ export default function StudentMonitorScreen() {
   const getInitials = (first: string, last: string) =>
     `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
 
+  function confirmRemove(member: GroupMember) {
+    const name = `${member.firstName} ${member.lastName}`.trim();
+    Alert.alert(
+      t('advisor.removeStudent'),
+      t('advisor.removeStudentConfirm', { name }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('advisor.removeStudent'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await groupService.closeMembership(member.membershipId);
+              await loadData();
+              Alert.alert(t('advisor.removeStudent'), t('advisor.removeStudentDone'));
+            } catch (err: any) {
+              Alert.alert(t('common.error'), err.message || t('errors.unknown'));
+            }
+          },
+        },
+      ],
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (groupId) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.screenTitle} numberOfLines={1}>
+            {activeGroup?.name || 'Student Monitor'}
+          </Text>
+          <Text style={styles.countText}>{members.length} student{members.length !== 1 ? 's' : ''}</Text>
+        </View>
+
+        <FlatList
+          data={members}
+          keyExtractor={(item) => item.membershipId}
+          renderItem={({ item }) => (
+            <View style={styles.memberCard}>
+              <View style={styles.avatar}>
+                <Text style={styles.initials}>
+                  {getInitials(item.firstName, item.lastName)}
+                </Text>
+              </View>
+              <View style={styles.nameSection}>
+                <Text style={styles.studentName} numberOfLines={1}>
+                  {item.firstName} {item.lastName}
+                </Text>
+                <Text style={styles.companyName} numberOfLines={1}>{item.email}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => confirmRemove(item)}
+                hitSlop={8}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="person-remove-outline" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
+              <Text style={styles.emptyTitle}>No Students Yet</Text>
+              <Text style={styles.emptyText}>
+                Share this group's join code with your students so they can join.
+              </Text>
+            </View>
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -225,6 +325,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: colors.text,
+    flexShrink: 1,
+    marginRight: spacing.sm,
   },
   countText: {
     fontSize: 14,
@@ -341,6 +443,21 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     backgroundColor: colors.divider,
+  },
+
+  // Group member card
+  memberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
 
   // Empty
