@@ -17,12 +17,15 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { logService } from '@/services/logs';
 import { notificationService } from '@/services/notifications';
-import { COMPETENCIES, LIMITS } from '@/utils/constants';
+import { competencyService } from '@/services/competency';
+import { KpiChecklist } from '@/components/competency';
+import { LIMITS } from '@/utils/constants';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -35,17 +38,6 @@ const REVISION_CHECKLIST = [
   { key: 'activities', label: 'Activities not clearly described', icon: 'list-outline' as const },
   { key: 'skills', label: 'Skills learned section incomplete', icon: 'school-outline' as const },
 ];
-
-const COMPETENCY_LABELS: Record<string, string> = {
-  technical_skills: 'Technical Skills',
-  problem_solving: 'Problem Solving',
-  communication: 'Communication',
-  teamwork: 'Teamwork',
-  time_management: 'Time Management',
-  adaptability: 'Adaptability',
-  initiative: 'Initiative',
-  professional_ethics: 'Professional Ethics',
-};
 
 interface PendingLogItem {
   id: string;
@@ -74,7 +66,6 @@ interface LogDetail {
   challengesFaced: string;
   photos: { id: string; uri: string; caption?: string }[];
   selfAssessment?: {
-    competencyRatings: Record<string, number>;
     reflectionNotes: string;
   };
 }
@@ -119,7 +110,6 @@ function mapLogDetail(row: Record<string, unknown>): LogDetail {
     })),
     selfAssessment: sa
       ? {
-          competencyRatings: (sa.competency_ratings as Record<string, number>) || {},
           reflectionNotes: (sa.reflection_notes as string) || '',
         }
       : undefined,
@@ -159,6 +149,7 @@ function StarRating({
 }
 
 export default function ReviewLogScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
@@ -174,7 +165,7 @@ export default function ReviewLogScreen() {
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   // Review form state
-  const [competencyRatings, setCompetencyRatings] = useState<Record<string, number>>({});
+  const [observedKpis, setObservedKpis] = useState<string[]>([]);
   const [overallRating, setOverallRating] = useState(0);
   const [comments, setComments] = useState('');
   const [areasOfExcellence, setAreasOfExcellence] = useState('');
@@ -225,7 +216,7 @@ export default function ReviewLogScreen() {
     setSelectedLog(log);
     setLoadingDetail(true);
     // Reset form
-    setCompetencyRatings({});
+    setObservedKpis([]);
     setOverallRating(0);
     setComments('');
     setAreasOfExcellence('');
@@ -249,10 +240,6 @@ export default function ReviewLogScreen() {
   };
 
   const validateForm = (): string | null => {
-    const ratedCount = Object.values(competencyRatings).filter((v) => v > 0).length;
-    if (ratedCount < COMPETENCIES.length) {
-      return 'Please rate all competencies.';
-    }
     if (overallRating === 0) {
       return 'Please provide an overall rating.';
     }
@@ -309,10 +296,16 @@ export default function ReviewLogScreen() {
                 user.id,
                 overallRating,
                 comments.trim(),
-                competencyRatings,
+                {},
                 isApproved,
                 combinedRevisionNotes,
                 isApproved ? areasOfExcellence.trim() || undefined : undefined,
+              );
+
+              await competencyService.recordObservations(
+                selectedLog.studentId,
+                selectedLog.id,
+                observedKpis,
               );
 
               // Approval XP is awarded to the student server-side by a
@@ -366,9 +359,6 @@ export default function ReviewLogScreen() {
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
   };
-
-  const getCompetencyLabel = (key: string) =>
-    COMPETENCY_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   // ─── DETAIL VIEW ───
   if (selectedLog) {
@@ -515,49 +505,20 @@ export default function ReviewLogScreen() {
                 </TouchableOpacity>
               </Modal>
 
-              {/* Competency Comparison — Side-by-Side */}
+              {/* Competency Assessment */}
               <View style={[styles.card, styles.reviewFormCard]}>
                 <Text style={styles.reviewFormTitle}>Competency Assessment</Text>
 
-                {/* Column Headers */}
-                <View style={styles.comparisonHeader}>
-                  <Text style={styles.compHeaderLabel}>Competency</Text>
-                  <View style={styles.compHeaderRight}>
-                    <Text style={styles.compHeaderBadge}>Student</Text>
-                    <Text style={styles.compHeaderStars}>Your Rating</Text>
-                  </View>
-                </View>
-
-                {/* Each competency: label row + rating row below */}
-                {COMPETENCIES.map((compKey) => {
-                  const studentScore = logDetail?.selfAssessment?.competencyRatings[compKey] || 0;
-                  return (
-                    <View key={compKey} style={styles.comparisonRow}>
-                      <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
-                      <View style={styles.compRatingsRow}>
-                        <View style={styles.compScoreCol}>
-                          {studentScore > 0 ? (
-                            <View style={styles.scoreBadge}>
-                              <Ionicons name="person" size={10} color={colors.info} />
-                              <Text style={styles.scoreBadgeText}>{studentScore}/5</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.compNoScore}>-</Text>
-                          )}
-                        </View>
-                        <View style={styles.compMentorCol}>
-                          <StarRating
-                            value={competencyRatings[compKey] || 0}
-                            onChange={(v) =>
-                              setCompetencyRatings((prev) => ({ ...prev, [compKey]: v }))
-                            }
-                            size={18}
-                          />
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
+                {logDetail && (
+                  <KpiChecklist
+                    studentId={logDetail.studentId}
+                    logId={logDetail.id}
+                    observerId={user!.id}
+                    title={t('mentor.observedToday')}
+                    hint={t('mentor.observedTodayHint')}
+                    onChange={setObservedKpis}
+                  />
+                )}
 
                 {/* Student Reflection */}
                 {logDetail?.selfAssessment?.reflectionNotes ? (

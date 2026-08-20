@@ -22,10 +22,12 @@ import { useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useLogStore } from '@/store/logStore';
 import { logService } from '@/services/logs';
+import { competencyService } from '@/services/competency';
 import { Button } from '@/components/common';
+import { KpiChecklist } from '@/components/competency';
 import { DailyLog, MentorFeedback } from '@/types/log';
 import { POINT_VALUES } from '@/types/gamification';
-import { LIMITS, COMPETENCIES } from '@/utils/constants';
+import { LIMITS } from '@/utils/constants';
 import { colors, spacing, borderRadius } from '@/theme';
 
 function mapDbLog(row: Record<string, unknown>): DailyLog {
@@ -49,17 +51,6 @@ function mapDbLog(row: Record<string, unknown>): DailyLog {
     updatedAt: (row.updated_at as string) || '',
   };
 }
-
-const COMPETENCY_LABELS: Record<string, string> = {
-  technical_skills: 'Technical Skills',
-  problem_solving: 'Problem Solving',
-  communication: 'Communication',
-  teamwork: 'Teamwork',
-  time_management: 'Time Management',
-  adaptability: 'Adaptability',
-  initiative: 'Initiative',
-  professional_ethics: 'Professional Ethics',
-};
 
 export default function CreateLogScreen() {
   const { t } = useTranslation();
@@ -92,7 +83,7 @@ export default function CreateLogScreen() {
   const [minutesSpent, setMinutesSpent] = useState(0);
 
   // New state for self-assessment
-  const [competencyRatings, setCompetencyRatings] = useState<Record<string, number>>({});
+  const [observedKpis, setObservedKpis] = useState<string[]>([]);
   const [reflectionNotes, setReflectionNotes] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
@@ -111,21 +102,21 @@ export default function CreateLogScreen() {
   const pointsPreview = useMemo(() => {
     const base = POINT_VALUES.dailyLogSubmit;
     const photoPoints = totalPhotoCount * POINT_VALUES.photoAttached;
-    const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
-    const assessmentPoints = allRated ? POINT_VALUES.selfAssessment : 0;
+    // Reflection is effort; ticking is a claim, so XP for the assessment
+    // hinges on whether a reflection was written, not on what was ticked.
+    const assessmentPoints = reflectionNotes.trim() ? POINT_VALUES.selfAssessment : 0;
     return { base, photoPoints, assessmentPoints, total: base + photoPoints + assessmentPoints };
-  }, [totalPhotoCount, competencyRatings]);
+  }, [totalPhotoCount, reflectionNotes]);
 
   // Checklist state
   const checklist = useMemo(() => {
     const contentFilled = content.trim().length >= LIMITS.minLogContentLength;
     const hasPhotos = totalPhotoCount > 0;
-    const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
     const hasReflection = reflectionNotes.trim().length > 0;
-    return { contentFilled, hasPhotos, allRated, hasReflection };
-  }, [content, totalPhotoCount, competencyRatings, reflectionNotes]);
+    return { contentFilled, hasPhotos, hasReflection };
+  }, [content, totalPhotoCount, reflectionNotes]);
 
-  const allChecklistDone = checklist.contentFilled && checklist.hasPhotos && checklist.allRated && checklist.hasReflection;
+  const allChecklistDone = checklist.contentFilled && checklist.hasPhotos && checklist.hasReflection;
 
   const loadTodayLog = useCallback(async () => {
     if (!user) return;
@@ -150,9 +141,6 @@ export default function CreateLogScreen() {
 
           const assessments = Array.isArray(row.self_assessments) ? row.self_assessments : [];
           const sa = assessments[0] as Record<string, unknown> | undefined;
-          if (sa?.competency_ratings) {
-            setCompetencyRatings((sa.competency_ratings as Record<string, number>) || {});
-          }
           if (sa?.reflection_notes) {
             setReflectionNotes((sa.reflection_notes as string) || '');
           }
@@ -206,7 +194,7 @@ export default function CreateLogScreen() {
         setSavedDocuments([]);
         setHoursSpent(0);
         setMinutesSpent(0);
-        setCompetencyRatings({});
+        setObservedKpis([]);
         setReflectionNotes('');
       }
     } catch (err) {
@@ -325,11 +313,6 @@ export default function CreateLogScreen() {
     setDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Competency rating
-  const setRating = (competency: string, rating: number) => {
-    setCompetencyRatings((prev) => ({ ...prev, [competency]: rating }));
-  };
-
   const handleSaveDraft = async () => {
     if (!user) return;
     const titleError = title.trim().length < LIMITS.minTitleLength
@@ -446,13 +429,18 @@ export default function CreateLogScreen() {
         }
       }
 
-      // 3. Save self-assessment if user provided any assessment input
-      const allRated = COMPETENCIES.every((c) => competencyRatings[c] && competencyRatings[c] >= 1);
-      const hasAnyRating = Object.values(competencyRatings).some((score) => (score || 0) >= 1);
+      // 3. Record the KPIs the student ticked as self-observed today.
+      try {
+        await competencyService.recordObservations(user.id, logId, observedKpis);
+      } catch (obsErr) {
+        console.warn('KPI observation save failed:', obsErr);
+      }
+
+      // 3b. Save self-assessment reflection, if the student wrote one.
       const hasReflection = reflectionNotes.trim().length > 0;
-      if (hasAnyRating || hasReflection) {
+      if (hasReflection) {
         try {
-          await logService.saveSelfAssessment(logId, competencyRatings, reflectionNotes.trim());
+          await logService.saveSelfAssessment(logId, {}, reflectionNotes.trim());
         } catch (assessErr) {
           console.warn('Self-assessment save failed:', assessErr);
         }
@@ -815,37 +803,21 @@ export default function CreateLogScreen() {
           )}
 
           {/* Self-Assessment Section */}
-          {canEdit && (
+          {canEdit && user && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="star" size={18} color={colors.text} />
                 <Text style={styles.sectionTitle}>Self-Assessment</Text>
               </View>
 
-              {COMPETENCIES.map((comp) => (
-                <View key={comp} style={styles.competencyRow}>
-                  <Text style={styles.competencyLabel}>
-                    {COMPETENCY_LABELS[comp] || comp}
-                  </Text>
-                  <View style={styles.ratingRow}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <TouchableOpacity
-                        key={star}
-                        onPress={() => setRating(comp, star)}
-                        activeOpacity={0.6}
-                        style={styles.starButton}
-                      >
-                        <Ionicons
-                          name={competencyRatings[comp] && competencyRatings[comp] >= star ? 'star' : 'star-outline'}
-                          size={22}
-                          color={competencyRatings[comp] && competencyRatings[comp] >= star ? colors.gamification.gold : colors.textDisabled}
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              ))}
-
+              <KpiChecklist
+                studentId={user.id}
+                logId={existingLog?.id ?? null}
+                observerId={user.id}
+                title={t('student.whatIDidToday')}
+                hint={t('student.whatIDidTodayHint')}
+                onChange={setObservedKpis}
+              />
             </View>
           )}
 
@@ -876,17 +848,6 @@ export default function CreateLogScreen() {
                 />
                 <Text style={[styles.checklistText, checklist.hasPhotos && styles.checklistDone]}>
                   At least 1 photo attached
-                </Text>
-              </View>
-
-              <View style={styles.checklistItem}>
-                <Ionicons
-                  name={checklist.allRated ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={20}
-                  color={checklist.allRated ? colors.success : colors.textDisabled}
-                />
-                <Text style={[styles.checklistText, checklist.allRated && styles.checklistDone]}>
-                  All competencies rated
                 </Text>
               </View>
 
