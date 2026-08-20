@@ -123,9 +123,53 @@ CREATE POLICY "advisor closes membership" ON group_memberships
 -- ============================================
 -- 3. Polls move from institution scope to group scope
 -- ============================================
+-- The "Users can view active polls" policy reads polls.institution_id
+-- (docs/phase5-polls-realtime-migration.sql:192-213). Postgres records a hard
+-- dependency from a policy's qual to the columns it names, so DROP COLUMN
+-- without CASCADE fails with 2BP01 and halts the script. Drop the policy
+-- first, then recreate it group-scoped.
+--
+-- The index idx_polls_institution also reads the column, but an index is
+-- dropped automatically with its column and does not need handling.
+DROP POLICY IF EXISTS "Users can view active polls" ON polls;
+
 ALTER TABLE polls DROP COLUMN IF EXISTS institution_id;
 ALTER TABLE polls
   ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES internship_groups(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_polls_group ON polls(group_id);
+
+-- Same shape as the policy it replaces: active, role-targeted, and scoped.
+-- Only the scope clause changes. A poll with no group_id is unscoped and
+-- visible to everyone whose role matches, which is how mentors — who belong
+-- to no group — still see polls at all.
+CREATE POLICY "Users can view active polls"
+  ON polls FOR SELECT
+  USING (
+    is_active = TRUE
+    AND (
+      target_role = 'all'
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+          AND profiles.role = polls.target_role
+      )
+    )
+    AND (
+      polls.group_id IS NULL
+      OR EXISTS (
+        SELECT 1 FROM group_memberships m
+        WHERE m.student_id = auth.uid()
+          AND m.left_at IS NULL
+          AND m.group_id = polls.group_id
+      )
+      OR EXISTS (
+        SELECT 1 FROM internship_groups g
+        WHERE g.id = polls.group_id
+          AND g.advisor_id = auth.uid()
+      )
+    )
+  );
 
 -- ============================================
 -- 4. Leaderboard drops its free-text university scoping
