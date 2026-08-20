@@ -156,6 +156,7 @@ export default function ValidationScreen() {
   const [studentTicks, setStudentTicks] = useState<string[]>([]);
   const [mentorTicks, setMentorTicks] = useState<string[]>([]);
   const [kpiStatements, setKpiStatements] = useState<Record<string, string>>({});
+  const [ticksLoadFailed, setTicksLoadFailed] = useState(false);
 
   const loadPendingLogs = useCallback(async () => {
     if (!user) return;
@@ -186,22 +187,31 @@ export default function ValidationScreen() {
   const handleSelectLog = useCallback(async (log: PendingLogItem) => {
     setSelectedLog(log);
     setLoadingDetail(true);
+    setStudentTicks([]);
+    setMentorTicks([]);
+    setKpiStatements({});
+    setTicksLoadFailed(false);
     try {
       const detail = await logService.getLogWithDetails(log.id);
       const mapped = mapLogDetail(detail as unknown as Record<string, unknown>);
       setLogDetail(mapped);
 
-      const mentorId = mapped.mentorFeedback?.mentorId;
-      const [student, mentor, working] = await Promise.all([
-        competencyService.getObservedKpiIds(mapped.studentId, log.id, mapped.studentId),
-        mentorId
-          ? competencyService.getObservedKpiIds(mapped.studentId, log.id, mentorId)
-          : Promise.resolve([] as string[]),
-        competencyService.getWorkingKpis(mapped.studentId),
-      ]);
-      setStudentTicks(student);
-      setMentorTicks(mentor);
-      setKpiStatements(Object.fromEntries(working.map((k) => [k.kpiId, k.statement])));
+      try {
+        const mentorId = mapped.mentorFeedback?.mentorId;
+        const [student, mentor, working] = await Promise.all([
+          competencyService.getObservedKpiIds(mapped.studentId, log.id, mapped.studentId),
+          mentorId
+            ? competencyService.getObservedKpiIds(mapped.studentId, log.id, mentorId)
+            : Promise.resolve([] as string[]),
+          competencyService.getWorkingKpis(mapped.studentId),
+        ]);
+        setStudentTicks(student);
+        setMentorTicks(mentor);
+        setKpiStatements(Object.fromEntries(working.map((k) => [k.kpiId, k.statement])));
+      } catch (ticksErr) {
+        console.error('Load competency ticks error:', ticksErr);
+        setTicksLoadFailed(true);
+      }
     } catch (err) {
       console.error('Load log detail error:', err);
       Alert.alert('Error', 'Failed to load log details.');
@@ -217,6 +227,7 @@ export default function ValidationScreen() {
     setStudentTicks([]);
     setMentorTicks([]);
     setKpiStatements({});
+    setTicksLoadFailed(false);
   };
 
   const handleValidate = () => {
@@ -470,8 +481,12 @@ export default function ValidationScreen() {
               {renderGroup(t('advisor.agreedOn'), both, 'checkmark-circle', colors.success)}
               {renderGroup(t('advisor.studentClaimedOnly'), studentOnly, 'help-circle', colors.warning)}
               {renderGroup(t('advisor.mentorSawOnly'), mentorOnly, 'eye', colors.info)}
-              {both.length + studentOnly.length + mentorOnly.length === 0 && (
-                <Text style={styles.compareEmpty}>{t('advisor.nothingTicked')}</Text>
+              {ticksLoadFailed ? (
+                <Text style={styles.compareEmpty}>{t('advisor.ticksLoadFailed')}</Text>
+              ) : (
+                both.length + studentOnly.length + mentorOnly.length === 0 && (
+                  <Text style={styles.compareEmpty}>{t('advisor.nothingTicked')}</Text>
+                )
               )}
             </View>
 

@@ -196,7 +196,8 @@
     "studentClaimedOnly": "Student ticked, mentor did not",
     "mentorSawOnly": "Mentor saw, student did not tick",
     "nothingTicked": "Neither party ticked anything on this log.",
-    "kpiUnavailable": "(completed indicator)"
+    "kpiUnavailable": "(completed indicator)",
+    "ticksLoadFailed": "Could not load the tick comparison for this log. Try reopening it."
   },
   "levels": {
     "beginner": "Beginner",
