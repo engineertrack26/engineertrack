@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
@@ -11,8 +13,30 @@ import { colors, spacing, borderRadius } from '@/theme';
 
 type FormErrors = Record<string, string>;
 
+// The database column is DATE and the rest of the app passes these around as
+// 'YYYY-MM-DD' strings, so that stays the stored shape. Only the display
+// changes.
+//
+// Both helpers work in LOCAL time on purpose. toISOString() converts local
+// midnight to UTC, which in any positive offset lands on the previous day, and
+// new Date('2026-09-01') is parsed as UTC and then rendered locally, which does
+// the same thing in reverse. Either one silently shifts a student's start date
+// by a day.
+function toIsoDate(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
+function fromIsoDate(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export default function InternshipFormScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ return?: string }>();
   const user = useAuthStore((s) => s.user);
@@ -20,6 +44,7 @@ export default function InternshipFormScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [pickerFor, setPickerFor] = useState<'start' | 'end' | null>(null);
 
   const [university, setUniversity] = useState('');
   const [faculty, setFaculty] = useState('');
@@ -78,6 +103,17 @@ export default function InternshipFormScreen() {
     if (!internshipStartDate.trim()) newErrors.internshipStartDate = requiredMessage;
     if (!internshipEndDate.trim()) newErrors.internshipEndDate = requiredMessage;
 
+    // An internship that ends before it starts is not a database error — both
+    // columns accept it happily — so nothing downstream would ever notice.
+    const start = fromIsoDate(internshipStartDate);
+    const end = fromIsoDate(internshipEndDate);
+    if (start && end && end < start) {
+      newErrors.internshipEndDate = t(
+        'student.endDateBeforeStart',
+        'End date cannot be before the start date.',
+      );
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -114,6 +150,37 @@ export default function InternshipFormScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Stored as YYYY-MM-DD, shown in whatever the user's language writes dates
+  // in — 01.09.2026 in tr and de, 01/09/2026 in it and el. Nobody types a
+  // format, so there is no format to get wrong, and 03/04 is never ambiguous
+  // because it was never typed.
+  const renderDateField = (
+    which: 'start' | 'end',
+    label: string,
+    value: string,
+    error?: string,
+  ) => {
+    const parsed = fromIsoDate(value);
+    return (
+      <View>
+        <Text style={styles.dateLabel}>{label}</Text>
+        <TouchableOpacity
+          style={[styles.dateField, error ? styles.dateFieldError : null]}
+          onPress={() => setPickerFor(which)}
+          activeOpacity={0.7}
+        >
+          <Text style={parsed ? styles.dateValue : styles.datePlaceholder}>
+            {parsed
+              ? parsed.toLocaleDateString(i18n.language)
+              : t('student.selectDate', 'Select a date')}
+          </Text>
+          <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
+        {error ? <Text style={styles.dateError}>{error}</Text> : null}
+      </View>
+    );
   };
 
   if (loading) {
@@ -202,27 +269,52 @@ export default function InternshipFormScreen() {
 
         <View style={styles.row}>
           <View style={styles.col}>
-            <Input
-              label={t('student.internshipStartDate', 'Start Date')}
-              placeholder="YYYY-MM-DD"
-              value={internshipStartDate}
-              onChangeText={setInternshipStartDate}
-              keyboardType="numbers-and-punctuation"
-              error={errors.internshipStartDate}
-            />
+            {renderDateField(
+              'start',
+              t('student.internshipStartDate', 'Start Date'),
+              internshipStartDate,
+              errors.internshipStartDate,
+            )}
           </View>
           <View style={styles.col}>
-            <Input
-              label={t('student.internshipEndDate', 'End Date')}
-              placeholder="YYYY-MM-DD"
-              value={internshipEndDate}
-              onChangeText={setInternshipEndDate}
-              keyboardType="numbers-and-punctuation"
-              error={errors.internshipEndDate}
-            />
+            {renderDateField(
+              'end',
+              t('student.internshipEndDate', 'End Date'),
+              internshipEndDate,
+              errors.internshipEndDate,
+            )}
           </View>
         </View>
       </View>
+
+      {pickerFor && (
+        <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
+          <DateTimePicker
+            value={
+              fromIsoDate(pickerFor === 'start' ? internshipStartDate : internshipEndDate) ||
+              new Date()
+            }
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selected) => {
+              // Android shows a dialog and reports its own dismissal; iOS keeps
+              // the spinner on screen until the Done button below closes it.
+              if (Platform.OS === 'android') setPickerFor(null);
+              if (event.type === 'dismissed' || !selected) return;
+              const iso = toIsoDate(selected);
+              if (pickerFor === 'start') setInternshipStartDate(iso);
+              else setInternshipEndDate(iso);
+            }}
+          />
+          {Platform.OS === 'ios' && (
+            <Button
+              title={t('common.done', 'Done')}
+              onPress={() => setPickerFor(null)}
+              style={styles.iosPickerDone}
+            />
+          )}
+        </View>
+      )}
 
       <Button
         title={t('student.saveInternshipInfo', 'Save Internship Info')}
@@ -270,6 +362,50 @@ const styles = StyleSheet.create({
   },
   col: {
     flex: 1,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  dateField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+  },
+  dateFieldError: {
+    borderColor: colors.error,
+  },
+  dateValue: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  datePlaceholder: {
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  dateError: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  iosPickerBox: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  iosPickerDone: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
   },
   saveButton: {
     marginTop: spacing.sm,

@@ -47,7 +47,8 @@
       "expo-secure-store",
       "expo-font",
       "expo-router",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},
