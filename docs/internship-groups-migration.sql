@@ -263,13 +263,31 @@ DROP FUNCTION IF EXISTS regenerate_institution_code(UUID);
 DROP FUNCTION IF EXISTS is_admin_of_institution(UUID);
 DROP FUNCTION IF EXISTS is_admin();
 
-ALTER TABLE profiles DROP COLUMN IF EXISTS institution_id;
-ALTER TABLE profiles DROP COLUMN IF EXISTS department_id;
-
+-- ORDER HERE IS NOT ARBITRARY, and the obvious order does not work.
+--
+-- Four policies on institutions and departments read profiles.institution_id
+-- ("Institution members read", "Department members read", "Admin manages
+-- departments", "institution admin select"). Postgres records a hard
+-- dependency from a policy's qual to every column it names, so the column
+-- cannot be dropped while they exist. But the tables cannot be dropped first
+-- either, because profiles still holds foreign keys to them until those
+-- columns are gone. Neither direction works on its own.
+--
+-- CASCADE breaks the cycle: dropping the table takes its own policies and the
+-- foreign-key constraints pointing at it, after which the now-unreferenced
+-- columns drop cleanly. CASCADE is used deliberately rather than enumerating
+-- policies by name — this failure class has already been hit three times on
+-- this branch, each time because a hand-written list missed a case. Its blast
+-- radius is bounded to objects depending on these two doomed tables, and
+-- nothing that survives depends on them.
 DROP TABLE IF EXISTS join_issue_reports;
 DROP TABLE IF EXISTS admin_profiles;
-DROP TABLE IF EXISTS departments;
-DROP TABLE IF EXISTS institutions;
+DROP TABLE IF EXISTS departments CASCADE;
+DROP TABLE IF EXISTS institutions CASCADE;
+
+-- CASCADE removed the constraints, not the columns. These are now unreferenced.
+ALTER TABLE profiles DROP COLUMN IF EXISTS institution_id;
+ALTER TABLE profiles DROP COLUMN IF EXISTS department_id;
 
 -- Only now, with no admin rows and no admin-only objects left.
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
