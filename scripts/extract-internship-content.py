@@ -50,9 +50,15 @@ def extract_kpis(pdf_path):
     """The 48 KPI statements, tagged with competency and level.
 
     These come from the raw text layer rather than the tables: the KPI line sits
-    above each table as a heading, and it extracts cleanly there — all 48, none
-    truncated. The competency and level headings that precede it are what give
-    each one its coordinates.
+    above each table as a heading, and the competency and level headings that
+    precede it are what give each one its coordinates.
+
+    A KPI statement wraps across lines for about a quarter of the 48. The first
+    version of this function matched `KPI\\s*(\\d)\\s*:\\s*([^\\n]+)`, which stops
+    at the first newline, so twelve statements were silently cut mid-sentence
+    ("...expectations used by the"). Nothing downstream noticed, because a
+    truncated sentence is still a non-empty string of plausible length — which
+    is why check() now asserts that every statement ends in a period.
     """
     import pypdf
 
@@ -60,25 +66,68 @@ def extract_kpis(pdf_path):
     text = "\n".join(p.extract_text() or "" for p in reader.pages)
     body = text[text.find("2. INTERNSHIP CONTENT"):]
 
-    pattern = (
-        r"(" + "|".join(re.escape(c) for c in COMPETENCIES) + r")"
-        r"|(?:\n\s*(L[1-4])\s*\n)"
-        r"|KPI\s*(\d)\s*:\s*([^\n]+)"
-    )
+    # Lines that end a statement: the table's own column headers, or the start
+    # of the next structural element.
+    HEADERS = ("LEARNING", "OBJECTIVES", "TASKS", "SKILL", "CRITERIA",
+               "RESPONSIBILITIES")
+
+    def starts_new_block(line):
+        if line.upper().startswith(HEADERS):
+            return True
+        if re.match(r"KPI\s*\d\s*:", line):
+            return True
+        if re.fullmatch(r"L[1-4]", line):
+            return True
+        return any(line == name for name in COMPETENCIES)
+
+    lines = [ln.strip() for ln in body.split("\n")]
     competency = level = None
     out = []
-    for comp, lvl, idx, statement in re.findall(pattern, body):
-        if comp:
-            competency = comp
-        elif lvl:
-            level = lvl
-        elif idx:
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        if line in COMPETENCIES:
+            competency = line
+            i += 1
+            continue
+
+        matched_level = re.fullmatch(r"L([1-4])", line)
+        if matched_level:
+            level = int(matched_level.group(1))
+            i += 1
+            continue
+
+        matched_kpi = re.match(r"KPI\s*(\d)\s*:\s*(.*)", line)
+        if matched_kpi:
+            parts = [matched_kpi.group(2).strip()]
+            j = i + 1
+            # Keep consuming continuation lines until the sentence closes.
+            while j < len(lines) and not " ".join(parts).rstrip().endswith("."):
+                nxt = lines[j]
+                if not nxt:
+                    j += 1
+                    continue
+                if starts_new_block(nxt):
+                    break
+                parts.append(nxt)
+                j += 1
+            # Why the walk stopped matters more than punctuation. Running off
+            # the end of the document is the only way a statement can now be
+            # short; stopping at a block boundary means we took everything the
+            # source had, whether or not it ended with a full stop. Four of the
+            # 48 genuinely carry no final period in the PDF.
             out.append({
                 "competency": competency,
-                "level": int(level[1]),
-                "kpi_index": int(idx),
-                "statement": " ".join(statement.split()),
+                "level": level,
+                "kpi_index": int(matched_kpi.group(1)),
+                "statement": " ".join(" ".join(parts).split()),
+                "ran_off_end": j >= len(lines),
             })
+            i = j
+            continue
+
+        i += 1
     return out
 
 
@@ -145,6 +194,21 @@ def check(kpis, triplets):
     unlabelled = [k for k in kpis if not k["competency"] or not k["level"]]
     if unlabelled:
         problems.append("%d KPIs missing a competency or level" % len(unlabelled))
+
+    # A truncated statement is still a non-empty string of plausible length, so
+    # no count or label check catches one. Twelve of the 48 were cut mid-sentence
+    # before extract_kpis walked continuation lines, and every check here passed.
+    cut = [k for k in kpis if k.get("ran_off_end")]
+    if cut:
+        problems.append("%d KPI statements ran off the end of the document and "
+                        "are truncated; first ends: ...%s"
+                        % (len(cut), cut[0]["statement"][-45:]))
+
+    stubby = [k for k in kpis if len(k["statement"]) < 40]
+    if stubby:
+        problems.append("%d KPI statements are under 40 characters, which no "
+                        "real one in this framework is: %r"
+                        % (len(stubby), stubby[0]["statement"]))
 
     # 48 KPIs x 10 triplets. A small shortfall is a known, reported gap rather
     # than a silent one: the caller sees the number and decides.
