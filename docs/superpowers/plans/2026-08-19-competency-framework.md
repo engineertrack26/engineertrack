@@ -424,7 +424,10 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   - `get_competency_progress(p_student_id UUID)` → `TABLE(competency_id UUID, competency_code TEXT, competency_name TEXT, current_level INT, target_level INT)`
   - `get_working_kpis(p_student_id UUID)` → `TABLE(kpi_id UUID, competency_id UUID, competency_name TEXT, level INT, kpi_index INT, statement TEXT)`
   - `record_kpi_observations(p_student_id UUID, p_log_id UUID, p_kpi_ids UUID[])` → `VOID`
-  - Error codes `ROLE_NOT_ALLOWED`, `NOT_AUTHENTICATED`, `NO_ACTIVE_GROUP`
+  - Error codes `ROLE_NOT_ALLOWED` and `NOT_AUTHENTICATED` only. These functions
+    deliberately return an empty set for a student with no active group rather
+    than raising — the progress list feeds a dashboard, not an action the
+    student took.
 
   Task 4 wraps all three.
 
@@ -676,50 +679,29 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   - `WorkingKpi { kpiId, competencyId, competencyName, level, kpiIndex, statement }`
   - `GroupCompetencyTarget { competencyId, targetLevel }`
   - `competencyService.{ listFramework, getGroupTargets, setGroupTargets, getWorkingKpis, getProgress, recordObservations, getObservedKpiIds }`
-  - error code `NO_ACTIVE_GROUP → errors.noActiveGroup`
 
-  Tasks 5, 6 and 7 use these exact names.
+  Tasks 5, 6 and 7 use these exact names. **No new error code.** An earlier draft of
+  this plan listed `NO_ACTIVE_GROUP`, but no RPC raises it — Task 3's
+  `get_competency_progress` deliberately returns an empty set for a student with
+  no group, and the client already has `student.noGroupYet` for that case. A
+  mapping nothing raises is the same dead weight the previous subsystem had to
+  clean up.
 
 Purely additive — nothing references it yet, so the app keeps compiling.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Confirm no new error code is needed**
 
-Append inside the existing `describe('mapRpcError', …)` block of `src/utils/__tests__/rpcErrors.test.ts`:
+`src/utils/rpcErrors.ts` is untouched by this task. Verify that nothing in Task 3's RPCs raises a code the map lacks:
 
-```ts
-  it('maps NO_ACTIVE_GROUP', () => {
-    expect(mapRpcError('NO_ACTIVE_GROUP')).toEqual({
-      code: 'NO_ACTIVE_GROUP',
-      key: 'errors.noActiveGroup',
-    });
-  });
+```bash
+grep -oE "RAISE EXCEPTION '[A-Z_]+'" docs/competency-rpcs.sql | sort -u
 ```
 
-- [ ] **Step 2: Run it and confirm it fails**
+Expected: `NOT_AUTHENTICATED` and `ROLE_NOT_ALLOWED`, both already in `ERROR_KEYS`. If a third appears, stop and report — do not add it silently, because a client-side mapping and a server-side raise drifting apart is how an error ends up rendering as `errors.unknown`.
 
-Run: `npx jest rpcErrors -t NO_ACTIVE_GROUP`
-Expected: FAIL — received `{ code: 'UNKNOWN', key: 'errors.unknown' }`.
-
-- [ ] **Step 3: Add the code**
-
-In `src/utils/rpcErrors.ts`, add to `ERROR_KEYS`:
-
-```ts
-  NO_ACTIVE_GROUP: 'errors.noActiveGroup',
-```
-
-- [ ] **Step 4: Run the tests**
-
-Run: `npx jest`
-Expected: 3 suites, 21 tests.
+The test count stays at 20.
 
 - [ ] **Step 5: Add the English strings**
-
-Add to `errors` in `src/i18n/locales/en.json`:
-
-```
-"noActiveGroup": "You have not joined an internship group yet."
-```
 
 Add to `advisor`:
 
