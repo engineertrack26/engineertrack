@@ -50,7 +50,6 @@ export interface LogDocument {
 export interface SelfAssessment {
   id: string;
   logId: string;
-  competencyRatings: Record<string, number>;
   reflectionNotes: string;
   createdAt: string;
 }
@@ -61,7 +60,6 @@ export interface MentorFeedback {
   mentorId: string;
   rating: number;
   comments: string;
-  competencyRatings: Record<string, number>;
   isApproved: boolean;
   revisionRequired: boolean;
   revisionNotes?: string;

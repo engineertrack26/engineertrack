@@ -154,7 +154,6 @@ export default function CreateLogScreen() {
               mentorId: fb.mentor_id as string,
               rating: fb.rating as number,
               comments: (fb.comments as string) || '',
-              competencyRatings: (fb.competency_ratings as Record<string, number>) || {},
               isApproved: fb.is_approved as boolean,
               revisionRequired: fb.revision_required as boolean,
               revisionNotes: (fb.revision_notes as string) || undefined,
@@ -450,7 +449,7 @@ export default function CreateLogScreen() {
       const hasReflection = reflectionNotes.trim().length > 0;
       if (hasReflection) {
         try {
-          await logService.saveSelfAssessment(logId, {}, reflectionNotes.trim());
+          await logService.saveSelfAssessment(logId, reflectionNotes.trim());
         } catch (assessErr) {
           console.warn('Self-assessment save failed:', assessErr);
         }

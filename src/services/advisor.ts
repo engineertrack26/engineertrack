@@ -47,7 +47,6 @@ export const advisorService = {
         mentor_feedbacks (
           rating,
           comments,
-          competency_ratings,
           is_approved
         )
       `)

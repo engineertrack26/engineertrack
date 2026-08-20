@@ -296,7 +296,6 @@ export default function ReviewLogScreen() {
                 user.id,
                 overallRating,
                 comments.trim(),
-                {},
                 isApproved,
                 combinedRevisionNotes,
                 isApproved ? areasOfExcellence.trim() || undefined : undefined,

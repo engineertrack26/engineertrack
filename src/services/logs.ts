@@ -280,7 +280,6 @@ export const logService = {
   // Self assessment
   async saveSelfAssessment(
     logId: string,
-    competencyRatings: Record<string, number>,
     reflectionNotes: string,
   ) {
     const { data, error } = await supabase
@@ -288,7 +287,6 @@ export const logService = {
       .upsert(
         {
           log_id: logId,
-          competency_ratings: competencyRatings,
           reflection_notes: reflectionNotes,
         },
         { onConflict: 'log_id' },
@@ -305,7 +303,6 @@ export const logService = {
     mentorId: string,
     rating: number,
     comments: string,
-    competencyRatings: Record<string, number>,
     isApproved: boolean,
     revisionNotes?: string,
     areasOfExcellence?: string,
@@ -339,7 +336,6 @@ export const logService = {
       mentor_id: mentorId,
       rating,
       comments,
-      competency_ratings: competencyRatings,
       is_approved: isApproved,
       revision_required: !isApproved,
       revision_notes: revisionNotes,
