@@ -16,24 +16,14 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { logService } from '@/services/logs';
 import { notificationService } from '@/services/notifications';
-import { COMPETENCY_RUBRIC } from '@/utils/constants';
+import { competencyService } from '@/services/competency';
 import { colors, spacing, borderRadius } from '@/theme';
-
-const COMPETENCY_LABELS: Record<string, string> = {
-  technical_skills: 'Technical Skills',
-  problem_solving: 'Problem Solving',
-  communication: 'Communication',
-  teamwork: 'Teamwork',
-  time_management: 'Time Management',
-  adaptability: 'Adaptability',
-  initiative: 'Initiative',
-  professional_ethics: 'Professional Ethics',
-};
 
 interface PendingLogItem {
   id: string;
@@ -50,7 +40,6 @@ interface PendingLogItem {
   studentLastName: string;
   mentorRating: number;
   mentorComments: string;
-  mentorCompetencyRatings: Record<string, number>;
 }
 
 interface LogDetail {
@@ -65,13 +54,12 @@ interface LogDetail {
   hoursSpent: number;
   photos: { id: string; uri: string; caption?: string }[];
   selfAssessment?: {
-    competencyRatings: Record<string, number>;
     reflectionNotes: string;
   };
   mentorFeedback?: {
+    mentorId: string;
     rating: number;
     comments: string;
-    competencyRatings: Record<string, number>;
     areasOfExcellence?: string;
   };
 }
@@ -95,7 +83,6 @@ function mapPendingLog(row: Record<string, unknown>): PendingLogItem {
     studentLastName: (profile?.last_name as string) || '',
     mentorRating: (fb?.rating as number) || 0,
     mentorComments: (fb?.comments as string) || '',
-    mentorCompetencyRatings: (fb?.competency_ratings as Record<string, number>) || {},
   };
 }
 
@@ -123,15 +110,14 @@ function mapLogDetail(row: Record<string, unknown>): LogDetail {
     })),
     selfAssessment: sa
       ? {
-          competencyRatings: (sa.competency_ratings as Record<string, number>) || {},
           reflectionNotes: (sa.reflection_notes as string) || '',
         }
       : undefined,
     mentorFeedback: fb
       ? {
+          mentorId: (fb.mentor_id as string) || '',
           rating: (fb.rating as number) || 0,
           comments: (fb.comments as string) || '',
-          competencyRatings: (fb.competency_ratings as Record<string, number>) || {},
           areasOfExcellence: (fb.areas_of_excellence as string) || undefined,
         }
       : undefined,
@@ -154,6 +140,7 @@ function StarDisplay({ value, size = 16 }: { value: number; size?: number }) {
 }
 
 export default function ValidationScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
@@ -166,7 +153,9 @@ export default function ValidationScreen() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [advisorNotes, setAdvisorNotes] = useState('');
-  const [expandedRubric, setExpandedRubric] = useState<string | null>(null);
+  const [studentTicks, setStudentTicks] = useState<string[]>([]);
+  const [mentorTicks, setMentorTicks] = useState<string[]>([]);
+  const [kpiStatements, setKpiStatements] = useState<Record<string, string>>({});
 
   const loadPendingLogs = useCallback(async () => {
     if (!user) return;
@@ -199,7 +188,20 @@ export default function ValidationScreen() {
     setLoadingDetail(true);
     try {
       const detail = await logService.getLogWithDetails(log.id);
-      setLogDetail(mapLogDetail(detail as unknown as Record<string, unknown>));
+      const mapped = mapLogDetail(detail as unknown as Record<string, unknown>);
+      setLogDetail(mapped);
+
+      const mentorId = mapped.mentorFeedback?.mentorId;
+      const [student, mentor, working] = await Promise.all([
+        competencyService.getObservedKpiIds(mapped.studentId, log.id, mapped.studentId),
+        mentorId
+          ? competencyService.getObservedKpiIds(mapped.studentId, log.id, mentorId)
+          : Promise.resolve([] as string[]),
+        competencyService.getWorkingKpis(mapped.studentId),
+      ]);
+      setStudentTicks(student);
+      setMentorTicks(mentor);
+      setKpiStatements(Object.fromEntries(working.map((k) => [k.kpiId, k.statement])));
     } catch (err) {
       console.error('Load log detail error:', err);
       Alert.alert('Error', 'Failed to load log details.');
@@ -212,6 +214,9 @@ export default function ValidationScreen() {
   const handleBack = () => {
     setSelectedLog(null);
     setLogDetail(null);
+    setStudentTicks([]);
+    setMentorTicks([]);
+    setKpiStatements({});
   };
 
   const handleValidate = () => {
@@ -323,8 +328,22 @@ export default function ValidationScreen() {
     return `${days}d ago`;
   };
 
-  const getCompetencyLabel = (key: string) =>
-    COMPETENCY_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const both = studentTicks.filter((id) => mentorTicks.includes(id));
+  const studentOnly = studentTicks.filter((id) => !mentorTicks.includes(id));
+  const mentorOnly = mentorTicks.filter((id) => !studentTicks.includes(id));
+
+  const renderGroup = (label: string, ids: string[], icon: keyof typeof Ionicons.glyphMap, tint: string) =>
+    ids.length === 0 ? null : (
+      <View style={styles.compareGroup}>
+        <Text style={styles.compareLabel}>{label}</Text>
+        {ids.map((id) => (
+          <View key={id} style={styles.compareRow}>
+            <Ionicons name={icon} size={16} color={tint} />
+            <Text style={styles.compareText}>{kpiStatements[id] || t('advisor.kpiUnavailable')}</Text>
+          </View>
+        ))}
+      </View>
+    );
 
   // ─── DETAIL VIEW ───
   if (selectedLog) {
@@ -445,21 +464,14 @@ export default function ValidationScreen() {
               )}
             </View>
 
-            {/* Self Assessment */}
+            {/* Competency Comparison */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Self Assessment</Text>
-              {logDetail?.selfAssessment?.competencyRatings &&
-              Object.keys(logDetail.selfAssessment.competencyRatings).length > 0 ? (
-                Object.entries(logDetail.selfAssessment.competencyRatings).map(([compKey, score]) => (
-                  <View key={compKey} style={styles.compRow}>
-                    <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
-                    <View style={[styles.scoreBadge, styles.selfBadge]}>
-                      <Text style={styles.selfBadgeText}>{score || '-'}/5</Text>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.logSectionText}>-</Text>
+              <Text style={styles.cardTitle}>{t('advisor.competencies')}</Text>
+              {renderGroup(t('advisor.agreedOn'), both, 'checkmark-circle', colors.success)}
+              {renderGroup(t('advisor.studentClaimedOnly'), studentOnly, 'help-circle', colors.warning)}
+              {renderGroup(t('advisor.mentorSawOnly'), mentorOnly, 'eye', colors.info)}
+              {both.length + studentOnly.length + mentorOnly.length === 0 && (
+                <Text style={styles.compareEmpty}>{t('advisor.nothingTicked')}</Text>
               )}
             </View>
 
@@ -494,94 +506,6 @@ export default function ValidationScreen() {
                     </Text>
                   </View>
                 ) : null}
-
-                {/* Competency Ratings Comparison */}
-                <Text style={styles.comparisonTitle}>Competency Assessment</Text>
-                <View style={styles.comparisonHeader}>
-                  <Text style={styles.compHeaderLabel}>Competency</Text>
-                  <View style={styles.compHeaderRight}>
-                    <Text style={styles.compHeaderBadgeSelf}>Self</Text>
-                    <Text style={styles.compHeaderBadgeMentor}>Mentor</Text>
-                  </View>
-                </View>
-
-                {Object.keys(logDetail.mentorFeedback.competencyRatings).map((compKey) => {
-                  const mentorScore = logDetail.mentorFeedback!.competencyRatings[compKey] || 0;
-                  const selfScore = logDetail.selfAssessment?.competencyRatings[compKey] || 0;
-                  const diff = Math.abs(selfScore - mentorScore);
-                  const rubric = COMPETENCY_RUBRIC[compKey];
-                  const isExpanded = expandedRubric === compKey;
-                  return (
-                    <View key={compKey}>
-                      <View style={styles.compRow}>
-                        <View style={styles.compLabelRow}>
-                          <Text style={styles.compLabel}>{getCompetencyLabel(compKey)}</Text>
-                          {rubric && (
-                            <TouchableOpacity
-                              onPress={() => setExpandedRubric(isExpanded ? null : compKey)}
-                              hitSlop={8}
-                            >
-                              <Ionicons
-                                name={isExpanded ? 'information-circle' : 'information-circle-outline'}
-                                size={18}
-                                color={isExpanded ? colors.primary : colors.textDisabled}
-                              />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                        <View style={styles.compScores}>
-                          <View style={[styles.scoreBadge, styles.selfBadge]}>
-                            <Text style={styles.selfBadgeText}>{selfScore || '-'}/5</Text>
-                          </View>
-                          <View style={[styles.scoreBadge, styles.mentorBadge]}>
-                            <Text style={styles.mentorBadgeText}>{mentorScore}/5</Text>
-                          </View>
-                          {diff > 1.5 && (
-                            <Ionicons name="warning" size={14} color={colors.warning} />
-                          )}
-                        </View>
-                      </View>
-                      {isExpanded && rubric && (
-                        <View style={styles.rubricPanel}>
-                          <Text style={styles.rubricDesc}>{rubric.description}</Text>
-                          {rubric.levels.map((level, idx) => {
-                            const levelNum = idx + 1;
-                            const isSelfLevel = selfScore === levelNum;
-                            const isMentorLevel = mentorScore === levelNum;
-                            return (
-                              <View
-                                key={idx}
-                                style={[
-                                  styles.rubricLevel,
-                                  (isSelfLevel || isMentorLevel) && styles.rubricLevelHighlight,
-                                ]}
-                              >
-                                <Text style={[
-                                  styles.rubricLevelText,
-                                  (isSelfLevel || isMentorLevel) && styles.rubricLevelTextHighlight,
-                                ]}>
-                                  {level}
-                                </Text>
-                                <View style={styles.rubricTags}>
-                                  {isSelfLevel && (
-                                    <View style={[styles.rubricTag, { backgroundColor: colors.info + '20' }]}>
-                                      <Text style={[styles.rubricTagText, { color: colors.info }]}>Self</Text>
-                                    </View>
-                                  )}
-                                  {isMentorLevel && (
-                                    <View style={[styles.rubricTag, { backgroundColor: colors.secondary + '20' }]}>
-                                      <Text style={[styles.rubricTagText, { color: colors.secondary }]}>Mentor</Text>
-                                    </View>
-                                  )}
-                                </View>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
               </View>
             )}
 
@@ -1039,87 +963,35 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Comparison
-  comparisonTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
+  // Competency comparison
+  compareGroup: {
+    marginBottom: spacing.md,
   },
-  comparisonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.secondary + '30',
-    marginBottom: spacing.xs,
-  },
-  compHeaderLabel: {
-    fontSize: 11,
+  compareLabel: {
+    fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
     textTransform: 'uppercase',
+    marginBottom: spacing.xs,
   },
-  compHeaderRight: {
+  compareRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  compHeaderBadgeSelf: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.info,
-    textTransform: 'uppercase',
-  },
-  compHeaderBadgeMentor: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.secondary,
-    textTransform: 'uppercase',
-  },
-  compRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  compLabel: {
+  compareText: {
+    flex: 1,
     fontSize: 13,
     color: colors.text,
-    fontWeight: '500',
-    flex: 1,
+    lineHeight: 18,
   },
-  compScores: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  scoreBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.full,
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  selfBadge: {
-    backgroundColor: colors.info + '12',
-  },
-  selfBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.info,
-  },
-  mentorBadge: {
-    backgroundColor: colors.secondary + '12',
-  },
-  mentorBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.secondary,
+  compareEmpty: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
 
   // Reflection
@@ -1182,63 +1054,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
-  },
-
-  // Rubric
-  compLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1,
-  },
-  rubricPanel: {
-    backgroundColor: colors.primary + '06',
-    borderRadius: borderRadius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.primary + '40',
-  },
-  rubricDesc: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-    marginBottom: spacing.sm,
-  },
-  rubricLevel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-    paddingHorizontal: spacing.xs,
-    borderRadius: borderRadius.sm,
-    marginBottom: 2,
-  },
-  rubricLevelHighlight: {
-    backgroundColor: colors.primary + '12',
-  },
-  rubricLevelText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  rubricLevelTextHighlight: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  rubricTags: {
-    flexDirection: 'row',
-    gap: 4,
-    marginLeft: spacing.xs,
-  },
-  rubricTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: borderRadius.full,
-  },
-  rubricTagText: {
-    fontSize: 10,
-    fontWeight: '700',
   },
 
   // Advisor Notes

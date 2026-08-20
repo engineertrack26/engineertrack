@@ -191,7 +191,12 @@
     "competencyScopeHint": "Choose which competencies this internship develops, and how far it aims to take them.",
     "targetLevel": "Target level",
     "competencySaved": "Competency scope updated.",
-    "noCompetencies": "No competencies are selected for this group yet."
+    "noCompetencies": "No competencies are selected for this group yet.",
+    "agreedOn": "Both agreed",
+    "studentClaimedOnly": "Student ticked, mentor did not",
+    "mentorSawOnly": "Mentor saw, student did not tick",
+    "nothingTicked": "Neither party ticked anything on this log.",
+    "kpiUnavailable": "(completed indicator)"
   },
   "levels": {
     "beginner": "Beginner",

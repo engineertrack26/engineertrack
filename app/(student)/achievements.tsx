@@ -13,11 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { gamificationService } from '@/services/gamification';
+import { competencyService } from '@/services/competency';
 import { supabase } from '@/services/supabase';
 import { ProgressBar } from '@/components/common';
 import { BadgeCard } from '@/components/gamification';
 import { BADGES, LEVELS } from '@/types/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
+import type { CompetencyProgress } from '@/types/competency';
 
 interface XpTransaction {
   id: string;
@@ -32,6 +34,7 @@ export default function AchievementsScreen() {
   const { totalXp, currentLevel, earnedBadges, setEarnedBadges, setXp, setLevel, setStreak } =
     useGamificationStore();
   const [xpHistory, setXpHistory] = useState<XpTransaction[]>([]);
+  const [progress, setProgress] = useState<CompetencyProgress[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +48,7 @@ export default function AchievementsScreen() {
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const [badges, history, profileRes] = await Promise.all([
+      const [badges, history, profileRes, competencyProgress] = await Promise.all([
         gamificationService.getEarnedBadges(user.id),
         gamificationService.getXpHistory(user.id),
         supabase
@@ -53,10 +56,12 @@ export default function AchievementsScreen() {
           .select('total_xp, current_level, current_streak, longest_streak')
           .eq('id', user.id)
           .single(),
+        competencyService.getProgress(user.id).catch(() => []),
       ]);
 
       setEarnedBadges((badges || []).map((b: Record<string, unknown>) => b.badge_key as string));
       setXpHistory((history || []).slice(0, 10) as XpTransaction[]);
+      setProgress(competencyProgress);
 
       if (profileRes.data) {
         setXp(profileRes.data.total_xp || 0);
@@ -158,6 +163,27 @@ export default function AchievementsScreen() {
             );
           })}
         </View>
+
+        {/* Competency Progress */}
+        {progress.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>{t('student.myCompetencies')}</Text>
+            <View style={styles.historyCard}>
+              {progress.map((p) => (
+                <View key={p.competencyId} style={styles.competencyRow}>
+                  <Text style={styles.competencyName}>{p.name}</Text>
+                  <Text style={styles.competencyLevel}>
+                    {p.currentLevel === 0
+                      ? t('student.competencyNotStarted')
+                      : p.currentLevel >= p.targetLevel
+                        ? t('student.competencyComplete')
+                        : t('student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* XP History */}
         {xpHistory.length > 0 && (
@@ -333,5 +359,24 @@ const styles = StyleSheet.create({
   historyAmount: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  competencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  competencyName: {
+    fontSize: 14,
+    color: colors.text,
+    flex: 1,
+  },
+  competencyLevel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });
