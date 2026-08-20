@@ -178,6 +178,12 @@ export default function AdvisorGroupsScreen() {
               >
                 <Text style={styles.action}>{t('advisor.viewStudents')}</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(`/(advisor)/group-competencies?groupId=${g.id}`)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.action}>{t('advisor.competencies')}</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => confirmArchive(g)} activeOpacity={0.7}>
                 <Text style={styles.action}>
                   {g.isArchived ? t('advisor.unarchive') : t('advisor.archive')}
