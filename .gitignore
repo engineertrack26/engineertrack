@@ -54,6 +54,9 @@ coverage/
 Thumbs.db
 nul
 
+# scratch output (PDF extraction, generated seeds)
+.tmp/
+
 # Claude Code local state
 .claude/
 
