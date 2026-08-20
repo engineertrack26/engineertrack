@@ -302,11 +302,22 @@ export default function ReviewLogScreen() {
                 isApproved ? areasOfExcellence.trim() || undefined : undefined,
               );
 
-              await competencyService.recordObservations(
-                selectedLog.studentId,
-                selectedLog.id,
-                observedKpis,
-              );
+              // The feedback row above is already committed. This must not
+              // throw past this point — a rejection here would otherwise
+              // leave the mentor with no option but to resubmit, writing a
+              // second feedback row for the same log (there is no unique
+              // constraint on mentor_feedbacks.log_id).
+              let kpiObservationFailed = false;
+              try {
+                await competencyService.recordObservations(
+                  selectedLog.studentId,
+                  selectedLog.id,
+                  observedKpis,
+                );
+              } catch (obsErr) {
+                console.warn('KPI observation save failed:', obsErr);
+                kpiObservationFailed = true;
+              }
 
               // Approval XP is awarded to the student server-side by a
               // database trigger on the status change to 'approved'.
@@ -329,9 +340,11 @@ export default function ReviewLogScreen() {
 
               Alert.alert(
                 'Success',
-                isApproved
-                  ? 'Log approved successfully! Student earned XP.'
-                  : 'Revision requested. Student will be notified.',
+                kpiObservationFailed
+                  ? t('mentor.feedbackSavedKpisFailed')
+                  : isApproved
+                    ? 'Log approved successfully! Student earned XP.'
+                    : 'Revision requested. Student will be notified.',
               );
               setSelectedLog(null);
               setLogDetail(null);

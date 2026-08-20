@@ -151,7 +151,8 @@
     "averageRating": "Average Rating",
     "observedToday": "What did this student demonstrate?",
     "observedTodayHint": "Tick only what you actually observed. A behaviour counts once it has been seen on two separate days.",
-    "noWorkingKpis": "This student has reached the group's target in every competency."
+    "noWorkingKpis": "This student has reached the group's target in every competency.",
+    "feedbackSavedKpisFailed": "Feedback was saved, but the observed KPIs could not be recorded. Please try ticking them again from the log later."
   },
   "advisor": {
     "dashboard": "Advisor Dashboard",

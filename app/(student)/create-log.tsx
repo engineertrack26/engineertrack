@@ -336,6 +336,11 @@ export default function CreateLogScreen() {
           hoursSpent: totalMinutes,
         });
         const updated = mapDbLog(data);
+        try {
+          await competencyService.recordObservations(user.id, updated.id, observedKpis);
+        } catch (obsErr) {
+          console.warn('KPI observation save failed:', obsErr);
+        }
         setExistingLog(updated);
         updateLogInStore(updated.id, updated);
         Alert.alert('Saved', 'Draft saved successfully');
@@ -351,6 +356,11 @@ export default function CreateLogScreen() {
           hoursSpent: totalMinutes,
         });
         const newLog = mapDbLog(data);
+        try {
+          await competencyService.recordObservations(user.id, newLog.id, observedKpis);
+        } catch (obsErr) {
+          console.warn('KPI observation save failed:', obsErr);
+        }
         setExistingLog(newLog);
         addLog(newLog);
         Alert.alert('Saved', 'Draft created successfully');

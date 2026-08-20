@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { competencyService } from '@/services/competency';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { WorkingKpi } from '@/types/competency';
 
 interface Props {
@@ -20,12 +20,17 @@ export function KpiChecklist({ studentId, logId, observerId, title, hint, onChan
   const [kpis, setKpis] = useState<WorkingKpi[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  // Set the moment the user ticks/unticks anything. Once true, a reload
+  // (e.g. logId flipping from null to a real id after a draft save) must
+  // not overwrite what's on screen with a DB pre-fill — a ref rather than
+  // state because this must not itself trigger a re-render or re-run load.
+  const touchedRef = useRef(false);
 
   const load = useCallback(async () => {
     try {
       const working = await competencyService.getWorkingKpis(studentId);
       setKpis(working);
-      if (logId) {
+      if (logId && !touchedRef.current) {
         const already = await competencyService.getObservedKpiIds(studentId, logId, observerId);
         setSelected(new Set(already));
         onChange(already);
@@ -42,6 +47,7 @@ export function KpiChecklist({ studentId, logId, observerId, title, hint, onChan
   useEffect(() => { load(); }, [load]);
 
   function toggle(kpiId: string) {
+    touchedRef.current = true;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(kpiId)) next.delete(kpiId);
