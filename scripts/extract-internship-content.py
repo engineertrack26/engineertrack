@@ -131,28 +131,75 @@ def extract_kpis(pdf_path):
     return out
 
 
-def extract_triplets(pdf_path):
-    """The Learning Objective / Task / Assessment Criterion rows."""
+def extract_triplets(pdf_path, kpis):
+    """The Learning Objective / Task / Assessment Criterion rows, each tagged
+    with the KPI it sits under.
+
+    The KPI heading is a row inside the same table as its triplets, above the
+    column headers, so no page geometry is needed: a triplet belongs to the
+    heading row above it in its own table.
+
+    The table carries the level and the KPI index but not the competency name,
+    which lives in the text layer. `kpis` is already in document order, so the
+    Nth table carrying a heading is the Nth KPI — an assumption this function
+    proves rather than trusts, by matching the heading's statement text.
+    """
     import camelot
 
     tables = camelot.read_pdf(pdf_path, pages="1-80", flavor="lattice")
+    ordered = sorted(tables, key=lambda t: (t.page, t.order))
+
     rows = []
-    for table in tables:
+    seen_kpis = 0
+    current = None
+    for table in ordered:
         df = table.df
         for i in range(len(df)):
             cells = [" ".join(str(x).split()) for x in df.iloc[i].tolist()]
+            first = cells[0] if cells else ""
+
+            if re.match(r"KPI\s*\d\s*:", first):
+                if seen_kpis >= len(kpis):
+                    raise SystemExit(f"FAIL: more KPI headings than the {len(kpis)} extracted")
+                current = kpis[seen_kpis]
+                statement = re.sub(r"^KPI\s*\d\s*:\s*", "", first)
+                # The table cell and the text layer must be the same sentence.
+                # A mismatch means the Nth heading is not the Nth KPI, and every
+                # triplet after it would be filed under the wrong competency.
+                head = " ".join(statement.split())[:40].lower()
+                want = " ".join(current["statement"].split())[:40].lower()
+                if head != want:
+                    raise SystemExit(
+                        f"FAIL: KPI {seen_kpis + 1} misaligned\n"
+                        f"  table: {head}\n"
+                        f"  kpis : {want}"
+                    )
+                seen_kpis += 1
+                continue
+
             if len(cells) != 3 or not all(cells):
                 continue
-            head = cells[0].upper()
-            if "LEARNING" in head or head.startswith("KPI"):
+            if "LEARNING" in first.upper():
                 continue
+            if current is None:
+                raise SystemExit("FAIL: a triplet row appeared before any KPI heading")
+
             rows.append({
                 "page": table.page,
+                "competency": current["competency"],
+                "level": current["level"],
+                "kpi_index": current["kpi_index"],
                 "objective": cells[0],
                 "task": cells[1],
                 "criterion": cells[2],
             })
 
+    if seen_kpis != len(kpis):
+        raise SystemExit(f"FAIL: {seen_kpis} KPI headings in tables, expected {len(kpis)}")
+
+    # A row split across a page break arrives as two rows whose first cell does
+    # not end in a period. Merge only within one KPI: a merge across a boundary
+    # would silently move text between competencies.
     merged = []
     for row in rows:
         previous = merged[-1] if merged else None
@@ -160,6 +207,8 @@ def extract_triplets(pdf_path):
             previous is not None
             and not previous["objective"].rstrip().endswith(".")
             and row["page"] != previous["pages"][-1]
+            and (previous["competency"], previous["level"], previous["kpi_index"])
+                == (row["competency"], row["level"], row["kpi_index"])
         )
         if continues:
             for key in ("objective", "task", "criterion"):
@@ -220,6 +269,22 @@ def check(kpis, triplets):
         problems.append("%d triplets have a suspiciously short task or criterion"
                         % len(stunted))
 
+    counts = Counter(
+        (t["competency"], t["level"], t["kpi_index"]) for t in triplets
+    )
+    if len(counts) != len(kpis):
+        raise SystemExit(f"FAIL: {len(counts)} KPIs carry triplets, expected {len(kpis)}")
+
+    outside = {k: n for k, n in counts.items() if not 8 <= n <= 12}
+    if outside:
+        raise SystemExit(f"FAIL: KPIs outside the 8-12 band: {outside}")
+
+    # Within the band this is not a failure, but it is where a missing triplet
+    # would hide, so it is reported for the human pass. The document says ten
+    # each; 478 across 48 averages 9.96.
+    uneven = {k: n for k, n in counts.items() if n != 10}
+    print(f"note: {len(uneven)} KPIs do not hold exactly 10 triplets: {uneven}", file=sys.stderr)
+
     return problems
 
 
@@ -230,7 +295,7 @@ def main():
     pdf_path, out_dir = sys.argv[1], sys.argv[2]
 
     kpis = extract_kpis(pdf_path)
-    triplets = extract_triplets(pdf_path)
+    triplets = extract_triplets(pdf_path, kpis)
 
     problems = check(kpis, triplets)
     print("KPIs:     %d" % len(kpis))
@@ -240,6 +305,16 @@ def main():
         for p in problems:
             print("  - %s" % p)
         return 1
+
+    import random
+    random.seed(0)          # same 48 samples on every run, so a re-check is comparable
+    by_kpi = {}
+    for t in triplets:
+        by_kpi.setdefault((t["competency"], t["level"], t["kpi_index"]), []).append(t)
+    print("\n--- one sample per KPI, compare against the PDF ---", file=sys.stderr)
+    for key in sorted(by_kpi):
+        s = random.choice(by_kpi[key])
+        print(f"{key[0]} L{key[1]} KPI{key[2]}: {s['objective']}  (p{s['pages'][0]})", file=sys.stderr)
 
     for name, data in (("kpis.json", kpis), ("triplets.json", triplets)):
         with open("%s/%s" % (out_dir, name), "w", encoding="utf-8") as fh:
