@@ -64,18 +64,36 @@ advisor derives tasks from it; nobody edits it from the app.
 
 ### Extraction
 
-`scripts/extract-internship-content.py` is rewritten. Today it records KPI
-headings without position and triplets with a page number only, so the two cannot
-be joined — which is why the mapping does not exist. The new version records
-**(page, in-page order)** for both.
+`scripts/extract-internship-content.py` is rewritten. Today it reads KPI headings
+from the text layer with pypdf and triplets from the tables with camelot, keeping
+only a page number for the latter, so the two cannot be joined — which is why the
+mapping does not exist.
 
-The rule: a triplet belongs to the last KPI heading preceding it in document
-order.
+The fix is simpler than page geometry, and was found by probing rather than
+assumed. **The KPI heading is itself a row inside the triplet table.** A section's
+table reads:
 
-All 48 headings are present in the PDF and each carries a page. They fall on 46
-pages, so **two pages carry two headings each**; on those, page number alone is
-ambiguous and in-page table order decides. Four KPI boundaries are affected.
-Resolve them explicitly and record the resolution in a comment.
+```
+row 0   L1
+row 1   KPI1: Identifies key communication channels (meetings, email)...
+row 2   LEARNING OBJECTIVES | TASKS AND RESPONSIBILITIES | SKILL ASSESSMENT CRITERIA
+row 3+  the triplets
+```
+
+So a triplet belongs to the KPI heading in its own table. Verified across the
+document: 48 heading rows, each in its own table, 48 distinct tables, and 499 raw
+triplet rows that merge to 478 once rows split across a page break are rejoined.
+
+No page coordinates, no ambiguous pages, no boundary to resolve by hand. Walk the
+tables in `(page, order)` sequence and attach each triplet row to the heading row
+above it in the same table.
+
+The competency name is not in the table — only the level and the KPI index are.
+It comes from `kpis.json`, which already holds the 48 KPIs in document order. The
+Nth table carrying a heading is the Nth KPI. That assumption is not taken on
+faith: the heading row's statement text is matched against the corresponding
+entry's statement, and a mismatch fails the run. This turns the ordering
+assumption into a per-KPI proof of alignment.
 
 ### Verification
 
