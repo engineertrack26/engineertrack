@@ -185,6 +185,19 @@ GRANT EXECUTE ON FUNCTION get_my_student_code() TO authenticated;
 -- ============================================
 -- The caller's group is resolved internally rather than passed in, so nobody
 -- can read another group's ranking by supplying its id.
+--
+-- The surname is reduced to an initial HERE rather than in the client. The
+-- screen has always displayed "Ada Y.", but an earlier version of this
+-- function returned the whole surname, so the masking was cosmetic — the full
+-- name still reached every group member's device and anyone reading the
+-- response could recover it. The privacy notice promises an initial, so the
+-- function returns an initial.
+--
+-- DROP before CREATE is required, not tidiness: this changes the result
+-- column from last_name to last_initial, and CREATE OR REPLACE cannot change
+-- a function's return type.
+DROP FUNCTION IF EXISTS get_my_group_leaderboard(INT);
+
 CREATE OR REPLACE FUNCTION get_my_group_leaderboard(p_limit INT DEFAULT 50)
 RETURNS TABLE (
   id             UUID,
@@ -192,7 +205,7 @@ RETURNS TABLE (
   current_level  INTEGER,
   current_streak INTEGER,
   first_name     TEXT,
-  last_name      TEXT,
+  last_initial   TEXT,
   avatar_url     TEXT
 )
 LANGUAGE plpgsql
@@ -219,7 +232,10 @@ BEGIN
 
   RETURN QUERY
     SELECT lp.id, lp.total_xp, lp.current_level, lp.current_streak,
-           lp.first_name, lp.last_name, lp.avatar_url
+           lp.first_name,
+           CASE WHEN coalesce(lp.last_name, '') = '' THEN ''
+                ELSE upper(left(lp.last_name, 1)) END,
+           lp.avatar_url
     FROM leaderboard_public lp
     JOIN group_memberships m
       ON m.student_id = lp.id AND m.left_at IS NULL

@@ -21,7 +21,9 @@ interface LeaderboardEntry {
   current_level: number;
   current_streak: number;
   first_name: string;
-  last_name: string;
+  /** Already reduced to a single character by get_my_group_leaderboard.
+   *  The full surname never leaves the database. */
+  last_initial: string;
   avatar_url: string | null;
 }
 
@@ -48,7 +50,7 @@ export default function LeaderboardScreen() {
           current_level: item.current_level as number,
           current_streak: item.current_streak as number,
           first_name: (item.first_name as string) || '',
-          last_name: (item.last_name as string) || '',
+          last_initial: (item.last_initial as string) || '',
           avatar_url: (item.avatar_url as string) || null,
         };
       });
@@ -70,12 +72,14 @@ export default function LeaderboardScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  const maskName = (firstName: string, lastName: string) => {
+  // get_my_group_leaderboard already returns only the initial, so this
+  // formats what it was given rather than doing the masking itself.
+  const maskName = (firstName: string, lastInitial: string) => {
     const first = (firstName || '').trim();
-    const last = (lastName || '').trim();
-    if (!first && !last) return 'Student';
-    if (!last) return first;
-    return `${first} ${last[0].toUpperCase()}.`;
+    const initial = (lastInitial || '').trim();
+    if (!first && !initial) return 'Student';
+    if (!initial) return first;
+    return `${first} ${initial.toUpperCase()}.`;
   };
 
   const topThree = entries.slice(0, 3);
@@ -123,7 +127,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[1]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {maskName(topThree[1].first_name, topThree[1].last_name)}
+                            {maskName(topThree[1].first_name, topThree[1].last_initial)}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[1].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumSecond, { backgroundColor: PODIUM_COLORS[1] }]}>
@@ -139,7 +143,7 @@ export default function LeaderboardScreen() {
                           <Ionicons name="person" size={28} color={PODIUM_COLORS[0]} />
                         </View>
                         <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>
-                          {maskName(topThree[0].first_name, topThree[0].last_name)}
+                          {maskName(topThree[0].first_name, topThree[0].last_initial)}
                         </Text>
                         <Text style={styles.podiumXp}>{topThree[0].total_xp} XP</Text>
                         <View style={[styles.podiumBlock, styles.podiumFirst, { backgroundColor: PODIUM_COLORS[0] }]}>
@@ -154,7 +158,7 @@ export default function LeaderboardScreen() {
                             <Ionicons name="person" size={24} color={PODIUM_COLORS[2]} />
                           </View>
                           <Text style={styles.podiumName} numberOfLines={1}>
-                            {maskName(topThree[2].first_name, topThree[2].last_name)}
+                            {maskName(topThree[2].first_name, topThree[2].last_initial)}
                           </Text>
                           <Text style={styles.podiumXp}>{topThree[2].total_xp} XP</Text>
                           <View style={[styles.podiumBlock, styles.podiumThird, { backgroundColor: PODIUM_COLORS[2] }]}>
@@ -176,7 +180,7 @@ export default function LeaderboardScreen() {
             renderItem={({ item, index }) => (
               <LeaderboardRow
                 rank={index + 4}
-                name={maskName(item.first_name, item.last_name)}
+                name={maskName(item.first_name, item.last_initial)}
                 xp={item.total_xp}
                 level={item.current_level}
                 isCurrentUser={item.id === user?.id}
