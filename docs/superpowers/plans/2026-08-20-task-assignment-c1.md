@@ -227,6 +227,20 @@ enters silently, and nothing downstream would notice.
 import json
 import sys
 
+# The JSON artifacts carry the competency's DISPLAY NAME, not its code, and
+# competencies.code holds the code. Joining on the name matches nothing and the
+# INSERT silently adds zero rows, which no count of the generated VALUES lines
+# can detect. scripts/generate-competency-seed.py carries the same map for the
+# same reason; keep the two in step.
+BY_NAME = {
+    "Engineering Problem Solving": "problem_solving",
+    "Technical Documentation": "documentation",
+    "Professional Communication": "communication",
+    "Digital Tool Proficiency": "digital_tools",
+    "Responsibility & Ethics": "ethics",
+    "Collaboration & Teamwork": "teamwork",
+}
+
 
 def sql_quote(value):
     return "'" + str(value).replace("'", "''") + "'"
@@ -235,13 +249,18 @@ def sql_quote(value):
 def main():
     triplets = json.load(open(sys.argv[1], encoding="utf-8"))
 
+    unknown = {t["competency"] for t in triplets} - set(BY_NAME)
+    if unknown:
+        sys.exit("unmapped competency names: %s" % sorted(unknown))
+
     by_kpi = {}
     for t in triplets:
         by_kpi.setdefault((t["competency"], t["level"], t["kpi_index"]), []).append(t)
 
     values = []
     for key in sorted(by_kpi):
-        code, level, kpi_index = key
+        name, level, kpi_index = key
+        code = BY_NAME[name]
         for n, t in enumerate(by_kpi[key], start=1):
             values.append(
                 "  (%s, %d, %d, %d, %s, %s, %s)"
@@ -1164,16 +1183,23 @@ BEGIN
   --    through tasks alone takes four approved assignments: two triplets from
   --    each of the level's two KPIs.
   DELETE FROM kpi_observations o WHERE o.student_id = stu;
+  -- Exactly two triplets from EACH of the level's two KPIs. Iterating both
+  -- KPIs together and stopping at four observations would let one KPI supply
+  -- all four — kpi_id is a UUID, so their relative order is arbitrary — and
+  -- the level would correctly stay at 0 while the case reported a failure.
   FOR t IN
-    SELECT tr.id, tr.objective, tr.criterion
-    FROM kpi_triplets tr WHERE tr.kpi_id IN (kpi1, kpi2)
-    ORDER BY tr.kpi_id, tr.triplet_index
+    (SELECT tr.id, tr.objective, tr.criterion
+     FROM kpi_triplets tr
+     WHERE tr.kpi_id = kpi1
+       AND tr.id NOT IN (SELECT a.triplet_id FROM group_assignments a WHERE a.group_id = grp)
+     ORDER BY tr.triplet_index LIMIT 2)
+    UNION ALL
+    (SELECT tr.id, tr.objective, tr.criterion
+     FROM kpi_triplets tr
+     WHERE tr.kpi_id = kpi2
+       AND tr.id NOT IN (SELECT a.triplet_id FROM group_assignments a WHERE a.group_id = grp)
+     ORDER BY tr.triplet_index LIMIT 2)
   LOOP
-    CONTINUE WHEN (SELECT count(*) FROM group_assignments a
-                   WHERE a.group_id = grp AND a.triplet_id = t.id) > 0;
-    EXIT WHEN (SELECT count(*) FROM kpi_observations o
-               WHERE o.student_id = stu AND o.assignment_submission_id IS NOT NULL) >= 4;
-
     INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
     VALUES (grp, t.id, 'Probe level', t.objective, t.criterion, adv) RETURNING id INTO asg;
 
