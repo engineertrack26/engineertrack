@@ -44,37 +44,47 @@ Subsystem **B** of three.
 |---|---|---|
 | **A** | Advisor-owned internship groups replacing the admin/institution model | done, applied live |
 | **B** | The competency framework, group scoping, and assessment against it | **this spec** |
-| **C** | The 480 learning triplets as missions | blocked on data (see below) |
+| **C** | The 480 learning triplets as missions | its own spec; data now extractable (see below) |
 
-### Why C is blocked, and why that draws the line here
+### Why B stops at the KPIs
 
 The framework is not just six names. Each competency has four levels, each level
 has two KPIs, and **each KPI expands into ten triplets** of *Learning Objective →
 Task/Responsibility → Assessment Criterion*. That is 6 × 4 × 2 × 10 = **480
-triplets**, and the document describes exactly what C should do with them:
-"Learning objectives become achievable missions, workplace tasks become
-real-world challenges, assessment criteria support instant feedback and progress
-tracking."
+triplets**, and the document says what C should do with them: "Learning
+objectives become achievable missions, workplace tasks become real-world
+challenges, assessment criteria support instant feedback and progress tracking."
 
-Those 480 triplets **cannot be extracted reliably from the PDF.** This was
-measured, not assumed:
+B stops before that because turning 480 triplets into missions is a subsystem of
+its own, not because the data is unavailable. **It is available.**
 
-- The 48 KPI statements extract cleanly — all 48, average 77 characters, none
-  truncated, every one correctly attributable to a competency and level.
-- The triplets do not. In the numbered sections the objective and the task run
-  together in the text layer ("To identify the main documentation standards used
-  in the workplace. Review the organisation's…"); in the unnumbered sections the
-  three columns interleave and each visual line becomes a separate fragment.
-  `pdfplumber`'s table mode recovers some rows and shreds others.
+An earlier draft of this spec claimed the triplets could not be extracted from
+the PDF. That was wrong, and the correction matters enough to record: the first
+attempt used the raw text layer and then `pdfplumber`, and both fail badly here —
+raw text runs the objective and task together in the numbered sections and
+interleaves all three columns in the unnumbered ones, while `pdfplumber`, across
+four different `table_settings`, shreds each cell into one row per visual line
+(a 10-triplet page came back as 22 fragments averaging 24 characters).
 
-Forcing it would mean per-page repair rules plus hand-verification of 1440 text
-fields, where a mis-paired task and criterion produces no error anywhere — it
-just silently teaches the wrong thing.
+The document's tables are **ruled**, and camelot's `lattice` flavour reads ruled
+tables. It returns whole cells — 74 / 153 / 138 characters where `pdfplumber`
+gave 24 — at 99.4% reported accuracy. `scripts/extract-internship-content.py`
+does this and yields **48 KPIs and 478 triplets**, with every structural
+assertion passing: exactly 8 KPIs per competency, exactly 12 per level, none
+unlabelled, no stunted task or criterion.
 
-**The team should be asked for the source document (Word or Excel).** Table cells
-in a `.docx` extract cleanly, turning days of unreliable work into a scripted
-import. Until it arrives, B proceeds on the skeleton, which is complete and
-verified.
+Two details are worth carrying forward to C:
+
+- **478, not 480.** Two triplets are unaccounted for. The gap is small and
+  bounded, and closing it is a reconciliation pass per KPI, not a rewrite.
+- **A triplet whose text crosses a page break arrives as two rows** and must be
+  rejoined. The rule is deliberately narrow — the previous objective does not end
+  in a period *and* the next row is on a different page. A looser rule was tried
+  and collapsed 499 rows into 160, gluing one objective into 16857 characters.
+
+**The Word or Excel source is still worth asking the team for**, but as a
+cross-check rather than a blocker: 478 machine-extracted triplets are far easier
+to diff against an authoritative file than to hand-verify from a PDF.
 
 ## The framework as data
 
