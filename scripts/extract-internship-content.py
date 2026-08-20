@@ -143,13 +143,31 @@ def extract_triplets(pdf_path, kpis):
     which lives in the text layer. `kpis` is already in document order, so the
     Nth table carrying a heading is the Nth KPI — an assumption this function
     proves rather than trusts, by matching the heading's statement text.
+
+    A row split across a page break can arrive with one of its three cells
+    empty rather than all three populated — camelot sometimes puts only the
+    continuing column's text in the second fragment. Discarding any row with
+    an empty cell (the first version of this function did) throws that
+    fragment away AND leaves the previous entry's sentence unterminated, so
+    the very next real row silently fuses into it: two triplets collapse into
+    one and the total still looks plausible. So a row is allowed to reach the
+    merge decision as long as it has at least one non-empty cell; only the
+    cells it actually carries text for are merged in, and only a row that is
+    NOT a continuation is required to have all three cells non-empty to start
+    a fresh triplet.
+
+    Every row examined is made to land in exactly one recognised bucket —
+    entirely empty, level marker, KPI heading, column header, merged into the
+    previous triplet, or a new triplet — and a row that fits none of those
+    fails the run loudly with its location, rather than being silently
+    dropped or silently fused into its neighbour.
     """
     import camelot
 
     tables = camelot.read_pdf(pdf_path, pages="1-80", flavor="lattice")
     ordered = sorted(tables, key=lambda t: (t.page, t.order))
 
-    rows = []
+    merged = []
     seen_kpis = 0
     current = None
     for table in ordered:
@@ -157,6 +175,9 @@ def extract_triplets(pdf_path, kpis):
         for i in range(len(df)):
             cells = [" ".join(str(x).split()) for x in df.iloc[i].tolist()]
             first = cells[0] if cells else ""
+
+            if not any(cells):
+                continue  # entirely empty row
 
             if re.match(r"KPI\s*\d\s*:", first):
                 if seen_kpis >= len(kpis):
@@ -177,47 +198,77 @@ def extract_triplets(pdf_path, kpis):
                 seen_kpis += 1
                 continue
 
-            if len(cells) != 3 or not all(cells):
-                continue
-            if "LEARNING" in first.upper():
-                continue
+            if re.fullmatch(r"L[1-4]", first):
+                continue  # level marker
+
+            if first.upper() == "LEARNING OBJECTIVES":
+                continue  # column-header row: exact match, not substring —
+                # "LEARNING" in first.upper() also matches any objective that
+                # happens to contain the word (e.g. "...materials for peer
+                # learning."), which silently dropped that whole triplet with
+                # nothing downstream noticing.
+
             if current is None:
                 raise SystemExit("FAIL: a triplet row appeared before any KPI heading")
 
-            rows.append({
-                "page": table.page,
-                "competency": current["competency"],
-                "level": current["level"],
-                "kpi_index": current["kpi_index"],
-                "objective": cells[0],
-                "task": cells[1],
-                "criterion": cells[2],
-            })
+            previous = merged[-1] if merged else None
+            # Two different shapes both mean "this row continues the
+            # previous one", and neither alone covers both:
+            #  - the row itself is a fragment (some cell empty). This is the
+            #    shape at the page 14/15 boundary, where only the criterion
+            #    carried across and the other two cells arrive blank.
+            #  - all three cells are populated, but the objective is the
+            #    same sentence still running — the original signal, kept
+            #    because objective is reliable: it fails to end in a period
+            #    only at a genuine split, unlike task/criterion, which
+            #    routinely end without one as plain document style (e.g.
+            #    "...upload in App") with no page break involved. Widening
+            #    that check to all three columns (tried first) merged one
+            #    such stylistically-open task into the next unrelated
+            #    triplet — a false fusion the 8-12 band did not catch either.
+            is_fragment = not all(cells)
+            objective_still_open = (
+                previous is not None
+                and not previous["objective"].rstrip().endswith(".")
+            )
+            continues = (
+                previous is not None
+                and (is_fragment or objective_still_open)
+                and table.page != previous["pages"][-1]
+                and (previous["competency"], previous["level"], previous["kpi_index"])
+                    == (current["competency"], current["level"], current["kpi_index"])
+            )
+
+            if continues:
+                # Only the columns this fragment actually carries text for —
+                # an empty cell here is the shape of a split row, not a blank
+                # answer, and must not blank out what the previous row had.
+                for key, cell in zip(("objective", "task", "criterion"), cells):
+                    if cell:
+                        previous[key] = (previous[key] + " " + cell).strip()
+                previous["pages"] = sorted(set(previous["pages"] + [table.page]))
+                continue
+
+            if len(cells) == 3 and all(cells):
+                merged.append({
+                    "competency": current["competency"],
+                    "level": current["level"],
+                    "kpi_index": current["kpi_index"],
+                    "objective": cells[0],
+                    "task": cells[1],
+                    "criterion": cells[2],
+                    "pages": [table.page],
+                })
+                continue
+
+            raise SystemExit(
+                f"FAIL: unrecognised row -- page {table.page}, table order "
+                f"{table.order}, row {i}: {cells!r}"
+            )
 
     if seen_kpis != len(kpis):
         raise SystemExit(f"FAIL: {seen_kpis} KPI headings in tables, expected {len(kpis)}")
 
-    # A row split across a page break arrives as two rows whose first cell does
-    # not end in a period. Merge only within one KPI: a merge across a boundary
-    # would silently move text between competencies.
-    merged = []
-    for row in rows:
-        previous = merged[-1] if merged else None
-        continues = (
-            previous is not None
-            and not previous["objective"].rstrip().endswith(".")
-            and row["page"] != previous["pages"][-1]
-            and (previous["competency"], previous["level"], previous["kpi_index"])
-                == (row["competency"], row["level"], row["kpi_index"])
-        )
-        if continues:
-            for key in ("objective", "task", "criterion"):
-                previous[key] = (previous[key] + " " + row[key]).strip()
-            previous["pages"] = sorted(set(previous["pages"] + [row["page"]]))
-        else:
-            entry = dict(row)
-            entry["pages"] = [entry.pop("page")]
-            merged.append(entry)
     return merged
 
 
