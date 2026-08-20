@@ -114,7 +114,13 @@
     "join": "Join",
     "joinedGroup": "You joined {{name}}.",
     "myGroup": "My group",
-    "noGroupYet": "You have not joined a group yet."
+    "noGroupYet": "You have not joined a group yet.",
+    "myCompetencies": "My competencies",
+    "competencyLevel": "Level {{current}} of {{target}}",
+    "competencyNotStarted": "Not started",
+    "competencyComplete": "Target reached",
+    "whatIDidToday": "What did you demonstrate today?",
+    "whatIDidTodayHint": "Tick the behaviours you showed. Your mentor ticks separately — the two are compared, not merged."
   },
   "gamification": {
     "points": "Points",
@@ -142,7 +148,10 @@
     "competencyRating": "Competency Rating",
     "pendingReviews": "Pending Reviews",
     "reviewedToday": "Reviewed Today",
-    "averageRating": "Average Rating"
+    "averageRating": "Average Rating",
+    "observedToday": "What did this student demonstrate?",
+    "observedTodayHint": "Tick only what you actually observed. A behaviour counts once it has been seen on two separate days.",
+    "noWorkingKpis": "This student has reached the group's target in every competency."
   },
   "advisor": {
     "dashboard": "Advisor Dashboard",
@@ -175,7 +184,13 @@
     "removeStudentConfirm": "Remove {{name}} from this group? Their logs and history are kept.",
     "removeStudentDone": "Student removed from the group.",
     "noStudentsYet": "No Students Yet",
-    "noStudentsYetHint": "Share this group's join code with your students so they can join."
+    "noStudentsYetHint": "Share this group's join code with your students so they can join.",
+    "competencies": "Competencies",
+    "competencyScope": "Competency scope",
+    "competencyScopeHint": "Choose which competencies this internship develops, and how far it aims to take them.",
+    "targetLevel": "Target level",
+    "competencySaved": "Competency scope updated.",
+    "noCompetencies": "No competencies are selected for this group yet."
   },
   "levels": {
     "beginner": "Beginner",
