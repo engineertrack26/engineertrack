@@ -28,8 +28,6 @@ export const LIMITS = {
   maxLogContentLength: 5000,
   minTitleLength: 5,
   maxTitleLength: 100,
-  maxCompetencyRating: 5,
-  minCompetencyRating: 1,
 } as const;
 
 export const INTERVENTION_THRESHOLD_DAYS = 3;
