@@ -11,6 +11,7 @@ const ERROR_KEYS: Record<string, string> = {
   INVALID_CODE_FORMAT: 'errors.invalidCodeFormat',
   GROUP_ARCHIVED: 'errors.groupArchived',
   GROUP_NOT_FOUND: 'errors.groupNotFound',
+  MEMBERSHIP_NOT_FOUND: 'errors.membershipNotFound',
 };
 
 /**

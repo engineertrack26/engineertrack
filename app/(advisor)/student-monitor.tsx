@@ -166,7 +166,7 @@ export default function StudentMonitorScreen() {
           <Text style={styles.screenTitle} numberOfLines={1}>
             {activeGroup?.name || t('advisor.studentMonitor')}
           </Text>
-          <Text style={styles.countText}>{members.length} student{members.length !== 1 ? 's' : ''}</Text>
+          <Text style={styles.countText}>{t('advisor.memberCount', { count: members.length })}</Text>
         </View>
 
         <FlatList

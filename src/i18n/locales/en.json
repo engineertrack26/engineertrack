@@ -245,8 +245,9 @@
     "roleNotAllowed": "Your role cannot perform this action.",
     "invalidCode": "This code is not valid. Check it with the person who gave it to you.",
     "expiredCode": "This code is no longer active. Ask the student to share their current code.",
-    "invalidCodeFormat": "That does not look like a valid code. Enter the full code or just the last 6 characters.",
+    "invalidCodeFormat": "That does not look like a valid code. Student codes are 6 characters.",
     "groupArchived": "That group has been archived and is no longer accepting students.",
-    "groupNotFound": "No group found with that code. Check it with your advisor."
+    "groupNotFound": "No group found with that code. Check it with your advisor.",
+    "membershipNotFound": "That membership no longer exists. Refresh and try again."
   }
 }

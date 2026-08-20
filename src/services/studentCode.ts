@@ -103,8 +103,11 @@ export const studentCodeService = {
     let advisor = null;
 
     if (mentorId) {
+      // profiles_public, not profiles: profiles_select only ever lets a
+      // supervisor read a student's row, never the reverse, so reading
+      // profiles here silently returned nothing and the card rendered blank.
       const { data: mp } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id, first_name, last_name')
         .eq('id', mentorId)
         .single();
@@ -120,7 +123,7 @@ export const studentCodeService = {
 
     if (advisorId) {
       const { data: ap } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id, first_name, last_name')
         .eq('id', advisorId)
         .single();

@@ -8,7 +8,7 @@
 | Phase 2 | Auth & Navigation | Complete |
 | Phase 3 | Student Features | Complete |
 | Phase 4 | Mentor & Advisor Features + Realtime | Complete |
-| Phase 4.5 | Admin Role & Code-Based Linking | Complete |
+| Phase 4.5 | Admin Role & Code-Based Linking | Superseded (removed 2026-08-19, see Session 14) |
 | Phase 5 | Gamification, i18n & Realtime | Complete |
 | Phase 6 | Polish & Deployment | Not Started |
 
@@ -138,7 +138,7 @@
 - [x] Level progression (gamificationStore, level-up notification)
 - [x] Badges (earned_badges table, BadgeCard component)
 - [x] XP history (xp_transactions table)
-- [x] Leaderboard scoped to same university + department
+- [x] Leaderboard scoped to same university + department (superseded 2026-08-19: now scoped to the student's internship group)
   - [x] `leaderboard_public` extended with university, faculty, department columns
   - [x] Sync trigger updated to include new columns
   - [x] `getLeaderboard(limit, university, department)` filter params

@@ -96,14 +96,21 @@ export const groupService = {
     return counts;
   },
 
-  /** Closing, never deleting: the student's logs and term history hang off
-   *  this row. */
+  /**
+   * Closing, never deleting: the student's logs and term history hang off
+   * this row.
+   *
+   * Goes through an RPC rather than a direct update. The direct-UPDATE policy
+   * this replaces had no WITH CHECK, so Postgres reused its USING clause for
+   * the new row — and that clause only constrained group_id. An advisor could
+   * rewrite a membership's student_id and clear left_at, attaching someone who
+   * never entered the join code. The function writes left_at and nothing else.
+   */
   async closeMembership(membershipId: string): Promise<void> {
-    const { error } = await supabase
-      .from('group_memberships')
-      .update({ left_at: new Date().toISOString() })
-      .eq('id', membershipId);
-    if (error) throw error;
+    const { error } = await supabase.rpc('close_membership', {
+      p_membership_id: membershipId,
+    });
+    if (error) throw new RpcError(error.message);
   },
 
   async validateCode(code: string): Promise<GroupSummary | null> {
