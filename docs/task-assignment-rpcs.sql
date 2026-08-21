@@ -217,7 +217,7 @@ BEGIN
       (student_id, kpi_id, log_id, observed_by, assignment_submission_id)
     VALUES (the_student, the_kpi, NULL, auth.uid(), p_submission_id)
     ON CONFLICT (assignment_submission_id) WHERE assignment_submission_id IS NOT NULL
-      DO NOTHING;
+      DO UPDATE SET observed_by = auth.uid(), observed_at = now();
   ELSE
     -- A withdrawn approval must stop counting. Otherwise the student stays
     -- promoted on evidence that was taken back.
