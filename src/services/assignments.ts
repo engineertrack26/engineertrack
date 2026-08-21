@@ -68,7 +68,13 @@ export const assignmentService = {
       })
       .select()
       .single();
-    if (error) throw error;
+    // The only .from() write in this file that can fail with a DOMAIN code
+    // rather than an infrastructure one: trg_assignment_within_scope raises
+    // NOT_IN_SCOPE from a BEFORE INSERT trigger, so this insert has to be
+    // wrapped like an .rpc() call for mapRpcError to reach it. The plain
+    // `throw error` used by the reads below stays correct -- they cannot raise
+    // a code we have a message for.
+    if (error) throw new RpcError(error.message);
     return toAssignment(data as Record<string, unknown>);
   },
 
