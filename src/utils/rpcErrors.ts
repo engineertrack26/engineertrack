@@ -16,6 +16,7 @@ const ERROR_KEYS: Record<string, string> = {
   SUBMISSION_NOT_FOUND: 'errors.submissionNotFound',
   NOT_IN_SCOPE: 'errors.notInScope',
   ALREADY_APPROVED: 'errors.alreadyApproved',
+  STUDENT_LEFT_GROUP: 'errors.studentLeftGroup',
 };
 
 /**

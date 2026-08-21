@@ -45,5 +45,6 @@ describe('mapRpcError', () => {
     expect(mapRpcError('SUBMISSION_NOT_FOUND').key).toBe('errors.submissionNotFound');
     expect(mapRpcError('NOT_IN_SCOPE').key).toBe('errors.notInScope');
     expect(mapRpcError('ALREADY_APPROVED').key).toBe('errors.alreadyApproved');
+    expect(mapRpcError('STUDENT_LEFT_GROUP').key).toBe('errors.studentLeftGroup');
   });
 });

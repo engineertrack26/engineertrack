@@ -274,6 +274,7 @@
     "assignmentNotFound": "That task no longer exists.",
     "submissionNotFound": "That submission no longer exists.",
     "notInScope": "This competency is not part of the group's scope.",
-    "alreadyApproved": "This task has already been approved. Ask your mentor to reopen it if you need to change your submission."
+    "alreadyApproved": "This task has already been approved. Ask your mentor to reopen it if you need to change your submission.",
+    "studentLeftGroup": "This student is no longer in the group this task was set for, so it can no longer be evaluated."
   }
 }

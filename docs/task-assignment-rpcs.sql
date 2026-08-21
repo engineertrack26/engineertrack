@@ -166,6 +166,27 @@ BEGIN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
   END IF;
 
+  -- get_competency_progress computes against the student's ACTIVE membership,
+  -- while the scope check below validates against the ASSIGNMENT's group.
+  -- join_group_by_code closes the old membership and opens a new one, so a
+  -- student who re-joins between submitting and being approved would be
+  -- approved against group A's targets and read from group B's -- and if B does
+  -- not target that competency, nothing moves and nothing says why. Approving
+  -- into a void is worse than refusing with a name: the work belongs to a term
+  -- the student has left.
+  --
+  -- Reading group_memberships here is fine. This is a function body, not a
+  -- policy qual, so it cannot re-enter that table's policies and cause 42P17 --
+  -- the same reason every SECURITY DEFINER helper in this project reaches it.
+  IF NOT EXISTS (
+    SELECT 1 FROM group_memberships m
+    WHERE m.group_id = the_group
+      AND m.student_id = the_student
+      AND m.left_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'STUDENT_LEFT_GROUP';
+  END IF;
+
   -- An observation for a competency outside the group's scope is written but
   -- never reported, because get_competency_progress only returns competencies
   -- with a target row. The student would do the work, be approved, and see
