@@ -66,6 +66,34 @@ BEGIN
     RAISE EXCEPTION 'FAIL: one_observation_per_submission is missing; re-approval would double-count';
   END IF;
 
+  -- STRUCTURAL, and the right kind of structural: a trigger either exists or it
+  -- does not, and that is exactly what a catalog check can prove. Both of these
+  -- guard rules that Part B cannot protect on its own -- case 6 still passes
+  -- with trg_assignment_within_scope dropped, because review_assignment's own
+  -- scope check catches the same thing one step later. Without these two
+  -- assertions the creation-time guard could be deleted in silence.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger tg
+    JOIN pg_class c ON c.oid = tg.tgrelid
+    WHERE c.relnamespace = 'public'::regnamespace
+      AND c.relname = 'group_assignments'
+      AND tg.tgname = 'trg_assignment_within_scope'
+      AND NOT tg.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'FAIL: trg_assignment_within_scope is missing; an advisor could create an assignment for a competency outside the group scope, and only the mentor would find out, after the student had done the work';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger tg
+    JOIN pg_class c ON c.oid = tg.tgrelid
+    WHERE c.relnamespace = 'public'::regnamespace
+      AND c.relname = 'group_assignments'
+      AND tg.tgname = 'trg_freeze_assessed_assignment'
+      AND NOT tg.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'FAIL: trg_freeze_assessed_assignment is missing; objective, criterion and triplet_id would be editable after approvals exist, so an approval would no longer mean what it meant when it was granted';
+  END IF;
+
   -- STRUCTURAL: the same shape-of-policy check the recursion fix ends with.
   -- These two tables consult group ownership, membership and the mentor link
   -- at once, which is the shape that produced 42P17. This proves no policy
