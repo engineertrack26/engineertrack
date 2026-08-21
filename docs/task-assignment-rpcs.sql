@@ -167,10 +167,18 @@ BEGIN
   WHERE s.id = p_submission_id;
 
   IF p_approved THEN
+    -- one_observation_per_submission is a PARTIAL unique index (predicate:
+    -- assignment_submission_id IS NOT NULL). Postgres only infers a partial
+    -- index as an ON CONFLICT arbiter when the conflict target repeats that
+    -- same predicate; without it, index inference finds no matching arbiter
+    -- and every call raises 42P10, not just genuine duplicates. Repeating the
+    -- WHERE here looks redundant next to the index definition but is load-
+    -- bearing -- do not drop it.
     INSERT INTO kpi_observations
       (student_id, kpi_id, log_id, observed_by, assignment_submission_id)
     VALUES (the_student, the_kpi, NULL, auth.uid(), p_submission_id)
-    ON CONFLICT (assignment_submission_id) DO NOTHING;
+    ON CONFLICT (assignment_submission_id) WHERE assignment_submission_id IS NOT NULL
+      DO NOTHING;
   ELSE
     -- A withdrawn approval must stop counting. Otherwise the student stays
     -- promoted on evidence that was taken back.
