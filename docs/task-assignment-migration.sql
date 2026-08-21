@@ -133,3 +133,67 @@ CREATE POLICY "submissions read" ON assignment_submissions
 -- is the same reasoning that left kpi_observations with no INSERT policy.
 DROP POLICY IF EXISTS "submissions insert" ON assignment_submissions;
 DROP POLICY IF EXISTS "submissions update" ON assignment_submissions;
+
+-- ============================================
+-- A rule RLS cannot express, as a trigger
+-- ============================================
+-- It sits at the end of the file because CREATE TRIGGER needs its table. The
+-- function BODY is plpgsql and so is not resolved against the catalog at
+-- CREATE FUNCTION time -- unlike the LANGUAGE sql helpers above, which is
+-- exactly why those had to be ordered, and this merely follows the same
+-- discipline for readability.
+
+-- Scope is meant to be "enforced twice -- a filter in the UI and a validation
+-- in the RPC". Until now the only enforcement was in review_assignment, which
+-- fires AFTER the student has done the work and reports to the MENTOR, who
+-- cannot fix it: the competency scope lives on the advisor's screen. The
+-- student's submission became unresolvable. Creation is where the advisor can
+-- still act, so the same NOT_IN_SCOPE refusal is raised here.
+--
+-- A trigger rather than a WITH CHECK on "advisor inserts assignments" because
+-- the check must resolve the triplet's competency through kpi_triplets and
+-- competency_kpis; a policy qual that walked those tables would be one more
+-- policy body reading tables it does not own, the pattern this file avoids.
+--
+-- SECURITY DEFINER so the lookup is not itself filtered by the caller's RLS
+-- view of group_competency_targets: an advisor can read their own group's
+-- targets, but the function must answer the same way for every caller.
+CREATE OR REPLACE FUNCTION assignment_within_group_scope()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  the_comp UUID;
+BEGIN
+  SELECT k.competency_id INTO the_comp
+  FROM kpi_triplets t
+  JOIN competency_kpis k ON k.id = t.kpi_id
+  WHERE t.id = NEW.triplet_id;
+
+  -- No separate "triplet not found" branch: triplet_id carries a FOREIGN KEY,
+  -- so the only way the_comp is NULL is a triplet whose KPI vanished, and the
+  -- EXISTS below is false for NULL anyway. One refusal, one code.
+  IF NOT EXISTS (
+    SELECT 1 FROM group_competency_targets gt
+    WHERE gt.group_id = NEW.group_id
+      AND gt.competency_id = the_comp
+  ) THEN
+    RAISE EXCEPTION 'NOT_IN_SCOPE';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_assignment_within_scope ON group_assignments;
+CREATE TRIGGER trg_assignment_within_scope
+  BEFORE INSERT ON group_assignments
+  FOR EACH ROW EXECUTE FUNCTION assignment_within_group_scope();
+
+-- INSERT only, not UPDATE. Narrowing scope after an assignment exists is a
+-- decision the advisor is allowed to make -- get_competency_progress simply
+-- stops reporting that competency, and the observations survive to reappear if
+-- the target is restored. Firing on UPDATE would turn an unrelated edit to a
+-- title into a refusal the advisor cannot explain.
