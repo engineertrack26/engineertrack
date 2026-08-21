@@ -135,13 +135,14 @@ DROP POLICY IF EXISTS "submissions insert" ON assignment_submissions;
 DROP POLICY IF EXISTS "submissions update" ON assignment_submissions;
 
 -- ============================================
--- A rule RLS cannot express, as a trigger
+-- Two rules RLS cannot express, as triggers
 -- ============================================
--- It sits at the end of the file because CREATE TRIGGER needs its table. The
--- function BODY is plpgsql and so is not resolved against the catalog at
--- CREATE FUNCTION time -- unlike the LANGUAGE sql helpers above, which is
--- exactly why those had to be ordered, and this merely follows the same
--- discipline for readability.
+-- Both sit at the end of the file because CREATE TRIGGER needs its table, and
+-- freeze_assessed_assignment calls assignment_has_submissions, which needs
+-- assignment_submissions. The function BODIES are plpgsql and so are not
+-- resolved against the catalog at CREATE FUNCTION time -- unlike the
+-- LANGUAGE sql helpers above, which is exactly why those had to be ordered
+-- and these merely follow the same discipline for readability.
 
 -- Scope is meant to be "enforced twice -- a filter in the UI and a validation
 -- in the RPC". Until now the only enforcement was in review_assignment, which
@@ -197,3 +198,43 @@ CREATE TRIGGER trg_assignment_within_scope
 -- stops reporting that competency, and the observations survive to reappear if
 -- the target is restored. Firing on UPDATE would turn an unrelated edit to a
 -- title into a refusal the advisor cannot explain.
+
+-- objective and criterion are copied from the triplet, and the whole reason for
+-- copying rather than joining is that approvals granted last month must still
+-- mean what they meant when they were granted. That copy was protected against
+-- the unlikely edit -- kpi_triplets has no write policy at all -- and exposed
+-- to the likely one: "advisor updates assignments" is FOR UPDATE with no column
+-- restriction, so the advisor's own screen could rewrite the terms of an
+-- assessment that has already been made. triplet_id is worse still: re-pointing
+-- it moves the assignment to a different KPI while existing observations keep
+-- the old kpi_id, so the record and its evidence disagree with no trace.
+--
+-- RLS has no column-level WITH CHECK, which is why this is a trigger and not a
+-- policy. title, description and due_date stay editable -- those are
+-- presentation, not the terms of assessment.
+--
+-- assignment_has_submissions is the same helper the DELETE policy uses. One
+-- definition of "this assignment is now a record", used by both rules.
+CREATE OR REPLACE FUNCTION freeze_assessed_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF (NEW.objective  IS DISTINCT FROM OLD.objective
+   OR NEW.criterion  IS DISTINCT FROM OLD.criterion
+   OR NEW.triplet_id IS DISTINCT FROM OLD.triplet_id)
+   AND assignment_has_submissions(OLD.id)
+  THEN
+    RAISE EXCEPTION 'ASSIGNMENT_LOCKED';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_freeze_assessed_assignment ON group_assignments;
+CREATE TRIGGER trg_freeze_assessed_assignment
+  BEFORE UPDATE ON group_assignments
+  FOR EACH ROW EXECUTE FUNCTION freeze_assessed_assignment();
