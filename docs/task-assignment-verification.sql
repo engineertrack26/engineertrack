@@ -56,9 +56,25 @@ BEGIN
   -- policy evaluates without recursing (RLS is bypassed here as owner).
   -- kpi_triplets is reference data and assignment_submissions is RPC-only.
   IF EXISTS (SELECT 1 FROM pg_policies
-             WHERE tablename IN ('kpi_triplets','assignment_submissions')
+             WHERE schemaname = 'public'
+               AND tablename IN ('kpi_triplets','assignment_submissions')
                AND cmd <> 'SELECT') THEN
     RAISE EXCEPTION 'FAIL: a write policy exists on a read-only or RPC-only table';
+  END IF;
+
+  -- STRUCTURAL, same caveat: proves no write policy exists on
+  -- kpi_observations, never that the SELECT policy evaluates without
+  -- recursing. This absence is the security foundation the whole
+  -- approval-to-observation bridge rests on: record_kpi_observations and
+  -- review_assignment are SECURITY DEFINER and take observed_by from
+  -- auth.uid() themselves, so nothing else may write here. A single INSERT
+  -- policy would let a client set observed_by to somebody else and
+  -- manufacture the two independent observations a level requires.
+  IF EXISTS (SELECT 1 FROM pg_policies
+             WHERE schemaname = 'public'
+               AND tablename = 'kpi_observations'
+               AND cmd <> 'SELECT') THEN
+    RAISE EXCEPTION 'FAIL: a write policy exists on kpi_observations; a client could set observed_by to somebody else and manufacture the two independent observations a level requires';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_indexes
@@ -102,7 +118,8 @@ BEGIN
   -- recursion — only the absence of the pattern that is known to cause one.
   IF EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE tablename IN ('group_assignments','assignment_submissions')
+    WHERE schemaname = 'public'
+      AND tablename IN ('group_assignments','assignment_submissions')
       AND (coalesce(qual, '')       ~ '\minternship_groups\M'
         OR coalesce(qual, '')       ~ '\mgroup_memberships\M'
         OR coalesce(with_check, '') ~ '\minternship_groups\M'
