@@ -90,6 +90,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   4 full level      current_level = 1
 --   5 log re-save     task observation survived
 --   6 out of scope    rejected NOT_IN_SCOPE
+--   7 reopen approved rejected ALREADY_APPROVED
 --
 -- Needs an advisor and a student whose student_profiles.mentor_id is set.
 -- With neither present the script reports SKIP rather than failing, because
@@ -229,6 +230,25 @@ BEGIN
   log := log || '5 log re-save' || E'\t'
       || CASE WHEN n >= 4 THEN 'task observation survived'
               ELSE 'FAIL: only ' || n || ' task observations left' END || E'\n';
+
+  -- 7. A student cannot reopen their own approved submission. `sub` is the last
+  --    submission case 4 approved, and the observation it produced is still
+  --    counting toward the level. Letting submit_assignment reset that row to
+  --    'submitted' would leave evidence standing behind a submission nobody
+  --    approved, and would erase the mentor's attribution on a record that still
+  --    grants credit. Reopening is review_assignment(id, false, note), which
+  --    retracts the observation in the same statement.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  BEGIN
+    PERFORM submit_assignment(
+      (SELECT s.assignment_id FROM assignment_submissions s WHERE s.id = sub),
+      'trying again', NULL);
+    log := log || '7 reopen approved' || E'\t' || 'FAIL: resubmission accepted' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '7 reopen approved' || E'\t'
+        || CASE WHEN SQLERRM = 'ALREADY_APPROVED' THEN 'rejected ALREADY_APPROVED'
+                ELSE 'FAIL (wrong error): ' || SQLERRM END || E'\n';
+  END;
 
   -- 6. A competency outside the group's scope must be refused at review time,
   --    or the student is approved and nothing moves.

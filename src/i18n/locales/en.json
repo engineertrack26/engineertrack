@@ -273,6 +273,7 @@
     "membershipNotFound": "That membership no longer exists. Refresh and try again.",
     "assignmentNotFound": "That task no longer exists.",
     "submissionNotFound": "That submission no longer exists.",
-    "notInScope": "This competency is not part of the group's scope."
+    "notInScope": "This competency is not part of the group's scope.",
+    "alreadyApproved": "This task has already been approved. Ask your mentor to reopen it if you need to change your submission."
   }
 }

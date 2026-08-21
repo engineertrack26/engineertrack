@@ -87,6 +87,29 @@ BEGIN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
   END IF;
 
+  -- An approved submission is a finished record. The observation it produced is
+  -- counting toward a competency level and carries the mentor's name.
+  --
+  -- Without this guard the DO UPDATE below would reset the row to 'submitted'
+  -- and clear reviewed_by while leaving that observation in place — the one
+  -- state this design says cannot exist: evidence backed by a submission nobody
+  -- approved. review_assignment handles the mentor withdrawing an approval and
+  -- deletes the observation in the same statement; nothing handled the student
+  -- reopening it from this side, because the rule is written over there and the
+  -- hole was here.
+  --
+  -- Reopening stays the mentor's call: review_assignment(id, false, note) moves
+  -- the row to needs_revision and retracts the observation, and the student can
+  -- resubmit from there. That path is exercised by the verification script.
+  IF EXISTS (
+    SELECT 1 FROM assignment_submissions s
+    WHERE s.assignment_id = p_assignment_id
+      AND s.student_id = auth.uid()
+      AND s.status = 'approved'
+  ) THEN
+    RAISE EXCEPTION 'ALREADY_APPROVED';
+  END IF;
+
   INSERT INTO assignment_submissions
     (assignment_id, student_id, status, student_note, log_id, submitted_at)
   VALUES (p_assignment_id, auth.uid(), 'submitted', p_note, p_log_id, now())
