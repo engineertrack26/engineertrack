@@ -324,11 +324,12 @@ def check(kpis, triplets):
         (t["competency"], t["level"], t["kpi_index"]) for t in triplets
     )
     if len(counts) != len(kpis):
-        raise SystemExit(f"FAIL: {len(counts)} KPIs carry triplets, expected {len(kpis)}")
+        problems.append("%d KPIs carry triplets, expected %d"
+                        % (len(counts), len(kpis)))
 
     outside = {k: n for k, n in counts.items() if not 8 <= n <= 12}
     if outside:
-        raise SystemExit(f"FAIL: KPIs outside the 8-12 band: {outside}")
+        problems.append("KPIs outside the 8-12 band: %r" % (outside,))
 
     # Within the band this is not a failure, but it is where a missing triplet
     # would hide, so it is reported for the human pass. The document says ten
