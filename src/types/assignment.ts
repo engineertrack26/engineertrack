@@ -31,6 +31,7 @@ export interface AssignmentSubmission {
   logId?: string;
   submittedAt: string;
   reviewedAt?: string;
+  reviewedBy?: string;
 }
 
 /** An assignment as one student sees it: the task plus their own state, which

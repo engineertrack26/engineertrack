@@ -29,6 +29,7 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
     logId: (r.log_id as string) || undefined,
     submittedAt: (r.submitted_at as string) || '',
     reviewedAt: (r.reviewed_at as string) || undefined,
+    reviewedBy: (r.reviewed_by as string) || undefined,
   };
 }
 
