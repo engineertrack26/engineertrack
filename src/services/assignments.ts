@@ -127,11 +127,21 @@ export const assignmentService = {
   },
 
   /** Submissions waiting on this mentor. RLS already limits the rows to the
-   *  students they supervise, so the status filter is the whole query. */
+   *  students they supervise, so the status filter is the whole query.
+   *
+   *  The embed is an INNER join because the two tables are reached by different
+   *  policies: the mentor reads assignment_submissions through
+   *  is_mentor_of(student_id), which is group-independent, but reads
+   *  group_assignments through mentors_a_member_of_group(group_id), which needs
+   *  an ACTIVE membership. Close the student's membership, or let them join a
+   *  new group, and the mentor keeps the submission while the assignment
+   *  disappears — leaving a review card with no title, no task and, worst, no
+   *  criterion, the one thing the mentor is supposed to judge against. A row
+   *  they cannot evaluate is worse than a row they cannot see. */
   async listPendingReviews(): Promise<Array<AssignmentSubmission & { assignment: GroupAssignment }>> {
     const { data, error } = await supabase
       .from('assignment_submissions')
-      .select('*, group_assignments(*)')
+      .select('*, group_assignments!inner(*)')
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: true });
     if (error) throw error;
@@ -140,6 +150,8 @@ export const assignmentService = {
       const r = row as Record<string, unknown>;
       return {
         ...toSubmission(r),
+        // The `!inner` above is what actually prevents a parentless row from
+        // reaching here; this fallback only keeps the mapper total.
         assignment: toAssignment((r.group_assignments || {}) as Record<string, unknown>),
       };
     });
