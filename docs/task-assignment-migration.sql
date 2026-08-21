@@ -50,9 +50,23 @@ CREATE POLICY "assignments read" ON group_assignments
     OR mentors_a_member_of_group(group_id)
   );
 
+-- Replaced by three separately-governed policies below (insert, update,
+-- delete) so a database that already has this FOR ALL policy loses it on
+-- re-run. FOR ALL included DELETE, and this table's child rows can carry
+-- approvals that must not be casually erasable — see the delete policy.
 DROP POLICY IF EXISTS "advisor writes assignments" ON group_assignments;
-CREATE POLICY "advisor writes assignments" ON group_assignments
-  FOR ALL TO authenticated
+
+DROP POLICY IF EXISTS "advisor inserts assignments" ON group_assignments;
+CREATE POLICY "advisor inserts assignments" ON group_assignments
+  FOR INSERT TO authenticated
+  WITH CHECK (owns_group(group_id));
+
+-- WITH CHECK matters as much as USING here: with only USING, an advisor
+-- could move a row to a group they do not own, because USING only tests the
+-- row as it stood BEFORE the update.
+DROP POLICY IF EXISTS "advisor updates assignments" ON group_assignments;
+CREATE POLICY "advisor updates assignments" ON group_assignments
+  FOR UPDATE TO authenticated
   USING (owns_group(group_id))
   WITH CHECK (owns_group(group_id));
 
@@ -78,6 +92,29 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
 
 CREATE INDEX IF NOT EXISTS assignment_submissions_student_idx
   ON assignment_submissions(student_id, status);
+
+-- An assignment nobody has acted on is a mistake the advisor can take back.
+-- One that carries submissions is a record: deleting it would cascade away
+-- approvals and, through them, the KPI observations those approvals produced.
+-- SECURITY DEFINER because the policy must see whether ANY student has
+-- submitted, and an advisor's own RLS view of assignment_submissions is
+-- limited to their group's students; this also keeps the rule this file
+-- already follows -- no policy body reads another RLS-protected table
+-- directly.
+CREATE OR REPLACE FUNCTION assignment_has_submissions(p_assignment_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM assignment_submissions s
+    WHERE s.assignment_id = p_assignment_id
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION assignment_has_submissions(UUID) TO authenticated;
+
+DROP POLICY IF EXISTS "advisor deletes assignments" ON group_assignments;
+CREATE POLICY "advisor deletes assignments" ON group_assignments
+  FOR DELETE TO authenticated
+  USING (owns_group(group_id) AND NOT assignment_has_submissions(id));
 
 ALTER TABLE assignment_submissions ENABLE ROW LEVEL SECURITY;
 
