@@ -111,7 +111,7 @@ BEGIN;
 DO $$
 DECLARE
   adv UUID; stu UUID; men UUID; grp UUID; comp UUID;
-  kpi1 UUID; kpi2 UUID; lg UUID;
+  kpi1 UUID; kpi2 UUID;
   asg UUID; sub UUID; n INT; lvl INT; log TEXT := '';
   t RECORD;
 BEGIN
@@ -203,13 +203,27 @@ BEGIN
       || CASE WHEN lvl = 1 THEN 'current_level = 1'
               ELSE 'FAIL: current_level = ' || coalesce(lvl, -1) END || E'\n';
 
-  -- 5. Saving a daily log must not sweep away task observations. This is the
-  --    only thing asserting the `assignment_submission_id IS NULL` clause in
-  --    record_kpi_observations; without it that clause could be deleted and
-  --    nothing would fail.
-  INSERT INTO daily_logs (student_id, date, title, content)
-  VALUES (stu, DATE '1900-01-01', 'Probe log', 'Probe log') RETURNING id INTO lg;
-  PERFORM record_kpi_observations(stu, lg, ARRAY[kpi1]);
+  -- 5. Saving a daily log must not sweep away task observations, protected by
+  --    the `assignment_submission_id IS NULL` clause in
+  --    record_kpi_observations's DELETE. To make that clause the thing this
+  --    case actually depends on, the other three predicates of the DELETE
+  --    must all match the four task observations from case 4 — student_id,
+  --    log_id, and observed_by — leaving assignment_submission_id IS NULL as
+  --    the only reason they survive.
+  --
+  --    Those observations carry log_id = NULL (review_assignment sets it
+  --    explicitly) and observed_by = men (the mentor approved them). Calling
+  --    as the student with a real log id — the shape the app actually uses —
+  --    would exclude them by observed_by and by log_id before the clause
+  --    under test ever gets consulted, and this case would report success
+  --    even with the clause deleted.
+  --
+  --    So: call as the mentor, whose id is on those observations, with a NULL
+  --    log id. Passing an empty KPI array keeps the case focused — nothing is
+  --    deleted or inserted by the array-driven parts of the function, so the
+  --    only thing being measured is whether the DELETE spared the task rows.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', men)::text, true);
+  PERFORM record_kpi_observations(stu, NULL, ARRAY[]::UUID[]);
   SELECT count(*) INTO n FROM kpi_observations o
   WHERE o.student_id = stu AND o.assignment_submission_id IS NOT NULL;
   log := log || '5 log re-save' || E'\t'
