@@ -39,4 +39,10 @@ describe('mapRpcError', () => {
       key: 'errors.groupNotFound',
     });
   });
+
+  it('maps the assignment error codes', () => {
+    expect(mapRpcError('ASSIGNMENT_NOT_FOUND').key).toBe('errors.assignmentNotFound');
+    expect(mapRpcError('SUBMISSION_NOT_FOUND').key).toBe('errors.submissionNotFound');
+    expect(mapRpcError('NOT_IN_SCOPE').key).toBe('errors.notInScope');
+  });
 });

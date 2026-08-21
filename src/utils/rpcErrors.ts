@@ -12,6 +12,9 @@ const ERROR_KEYS: Record<string, string> = {
   GROUP_ARCHIVED: 'errors.groupArchived',
   GROUP_NOT_FOUND: 'errors.groupNotFound',
   MEMBERSHIP_NOT_FOUND: 'errors.membershipNotFound',
+  ASSIGNMENT_NOT_FOUND: 'errors.assignmentNotFound',
+  SUBMISSION_NOT_FOUND: 'errors.submissionNotFound',
+  NOT_IN_SCOPE: 'errors.notInScope',
 };
 
 /**
