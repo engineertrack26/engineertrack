@@ -56,10 +56,13 @@ CREATE POLICY "assignments read" ON group_assignments
 -- approvals that must not be casually erasable — see the delete policy.
 DROP POLICY IF EXISTS "advisor writes assignments" ON group_assignments;
 
+-- created_by = auth.uid() as well as owns_group(group_id): without it, an
+-- advisor could still own the group but attribute the assignment to another
+-- profile, since WITH CHECK only tested group ownership before.
 DROP POLICY IF EXISTS "advisor inserts assignments" ON group_assignments;
 CREATE POLICY "advisor inserts assignments" ON group_assignments
   FOR INSERT TO authenticated
-  WITH CHECK (owns_group(group_id));
+  WITH CHECK (owns_group(group_id) AND created_by = auth.uid());
 
 -- WITH CHECK matters as much as USING here: with only USING, an advisor
 -- could move a row to a group they do not own, because USING only tests the
@@ -101,11 +104,26 @@ CREATE INDEX IF NOT EXISTS assignment_submissions_student_idx
 -- limited to their group's students; this also keeps the rule this file
 -- already follows -- no policy body reads another RLS-protected table
 -- directly.
+--
+-- Scoped to the caller: without owns_group(a.group_id), any signed-in user
+-- could pass an arbitrary assignment id and learn whether it has submissions.
+-- Narrowing this cannot loosen the DELETE policy below, which is
+-- USING (owns_group(group_id) AND NOT assignment_has_submissions(id)) -- for
+-- a non-owner, owns_group is already false, so the whole AND is false
+-- regardless of what this function returns. It also cannot loosen
+-- freeze_assessed_assignment's guard: that trigger only ever runs on a row
+-- an UPDATE already reached through "advisor updates assignments", whose own
+-- USING/WITH CHECK already required owns_group(group_id) for this same
+-- auth.uid(), so the extra check here is never the reason the trigger's
+-- caller fails it.
 CREATE OR REPLACE FUNCTION assignment_has_submissions(p_assignment_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
-    SELECT 1 FROM assignment_submissions s
+    SELECT 1
+    FROM assignment_submissions s
+    JOIN group_assignments a ON a.id = s.assignment_id
     WHERE s.assignment_id = p_assignment_id
+      AND owns_group(a.group_id)
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
