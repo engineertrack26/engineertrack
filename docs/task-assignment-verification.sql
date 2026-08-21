@@ -18,8 +18,8 @@
 -- editor runs as the table owner, and an owner bypasses RLS entirely. These
 -- checks prove a policy exists (or that no write policy exists); they never
 -- prove a policy can be evaluated without recursing. On 2026-08-20 two green
--- verification runs hid a 42P17 recursion for exactly this reason. C2's
--- device checklist is what actually exercises the policies.
+-- verification runs hid a 42P17 recursion for exactly this reason.
+-- C2's device checklist is what actually exercises the policies.
 
 -- ============================================================
 -- PART A — schema assertions
@@ -84,13 +84,14 @@ SELECT 'PASS: schema assertions held' AS result;
 -- ============================================================
 -- PART B — the rules. Submit BEGIN..ROLLBACK in one go.
 --
---   1 approval        1 observation
---   2 re-approval     still 1 observation
---   3 withdrawal      0 observations
---   4 full level      current_level = 1
---   5 log re-save     task observation survived
---   6 out of scope    rejected NOT_IN_SCOPE
---   7 reopen approved rejected ALREADY_APPROVED
+--   1 approval           1 observation
+--   2 re-approval        still 1 observation
+--   3 withdrawal         0 observations
+--   4 full level         current_level = 1
+--   5 log re-save        task observation survived
+--   5b log tick insert   2 ticks in, 4 task observations still there
+--   6 out of scope       rejected NOT_IN_SCOPE
+--   7 reopen approved    rejected ALREADY_APPROVED
 --
 -- Needs an advisor and a student whose student_profiles.mentor_id is set.
 -- With neither present the script reports SKIP rather than failing, because
@@ -113,7 +114,7 @@ DO $$
 DECLARE
   adv UUID; stu UUID; men UUID; grp UUID; comp UUID;
   kpi1 UUID; kpi2 UUID;
-  asg UUID; sub UUID; n INT; lvl INT; log TEXT := '';
+  asg UUID; sub UUID; lg UUID; n INT; n2 INT; lvl INT; log TEXT := '';
   t RECORD;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -231,6 +232,39 @@ BEGIN
       || CASE WHEN n >= 4 THEN 'task observation survived'
               ELSE 'FAIL: only ' || n || ' task observations left' END || E'\n';
 
+  -- 5b. Case 5 above is deliberately the isolated one: mentor, NULL log, empty
+  --     array, so that `assignment_submission_id IS NULL` is the only reason the
+  --     task rows survive. The price is that nothing then exercises
+  --     record_kpi_observations on its REAL path -- a student saving a log with
+  --     boxes ticked -- which is the one function C1 changed. A guard clause can
+  --     be made to pass by a call that never reaches the INSERT at all.
+  --
+  --     So: as the STUDENT, with a real daily_logs id and a non-empty KPI array.
+  --     Both halves are asserted, because either alone would mislead. The ticks
+  --     must land -- the INSERT branch runs and writes observed_by = the student
+  --     -- AND the four task observations from case 4 must still be there, this
+  --     time with the DELETE having run on the shape the app actually sends.
+  --
+  --     The date is in 1900 for the reason the header gives: daily_logs carries
+  --     UNIQUE(student_id, date), and colliding with a real log the student
+  --     already wrote would surface as a unique_violation that reads like a bug
+  --     in the framework rather than a fixture clash.
+  INSERT INTO daily_logs (student_id, date, title, content)
+  VALUES (stu, DATE '1900-01-01', 'Probe tick', 'Probe tick') RETURNING id INTO lg;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  PERFORM record_kpi_observations(stu, lg, ARRAY[kpi1, kpi2]);
+
+  SELECT count(*) INTO n FROM kpi_observations o
+  WHERE o.student_id = stu AND o.log_id = lg AND o.observed_by = stu;
+  SELECT count(*) INTO n2 FROM kpi_observations o
+  WHERE o.student_id = stu AND o.assignment_submission_id IS NOT NULL;
+  log := log || '5b log tick insert' || E'\t'
+      || CASE WHEN n = 2 AND n2 >= 4 THEN '2 ticks in, 4 task observations still there'
+              WHEN n <> 2 THEN 'FAIL: ' || n || ' ticks landed, expected 2'
+              ELSE 'FAIL: ticks landed but only ' || n2
+                   || ' task observations left' END || E'\n';
+
   -- 7. A student cannot reopen their own approved submission. `sub` is the last
   --    submission case 4 approved, and the observation it produced is still
   --    counting toward the level. Letting submit_assignment reset that row to
@@ -252,13 +286,21 @@ BEGIN
 
   -- 6. A competency outside the group's scope must be refused at review time,
   --    or the student is approved and nothing moves.
-  DELETE FROM group_competency_targets gt
-  WHERE gt.group_id = grp AND gt.competency_id = comp;
-
+  --
+  --    Order matters here. trg_assignment_within_scope now rejects the INSERT
+  --    itself once the target is gone, so the assignment has to be created
+  --    while the competency IS in scope and the target removed afterwards --
+  --    the only sequence that still reaches review_assignment's own check. It
+  --    is the truer scenario anyway: the advisor narrows the group's scope
+  --    after tasks are already outstanding, which is now the only way a
+  --    submission can arrive for a competency the group does not target.
   INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
   SELECT grp, tr.id, 'Probe scope', tr.objective, tr.criterion, adv
   FROM kpi_triplets tr WHERE tr.kpi_id = kpi1 ORDER BY tr.triplet_index DESC LIMIT 1
   RETURNING id INTO asg;
+
+  DELETE FROM group_competency_targets gt
+  WHERE gt.group_id = grp AND gt.competency_id = comp;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
   SELECT submit_assignment(asg, 'probe', NULL) INTO sub;
