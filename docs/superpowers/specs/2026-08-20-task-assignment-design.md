@@ -11,7 +11,7 @@ not the KPI:
 
 > Öğrenme Hedefi → Görev/Sorumluluk → Değerlendirme Kriterleri
 
-Each of the 48 KPIs expands into roughly ten of these triplets — 478 in total.
+Each of the 48 KPIs expands into roughly ten of these triplets — 480 in total.
 The document calls the chain "yapıcı uyum": the learning objective states what the
 student should acquire, the task is the real workplace activity that develops it,
 and the criterion is the transparent, measurable evidence that it happened.
@@ -19,7 +19,7 @@ and the criterion is the transparent, measurable evidence that it happened.
 Subsystem B built the measurement half of this. The app can say *"this student is
 at level 2 in Technical Documentation."* It cannot say *"this task was assigned,
 it serves this objective, and it will be judged by this criterion."* There is no
-task concept anywhere: none of the 27 tables is an assignment, and the 478
+task concept anywhere: none of the 27 tables is an assignment, and the 480
 triplets exist only as `.tmp/triplets.json`, which is gitignored.
 
 Subsystem C builds that half.
@@ -82,7 +82,7 @@ row 3+  the triplets
 
 So a triplet belongs to the KPI heading in its own table. Verified across the
 document: 48 heading rows, each in its own table, 48 distinct tables, and 499 raw
-triplet rows that merge to 478 once rows split across a page break are rejoined.
+triplet rows that merge to 480 once rows split across a page break are rejoined.
 
 No page coordinates, no ambiguous pages, no boundary to resolve by hand. Walk the
 tables in `(page, order)` sequence and attach each triplet row to the heading row
@@ -101,10 +101,10 @@ A boundary error is silent. A triplet attached to the wrong KPI leaves no gap an
 raises nothing — just a plausible sentence in the wrong place. So the check
 targets the *shape* of that failure rather than its symptom:
 
-- all 478 assigned, none orphaned
+- all 480 assigned, none orphaned
 - each of the 48 KPIs has at least one triplet
 - **every KPI holds between 8 and 12 triplets, and the run fails otherwise.**
-  The document says ten each; 478 across 48 averages 9.96. When a boundary slips,
+  The document says ten each; 480 across 48 is exactly ten. When a boundary slips,
   one KPI takes about twenty and its neighbour takes none, so a band this tight
   catches exactly that and tolerates the small genuine variation. Any KPI not
   holding exactly ten is additionally listed for the human pass — within the band
@@ -114,7 +114,7 @@ targets the *shape* of that failure rather than its symptom:
 Then a human step: one random triplet per KPI, printed with its assignment, for
 comparison against the PDF. Forty-eight samples, one sitting.
 
-Output is a generated migration, `docs/task-triplets-migration.sql`, 478 rows,
+Output is a generated migration, `docs/task-triplets-migration.sql`, 480 rows,
 not hand-edited — same discipline as the competency seed.
 
 ### Sequencing
@@ -300,7 +300,7 @@ device pass then cannot tell you which layer is wrong.
 
 Following the pattern that worked for subsystem B:
 
-- **Part A**, schema assertions: 478 triplets, every KPI covered, the distribution
+- **Part A**, schema assertions: 480 triplets, every KPI covered, the distribution
   band, no write policy on `kpi_triplets` or `assignment_submissions`.
 - **Part B**, the rules, inside a transaction that rolls back: an approval writes
   exactly one observation; re-approval writes no second one; withdrawal removes
@@ -317,10 +317,14 @@ Following the pattern that worked for subsystem B:
   silently truncated by the first version of this extractor and nothing downstream
   noticed. The distribution band and the 48-sample human pass are the answer, and
   they are not optional.
-- **478, not 480.** Either two triplets are missing from the extraction or the
-  document genuinely has 478. This cannot be settled from the PDF alone; the
-  structured source from the project team would settle it. Worth requesting in
-  parallel even though the decision was to proceed from the PDF.
+- **480, settled.** This was an open question at design time; it no longer is.
+  Two independent bugs in the extractor — a continuation row discarded whenever
+  any one of its three cells arrived empty at a page break, and a column-header
+  filter that matched "LEARNING" as a substring and so also dropped any triplet
+  whose own objective happened to contain that word — were together eating two
+  triplets. Commit `2d75f38` fixed both. The extraction now yields 480, with
+  every one of the 48 KPIs holding exactly 10; no structured source from the
+  project team was needed to settle it.
 - **`join_group_by_code` sets `student_profiles.advisor_id` with an UPDATE that
   silently affects zero rows** if the student has not completed the internship
   form. The dashboard gate forces the form first, so the order holds today by

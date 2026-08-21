@@ -318,7 +318,7 @@ python scripts/generate-triplet-seed.py .tmp/triplets.json > docs/task-triplets-
 grep -c "^  ('" docs/task-triplets-migration.sql
 ```
 
-Expected: `478`. Any other number means the generator dropped rows; do not proceed.
+Expected: `480`. Any other number means the generator dropped rows; do not proceed.
 
 - [ ] **Step 3: Check the quoting survived**
 

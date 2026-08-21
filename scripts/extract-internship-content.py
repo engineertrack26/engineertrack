@@ -332,7 +332,7 @@ def check(kpis, triplets):
 
     # Within the band this is not a failure, but it is where a missing triplet
     # would hide, so it is reported for the human pass. The document says ten
-    # each; 478 across 48 averages 9.96.
+    # each; 480 across 48 is exactly ten.
     uneven = {k: n for k, n in counts.items() if n != 10}
     print(f"note: {len(uneven)} KPIs do not hold exactly 10 triplets: {uneven}", file=sys.stderr)
 
