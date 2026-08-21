@@ -6,7 +6,8 @@
 -- — an approval writes exactly one observation, a withdrawal takes it back, a
 -- level needs both its KPIs demonstrated twice, a log re-save must not sweep
 -- away a task observation, and a competency outside the group's scope is
--- refused at review time — inside a transaction that rolls back.
+-- refused at review time — inside a transaction that rolls back. Part C drops
+-- into the `authenticated` role and evaluates the policies themselves.
 --
 -- The Supabase SQL editor gives each submission its own connection, so a temp
 -- table written in one statement is invisible to the next (42P01). Results
@@ -19,7 +20,12 @@
 -- checks prove a policy exists (or that no write policy exists); they never
 -- prove a policy can be evaluated without recursing. On 2026-08-20 two green
 -- verification runs hid a 42P17 recursion for exactly this reason.
--- C2's device checklist is what actually exercises the policies.
+--
+-- Part C is the answer to that blind spot: `SET LOCAL ROLE authenticated`
+-- makes the same session subject to RLS, so the three assertions there are the
+-- first in this project that actually EVALUATE a policy rather than read its
+-- catalog entry. Parts A and B still run as owner and are still structural —
+-- do not read a green Part A as evidence that a policy works.
 
 -- ============================================================
 -- PART A — schema assertions
@@ -316,6 +322,183 @@ BEGIN
 
   PERFORM set_config('probe.results', log, true);
 END $$;
+
+SELECT split_part(line, E'\t', 1) AS step,
+       split_part(line, E'\t', 2) AS result
+FROM unnest(string_to_array(current_setting('probe.results'), E'\n')) AS line
+WHERE line <> ''
+ORDER BY 1;
+
+ROLLBACK;
+
+
+-- ============================================================
+-- PART C — the policies, actually evaluated. Submit BEGIN..ROLLBACK in one go.
+--
+--   C1 delete unused      deleted
+--   C2 delete assessed    0 rows deleted, row still there
+--   C3 direct submission  refused by RLS (42501)
+--
+-- Parts A and B run as the table owner, and an owner bypasses RLS. Every RLS
+-- claim this project has made so far is therefore structural: it proves a
+-- policy EXISTS. On 2026-08-20 that blind spot let a 42P17 recursion through
+-- two green verification runs. `SET LOCAL ROLE authenticated` closes it — the
+-- same session, now subject to RLS, so a policy that cannot be evaluated fails
+-- here instead of failing on a device.
+--
+-- Why C2 asserts a row count and not an error: for DELETE and UPDATE, a USING
+-- qual FILTERS rows rather than raising. An advisor deleting an assignment that
+-- carries submissions gets a perfectly successful statement affecting zero
+-- rows, so "it did not raise" proves nothing and the row itself has to be
+-- looked for afterwards. Only INSERT/WITH CHECK raises, which is why C3 can
+-- assert an error.
+--
+-- C3 is the one that matters most. assignment_submissions has no INSERT policy
+-- because review_assignment's approval writes a KPI observation; if a client
+-- could insert a submission directly, that observation would be forgeable. An
+-- accepted insert here is reported as FAIL, not as a curiosity.
+--
+-- The fixtures are built as the owner BEFORE the role change, and their ids are
+-- handed over in transaction-local GUCs — a temp table would be invisible to
+-- the next statement (42P01), and PL/pgSQL variables do not outlive their DO
+-- block. Building them as owner is not a shortcut: the submission C2 needs
+-- cannot be created through RLS by anyone, which is exactly what C3 asserts.
+-- ============================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+  adv UUID; stu UUID; grp UUID; kpi UUID;
+  a_free UUID; a_used UUID; a_spare UUID;
+BEGIN
+  SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
+  SELECT id INTO stu FROM profiles WHERE role = 'student'  ORDER BY created_at LIMIT 1;
+
+  IF adv IS NULL OR stu IS NULL THEN
+    PERFORM set_config('probe.ready', 'no', true);
+    RETURN;
+  END IF;
+
+  INSERT INTO internship_groups (advisor_id, name)
+  VALUES (adv, 'Probe policies') RETURNING id INTO grp;
+
+  -- tr_seed_group_competency_targets seeded every competency as a target on
+  -- that INSERT, so any triplet is in scope and trg_assignment_within_scope
+  -- lets these three through. Three separate assignments, because C1 deletes
+  -- one, C2 needs one that already carries a submission, and C3 must insert
+  -- against a third: attempting C3 against C2's assignment would hit
+  -- UNIQUE (assignment_id, student_id) and could not tell an RLS refusal apart
+  -- from a duplicate.
+  SELECT k.id INTO kpi
+  FROM competency_kpis k
+  JOIN competencies c ON c.id = k.competency_id
+  WHERE k.level = 1 AND k.kpi_index = 1
+  ORDER BY c.display_order LIMIT 1;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe free', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 0 LIMIT 1
+  RETURNING id INTO a_free;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe used', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO a_used;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe spare', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 2 LIMIT 1
+  RETURNING id INTO a_spare;
+
+  INSERT INTO assignment_submissions (assignment_id, student_id, status)
+  VALUES (a_used, stu, 'submitted');
+
+  PERFORM set_config('probe.ready',   'yes',         true);
+  PERFORM set_config('probe.adv',     adv::text,     true);
+  PERFORM set_config('probe.stu',     stu::text,     true);
+  PERFORM set_config('probe.a_free',  a_free::text,  true);
+  PERFORM set_config('probe.a_used',  a_used::text,  true);
+  PERFORM set_config('probe.a_spare', a_spare::text, true);
+END $$;
+
+-- The line the whole part turns on. In Supabase the SQL editor connects as
+-- `postgres`, which is a member of `authenticated`, so this succeeds. If it
+-- raises 42501 (insufficient_privilege) in your editor, STOP: do not replace
+-- the three cases below with catalog lookups, because a structural check here
+-- would assert exactly what Part A already asserts while reading as though it
+-- had proved more. Report Part C as unrunnable instead.
+SET LOCAL ROLE authenticated;
+
+DO $$
+DECLARE
+  adv UUID; stu UUID; a_free UUID; a_used UUID; a_spare UUID;
+  n INT; n2 INT; log TEXT := '';
+BEGIN
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
+    PERFORM set_config('probe.results',
+      'C1-C3 policies' || E'\t' || 'SKIP: needs one advisor and one student profile' || E'\n', true);
+    RETURN;
+  END IF;
+
+  adv     := current_setting('probe.adv')::UUID;
+  stu     := current_setting('probe.stu')::UUID;
+  a_free  := current_setting('probe.a_free')::UUID;
+  a_used  := current_setting('probe.a_used')::UUID;
+  a_spare := current_setting('probe.a_spare')::UUID;
+
+  -- C1. The advisor owns the group and nobody has submitted, so
+  --     "advisor deletes assignments" lets the row go. This is the positive
+  --     control: without it, C2 passing would be indistinguishable from the
+  --     policy refusing everything, or from the advisor not being able to see
+  --     the row at all.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', adv)::text, true);
+
+  DELETE FROM group_assignments a WHERE a.id = a_free;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  log := log || 'C1 delete unused' || E'\t'
+      || CASE WHEN n = 1 THEN 'deleted'
+              ELSE 'FAIL: ' || n || ' rows deleted, expected 1' END || E'\n';
+
+  -- C2. The same advisor, an assignment that carries a submission. The USING
+  --     qual filters the row out, so the statement succeeds and affects
+  --     nothing — and the row must still be there afterwards. Deleting it would
+  --     cascade away the submission and, through it, any KPI observation the
+  --     approval produced.
+  DELETE FROM group_assignments a WHERE a.id = a_used;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  SELECT count(*) INTO n2 FROM group_assignments a WHERE a.id = a_used;
+  log := log || 'C2 delete assessed' || E'\t'
+      || CASE WHEN n = 0 AND n2 = 1 THEN '0 rows deleted, row still there'
+              WHEN n <> 0 THEN 'FAIL: ' || n || ' rows deleted'
+              ELSE 'FAIL: row is gone' END || E'\n';
+
+  -- C3. A student writing a submission directly. There is no INSERT policy, so
+  --     WITH CHECK has nothing to satisfy and the write must be refused. If it
+  --     is accepted, the RPC-only write path has a hole and a KPI observation
+  --     could be forged from a submission the student wrote for themselves.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  BEGIN
+    INSERT INTO assignment_submissions (assignment_id, student_id, status)
+    VALUES (a_spare, stu, 'submitted');
+    log := log || 'C3 direct submission' || E'\t'
+        || 'FAIL: insert accepted -- an observation could be forged' || E'\n';
+  EXCEPTION WHEN insufficient_privilege THEN
+    -- 42501 covers both refusals worth having: "new row violates row-level
+    -- security policy" and a missing table-level INSERT grant. Either one means
+    -- the client cannot write here.
+    log := log || 'C3 direct submission' || E'\t' || 'refused by RLS (42501)' || E'\n';
+  WHEN OTHERS THEN
+    log := log || 'C3 direct submission' || E'\t'
+        || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  PERFORM set_config('probe.results', log, true);
+END $$;
+
+-- Back to the owner before anything else reads the results, so a failure in the
+-- SELECT below cannot be blamed on the role change.
+RESET ROLE;
 
 SELECT split_part(line, E'\t', 1) AS step,
        split_part(line, E'\t', 2) AS result
