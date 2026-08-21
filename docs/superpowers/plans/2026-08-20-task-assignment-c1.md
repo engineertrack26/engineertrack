@@ -1278,10 +1278,24 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 The migrations are applied by hand in this order, each verified before the next:
 
-1. `docs/task-triplets-migration.sql`
-2. `docs/task-assignment-migration.sql`
-3. `docs/task-assignment-rpcs.sql`
+1. `docs/competency-assessment-migration.sql` — **re-apply.** Already live, but it
+   now declares `kpi_observations.assignment_submission_id`. The column moved here,
+   next to the table it belongs to, because `record_kpi_observations` reads it and
+   that function is defined in the file below, which runs first. Idempotent.
+2. `docs/competency-rpcs.sql` — **re-apply.** Already live, but it now carries the
+   hardened `record_kpi_observations`, which no longer has a second copy anywhere.
+3. `docs/task-triplets-migration.sql`
+4. `docs/task-assignment-migration.sql`
+5. `docs/task-assignment-rpcs.sql` — adds the FOREIGN KEY for that column, the
+   partial unique index, and the three assignment functions.
 
 Then Part A and Part B of the verification.
+
+Steps 1 and 2 are new. Before this restructuring, `record_kpi_observations` was
+defined in two files and the older one held the un-hardened body — so re-applying
+`competency-rpcs.sql`, which this project's own idempotency convention invites and
+which a fresh rebuild in filename order does by itself (`competency-` sorts before
+`task-`), silently reverted the guard. Nothing asserted the function body either
+way. One file owns it now.
 
 **C1 is not done until Part B passes against the live database.** Every RLS assertion in Part A is structural only — the Supabase SQL editor runs as the table owner and bypasses RLS entirely, which is exactly how a `42P17` recursion hid behind two green verification runs on 2026-08-20. C2's device checklist is what tests the policies.

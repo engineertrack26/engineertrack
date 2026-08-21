@@ -166,7 +166,19 @@ BEGIN
   DELETE FROM kpi_observations o
   WHERE o.student_id = p_student_id
     AND o.log_id IS NOT DISTINCT FROM p_log_id
-    AND o.observed_by = auth.uid();
+    AND o.observed_by = auth.uid()
+    -- Never an observation produced by approving an assigned task. Those carry
+    -- log_id = NULL, so a caller passing a real log id already misses them —
+    -- but that is a property of today's four call sites, not of the interface,
+    -- which types p_log_id as nullable. This clause makes the protection
+    -- structural instead of incidental.
+    --
+    -- This function is defined ONLY here. docs/task-assignment-rpcs.sql used to
+    -- carry a second copy, which meant re-applying this file — something the
+    -- project's own "migrations are idempotent, re-run freely" convention
+    -- invites, and which a fresh rebuild in filename order does automatically,
+    -- since `competency-` sorts before `task-` — silently reverted the clause.
+    AND o.assignment_submission_id IS NULL;
 
   INSERT INTO kpi_observations (student_id, kpi_id, log_id, observed_by)
   SELECT p_student_id, kid, p_log_id, auth.uid()

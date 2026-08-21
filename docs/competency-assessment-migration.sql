@@ -86,6 +86,24 @@ CREATE TABLE IF NOT EXISTS kpi_observations (
 CREATE INDEX IF NOT EXISTS kpi_observations_student_idx
   ON kpi_observations(student_id, kpi_id);
 
+-- Which assignment approval produced this observation, if any. A tick from a
+-- daily log has log_id set and this null; an observation written by
+-- review_assignment has the reverse.
+--
+-- The column lives here, with the table, rather than in the migration that
+-- introduced it (docs/task-assignment-rpcs.sql), because record_kpi_observations
+-- below reads it — and that function is defined in docs/competency-rpcs.sql,
+-- which runs before any task-assignment file. Declaring it there would have left
+-- a function referring to a column that does not exist yet: plpgsql bodies are
+-- not checked at CREATE time, so it would create cleanly and fail at the first
+-- call, on an install that applied only this subsystem.
+--
+-- Its FOREIGN KEY to assignment_submissions stays in docs/task-assignment-rpcs.sql,
+-- because that table does not exist until then. A bare UUID here is enough for
+-- the guard that reads it.
+ALTER TABLE kpi_observations
+  ADD COLUMN IF NOT EXISTS assignment_submission_id UUID;
+
 ALTER TABLE kpi_observations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "observations read" ON kpi_observations;

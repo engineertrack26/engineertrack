@@ -6,9 +6,26 @@
 -- raises 42702 — a bug that shipped in this codebase once and survived months,
 -- because it only fires on the success path.
 
-ALTER TABLE kpi_observations
-  ADD COLUMN IF NOT EXISTS assignment_submission_id UUID
-    REFERENCES assignment_submissions(id) ON DELETE CASCADE;
+-- The FOREIGN KEY for kpi_observations.assignment_submission_id. The column
+-- itself is declared in docs/competency-assessment-migration.sql, with the
+-- table it belongs to, because record_kpi_observations reads it and that
+-- function is defined in docs/competency-rpcs.sql, which runs before this file.
+-- Only the constraint has to wait, because assignment_submissions does not
+-- exist until docs/task-assignment-migration.sql.
+--
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so the guard is explicit.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'kpi_observations_assignment_submission_fk'
+  ) THEN
+    ALTER TABLE kpi_observations
+      ADD CONSTRAINT kpi_observations_assignment_submission_fk
+      FOREIGN KEY (assignment_submission_id)
+      REFERENCES assignment_submissions(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- One observation per approved submission. UNIQUE (kpi_id, log_id, observed_by)
 -- treats NULLs as distinct, so two approvals of DIFFERENT tasks for one KPI
@@ -20,39 +37,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_observation_per_submission
   WHERE assignment_submission_id IS NOT NULL;
 
 -- ============================================
--- record_kpi_observations: task observations must survive a log re-save.
--- Signature unchanged from docs/competency-rpcs.sql.
+-- record_kpi_observations is NOT redefined here.
 -- ============================================
-CREATE OR REPLACE FUNCTION record_kpi_observations(
-  p_student_id UUID,
-  p_log_id     UUID,
-  p_kpi_ids    UUID[]
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'NOT_AUTHENTICATED';
-  END IF;
-
-  IF NOT can_view_competency(p_student_id) THEN
-    RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
-  END IF;
-
-  DELETE FROM kpi_observations o
-  WHERE o.student_id = p_student_id
-    AND o.log_id IS NOT DISTINCT FROM p_log_id
-    AND o.observed_by = auth.uid()
-    AND o.assignment_submission_id IS NULL;   -- never a task observation
-
-  INSERT INTO kpi_observations (student_id, kpi_id, log_id, observed_by)
-  SELECT p_student_id, kid, p_log_id, auth.uid()
-  FROM unnest(coalesce(p_kpi_ids, ARRAY[]::UUID[])) AS kid;
-END;
-$$;
+-- It lives in docs/competency-rpcs.sql, which owns the daily-log tick flow, and
+-- its DELETE already carries `AND o.assignment_submission_id IS NULL` so that a
+-- log re-save cannot sweep away an observation produced by approving a task.
+--
+-- A second copy used to sit here. Two files owning one function meant that
+-- re-applying competency-rpcs.sql — which the project's own idempotency
+-- convention invites, and which a fresh rebuild in filename order does by
+-- itself, since `competency-` sorts before `task-` — silently reverted the
+-- guard, with nothing asserting the function body either way.
 
 -- ============================================
 -- submit_assignment
