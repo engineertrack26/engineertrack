@@ -394,16 +394,6 @@ BEGIN
   --    about. The UPDATE runs as the owner, which is fine and in fact the
   --    stronger test: RLS is bypassed here, so nothing but the trigger itself
   --    can be what refuses.
-  --
-  --    assignment_has_submissions is now scoped to the caller (owns_group),
-  --    and freeze_assessed_assignment calls it internally. auth.uid() is
-  --    still 'men' here, left over from case 8, and 'men' does not own grp --
-  --    so without resetting identity first, the scoped function would return
-  --    false for a reason that has nothing to do with the rule under test,
-  --    and this case would falsely report the freeze as gone. Set identity
-  --    to the advisor, who does own grp, so the only thing that can make this
-  --    case pass or fail is the trigger itself.
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', adv)::text, true);
   BEGIN
     UPDATE group_assignments a SET criterion = a.criterion || ' (edited)'
     WHERE a.id = asg8;

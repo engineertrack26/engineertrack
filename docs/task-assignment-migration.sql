@@ -105,25 +105,29 @@ CREATE INDEX IF NOT EXISTS assignment_submissions_student_idx
 -- already follows -- no policy body reads another RLS-protected table
 -- directly.
 --
--- Scoped to the caller: without owns_group(a.group_id), any signed-in user
--- could pass an arbitrary assignment id and learn whether it has submissions.
--- Narrowing this cannot loosen the DELETE policy below, which is
--- USING (owns_group(group_id) AND NOT assignment_has_submissions(id)) -- for
--- a non-owner, owns_group is already false, so the whole AND is false
--- regardless of what this function returns. It also cannot loosen
--- freeze_assessed_assignment's guard: that trigger only ever runs on a row
--- an UPDATE already reached through "advisor updates assignments", whose own
--- USING/WITH CHECK already required owns_group(group_id) for this same
--- auth.uid(), so the extra check here is never the reason the trigger's
--- caller fails it.
+-- Deliberately NOT scoped to the caller. freeze_assessed_assignment asks a
+-- question about the ROW -- "has this assignment been acted on" -- not about
+-- the reader, and that rule must hold regardless of who is running the
+-- UPDATE: the service role, the SQL editor, or any future SECURITY DEFINER
+-- path running under a different identity. Scoping this to owns_group(...)
+-- was tried and reverted, because it made the freeze fire only when the
+-- updater happened to own the group -- true for every UPDATE that reaches
+-- the trigger today (RLS already requires ownership to get that far), but a
+-- guard that quietly stops guarding depending on who is asking is a worse
+-- trade than the alternative it was bought with.
+--
+-- The alternative it was bought with, and the cost being accepted here: any
+-- authenticated user who already holds an assignment's UUID can call this
+-- function and learn whether it has a submission. The id is not enumerable
+-- (UUID, and RLS on group_assignments still governs who can list them), so
+-- this is an existence probe reachable only by someone who already has the
+-- specific id in hand -- a materially smaller cost than an integrity guard
+-- that can be sidestepped by identity.
 CREATE OR REPLACE FUNCTION assignment_has_submissions(p_assignment_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
-    SELECT 1
-    FROM assignment_submissions s
-    JOIN group_assignments a ON a.id = s.assignment_id
+    SELECT 1 FROM assignment_submissions s
     WHERE s.assignment_id = p_assignment_id
-      AND owns_group(a.group_id)
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
