@@ -126,6 +126,9 @@ SELECT 'PASS: schema assertions held' AS result;
 --   5b log tick insert   2 ticks in, 4 task observations still there
 --   6 out of scope       rejected NOT_IN_SCOPE
 --   7 reopen approved    rejected ALREADY_APPROVED
+--   8 student left group rejected STUDENT_LEFT_GROUP
+--   9 assignment locked  rejected ASSIGNMENT_LOCKED
+--   9b title editable    title changed on an assessed assignment
 --
 -- Needs an advisor and a student whose student_profiles.mentor_id is set.
 -- With neither present the script reports SKIP rather than failing, because
@@ -148,7 +151,8 @@ DO $$
 DECLARE
   adv UUID; stu UUID; men UUID; grp UUID; comp UUID;
   kpi1 UUID; kpi2 UUID;
-  asg UUID; sub UUID; lg UUID; n INT; n2 INT; lvl INT; log TEXT := '';
+  asg UUID; sub UUID; asg8 UUID; sub8 UUID; lg UUID;
+  n INT; n2 INT; lvl INT; log TEXT := '';
   t RECORD;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -316,6 +320,88 @@ BEGIN
     log := log || '7 reopen approved' || E'\t'
         || CASE WHEN SQLERRM = 'ALREADY_APPROVED' THEN 'rejected ALREADY_APPROVED'
                 ELSE 'FAIL (wrong error): ' || SQLERRM END || E'\n';
+  END;
+
+  -- 8. A student who has left the assignment's group cannot be approved into
+  --    it. review_assignment validates scope against the ASSIGNMENT's group
+  --    while get_competency_progress reads the student's ACTIVE membership, so
+  --    without this guard an approval would be validated against group A and
+  --    the progress read from group B -- nothing moves, and nothing says why.
+  --
+  --    The guard sits BEFORE the scope check, so the membership is the fact
+  --    reported first. That is why this case can be built without touching the
+  --    group's targets at all.
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe left', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr
+  WHERE tr.kpi_id = kpi1
+    AND tr.id NOT IN (SELECT a.triplet_id FROM group_assignments a WHERE a.group_id = grp)
+  ORDER BY tr.triplet_index LIMIT 1
+  RETURNING id INTO asg8;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  SELECT submit_assignment(asg8, 'probe', NULL) INTO sub8;
+
+  -- join_group_by_code closes a membership exactly this way rather than
+  -- deleting it, so this is the real shape of a student moving on.
+  UPDATE group_memberships m SET left_at = now()
+  WHERE m.group_id = grp AND m.student_id = stu AND m.left_at IS NULL;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', men)::text, true);
+  BEGIN
+    PERFORM review_assignment(sub8, true, 'ok');
+    log := log || '8 student left group' || E'\t' || 'FAIL: approval accepted' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '8 student left group' || E'\t'
+        || CASE WHEN SQLERRM = 'STUDENT_LEFT_GROUP' THEN 'rejected STUDENT_LEFT_GROUP'
+                ELSE 'FAIL (wrong error): ' || SQLERRM END || E'\n';
+  END;
+
+  -- Re-open it. Case 6 below still has the student submit, and
+  -- submit_assignment refuses a non-member with ROLE_NOT_ALLOWED, which would
+  -- surface as a wrong-error failure on case 6 that has nothing to do with
+  -- scope. Setting left_at back to NULL is the narrowest undo: this case owns
+  -- the membership only for as long as it needs it.
+  UPDATE group_memberships m SET left_at = NULL
+  WHERE m.group_id = grp AND m.student_id = stu;
+
+  -- 9. Once an assignment carries a submission, the terms it is assessed
+  --    against are frozen. objective and criterion are COPIED from the triplet
+  --    precisely so that approvals granted last month still mean what they
+  --    meant then; an advisor editing them afterwards would rewrite the
+  --    standard a mentor has already judged against, and editing triplet_id
+  --    would re-point the assignment at a different KPI while existing
+  --    observations kept the old one.
+  --
+  --    asg8 already carries sub8 from case 8, so it is the row this rule is
+  --    about. The UPDATE runs as the owner, which is fine and in fact the
+  --    stronger test: RLS is bypassed here, so nothing but the trigger itself
+  --    can be what refuses.
+  BEGIN
+    UPDATE group_assignments a SET criterion = a.criterion || ' (edited)'
+    WHERE a.id = asg8;
+    log := log || '9 assignment locked' || E'\t' || 'FAIL: criterion edit accepted' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '9 assignment locked' || E'\t'
+        || CASE WHEN SQLERRM = 'ASSIGNMENT_LOCKED' THEN 'rejected ASSIGNMENT_LOCKED'
+                ELSE 'FAIL (wrong error): ' || SQLERRM END || E'\n';
+  END;
+
+  -- 9b. The other half, and the half that makes 9 mean something. A freeze that
+  --     blocked every edit would pass case 9 while being a different bug: title,
+  --     description and due_date are presentation, not the terms of assessment,
+  --     and an advisor must still be able to fix a typo or move a deadline on an
+  --     assignment students have already submitted to.
+  BEGIN
+    UPDATE group_assignments a SET title = 'Probe renamed' WHERE a.id = asg8;
+    SELECT count(*) INTO n FROM group_assignments a
+    WHERE a.id = asg8 AND a.title = 'Probe renamed';
+    log := log || '9b title editable' || E'\t'
+        || CASE WHEN n = 1 THEN 'title changed on an assessed assignment'
+                ELSE 'FAIL: title unchanged' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '9b title editable' || E'\t'
+        || 'FAIL: the freeze blocked a title edit: ' || SQLERRM || E'\n';
   END;
 
   -- 6. A competency outside the group's scope must be refused at review time,
