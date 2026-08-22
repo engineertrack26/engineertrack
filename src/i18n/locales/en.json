@@ -198,7 +198,22 @@
     "mentorSawOnly": "Mentor saw, student did not tick",
     "nothingTicked": "Neither party ticked anything on this log.",
     "kpiUnavailable": "(completed indicator)",
-    "ticksLoadFailed": "Could not load the tick comparison for this log. Try reopening it."
+    "ticksLoadFailed": "Could not load the tick comparison for this log. Try reopening it.",
+    "assignments": "Assignments",
+    "assignmentCreated": "Assignment created.",
+    "assignmentTitleRequired": "A title is required.",
+    "pickCompetency": "Pick a competency",
+    "pickLevel": "Pick a level",
+    "pickTriplet": "Pick a task",
+    "assignmentTitle": "Title",
+    "assignmentObjective": "Objective",
+    "assignmentCriterion": "Assessment criterion",
+    "assignmentDescription": "Description (optional)",
+    "assignmentDueDate": "Due date",
+    "assign": "Assign",
+    "noAssignments": "No assignments yet. Pick a competency below to create one.",
+    "submittedCount": "{{count}} submitted",
+    "approvedCount": "{{count}} approved"
   },
   "levels": {
     "beginner": "Beginner",
