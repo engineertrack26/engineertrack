@@ -191,6 +191,7 @@
     "competencyScopeHint": "Choose which competencies this internship develops, and how far it aims to take them.",
     "targetLevel": "Target level",
     "competencySaved": "Competency scope updated.",
+    "competencyScopeEmpty": "Pick at least one competency. A group with none in scope leaves its students with nothing to progress on.",
     "noCompetencies": "No competencies are selected for this group yet.",
     "agreedOn": "Both agreed",
     "studentClaimedOnly": "Student ticked, mentor did not",

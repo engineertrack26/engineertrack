@@ -53,6 +53,21 @@ export default function GroupCompetenciesScreen() {
 
   async function handleSave() {
     if (!groupId) return;
+
+    // A group with nothing in scope is not a narrower selection, it is a group
+    // whose students cannot progress on anything: get_competency_progress
+    // reports only competencies with a target row, so every screen would show
+    // an empty framework with nothing saying why.
+    //
+    // It also collides with the backfill in docs/competency-assessment-migration.sql,
+    // which re-seeds groups that have NO targets on the reasoning that they were
+    // never configured. Saving an empty selection is indistinguishable from that,
+    // so the next re-apply would hand all six back at level 2.
+    if (Object.keys(targets).length === 0) {
+      Alert.alert(t('common.error'), t('advisor.competencyScopeEmpty'));
+      return;
+    }
+
     setSaving(true);
     try {
       await competencyService.setGroupTargets(
