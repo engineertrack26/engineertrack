@@ -89,6 +89,46 @@ export const assignmentService = {
     return (data || []).map((r) => toAssignment(r as Record<string, unknown>));
   },
 
+  /** title, description and due_date are always editable. objective, criterion
+   *  and triplet_id are frozen by trg_freeze_assessed_assignment once any
+   *  submission exists, and the attempt comes back as ASSIGNMENT_LOCKED. */
+  async updateAssignment(
+    id: string,
+    patch: {
+      title?: string; description?: string | null; dueDate?: string | null;
+      objective?: string; criterion?: string;
+    },
+  ): Promise<GroupAssignment> {
+    const row: Record<string, unknown> = {};
+    if (patch.title !== undefined) row.title = patch.title;
+    if (patch.description !== undefined) row.description = patch.description;
+    if (patch.dueDate !== undefined) row.due_date = patch.dueDate;
+    if (patch.objective !== undefined) row.objective = patch.objective;
+    if (patch.criterion !== undefined) row.criterion = patch.criterion;
+
+    const { data, error } = await supabase
+      .from('group_assignments')
+      .update(row)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new RpcError(error.message);
+    return toAssignment(data as Record<string, unknown>);
+  },
+
+  /** Permitted only while no student has acted on it — the DELETE policy
+   *  carries `NOT assignment_has_submissions(id)`, so a withdrawal of an
+   *  assessed assignment silently affects zero rows rather than raising. */
+  async deleteAssignment(id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('group_assignments')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    if (error) throw new RpcError(error.message);
+    return (data || []).length > 0;
+  },
+
   async submitAssignment(assignmentId: string, note: string, logId: string | null): Promise<string> {
     const { data, error } = await supabase.rpc('submit_assignment', {
       p_assignment_id: assignmentId,

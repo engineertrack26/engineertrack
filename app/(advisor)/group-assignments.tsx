@@ -79,6 +79,17 @@ export default function GroupAssignmentsScreen() {
   const [dueDate, setDueDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // The edit sheet lives inline under the card being edited rather than as a
+  // separate modal, matching how the create form below is already laid out.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editObjective, setEditObjective] = useState('');
+  const [editCriterion, setEditCriterion] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editShowDatePicker, setEditShowDatePicker] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!groupId) return;
     try {
@@ -202,6 +213,91 @@ export default function GroupAssignmentsScreen() {
     }
   }
 
+  function openEdit(a: GroupAssignment) {
+    setEditingId(a.id);
+    setEditTitle(a.title);
+    setEditDescription(a.description || '');
+    setEditObjective(a.objective);
+    setEditCriterion(a.criterion);
+    setEditDueDate(a.dueDate || '');
+    setEditShowDatePicker(false);
+  }
+
+  function closeEdit() {
+    setEditingId(null);
+    setEditShowDatePicker(false);
+  }
+
+  async function handleUpdate(a: GroupAssignment, canEditTerms: boolean) {
+    if (!editTitle.trim()) {
+      Alert.alert(t('common.error'), t('advisor.assignmentTitleRequired'));
+      return;
+    }
+    // Send only what changed -- the server is still the authority on whether
+    // objective/criterion may move, but there is no reason to resend fields
+    // the advisor never touched.
+    const patch: {
+      title?: string; description?: string | null; dueDate?: string | null;
+      objective?: string; criterion?: string;
+    } = {};
+    const nextTitle = editTitle.trim();
+    if (nextTitle !== a.title) patch.title = nextTitle;
+    const nextDescription = editDescription.trim();
+    if (nextDescription !== (a.description || '')) patch.description = nextDescription || null;
+    if (editDueDate !== (a.dueDate || '')) patch.dueDate = editDueDate || null;
+    if (canEditTerms) {
+      const nextObjective = editObjective.trim();
+      const nextCriterion = editCriterion.trim();
+      if (nextObjective !== a.objective) patch.objective = nextObjective;
+      if (nextCriterion !== a.criterion) patch.criterion = nextCriterion;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      closeEdit();
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await assignmentService.updateAssignment(a.id, patch);
+      Alert.alert(t('common.done'), t('advisor.assignmentUpdated'));
+      closeEdit();
+      await loadData();
+    } catch (err) {
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function confirmWithdraw(a: GroupAssignment) {
+    Alert.alert(
+      t('advisor.withdrawAssignment'),
+      t('advisor.withdrawConfirm', { title: a.title }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('advisor.withdrawAssignment'), style: 'destructive', onPress: () => handleWithdraw(a) },
+      ],
+    );
+  }
+
+  async function handleWithdraw(a: GroupAssignment) {
+    try {
+      const removed = await assignmentService.deleteAssignment(a.id);
+      if (!removed) {
+        Alert.alert(t('common.error'), t('advisor.assignmentHasSubmissions'));
+        return;
+      }
+      Alert.alert(t('common.done'), t('advisor.assignmentWithdrawn'));
+      if (editingId === a.id) closeEdit();
+      await loadData();
+    } catch (err) {
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    }
+  }
+
   // A level has two KPIs and each holds ten triplets, so the picker shows
   // twenty. Grouping under the KPI's statement reads "for this behaviour,
   // these ten tasks" rather than a flat list of twenty.
@@ -237,9 +333,34 @@ export default function GroupAssignmentsScreen() {
         {assignments.map((a) => {
           const counts = submissionCounts[a.id] || { submitted: 0, approved: 0 };
           const due = a.dueDate ? fromIsoDate(a.dueDate) : null;
+          // Once any submission exists, trg_freeze_assessed_assignment refuses
+          // a change to objective/criterion/triplet_id/group_id. Computed from
+          // the counts already fetched above -- approved is a subset of
+          // submitted, so this is really just "submitted === 0", but written
+          // out to match what assignment_has_submissions itself is asking.
+          const canEditTerms = counts.submitted + counts.approved === 0;
+          const isEditing = editingId === a.id;
           return (
             <View key={a.id} style={styles.card}>
-              <Text style={styles.cardTitle}>{a.title}</Text>
+              <View style={styles.cardHeaderRow}>
+                <Text style={[styles.cardTitle, styles.cardTitleFlex]}>{a.title}</Text>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    onPress={() => (isEditing ? closeEdit() : openEdit(a))}
+                    activeOpacity={0.7}
+                    style={styles.iconBtn}
+                  >
+                    <Ionicons name={isEditing ? 'close' : 'pencil-outline'} size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => confirmWithdraw(a)}
+                    activeOpacity={0.7}
+                    style={styles.iconBtn}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              </View>
               {!!a.description && <Text style={styles.subtle}>{a.description}</Text>}
               {!!due && (
                 <Text style={styles.subtle}>
@@ -253,6 +374,118 @@ export default function GroupAssignmentsScreen() {
                 {' ('}{t('advisor.approvedCount', { count: counts.approved })}{')'} / {' '}
                 {t('advisor.memberCount', { count: members.length })}
               </Text>
+
+              {isEditing && (
+                <View style={styles.editPanel}>
+                  <Text style={styles.label}>{t('advisor.assignmentTitle')}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                    placeholderTextColor={colors.textDisabled}
+                  />
+
+                  <Text style={styles.label}>{t('advisor.assignmentDescription')}</Text>
+                  <TextInput
+                    style={[styles.input, styles.multilineInput]}
+                    value={editDescription}
+                    onChangeText={setEditDescription}
+                    placeholderTextColor={colors.textDisabled}
+                    multiline
+                  />
+
+                  <Text style={styles.label}>{t('advisor.assignmentObjective')}</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.multilineInput,
+                      !canEditTerms && styles.inputDisabled,
+                    ]}
+                    value={editObjective}
+                    onChangeText={setEditObjective}
+                    editable={canEditTerms}
+                    multiline
+                  />
+
+                  <Text style={styles.label}>{t('advisor.assignmentCriterion')}</Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.multilineInput,
+                      !canEditTerms && styles.inputDisabled,
+                    ]}
+                    value={editCriterion}
+                    onChangeText={setEditCriterion}
+                    editable={canEditTerms}
+                    multiline
+                  />
+
+                  {!canEditTerms && (
+                    <Text style={styles.lockedHint}>{t('advisor.assignmentTermsLocked')}</Text>
+                  )}
+
+                  <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>
+                  <TouchableOpacity
+                    style={styles.dateField}
+                    onPress={() => setEditShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={editDueDate ? styles.dateValue : styles.datePlaceholder}>
+                      {editDueDate
+                        ? fromIsoDate(editDueDate)?.toLocaleDateString(i18n.language)
+                        : t('student.selectDate', 'Select a date')}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  {editShowDatePicker && (
+                    <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
+                      <DateTimePicker
+                        value={fromIsoDate(editDueDate) || new Date()}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, selected) => {
+                          if (Platform.OS === 'android') setEditShowDatePicker(false);
+                          if (event.type === 'dismissed' || !selected) return;
+                          setEditDueDate(toIsoDate(selected));
+                        }}
+                      />
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          style={styles.iosPickerDone}
+                          onPress={() => setEditShowDatePicker(false)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.iosPickerDoneText}>{t('common.done')}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  <View style={styles.editActionsRow}>
+                    <TouchableOpacity
+                      style={styles.secondaryBtn}
+                      onPress={closeEdit}
+                      disabled={editSaving}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.secondaryBtnText}>{t('common.cancel')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, styles.editSaveBtn]}
+                      onPress={() => handleUpdate(a, canEditTerms)}
+                      disabled={editSaving}
+                      activeOpacity={0.7}
+                    >
+                      {editSaving ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.primaryBtnText}>{t('common.save')}</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           );
         })}
@@ -463,6 +696,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  cardTitleFlex: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  iconBtn: {
+    padding: spacing.xs,
+  },
   subtle: {
     fontSize: 13,
     color: colors.textSecondary,
@@ -488,6 +737,45 @@ const styles = StyleSheet.create({
   multilineInput: {
     minHeight: 72,
     textAlignVertical: 'top',
+  },
+  inputDisabled: {
+    backgroundColor: colors.surface,
+    color: colors.textDisabled,
+  },
+  editPanel: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  lockedHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  editActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  editSaveBtn: {
+    flex: 1,
+    marginTop: 0,
   },
 
   // Competency chips

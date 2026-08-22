@@ -213,7 +213,14 @@
     "assign": "Assign",
     "noAssignments": "No assignments yet. Pick a competency below to create one.",
     "submittedCount": "{{count}} submitted",
-    "approvedCount": "{{count}} approved"
+    "approvedCount": "{{count}} approved",
+    "editAssignment": "Edit assignment",
+    "assignmentUpdated": "Assignment updated.",
+    "assignmentTermsLocked": "Students have already submitted this task, so the objective and criterion are locked.",
+    "withdrawAssignment": "Withdraw",
+    "withdrawConfirm": "Withdraw \"{{title}}\"? This cannot be undone.",
+    "assignmentHasSubmissions": "This assignment already has submissions, so it can no longer be withdrawn.",
+    "assignmentWithdrawn": "Assignment withdrawn."
   },
   "levels": {
     "beginner": "Beginner",
