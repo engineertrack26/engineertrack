@@ -136,7 +136,7 @@ export default function PendingReviewsScreen() {
           approved
             ? t('notifications.taskApprovedBody', { mentorName, title: item.assignment.title })
             : t('notifications.taskRevisionBody', { mentorName, title: item.assignment.title }),
-          'task_reviewed',
+          approved ? 'task_approved' : 'task_revision_requested',
           { assignmentId: item.assignmentId },
         );
       } catch (e) {

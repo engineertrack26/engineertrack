@@ -27,7 +27,8 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   general: { name: 'notifications', color: colors.primary },
   task_assigned: { name: 'clipboard-outline', color: colors.info },
   task_submitted: { name: 'paper-plane', color: colors.primary },
-  task_reviewed: { name: 'checkmark-done-circle', color: colors.success },
+  task_approved: { name: 'checkmark-circle', color: colors.success },
+  task_revision_requested: { name: 'alert-circle', color: colors.error },
 };
 
 function timeAgo(dateStr: string): string {
