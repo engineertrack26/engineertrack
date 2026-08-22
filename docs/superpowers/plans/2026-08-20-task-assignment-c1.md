@@ -493,6 +493,20 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 4: The RPCs and the approval-to-observation bridge
 
+> **This plan is a historical record of a subsystem that is already built, applied and
+> verified. It is not the source of truth.** Where this task and the shipped
+> `docs/*.sql` files differ, **the files are authoritative** — read
+> `docs/task-assignment-rpcs.sql` and `docs/task-assignment-migration.sql`, not this.
+>
+> The function bodies reproduced below were brought back into line with the files during
+> the third fix wave, because a plan that still instructed building two defects a later
+> commit had removed is how those defects come back in a project that executes plans
+> literally. They are preserved as a record of what was written at execution time; they
+> are **not maintained**, and they will drift again the next time the RPCs change. Copying
+> one of them over a shipped file, or treating a difference between the two as a bug in
+> the file, is the mistake this note exists to prevent — the same "two owners of one
+> definition" hazard that `e514ba5` removed from the SQL itself.
+
 **Files:**
 - Create: `docs/task-assignment-rpcs.sql`
 
