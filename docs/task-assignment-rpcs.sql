@@ -76,14 +76,17 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  target_group UUID;
-  submission   UUID;
+  target_group     UUID;
+  submission       UUID;
+  assignment_title TEXT;
+  the_mentor       UUID;
+  student_name     TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'NOT_AUTHENTICATED';
   END IF;
 
-  SELECT a.group_id INTO target_group
+  SELECT a.group_id, a.title INTO target_group, assignment_title
   FROM group_assignments a WHERE a.id = p_assignment_id;
 
   IF target_group IS NULL THEN
@@ -160,6 +163,47 @@ BEGIN
   -- the client cannot tell the race apart from the ordinary refusal.
   IF submission IS NULL THEN
     RAISE EXCEPTION 'ALREADY_APPROVED';
+  END IF;
+
+  -- Tell the mentor, from here rather than from the client.
+  --
+  -- app/(student)/my-tasks.tsx used to insert this notification itself. It
+  -- could not: the only INSERT policy on notifications is
+  --   auth.uid() = user_id OR is_mentor_of(user_id) OR is_advisor_of(user_id)
+  -- and a student writing to their mentor fails all three -- they are not the
+  -- recipient, and both helpers look for a student_profiles row keyed by the
+  -- MENTOR's id, which does not exist. Every call raised 42501 into a .catch,
+  -- so the student saw "Task submitted." and the mentor was never told. This is
+  -- the app's only student->mentor notification; the other six directions are
+  -- advisor->student or mentor->student, which the policy admits.
+  --
+  -- This function is already SECURITY DEFINER, so it runs as the table owner
+  -- and bypasses that policy -- the same move report_join_issue makes in
+  -- docs/join-hardening-migration.sql to notify an institution admin.
+  --
+  -- The strings are plain English on purpose: the database has no access to
+  -- i18n, and every other server-written notification in this project
+  -- (award_xp_internal, award_badge_internal, report_join_issue) is English
+  -- too. They mirror notifications.taskSubmittedTitle/Body in en.json.
+  SELECT sp.mentor_id INTO the_mentor
+  FROM student_profiles sp WHERE sp.id = auth.uid();
+
+  -- A student whose mentor is not linked yet is a normal state, not an error.
+  -- Skip silently rather than raising, or a missing link would fail a
+  -- submission that has already been written.
+  IF the_mentor IS NOT NULL THEN
+    SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
+    INTO student_name FROM profiles p WHERE p.id = auth.uid();
+
+    INSERT INTO notifications (user_id, title, body, type, data)
+    VALUES (
+      the_mentor,
+      'Task Submitted',
+      coalesce(nullif(student_name, ''), 'A student')
+        || ' submitted "' || coalesce(assignment_title, 'a task') || '" for review.',
+      'task_submitted',
+      jsonb_build_object('assignmentId', p_assignment_id)
+    );
   END IF;
 
   RETURN submission;
