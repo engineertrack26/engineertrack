@@ -213,9 +213,10 @@ BEGIN
     -- The name lookup is inside the block too. It is part of composing the
     -- notification and a failure there has the identical consequence.
     --
-    -- WHEN OTHERS is deliberately broad and deliberately silent. This is the
-    -- .catch, not a place to decide which failures matter; the submission has
-    -- already been written and returning it is the contract.
+    -- WHEN OTHERS is deliberately broad, but NOT silent. This is the .catch,
+    -- not a place to decide which failures matter -- the submission has
+    -- already been written and returning it is the contract -- but it leaves a
+    -- trace on the way past. See the handler.
     BEGIN
       SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
       INTO student_name FROM profiles p WHERE p.id = auth.uid();
@@ -230,7 +231,15 @@ BEGIN
         jsonb_build_object('assignmentId', p_assignment_id)
       );
     EXCEPTION WHEN OTHERS THEN
-      NULL;
+      -- Silent would repeat the mistake this whole change exists to fix: the
+      -- client-side version of this notification failed with 42501 on every
+      -- submission from the day it shipped, and a deliberate catch is why
+      -- nobody knew. The transaction is still protected -- a WARNING aborts
+      -- neither the subtransaction nor the outer one -- but the failure leaves
+      -- a trace in the server log, which is where someone asking "why do
+      -- mentors never hear about submissions" would look, and where a Supabase
+      -- project's logs already collect.
+      RAISE WARNING 'submit_assignment: mentor notification failed: %', SQLERRM;
     END;
   END IF;
 
