@@ -20,10 +20,13 @@ Two tasks carry the run:
 
 1. **Advisor opens Group Assignments and picks a competency.**
    Expect the competency chips to list only the competencies the advisor's Competency
-   Scope screen has switched on for this group — not all six. Pick one, pick a level:
-   expect the triplet list to show twenty items (two KPIs at that level, ten triplets
-   each), grouped under each KPI's statement. Tapping a triplet fills the title,
-   objective and criterion fields from it, editable before saving.
+   Scope screen has switched on for this group — not all six. Pick one, then pick
+   **level 1** — this is the triplet Task 1 will use in item 2, and item 7 depends on it
+   being the floor of the ladder: a level only counts once every level below it is
+   complete, and level 1 has none. Expect the triplet list to show twenty items (two
+   KPIs at that level, ten triplets each), grouped under each KPI's statement. Tapping a
+   triplet fills the title, objective and criterion fields from it, editable before
+   saving.
 
 2. **Advisor fills in a due date and taps Assign (Task 1).**
    Expect a confirmation and the new assignment to appear in the list above the picker,
@@ -53,14 +56,16 @@ Two tasks carry the run:
    student's side) Task 1 to move from **Waiting** into **Done**.
 
 7. **Student's competency level moves as a result.**
-   This needs the level's *other* KPI already satisfied — reaching a level requires two
-   independent observations on **both** of its KPIs, which is subsystem B's ladder rule,
-   not something this screen changes. Before this check: confirm (or create, via one
-   ordinary log review) two observations on the level's other KPI, and one observation
-   on Task 1's KPI from a source other than Task 1 itself (a prior log review works).
-   Task 1's approval is then that KPI's second observation. Open the student's
-   Achievements: expect the competency's current level to read one higher than before,
-   proving a task approval feeds the exact same counter a daily-log review does.
+   Item 1 picked a level-1 triplet for Task 1, and level 1 is the floor of the ladder —
+   `get_competency_progress` reports the highest level for which every level below is
+   also complete, and there is nothing below level 1 to fail that check. The one
+   remaining condition is level 1's *other* KPI: it needs two independent observations,
+   from somewhere other than Task 1, before this check. Before this item: confirm (or
+   create, via one ordinary log review) two observations on that other KPI, and one
+   observation on Task 1's own KPI from a source other than Task 1 itself. Task 1's
+   approval is then that KPI's second observation. Open the student's Achievements:
+   expect the competency's current level to read one higher than before, proving a task
+   approval feeds the exact same counter a daily-log review does.
 
 8. **Mentor requests a revision on Task 2 instead of approving, and the student
    resubmits.**
@@ -74,8 +79,17 @@ Two tasks carry the run:
 9. **Advisor edits Task 1 (now assessed).**
    Expect the title and description fields open for editing, the objective and criterion
    fields **disabled** with a note that assignment terms are locked, and a title-only
-   save to succeed. This is `trg_freeze_assessed_assignment` firing once a submission
-   exists — editing terms is refused, not silently ignored.
+   save to succeed. This establishes the **client-side** guard — `canEditTerms` disables
+   the two term inputs and `handleUpdate` omits them from the patch — not the
+   server-side refusal behind it: with the fields disabled, no edited term is ever sent
+   for this screen to provoke a refusal in the first place. The server-side refusal is
+   proven separately, in `docs/task-assignment-verification.sql` Part B: cases
+   `9 assignment locked` (a criterion edit on an assessed assignment is rejected with
+   `ASSIGNMENT_LOCKED`), `9b title editable` (title still changes on that same row, so
+   the freeze isn't blocking everything), and `9c group id frozen` — all green against
+   the live database. If the term fields are ever editable on an assessed assignment
+   here, the client guard is gone, and `trg_freeze_assessed_assignment` becomes the only
+   thing standing between an advisor and a rewritten criterion.
 
 10. **Advisor withdraws an unused assignment, then tries to withdraw Task 1.**
     Create one more throwaway assignment (repeat item 2's flow, no submission against
