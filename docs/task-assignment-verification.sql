@@ -138,6 +138,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   1 approval           1 observation
 --   2 re-approval        still 1 observation
 --   3 withdrawal         0 observations
+--   3b resubmit after revision  accepted, back to submitted
 --   4 full level         current_level = 1
 --   5 log re-save        task observation survived
 --   5b log tick insert   2 ticks in, 4 task observations still there
@@ -168,8 +169,8 @@ DO $$
 DECLARE
   adv UUID; stu UUID; men UUID; grp UUID; comp UUID;
   kpi1 UUID; kpi2 UUID;
-  asg UUID; sub UUID; asg8 UUID; sub8 UUID; lg UUID;
-  n INT; n2 INT; lvl INT; log TEXT := '';
+  asg UUID; sub UUID; resub UUID; asg8 UUID; sub8 UUID; lg UUID;
+  n INT; n2 INT; lvl INT; st TEXT; log TEXT := '';
   t RECORD;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -221,6 +222,46 @@ BEGIN
   SELECT count(*) INTO n FROM kpi_observations o WHERE o.assignment_submission_id = sub;
   log := log || '3 withdrawal' || E'\t'
       || CASE WHEN n = 0 THEN '0 observations' ELSE 'FAIL: ' || n END || E'\n';
+
+  -- 3b. The other half of case 3, and the claim submit_assignment's own comment
+  --     makes about this file: "that path is exercised by the verification
+  --     script". Until this case existed it was not. Nothing in Part B ever
+  --     resubmitted a needs_revision row -- case 3 leaves `sub` sent back and
+  --     case 4 immediately reassigns that variable in its loop -- so the comment
+  --     described a case nobody had written.
+  --
+  --     It is the path that most needs one. Sending work back is only
+  --     meaningful if the student can act on it, and submit_assignment's
+  --     ALREADY_APPROVED guard is the code standing between them. That guard is
+  --     now TWO things -- a standalone EXISTS, and a
+  --     `WHERE assignment_submissions.status <> 'approved'` on the DO UPDATE
+  --     that makes the check atomic with the write. Either one written a notch
+  --     too wide (`= 'submitted'`, say, or an EXISTS that stops testing status)
+  --     turns every revision request into a task the student can never hand
+  --     back in, and no other case in this file would notice.
+  --
+  --     Both halves are asserted, because either alone would mislead. The
+  --     non-null id is what catches the silent failure that WHERE introduces:
+  --     an excluded row updates nothing, RETURNING yields nothing, `submission`
+  --     stays NULL, and without submit_assignment's NULL check the client would
+  --     be handed NULL as success. The status is what catches an id returned
+  --     without the row actually moving.
+  --
+  --     `asg` is still case 1-3's assignment here; case 4 reassigns it below.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  BEGIN
+    SELECT submit_assignment(asg, 'reworked', NULL) INTO resub;
+    SELECT s.status INTO st FROM assignment_submissions s WHERE s.id = resub;
+    log := log || '3b resubmit after revision' || E'\t'
+        || CASE WHEN resub IS NOT NULL AND st = 'submitted'
+                     THEN 'accepted, back to submitted'
+                WHEN resub IS NULL
+                     THEN 'FAIL: submit_assignment returned NULL'
+                ELSE 'FAIL: status is ' || coalesce(st, '(row missing)') END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '3b resubmit after revision' || E'\t'
+        || 'FAIL: resubmission refused: ' || SQLERRM || E'\n';
+  END;
 
   -- 4. A level needs BOTH its KPIs demonstrated twice, so reaching level 1
   --    through tasks alone takes four approved assignments: two triplets from
