@@ -173,6 +173,7 @@
     "taskCriterion": "Assess against",
     "taskDueDate": "Due",
     "studentNote": "Student's note",
+    "taskDescription": "Description",
     "linkedLog": "Linked log",
     "linkedLogFailed": "Could not load the linked log.",
     "reviewNote": "Note (optional)",

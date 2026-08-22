@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -48,6 +48,13 @@ export default function PendingReviewsScreen() {
   const [submitting, setSubmitting] = useState<'approve' | 'revise' | null>(null);
   const [linkedLog, setLinkedLog] = useState<LinkedLogSummary | null>(null);
   const [loadingLog, setLoadingLog] = useState(false);
+  const [logFailed, setLogFailed] = useState(false);
+  // Discards a linked-log fetch that a later tap has superseded. This is the
+  // guard commit 7fbd821 added to the advisor's level fetch as `levelRequest`,
+  // carried across rather than reinvented: setOpenId is synchronous and the
+  // fetch is not, so without it the last response to ARRIVE wins rather than
+  // the last one requested, and card A's log paints under card B's criterion.
+  const logRequest = useRef(0);
 
   const loadData = useCallback(async () => {
     try {
@@ -95,18 +102,28 @@ export default function PendingReviewsScreen() {
   }, [loadData]);
 
   async function toggleOpen(item: PendingReview) {
+    // Bumped before the close branch too: closing a card while its log is
+    // still in flight has to discard that response as much as opening
+    // another one does.
+    const request = ++logRequest.current;
     if (openId === item.id) {
       setOpenId(null);
       setLinkedLog(null);
+      setLogFailed(false);
+      setLoadingLog(false);
       return;
     }
     setOpenId(item.id);
     setNote('');
     setLinkedLog(null);
+    setLogFailed(false);
+    // Set from the card being opened rather than left over from the last one,
+    // or a card with no linked log inherits the previous card's spinner state.
+    setLoadingLog(!!item.logId);
     if (item.logId) {
-      setLoadingLog(true);
       try {
         const log = await logService.getLogWithDetails(item.logId);
+        if (request !== logRequest.current) return;
         const l = (log || {}) as Record<string, unknown>;
         setLinkedLog({
           title: (l.title as string) || '',
@@ -115,8 +132,12 @@ export default function PendingReviewsScreen() {
         });
       } catch (err) {
         console.error('Linked log load error:', err);
+        if (request !== logRequest.current) return;
+        setLogFailed(true);
       } finally {
-        setLoadingLog(false);
+        // Guarded for the same reason the setters above are: a superseded
+        // fetch must not clear the spinner the current one just raised.
+        if (request === logRequest.current) setLoadingLog(false);
       }
     }
   }
@@ -150,6 +171,7 @@ export default function PendingReviewsScreen() {
       setOpenId(null);
       setNote('');
       setLinkedLog(null);
+      setLogFailed(false);
       await loadData();
     } catch (err) {
       // STUDENT_LEFT_GROUP and NOT_IN_SCOPE are the two reachable refusals
@@ -198,6 +220,19 @@ export default function PendingReviewsScreen() {
               <Text style={styles.criterionText}>{item.assignment.criterion}</Text>
             </View>
 
+            {/* The advisor's own words about this task. It is the natural
+                place to put the real instructions -- the field sits right
+                under the title and says "Description (optional)" -- and until
+                now only the advisor's own card ever read it back. It sits
+                below the criterion, not above it: the criterion is what the
+                mentor judges against and still leads the panel. */}
+            {!!item.assignment.description && (
+              <>
+                <Text style={styles.label}>{t('mentor.taskDescription')}</Text>
+                <Text style={styles.detailText}>{item.assignment.description}</Text>
+              </>
+            )}
+
             {!!item.studentNote && (
               <>
                 <Text style={styles.label}>{t('mentor.studentNote')}</Text>
@@ -217,6 +252,11 @@ export default function PendingReviewsScreen() {
                       <Text style={styles.detailText}>{linkedLog.content}</Text>
                     )}
                   </View>
+                ) : logFailed ? (
+                  // A bare "Linked log" heading with nothing under it reads as
+                  // an empty log rather than a failed fetch. The mentor is
+                  // about to judge against evidence they cannot see; say so.
+                  <Text style={styles.subtle}>{t('mentor.linkedLogFailed')}</Text>
                 ) : null}
               </>
             )}
