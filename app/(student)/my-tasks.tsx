@@ -29,6 +29,17 @@ const SECTIONS: { key: SectionKey; titleKey: string; color: string; actionable: 
   { key: 'done', titleKey: 'student.stateDone', color: colors.status.approved, actionable: false },
 ];
 
+// due_date is a DATE column the app carries as a 'YYYY-MM-DD' string, and
+// new Date('2026-09-01') is parsed as UTC and rendered locally, which in a
+// negative offset shows the previous day. Parse the parts in local time
+// instead, the same way the advisor's and mentor's screens do.
+function fromIsoDate(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function todayIso(): string {
   const d = new Date();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -37,7 +48,7 @@ function todayIso(): string {
 }
 
 export default function MyTasksScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
@@ -97,7 +108,13 @@ export default function MyTasksScreen() {
       return;
     }
     setOpenId(a.id);
-    setNote('');
+    // Prefill rather than blank. submit_assignment's DO UPDATE overwrites
+    // student_note unconditionally, so a student asked only to attach a
+    // different log would resubmit with an empty note and the mentor's panel
+    // would render nothing where the note had been -- it gates on a truthy
+    // string. The note the student already wrote is the right starting point
+    // for the one they are about to send.
+    setNote(a.submission?.studentNote || '');
     setAttachLog(false);
   }
 
@@ -136,6 +153,7 @@ export default function MyTasksScreen() {
 
   function renderCard(a: MyAssignment, color: string, actionable: boolean) {
     const isOpen = openId === a.id;
+    const due = a.dueDate ? fromIsoDate(a.dueDate) : null;
     return (
       <View key={a.id} style={[styles.card, { borderLeftColor: color }]}>
         <TouchableOpacity
@@ -143,7 +161,17 @@ export default function MyTasksScreen() {
           onPress={() => toggleOpen(a)}
           activeOpacity={0.7}
         >
-          <Text style={styles.cardTitle}>{a.title}</Text>
+          <View style={styles.cardHeaderText}>
+            <Text style={styles.cardTitle}>{a.title}</Text>
+            {/* The advisor sets this to tell the STUDENT when the work is due,
+                and until now it reached the advisor's card and the mentor's
+                and stopped there. */}
+            {!!due && (
+              <Text style={styles.subtle}>
+                {t('student.taskDueDate')}: {due.toLocaleDateString(i18n.language)}
+              </Text>
+            )}
+          </View>
           <Ionicons
             name={isOpen ? 'chevron-up' : 'chevron-down'}
             size={18}
@@ -153,13 +181,25 @@ export default function MyTasksScreen() {
 
         {isOpen && (
           <View style={styles.detail}>
+            {/* The advisor's own words about this task. "Description
+                (optional)" under a title reads as "the instructions go here",
+                and until now nothing but the advisor's own card ever showed
+                them back. */}
+            {!!a.description && (
+              <Text style={[styles.detailText, styles.description]}>{a.description}</Text>
+            )}
+
             <Text style={styles.label}>{t('student.taskObjective')}</Text>
             <Text style={styles.detailText}>{a.objective}</Text>
 
             <Text style={styles.label}>{t('student.taskCriterion')}</Text>
             <Text style={styles.detailText}>{a.criterion}</Text>
 
-            {!!a.submission?.mentorNote && (
+            {/* Only while the card is actually in the sent-back state. On a
+                'Waiting for review' card the same note is the PREVIOUS
+                revision request, and it reads as a reply to work the mentor
+                has not seen yet. */}
+            {a.submission?.status === 'needs_revision' && !!a.submission.mentorNote && (
               <>
                 <Text style={styles.label}>{t('mentor.comments')}</Text>
                 <Text style={styles.detailText}>{a.submission.mentorNote}</Text>
@@ -323,12 +363,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  cardHeaderText: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-    flex: 1,
-    marginRight: spacing.sm,
+  },
+  subtle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 
   detail: {
@@ -347,6 +394,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     lineHeight: 20,
+  },
+  description: {
+    marginBottom: spacing.xs,
   },
 
   input: {
