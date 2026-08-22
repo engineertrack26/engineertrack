@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { RpcError } from './rpcError';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
+  AssignmentCounts,
 } from '@/types/assignment';
 
 function toAssignment(r: Record<string, unknown>): GroupAssignment {
@@ -127,6 +128,29 @@ export const assignmentService = {
       .select('id');
     if (error) throw new RpcError(error.message);
     return (data || []).length > 0;
+  },
+
+  /** Per-assignment tallies for the advisor's screen.
+   *
+   *  Deliberately an RPC and not a select on assignment_submissions. That
+   *  select is scoped by the table's SELECT policy, which reaches an advisor
+   *  through is_group_advisor_of(student_id) and so needs an ACTIVE membership,
+   *  while assignment_has_submissions -- the delete policy and the freeze
+   *  trigger -- asks only about the row. A student who submits and then joins
+   *  another group vanishes from the select and not from the trigger, and the
+   *  screen prints "0 submitted" one moment and takes ASSIGNMENT_LOCKED the
+   *  next. This counts what the server enforces against. */
+  async getAssignmentCounts(groupId: string): Promise<AssignmentCounts[]> {
+    const { data, error } = await supabase.rpc('group_assignment_counts', {
+      p_group_id: groupId,
+    });
+    if (error) throw new RpcError(error.message);
+    return ((data as Array<Record<string, unknown>>) || []).map((r) => ({
+      assignmentId: (r.assignment_id as string) || '',
+      submitted: (r.submitted as number) ?? 0,
+      approved: (r.approved as number) ?? 0,
+      needsRevision: (r.needs_revision as number) ?? 0,
+    }));
   },
 
   async submitAssignment(assignmentId: string, note: string, logId: string | null): Promise<string> {

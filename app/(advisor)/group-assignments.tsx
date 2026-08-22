@@ -45,7 +45,12 @@ function fromIsoDate(s: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-type SubmissionCounts = Record<string, { submitted: number; approved: number }>;
+type SubmissionCounts = Record<
+  string,
+  { submitted: number; approved: number; needsRevision: number }
+>;
+
+const ZERO_COUNTS = { submitted: 0, approved: 0, needsRevision: 0 };
 
 export default function GroupAssignmentsScreen() {
   const { t, i18n } = useTranslation();
@@ -60,6 +65,15 @@ export default function GroupAssignmentsScreen() {
   // re-deriving that list on the hot path risks it disagreeing with this one.
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [submissionCounts, setSubmissionCounts] = useState<SubmissionCounts>({});
+  // The group's competency scope, kept as its own set rather than derived from
+  // `competencies` above: that list is the PICKER, already filtered to what is
+  // in scope, so it can no longer answer "was this one dropped?" about an
+  // assignment that already exists.
+  const [inScope, setInScope] = useState<Set<string>>(new Set());
+  // assignment id -> the competency its triplet belongs to. Resolved once for
+  // the whole list, not per card.
+  const [assignmentCompetency, setAssignmentCompetency] =
+    useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,42 +104,75 @@ export default function GroupAssignmentsScreen() {
   const [editDueDate, setEditDueDate] = useState('');
   const [editShowDatePicker, setEditShowDatePicker] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  // Which assignment a withdrawal is in flight for. handleUpdate and
+  // handleAssign already had their own flags; without one here a double tap
+  // sends two deletes, and the second reports "already has submissions" for a
+  // row the first tap withdrew successfully.
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!groupId) return;
     try {
-      const [existing, framework, targets, groupMembers] = await Promise.all([
+      // The counts come from group_assignment_counts, not from a select on
+      // assignment_submissions. That select is scoped by the table's SELECT
+      // policy, which needs an ACTIVE membership, while the delete policy and
+      // the freeze trigger both go through assignment_has_submissions, which is
+      // unscoped -- so a student who submits and then joins another group used
+      // to disappear from this line while still locking the row underneath it.
+      const [existing, framework, targets, groupMembers, counts] = await Promise.all([
         assignmentService.listGroupAssignments(groupId),
         competencyService.listFramework(),
         competencyService.getGroupTargets(groupId),
         groupService.listMembers(groupId),
+        assignmentService.getAssignmentCounts(groupId),
       ]);
       setAssignments(existing);
-      const inScope = new Set(targets.map((tg) => tg.competencyId));
-      setCompetencies(framework.competencies.filter((c) => inScope.has(c.id)));
+      const scoped = new Set(targets.map((tg) => tg.competencyId));
+      setInScope(scoped);
+      setCompetencies(framework.competencies.filter((c) => scoped.has(c.id)));
       setKpis(framework.kpis);
       setMembers(groupMembers);
 
-      // Building the query at all when there is nothing to filter by is
-      // wasted work, and .in() with an empty array returns nothing anyway.
+      const byAssignment: SubmissionCounts = {};
+      for (const c of counts) {
+        byAssignment[c.assignmentId] = {
+          submitted: c.submitted,
+          approved: c.approved,
+          needsRevision: c.needsRevision,
+        };
+      }
+      setSubmissionCounts(byAssignment);
+
+      // Which competency each existing assignment came from, so one whose
+      // competency the advisor has since switched off can be marked. The
+      // kpi -> competency half is already in framework.kpis; only the
+      // triplet -> kpi half needs fetching, and it is fetched for the whole
+      // list at once rather than per card. .in() with an empty array returns
+      // nothing anyway, so the guard is not just an optimisation.
       if (existing.length > 0) {
+        const tripletIds = Array.from(
+          new Set(existing.map((a) => a.tripletId).filter(Boolean)),
+        );
         const { data, error } = await supabase
-          .from('assignment_submissions')
-          .select('assignment_id, status')
-          .in('assignment_id', existing.map((a) => a.id));
+          .from('kpi_triplets')
+          .select('id, kpi_id')
+          .in('id', tripletIds);
         if (error) throw error;
-        const counts: SubmissionCounts = {};
+        const kpiOfTriplet: Record<string, string> = {};
         for (const row of data || []) {
           const r = row as Record<string, unknown>;
-          const id = r.assignment_id as string;
-          const status = r.status as string;
-          if (!counts[id]) counts[id] = { submitted: 0, approved: 0 };
-          counts[id].submitted += 1;
-          if (status === 'approved') counts[id].approved += 1;
+          kpiOfTriplet[r.id as string] = (r.kpi_id as string) || '';
         }
-        setSubmissionCounts(counts);
+        const compOfAssignment: Record<string, string> = {};
+        for (const a of existing) {
+          const comp = framework.kpis.find(
+            (k) => k.id === kpiOfTriplet[a.tripletId],
+          )?.competencyId;
+          if (comp) compOfAssignment[a.id] = comp;
+        }
+        setAssignmentCompetency(compOfAssignment);
       } else {
-        setSubmissionCounts({});
+        setAssignmentCompetency({});
       }
     } catch (err) {
       console.error('Load assignments error:', err);
@@ -300,6 +347,12 @@ export default function GroupAssignmentsScreen() {
   }
 
   async function handleWithdraw(a: GroupAssignment) {
+    // The delete itself is harmless twice -- the second affects zero rows --
+    // but a zero-row delete is indistinguishable from a refusal here, so the
+    // second tap reports "already has submissions" about an assignment the
+    // first tap withdrew successfully.
+    if (withdrawingId) return;
+    setWithdrawingId(a.id);
     try {
       const removed = await assignmentService.deleteAssignment(a.id);
       if (!removed) {
@@ -312,6 +365,8 @@ export default function GroupAssignmentsScreen() {
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
       Alert.alert(t('common.error'), t(key));
+    } finally {
+      setWithdrawingId(null);
     }
   }
 
@@ -348,14 +403,26 @@ export default function GroupAssignmentsScreen() {
         )}
 
         {assignments.map((a) => {
-          const counts = submissionCounts[a.id] || { submitted: 0, approved: 0 };
+          const counts = submissionCounts[a.id] || ZERO_COUNTS;
           const due = a.dueDate ? fromIsoDate(a.dueDate) : null;
           // Once any submission exists, trg_freeze_assessed_assignment refuses
-          // a change to objective/criterion/triplet_id/group_id. Computed from
-          // the counts already fetched above -- approved is a subset of
-          // submitted, so this is really just "submitted === 0", but written
-          // out to match what assignment_has_submissions itself is asking.
-          const canEditTerms = counts.submitted + counts.approved === 0;
+          // a change to objective/criterion/triplet_id/group_id. `submitted` is
+          // the whole tally -- approved and needs_revision are both subsets of
+          // it -- and it now comes from group_assignment_counts, which counts
+          // exactly the rows assignment_has_submissions sees. So this can no
+          // longer disagree with the trigger the way the old client-side count
+          // did once a submitting student left the group.
+          const canEditTerms = counts.submitted === 0;
+          // trg_assignment_within_scope is BEFORE INSERT only, deliberately, so
+          // an advisor may switch a competency off after assigning from it.
+          // Nothing else surfaces that: the assignment stays in the student's
+          // list, submit_assignment has no scope check, and the NOT_IN_SCOPE
+          // refusal finally lands on the MENTOR at review time, who cannot fix
+          // it. The advisor can, and this screen is where. An assignment whose
+          // competency could not be resolved is not flagged -- no answer is not
+          // the same as a negative one.
+          const assignedComp = assignmentCompetency[a.id];
+          const outOfScope = !!assignedComp && !inScope.has(assignedComp);
           const isEditing = editingId === a.id;
           return (
             <View key={a.id} style={styles.card}>
@@ -371,10 +438,15 @@ export default function GroupAssignmentsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => confirmWithdraw(a)}
+                    disabled={withdrawingId !== null}
                     activeOpacity={0.7}
                     style={styles.iconBtn}
                   >
-                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    {withdrawingId === a.id ? (
+                      <ActivityIndicator size="small" color={colors.error} />
+                    ) : (
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -384,16 +456,25 @@ export default function GroupAssignmentsScreen() {
                   {t('advisor.assignmentDueDate')}: {due.toLocaleDateString(i18n.language)}
                 </Text>
               )}
-              {/* approved is a subset of submitted, not a fourth bucket
-                  alongside it -- the parenthesis is what says so. */}
+              {outOfScope && (
+                <Text style={styles.warning}>{t('advisor.assignmentOutOfScope')}</Text>
+              )}
+              {/* approved and "sent back" are subsets of submitted, not further
+                  buckets alongside it -- the parenthesis is what says so. */}
               <Text style={styles.subtle}>
                 {t('advisor.submittedCount', { count: counts.submitted })}
-                {' ('}{t('advisor.approvedCount', { count: counts.approved })}{')'} / {' '}
+                {' ('}
+                {t('advisor.approvedCount', { count: counts.approved })}
+                {', '}
+                {t('advisor.revisionCount', { count: counts.needsRevision })}
+                {') / '}
                 {t('advisor.memberCount', { count: members.length })}
               </Text>
 
               {isEditing && (
                 <View style={styles.editPanel}>
+                  <Text style={styles.editPanelTitle}>{t('advisor.editAssignment')}</Text>
+
                   <Text style={styles.label}>{t('advisor.assignmentTitle')}</Text>
                   <TextInput
                     style={styles.input}
@@ -759,11 +840,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.textDisabled,
   },
+  warning: {
+    fontSize: 13,
+    color: colors.warning,
+    marginTop: spacing.xs,
+  },
   editPanel: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  editPanelTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
   },
   lockedHint: {
     fontSize: 12,

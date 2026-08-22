@@ -34,6 +34,17 @@ export interface AssignmentSubmission {
   reviewedBy?: string;
 }
 
+/** One assignment's tallies as the SERVER counts them, which is not the same
+ *  as what a select on assignment_submissions returns to an advisor -- that is
+ *  scoped to active memberships, and the delete policy and freeze trigger are
+ *  not. See group_assignment_counts in docs/task-assignment-rpcs.sql. */
+export interface AssignmentCounts {
+  assignmentId: string;
+  submitted: number;
+  approved: number;
+  needsRevision: number;
+}
+
 /** An assignment as one student sees it: the task plus their own state, which
  *  is absent until they act on it. */
 export interface MyAssignment extends GroupAssignment {

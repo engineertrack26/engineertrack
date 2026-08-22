@@ -380,3 +380,48 @@ CREATE TRIGGER trg_assignment_xp
 --
 -- This fires on UPDATE only. submit_assignment inserts with status
 -- 'submitted', so the first approval is always an UPDATE.
+
+-- ============================================
+-- group_assignment_counts: the advisor's per-assignment tallies
+-- ============================================
+-- The advisor's screen used to count assignment_submissions with a plain
+-- select. That select is scoped by the table's SELECT policy, which reaches an
+-- advisor through is_group_advisor_of(student_id) and so needs an ACTIVE
+-- membership. assignment_has_submissions -- which backs the DELETE policy and
+-- trg_freeze_assessed_assignment -- is deliberately unscoped and asks only
+-- about the row.
+--
+-- The two therefore disagree the moment a student submits and then joins
+-- another group: the screen prints "0 submitted (0 approved)", enables the
+-- objective and criterion fields on that reasoning, and the next tap comes back
+-- ASSIGNMENT_LOCKED from the trigger or "already has submissions" from the
+-- delete. Both contradict the count the same screen printed a moment earlier.
+--
+-- This function counts the rows the server actually enforces against, so
+-- canEditTerms is derived from a number that cannot disagree with the trigger.
+--
+-- SECURITY DEFINER has no RLS of its own -- that is the whole point of it here
+-- and also the hazard. owns_group(p_group_id) in the WHERE is what stops it
+-- answering for a group the caller does not own.
+--
+-- needs_revision is reported separately as well as inside submitted. "Sent
+-- back" is the state an advisor most wants to see and it was invisible before,
+-- folded into the submitted total with no way to tell it apart.
+CREATE OR REPLACE FUNCTION group_assignment_counts(p_group_id UUID)
+RETURNS TABLE (assignment_id UUID, submitted INT, approved INT, needs_revision INT)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT a.id,
+         count(s.id)::INT,
+         count(s.id) FILTER (WHERE s.status = 'approved')::INT,
+         count(s.id) FILTER (WHERE s.status = 'needs_revision')::INT
+  FROM group_assignments a
+  LEFT JOIN assignment_submissions s ON s.assignment_id = a.id
+  WHERE a.group_id = p_group_id
+    AND owns_group(p_group_id)
+  GROUP BY a.id;
+$$;
+
+GRANT EXECUTE ON FUNCTION group_assignment_counts(UUID) TO authenticated;
