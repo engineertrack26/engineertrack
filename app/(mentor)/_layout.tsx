@@ -56,6 +56,7 @@ export default function MentorLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="pending-reviews" options={{ href: null }} />
       <Tabs.Screen
         name="feedback"
         options={{

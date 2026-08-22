@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
+import { assignmentService } from '@/services/assignments';
 import { StatCard } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -81,11 +82,18 @@ export default function MentorDashboard() {
   });
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [pendingLogs, setPendingLogs] = useState<PendingLogItem[]>([]);
+  // Task-assignment reviews are a separate domain from the daily-log reviews
+  // above -- mentorService.getDashboardStats knows nothing about them, so
+  // their count is its own fetch.
+  const [pendingTaskCount, setPendingTaskCount] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const result = await mentorService.getDashboardStats(user.id);
+      const [result, pendingTasks] = await Promise.all([
+        mentorService.getDashboardStats(user.id),
+        assignmentService.listPendingReviews(),
+      ]);
       setStats({
         assignedCount: result.assignedCount,
         pendingCount: result.pendingCount,
@@ -98,6 +106,7 @@ export default function MentorDashboard() {
       setPendingLogs(
         (result.pendingLogs || []).slice(0, 5).map((l) => mapPendingLog(l as unknown as Record<string, unknown>)),
       );
+      setPendingTaskCount(pendingTasks.length);
     } catch (err) {
       console.error('Mentor dashboard load error:', err);
     } finally {
@@ -256,6 +265,30 @@ export default function MentorDashboard() {
               </TouchableOpacity>
             ))
           )}
+        </View>
+
+        {/* Pending Task Reviews -- a separate queue from the daily-log
+            reviews above: task submissions carry a criterion the mentor
+            judges against, and an approval writes a KPI observation. */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.taskReviewCard}
+            onPress={() => router.push('/(mentor)/pending-reviews')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.taskReviewLeft}>
+              <View style={styles.taskReviewIconWrap}>
+                <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.taskReviewTitle}>
+                {t('mentor.pendingTaskReviews')}
+                {pendingTaskCount > 0 && (
+                  <Text style={styles.countBadge}> ({pendingTaskCount})</Text>
+                )}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
+          </TouchableOpacity>
         </View>
 
         {/* My Students */}
@@ -425,6 +458,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+  },
+
+  // Pending Task Reviews
+  taskReviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  taskReviewLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  taskReviewIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  taskReviewTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
   },
 
   // Pending Cards

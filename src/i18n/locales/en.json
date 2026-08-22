@@ -165,7 +165,18 @@
     "observedToday": "What did this student demonstrate?",
     "observedTodayHint": "Tick only what you actually observed. A behaviour counts once it has been seen on two separate days.",
     "noWorkingKpis": "This student has reached the group's target in every competency.",
-    "feedbackSavedKpisFailed": "Feedback was saved, but the observed KPIs could not be recorded. Please try ticking them again from the log later."
+    "feedbackSavedKpisFailed": "Feedback was saved, but the observed KPIs could not be recorded. Please try ticking them again from the log later.",
+    "pendingTaskReviews": "Pending Task Reviews",
+    "noPendingReviews": "No submissions are waiting on your review.",
+    "taskCriterion": "Assess against",
+    "taskDueDate": "Due",
+    "studentNote": "Student's note",
+    "linkedLog": "Linked log",
+    "reviewNote": "Note (optional)",
+    "approveTask": "Approve",
+    "requestTaskRevision": "Request revision",
+    "taskApproved": "Task approved.",
+    "taskRevisionRequested": "Revision requested."
   },
   "advisor": {
     "dashboard": "Advisor Dashboard",
@@ -309,9 +320,9 @@
     "membershipNotFound": "That membership no longer exists. Refresh and try again.",
     "assignmentNotFound": "That task no longer exists.",
     "submissionNotFound": "That submission no longer exists.",
-    "notInScope": "This competency is not part of the group's scope.",
+    "notInScope": "This competency is no longer part of the group's scope. Ask the advisor to review the group's targets.",
     "alreadyApproved": "This task has already been approved. Ask your mentor to reopen it if you need to change your submission.",
-    "studentLeftGroup": "This student is no longer in the group this task was set for, so it can no longer be evaluated.",
+    "studentLeftGroup": "This student is no longer in the group this task was assigned to, so it can't be evaluated. Ask the advisor to check the student's group membership.",
     "assignmentLocked": "Students have already submitted this task, so its objective and criterion can no longer be changed. The title, description and due date are still editable."
   }
 }
