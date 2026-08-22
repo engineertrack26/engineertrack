@@ -498,17 +498,54 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: everything from Task 3; `kpi_observations`, `record_kpi_observations`, `group_competency_targets`, `award_xp_internal(UUID, INTEGER, TEXT, UUID)`.
-- Produces: `submit_assignment(p_assignment_id UUID, p_note TEXT, p_log_id UUID) RETURNS UUID`; `review_assignment(p_submission_id UUID, p_approved BOOLEAN, p_note TEXT) RETURNS VOID`. Error codes raised: `NOT_AUTHENTICATED`, `ROLE_NOT_ALLOWED`, `ASSIGNMENT_NOT_FOUND`, `SUBMISSION_NOT_FOUND`, `NOT_IN_SCOPE`.
+- Produces: `submit_assignment(p_assignment_id UUID, p_note TEXT, p_log_id UUID) RETURNS UUID`; `review_assignment(p_submission_id UUID, p_approved BOOLEAN, p_note TEXT) RETURNS VOID`. Error codes raised: `NOT_AUTHENTICATED`, `ROLE_NOT_ALLOWED`, `ASSIGNMENT_NOT_FOUND`, `SUBMISSION_NOT_FOUND`, `NOT_IN_SCOPE`, `ALREADY_APPROVED`, `STUDENT_LEFT_GROUP`. `ASSIGNMENT_LOCKED` is raised by `freeze_assessed_assignment` in Task 3's migration, not by these RPCs, but it reaches the client through the same `mapRpcError` table and Task 5 must carry it.
 
-- [ ] **Step 1: Extend `kpi_observations` and harden the tick delete**
+- [ ] **Step 1: The FOREIGN KEY and the one-observation-per-submission index**
+
+`kpi_observations.assignment_submission_id` is **not** declared here. The column lives in
+`docs/competency-assessment-migration.sql`, next to the table it belongs to, because
+`record_kpi_observations` reads it and that function is defined in `docs/competency-rpcs.sql`,
+which runs before this file. Declaring it here would leave a function referring to a column
+that does not exist yet — plpgsql bodies are not checked at `CREATE` time, so it would create
+cleanly and fail at the first call on an install that applied only this subsystem.
+
+Only the constraint has to wait, because `assignment_submissions` does not exist until Task 3's
+migration. Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so the guard is explicit — and it
+tests for the *thing*, a single-column FK on that column, rather than for a constraint name. An
+earlier revision created this FK inline and Postgres auto-named it
+`kpi_observations_assignment_submission_id_fkey`; a name test would not match that, and Postgres
+does not deduplicate foreign keys, so a re-apply would leave two.
 
 ```sql
 -- docs/task-assignment-rpcs.sql
 -- Run AFTER docs/task-assignment-migration.sql. Idempotent.
 
-ALTER TABLE kpi_observations
-  ADD COLUMN IF NOT EXISTS assignment_submission_id UUID
-    REFERENCES assignment_submissions(id) ON DELETE CASCADE;
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so the guard is explicit.
+--
+-- The guard tests for the THING, not for a name. Before commit e514ba5 this
+-- FK was created inline in the ADD COLUMN and Postgres auto-named it
+-- kpi_observations_assignment_submission_id_fkey; a database carrying that one
+-- would not match a name test, and Postgres does not deduplicate foreign keys,
+-- so the re-apply this fix wave requires would have left TWO identical FKs on
+-- one column. conrelid pins it to this table, so a same-named constraint
+-- somewhere else cannot make the guard skip, and array_length(conkey,1) = 1
+-- keeps a composite FK that merely mentions the column from counting.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+    WHERE c.conrelid = 'kpi_observations'::regclass
+      AND c.contype = 'f'
+      AND array_length(c.conkey, 1) = 1
+      AND a.attname = 'assignment_submission_id'
+  ) THEN
+    ALTER TABLE kpi_observations
+      ADD CONSTRAINT kpi_observations_assignment_submission_fk
+      FOREIGN KEY (assignment_submission_id)
+      REFERENCES assignment_submissions(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- One observation per approved submission. UNIQUE (kpi_id, log_id, observed_by)
 -- treats NULLs as distinct, so two approvals of DIFFERENT tasks for one KPI
@@ -520,44 +557,38 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_observation_per_submission
   WHERE assignment_submission_id IS NOT NULL;
 ```
 
-- [ ] **Step 2: Stop a log re-save from deleting task observations**
+- [ ] **Step 2: Do not redefine `record_kpi_observations` here**
 
-`record_kpi_observations` deletes the caller's prior ticks for a log before inserting, matching `o.log_id IS NOT DISTINCT FROM p_log_id`. Task observations survive today only because the app always passes a real log id — incidental, not structural. Replace the whole function (`CREATE OR REPLACE` is enough; the signature is unchanged):
+The hardening that stops a log re-save from sweeping away a task observation —
+`AND o.assignment_submission_id IS NULL` on that function's `DELETE` — belongs to
+`docs/competency-rpcs.sql`, which owns the daily-log tick flow, and it is already there.
+**Do not write a second copy of the function into this file.**
+
+A second copy used to sit here, and two files owning one function meant that re-applying
+`competency-rpcs.sql` — which this project's own "migrations are idempotent, re-run freely"
+convention invites, and which a fresh rebuild in filename order does by itself, since
+`competency-` sorts before `task-` — silently reverted the guard, with nothing asserting the
+function body either way. Record the ownership in a comment where the copy used to be, so the
+next reader does not put it back:
 
 ```sql
-CREATE OR REPLACE FUNCTION record_kpi_observations(
-  p_student_id UUID,
-  p_log_id     UUID,
-  p_kpi_ids    UUID[]
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'NOT_AUTHENTICATED';
-  END IF;
-
-  IF NOT can_view_competency(p_student_id) THEN
-    RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
-  END IF;
-
-  DELETE FROM kpi_observations o
-  WHERE o.student_id = p_student_id
-    AND o.log_id IS NOT DISTINCT FROM p_log_id
-    AND o.observed_by = auth.uid()
-    AND o.assignment_submission_id IS NULL;   -- never a task observation
-
-  INSERT INTO kpi_observations (student_id, kpi_id, log_id, observed_by)
-  SELECT p_student_id, kid, p_log_id, auth.uid()
-  FROM unnest(coalesce(p_kpi_ids, ARRAY[]::UUID[])) AS kid;
-END;
-$$;
+-- ============================================
+-- record_kpi_observations is NOT redefined here.
+-- ============================================
+-- It lives in docs/competency-rpcs.sql, which owns the daily-log tick flow, and
+-- its DELETE already carries `AND o.assignment_submission_id IS NULL` so that a
+-- log re-save cannot sweep away an observation produced by approving a task.
 ```
 
 - [ ] **Step 3: `submit_assignment`**
+
+The `ALREADY_APPROVED` guard is two things, and both are needed. The standalone `EXISTS` gives
+the ordinary case a clean error. The `WHERE assignment_submissions.status <> 'approved'` on the
+`DO UPDATE` is what makes the check atomic with the write it protects: under READ COMMITTED the
+`EXISTS` and the `INSERT` see different row versions, so a mentor's approval committing between
+them would let the `DO UPDATE` reset the row to `'submitted'` and clear `reviewed_by` while the
+observation that approval wrote survives. When that `WHERE` excludes the row, `RETURNING` yields
+nothing and `submission` is `NULL` — which must raise, not be returned to the client as success.
 
 ```sql
 CREATE OR REPLACE FUNCTION submit_assignment(
@@ -590,6 +621,49 @@ BEGIN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
   END IF;
 
+  -- An approved submission is a finished record. The observation it produced is
+  -- counting toward a competency level and carries the mentor's name.
+  --
+  -- Without this guard the DO UPDATE below would reset the row to 'submitted'
+  -- and clear reviewed_by while leaving that observation in place — the one
+  -- state this design says cannot exist: evidence backed by a submission nobody
+  -- approved. review_assignment handles the mentor withdrawing an approval and
+  -- deletes the observation in the same statement; nothing handled the student
+  -- reopening it from this side, because the rule is written over there and the
+  -- hole was here.
+  --
+  -- Reopening stays the mentor's call: review_assignment(id, false, note) moves
+  -- the row to needs_revision and retracts the observation, and the student can
+  -- resubmit from there. That path is exercised by Part B case 3b of
+  -- docs/task-assignment-verification.sql, which resubmits the row case 3 sent
+  -- back and asserts it returns a non-null id in status 'submitted'.
+  --
+  -- This standalone EXISTS is kept for the common case: a student tapping
+  -- Submit on an already-approved task gets a clean ALREADY_APPROVED without
+  -- depending on the race path below. It is NOT the whole guard, because it
+  -- cannot be: under READ COMMITTED this SELECT and the INSERT below see
+  -- different row versions.
+  IF EXISTS (
+    SELECT 1 FROM assignment_submissions s
+    WHERE s.assignment_id = p_assignment_id
+      AND s.student_id = auth.uid()
+      AND s.status = 'approved'
+  ) THEN
+    RAISE EXCEPTION 'ALREADY_APPROVED';
+  END IF;
+
+  -- The WHERE on the DO UPDATE is what makes the guard atomic with the write it
+  -- protects. Without it: the student's EXISTS above passes while the row is
+  -- still 'submitted', the mentor's approval commits, and this statement then
+  -- re-reads the freshly committed row and resets it to 'submitted' with
+  -- reviewed_by cleared -- while the observation that approval wrote survives.
+  -- Evidence standing behind a submission nobody approved is exactly the state
+  -- the guard exists to prevent. ON CONFLICT DO UPDATE re-reads the conflicting
+  -- row under a lock and evaluates this WHERE against that fresh version, so
+  -- the two are one statement and there is no window between them.
+  --
+  -- 'needs_revision' and 'submitted' both pass the WHERE, which is the point:
+  -- a resubmission after a revision request must still go through.
   INSERT INTO assignment_submissions
     (assignment_id, student_id, status, student_note, log_id, submitted_at)
   VALUES (p_assignment_id, auth.uid(), 'submitted', p_note, p_log_id, now())
@@ -600,7 +674,19 @@ BEGIN
         submitted_at = now(),
         reviewed_at = NULL,
         reviewed_by = NULL
+    WHERE assignment_submissions.status <> 'approved'
   RETURNING id INTO submission;
+
+  -- When that WHERE excludes the row, the statement updates nothing, RETURNING
+  -- yields no row, and `submission` is left NULL -- which returned as-is would
+  -- report the race as a SUCCESS to a client that then has no submission id.
+  -- id is the primary key and NOT NULL, and both the plain-insert path and the
+  -- accepted-update path return it, so NULL here means one thing only: the row
+  -- was already 'approved'. Raise the same code the sequential path raises, so
+  -- the client cannot tell the race apart from the ordinary refusal.
+  IF submission IS NULL THEN
+    RAISE EXCEPTION 'ALREADY_APPROVED';
+  END IF;
 
   RETURN submission;
 END;
@@ -609,9 +695,22 @@ $$;
 GRANT EXECUTE ON FUNCTION submit_assignment(UUID, TEXT, UUID) TO authenticated;
 ```
 
-Resubmitting after a revision request clears `reviewed_at` and `reviewed_by`, so the mentor's queue shows it as waiting again.
+Resubmitting after a revision request clears `reviewed_at` and `reviewed_by`, so the mentor's
+queue shows it as waiting again. Task 6's Part B case `3b` is what proves that path still works.
 
 - [ ] **Step 4: `review_assignment`, which carries the bridge**
+
+Two things in this body are load-bearing and easy to "simplify" into a defect:
+
+1. `STUDENT_LEFT_GROUP` and `NOT_IN_SCOPE` are gated on `p_approved`. Each asks whether an
+   observation written *now* would be meaningful, and only the approve direction writes one. A
+   withdrawal removes evidence and has nothing to validate — refusing it would make an approval
+   permanently un-retractable, because `kpi_observations` has no `DELETE` policy and no other
+   RPC that removes a row.
+2. The `ON CONFLICT` target repeats the partial index's `WHERE`. Postgres infers a partial index
+   as an arbiter only when the conflict target repeats its predicate; without it every call
+   raises `42P10`, not just genuine duplicates. And it is `DO UPDATE`, not `DO NOTHING`, so a
+   re-approval by a different mentor moves `observed_by` to whoever last approved.
 
 ```sql
 CREATE OR REPLACE FUNCTION review_assignment(
@@ -651,15 +750,59 @@ BEGIN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
   END IF;
 
-  -- An observation for a competency outside the group's scope is written but
-  -- never reported, because get_competency_progress only returns competencies
-  -- with a target row. The student would do the work, be approved, and see
-  -- nothing move.
-  IF NOT EXISTS (
-    SELECT 1 FROM group_competency_targets gt
-    WHERE gt.group_id = the_group AND gt.competency_id = the_comp
-  ) THEN
-    RAISE EXCEPTION 'NOT_IN_SCOPE';
+  -- Both guards below are gated on p_approved, and the gate is the fix for a
+  -- trap, not a convenience.
+  --
+  -- Each of them asks whether an observation written NOW would be meaningful.
+  -- That question only arises in the approve direction. A withdrawal writes no
+  -- observation; it DELETES one. There is nothing for these checks to validate,
+  -- and nothing they could protect by refusing -- refusing a withdrawal only
+  -- keeps evidence standing that the mentor has decided to take back.
+  --
+  -- Ungated, they made an approval permanently un-retractable. Mentor approves,
+  -- observation written, XP paid; the student then joins another group, which
+  -- closes the first membership; the mentor tries to retract and gets
+  -- STUDENT_LEFT_GROUP. The observation keeps counting -- get_competency_progress
+  -- filters on nothing about groups -- and kpi_observations has no DELETE policy
+  -- and no other RPC that removes a row, so the app has no way back at all.
+  -- NOT_IN_SCOPE set the identical trap one step later: an advisor narrowing the
+  -- group's scope after an approval would freeze that approval in place.
+  --
+  -- Approving is a claim about the present; withdrawing is a correction to the
+  -- past. Only the claim has preconditions.
+  IF p_approved THEN
+    -- get_competency_progress computes against the student's ACTIVE membership,
+    -- while the scope check below validates against the ASSIGNMENT's group.
+    -- join_group_by_code closes the old membership and opens a new one, so a
+    -- student who re-joins between submitting and being approved would be
+    -- approved against group A's targets and read from group B's -- and if B
+    -- does not target that competency, nothing moves and nothing says why.
+    -- Approving into a void is worse than refusing with a name: the work
+    -- belongs to a term the student has left.
+    --
+    -- Reading group_memberships here is fine. This is a function body, not a
+    -- policy qual, so it cannot re-enter that table's policies and cause
+    -- 42P17 -- the same reason every SECURITY DEFINER helper in this project
+    -- reaches it.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_memberships m
+      WHERE m.group_id = the_group
+        AND m.student_id = the_student
+        AND m.left_at IS NULL
+    ) THEN
+      RAISE EXCEPTION 'STUDENT_LEFT_GROUP';
+    END IF;
+
+    -- An observation for a competency outside the group's scope is written but
+    -- never reported, because get_competency_progress only returns competencies
+    -- with a target row. The student would do the work, be approved, and see
+    -- nothing move.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_competency_targets gt
+      WHERE gt.group_id = the_group AND gt.competency_id = the_comp
+    ) THEN
+      RAISE EXCEPTION 'NOT_IN_SCOPE';
+    END IF;
   END IF;
 
   UPDATE assignment_submissions s
@@ -670,10 +813,18 @@ BEGIN
   WHERE s.id = p_submission_id;
 
   IF p_approved THEN
+    -- one_observation_per_submission is a PARTIAL unique index (predicate:
+    -- assignment_submission_id IS NOT NULL). Postgres only infers a partial
+    -- index as an ON CONFLICT arbiter when the conflict target repeats that
+    -- same predicate; without it, index inference finds no matching arbiter
+    -- and every call raises 42P10, not just genuine duplicates. Repeating the
+    -- WHERE here looks redundant next to the index definition but is load-
+    -- bearing -- do not drop it.
     INSERT INTO kpi_observations
       (student_id, kpi_id, log_id, observed_by, assignment_submission_id)
     VALUES (the_student, the_kpi, NULL, auth.uid(), p_submission_id)
-    ON CONFLICT (assignment_submission_id) DO NOTHING;
+    ON CONFLICT (assignment_submission_id) WHERE assignment_submission_id IS NOT NULL
+      DO UPDATE SET observed_by = auth.uid(), observed_at = now();
   ELSE
     -- A withdrawn approval must stop counting. Otherwise the student stays
     -- promoted on evidence that was taken back.
@@ -1285,11 +1436,24 @@ The migrations are applied by hand in this order, each verified before the next:
 2. `docs/competency-rpcs.sql` — **re-apply.** Already live, but it now carries the
    hardened `record_kpi_observations`, which no longer has a second copy anywhere.
 3. `docs/task-triplets-migration.sql`
-4. `docs/task-assignment-migration.sql`
-5. `docs/task-assignment-rpcs.sql` — adds the FOREIGN KEY for that column, the
-   partial unique index, and the three assignment functions.
+4. `docs/task-assignment-migration.sql` — **re-apply.** The third fix wave changed
+   the `"advisor updates assignments"` policy (`created_by` is now immutable),
+   added `group_id` to `freeze_assessed_assignment`'s frozen columns, and dropped
+   that function's unused `SECURITY DEFINER`. `CREATE OR REPLACE FUNCTION`
+   reassigns every property not named in the command, so re-applying is what
+   actually turns the live function back into `SECURITY INVOKER`.
+5. `docs/task-assignment-rpcs.sql` — **re-apply.** Adds the FOREIGN KEY for that
+   column, the partial unique index, and the three assignment functions. The
+   third fix wave rewrote the FK guard to test for a single-column FK on
+   `kpi_observations.assignment_submission_id` rather than for a constraint name,
+   gated `review_assignment`'s two preconditions on `p_approved`, and made
+   `submit_assignment`'s `ALREADY_APPROVED` check atomic with its write.
 
-Then Part A and Part B of the verification.
+Then Part A, Part B and Part C of the verification.
+
+Everything on this list is now live, so every step is a re-apply and the order
+still matters: step 1 must run before step 2 (the column before the function that
+reads it) and step 4 before step 5 (the table before its foreign key).
 
 Steps 1 and 2 are new. Before this restructuring, `record_kpi_observations` was
 defined in two files and the older one held the un-hardened body — so re-applying
