@@ -289,8 +289,6 @@
   "notifications": {
     "taskAssignedTitle": "New Task Assigned",
     "taskAssignedBody": "A new task has been assigned: \"{{title}}\".",
-    "taskSubmittedTitle": "Task Submitted",
-    "taskSubmittedBody": "{{studentName}} submitted \"{{title}}\" for review.",
     "taskApprovedTitle": "Task Approved!",
     "taskApprovedBody": "{{mentorName}} approved your task \"{{title}}\".",
     "taskRevisionTitle": "Revision Requested",

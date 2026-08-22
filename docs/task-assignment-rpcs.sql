@@ -184,7 +184,9 @@ BEGIN
   -- The strings are plain English on purpose: the database has no access to
   -- i18n, and every other server-written notification in this project
   -- (award_xp_internal, award_badge_internal, report_join_issue) is English
-  -- too. They mirror notifications.taskSubmittedTitle/Body in en.json.
+  -- too. They carry the wording the deleted client-side block used to build
+  -- from notifications.taskSubmittedTitle/Body; those two keys are gone from
+  -- en.json with the only code that ever read them.
   SELECT sp.mentor_id INTO the_mentor
   FROM student_profiles sp WHERE sp.id = auth.uid();
 
@@ -192,18 +194,44 @@ BEGIN
   -- Skip silently rather than raising, or a missing link would fail a
   -- submission that has already been written.
   IF the_mentor IS NOT NULL THEN
-    SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
-    INTO student_name FROM profiles p WHERE p.id = auth.uid();
+    -- A failed notification must never roll back a submission that succeeded.
+    -- All six client-side notify sites carry a .catch for exactly that reason,
+    -- and moving THIS one into the function is what dropped the protection:
+    -- an unhandled error in here aborts submit_assignment and takes the
+    -- student's submission with it. An exception block in plpgsql is a
+    -- subtransaction, so this restores the same rule server-side -- the INSERT
+    -- rolls back on failure, the submission does not.
+    --
+    -- Both known failure paths are closed today (notifications has no FORCE
+    -- ROW LEVEL SECURITY, so the definer bypasses RLS; student_profiles
+    -- .mentor_id and notifications.user_id both reference profiles(id) with the
+    -- default NO ACTION, so mentor_id cannot dangle). That is an argument this
+    -- will not fail, not that it cannot: notifications is a table someone will
+    -- add a constraint or a trigger to eventually, and the symptom would be
+    -- students unable to submit, with the cause three files away.
+    --
+    -- The name lookup is inside the block too. It is part of composing the
+    -- notification and a failure there has the identical consequence.
+    --
+    -- WHEN OTHERS is deliberately broad and deliberately silent. This is the
+    -- .catch, not a place to decide which failures matter; the submission has
+    -- already been written and returning it is the contract.
+    BEGIN
+      SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
+      INTO student_name FROM profiles p WHERE p.id = auth.uid();
 
-    INSERT INTO notifications (user_id, title, body, type, data)
-    VALUES (
-      the_mentor,
-      'Task Submitted',
-      coalesce(nullif(student_name, ''), 'A student')
-        || ' submitted "' || coalesce(assignment_title, 'a task') || '" for review.',
-      'task_submitted',
-      jsonb_build_object('assignmentId', p_assignment_id)
-    );
+      INSERT INTO notifications (user_id, title, body, type, data)
+      VALUES (
+        the_mentor,
+        'Task Submitted',
+        coalesce(nullif(student_name, ''), 'A student')
+          || ' submitted "' || coalesce(assignment_title, 'a task') || '" for review.',
+        'task_submitted',
+        jsonb_build_object('assignmentId', p_assignment_id)
+      );
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
   END IF;
 
   RETURN submission;
