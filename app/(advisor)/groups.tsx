@@ -311,10 +311,17 @@ const styles = StyleSheet.create({
   },
 
   // Card actions
+  //
+  // flexWrap is load-bearing, not tidiness: React Native defaults flexShrink to
+  // 0, so four labels at gap spacing.lg overflow a 360dp screen rather than
+  // shrink, and with justifyContent 'flex-end' it is the LEFTMOST label that
+  // leaves the screen. rowGap keeps a wrapped second line off the first.
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'flex-end',
     gap: spacing.lg,
+    rowGap: spacing.sm,
     marginTop: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,

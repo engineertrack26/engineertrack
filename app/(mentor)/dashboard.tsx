@@ -92,7 +92,13 @@ export default function MentorDashboard() {
     try {
       const [result, pendingTasks] = await Promise.all([
         mentorService.getDashboardStats(user.id),
-        assignmentService.listPendingReviews(),
+        // One count on one card must not be able to empty this whole screen.
+        // Promise.all rejects as a unit, so a failure in the new
+        // task-assignment query would take the stats, the student list and the
+        // pending-log list down with it -- a daily-log dashboard that worked
+        // before this branch, hostage to a number beside it. Same guard
+        // achievements.tsx puts on competencyService.getProgress.
+        assignmentService.listPendingReviews().catch(() => []),
       ]);
       setStats({
         assignedCount: result.assignedCount,
