@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Platform,
@@ -68,6 +68,9 @@ export default function GroupAssignmentsScreen() {
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
   const [pickedTriplet, setPickedTriplet] = useState<KpiTriplet | null>(null);
   const [triplets, setTriplets] = useState<KpiTriplet[]>([]);
+  // Discards a level fetch that a later tap has superseded -- readable
+  // inside the async continuation without re-rendering or a stale closure.
+  const levelRequest = useRef(0);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -135,12 +138,19 @@ export default function GroupAssignmentsScreen() {
   }
 
   async function chooseLevel(level: number) {
+    const request = ++levelRequest.current;
     setPickedLevel(level);
     setPickedTriplet(null);
+    setTriplets([]);
     const levelKpis = kpis.filter(
       (k) => k.competencyId === pickedCompetency && k.level === level,
     );
     const lists = await Promise.all(levelKpis.map((k) => assignmentService.listTriplets(k.id)));
+    // A later tap already superseded this fetch. setPickedLevel is synchronous
+    // and the fetch is not, so without this the last response to ARRIVE wins
+    // rather than the last one requested, and the list can show one level's
+    // triplets under another level's highlighted chip.
+    if (request !== levelRequest.current) return;
     setTriplets(lists.flat());
   }
 
@@ -236,9 +246,11 @@ export default function GroupAssignmentsScreen() {
                   {t('advisor.assignmentDueDate')}: {due.toLocaleDateString(i18n.language)}
                 </Text>
               )}
+              {/* approved is a subset of submitted, not a fourth bucket
+                  alongside it -- the parenthesis is what says so. */}
               <Text style={styles.subtle}>
-                {t('advisor.approvedCount', { count: counts.approved })} · {' '}
-                {t('advisor.submittedCount', { count: counts.submitted })} · {' '}
+                {t('advisor.submittedCount', { count: counts.submitted })}
+                {' ('}{t('advisor.approvedCount', { count: counts.approved })}{')'} / {' '}
                 {t('advisor.memberCount', { count: members.length })}
               </Text>
             </View>
