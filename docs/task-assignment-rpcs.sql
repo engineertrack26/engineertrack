@@ -14,11 +14,24 @@
 -- exist until docs/task-assignment-migration.sql.
 --
 -- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so the guard is explicit.
+--
+-- The guard tests for the THING, not for a name. Before commit e514ba5 this
+-- FK was created inline in the ADD COLUMN and Postgres auto-named it
+-- kpi_observations_assignment_submission_id_fkey; a database carrying that one
+-- would not match a name test, and Postgres does not deduplicate foreign keys,
+-- so the re-apply this fix wave requires would have left TWO identical FKs on
+-- one column. conrelid pins it to this table, so a same-named constraint
+-- somewhere else cannot make the guard skip, and array_length(conkey,1) = 1
+-- keeps a composite FK that merely mentions the column from counting.
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'kpi_observations_assignment_submission_fk'
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+    WHERE c.conrelid = 'kpi_observations'::regclass
+      AND c.contype = 'f'
+      AND array_length(c.conkey, 1) = 1
+      AND a.attname = 'assignment_submission_id'
   ) THEN
     ALTER TABLE kpi_observations
       ADD CONSTRAINT kpi_observations_assignment_submission_fk
@@ -95,7 +108,15 @@ BEGIN
   --
   -- Reopening stays the mentor's call: review_assignment(id, false, note) moves
   -- the row to needs_revision and retracts the observation, and the student can
-  -- resubmit from there. That path is exercised by the verification script.
+  -- resubmit from there. That path is exercised by Part B case 3b of
+  -- docs/task-assignment-verification.sql, which resubmits the row case 3 sent
+  -- back and asserts it returns a non-null id in status 'submitted'.
+  --
+  -- This standalone EXISTS is kept for the common case: a student tapping
+  -- Submit on an already-approved task gets a clean ALREADY_APPROVED without
+  -- depending on the race path below. It is NOT the whole guard, because it
+  -- cannot be: under READ COMMITTED this SELECT and the INSERT below see
+  -- different row versions.
   IF EXISTS (
     SELECT 1 FROM assignment_submissions s
     WHERE s.assignment_id = p_assignment_id
@@ -105,6 +126,18 @@ BEGIN
     RAISE EXCEPTION 'ALREADY_APPROVED';
   END IF;
 
+  -- The WHERE on the DO UPDATE is what makes the guard atomic with the write it
+  -- protects. Without it: the student's EXISTS above passes while the row is
+  -- still 'submitted', the mentor's approval commits, and this statement then
+  -- re-reads the freshly committed row and resets it to 'submitted' with
+  -- reviewed_by cleared -- while the observation that approval wrote survives.
+  -- Evidence standing behind a submission nobody approved is exactly the state
+  -- the guard exists to prevent. ON CONFLICT DO UPDATE re-reads the conflicting
+  -- row under a lock and evaluates this WHERE against that fresh version, so
+  -- the two are one statement and there is no window between them.
+  --
+  -- 'needs_revision' and 'submitted' both pass the WHERE, which is the point:
+  -- a resubmission after a revision request must still go through.
   INSERT INTO assignment_submissions
     (assignment_id, student_id, status, student_note, log_id, submitted_at)
   VALUES (p_assignment_id, auth.uid(), 'submitted', p_note, p_log_id, now())
@@ -115,7 +148,19 @@ BEGIN
         submitted_at = now(),
         reviewed_at = NULL,
         reviewed_by = NULL
+    WHERE assignment_submissions.status <> 'approved'
   RETURNING id INTO submission;
+
+  -- When that WHERE excludes the row, the statement updates nothing, RETURNING
+  -- yields no row, and `submission` is left NULL -- which returned as-is would
+  -- report the race as a SUCCESS to a client that then has no submission id.
+  -- id is the primary key and NOT NULL, and both the plain-insert path and the
+  -- accepted-update path return it, so NULL here means one thing only: the row
+  -- was already 'approved'. Raise the same code the sequential path raises, so
+  -- the client cannot tell the race apart from the ordinary refusal.
+  IF submission IS NULL THEN
+    RAISE EXCEPTION 'ALREADY_APPROVED';
+  END IF;
 
   RETURN submission;
 END;
@@ -166,36 +211,59 @@ BEGIN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
   END IF;
 
-  -- get_competency_progress computes against the student's ACTIVE membership,
-  -- while the scope check below validates against the ASSIGNMENT's group.
-  -- join_group_by_code closes the old membership and opens a new one, so a
-  -- student who re-joins between submitting and being approved would be
-  -- approved against group A's targets and read from group B's -- and if B does
-  -- not target that competency, nothing moves and nothing says why. Approving
-  -- into a void is worse than refusing with a name: the work belongs to a term
-  -- the student has left.
+  -- Both guards below are gated on p_approved, and the gate is the fix for a
+  -- trap, not a convenience.
   --
-  -- Reading group_memberships here is fine. This is a function body, not a
-  -- policy qual, so it cannot re-enter that table's policies and cause 42P17 --
-  -- the same reason every SECURITY DEFINER helper in this project reaches it.
-  IF NOT EXISTS (
-    SELECT 1 FROM group_memberships m
-    WHERE m.group_id = the_group
-      AND m.student_id = the_student
-      AND m.left_at IS NULL
-  ) THEN
-    RAISE EXCEPTION 'STUDENT_LEFT_GROUP';
-  END IF;
+  -- Each of them asks whether an observation written NOW would be meaningful.
+  -- That question only arises in the approve direction. A withdrawal writes no
+  -- observation; it DELETES one. There is nothing for these checks to validate,
+  -- and nothing they could protect by refusing -- refusing a withdrawal only
+  -- keeps evidence standing that the mentor has decided to take back.
+  --
+  -- Ungated, they made an approval permanently un-retractable. Mentor approves,
+  -- observation written, XP paid; the student then joins another group, which
+  -- closes the first membership; the mentor tries to retract and gets
+  -- STUDENT_LEFT_GROUP. The observation keeps counting -- get_competency_progress
+  -- filters on nothing about groups -- and kpi_observations has no DELETE policy
+  -- and no other RPC that removes a row, so the app has no way back at all.
+  -- NOT_IN_SCOPE set the identical trap one step later: an advisor narrowing the
+  -- group's scope after an approval would freeze that approval in place.
+  --
+  -- Approving is a claim about the present; withdrawing is a correction to the
+  -- past. Only the claim has preconditions.
+  IF p_approved THEN
+    -- get_competency_progress computes against the student's ACTIVE membership,
+    -- while the scope check below validates against the ASSIGNMENT's group.
+    -- join_group_by_code closes the old membership and opens a new one, so a
+    -- student who re-joins between submitting and being approved would be
+    -- approved against group A's targets and read from group B's -- and if B
+    -- does not target that competency, nothing moves and nothing says why.
+    -- Approving into a void is worse than refusing with a name: the work
+    -- belongs to a term the student has left.
+    --
+    -- Reading group_memberships here is fine. This is a function body, not a
+    -- policy qual, so it cannot re-enter that table's policies and cause
+    -- 42P17 -- the same reason every SECURITY DEFINER helper in this project
+    -- reaches it.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_memberships m
+      WHERE m.group_id = the_group
+        AND m.student_id = the_student
+        AND m.left_at IS NULL
+    ) THEN
+      RAISE EXCEPTION 'STUDENT_LEFT_GROUP';
+    END IF;
 
-  -- An observation for a competency outside the group's scope is written but
-  -- never reported, because get_competency_progress only returns competencies
-  -- with a target row. The student would do the work, be approved, and see
-  -- nothing move.
-  IF NOT EXISTS (
-    SELECT 1 FROM group_competency_targets gt
-    WHERE gt.group_id = the_group AND gt.competency_id = the_comp
-  ) THEN
-    RAISE EXCEPTION 'NOT_IN_SCOPE';
+    -- An observation for a competency outside the group's scope is written but
+    -- never reported, because get_competency_progress only returns competencies
+    -- with a target row. The student would do the work, be approved, and see
+    -- nothing move.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_competency_targets gt
+      WHERE gt.group_id = the_group AND gt.competency_id = the_comp
+    ) THEN
+      RAISE EXCEPTION 'NOT_IN_SCOPE';
+    END IF;
   END IF;
 
   UPDATE assignment_submissions s
