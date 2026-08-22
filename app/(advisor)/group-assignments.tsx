@@ -65,6 +65,10 @@ export default function GroupAssignmentsScreen() {
   // re-deriving that list on the hot path risks it disagreeing with this one.
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [submissionCounts, setSubmissionCounts] = useState<SubmissionCounts>({});
+  // The counts failed to load. NOT the same as "there are no submissions":
+  // under this flag the screen does not know whether an assignment has been
+  // acted on, so it has to assume it might have been. See canEditTerms.
+  const [countsUnavailable, setCountsUnavailable] = useState(false);
   // The group's competency scope, kept as its own set rather than derived from
   // `competencies` above: that list is the PICKER, already filtered to what is
   // in scope, so it can no longer answer "was this one dropped?" about an
@@ -124,7 +128,24 @@ export default function GroupAssignmentsScreen() {
         competencyService.listFramework(),
         competencyService.getGroupTargets(groupId),
         groupService.listMembers(groupId),
-        assignmentService.getAssignmentCounts(groupId),
+        // Caught here so it cannot empty this screen. Promise.all rejects as a
+        // unit and setAssignments runs only after the whole array resolves, so
+        // without this a failure of the counts alone leaves `assignments` at []
+        // and the advisor reads "No assignments yet. Pick a competency below to
+        // create one." for a group that has assignments -- and creates a
+        // duplicate. That is the same principle as the mentor dashboard's
+        // .catch, applied to the query this change itself added, and it is not
+        // hypothetical: group_assignment_counts is new, so until
+        // docs/task-assignment-rpcs.sql is re-applied PostgREST answers
+        // PGRST202 on every load.
+        //
+        // null rather than []. An empty array is indistinguishable from "no
+        // submissions anywhere", and reading it that way would make
+        // canEditTerms true for every assignment and silently restore the very
+        // disagreement these counts exist to remove: term fields enabled that
+        // the freeze trigger then refuses. A degraded state has to be MORE
+        // restrictive than the real one, not less.
+        assignmentService.getAssignmentCounts(groupId).catch(() => null),
       ]);
       setAssignments(existing);
       const scoped = new Set(targets.map((tg) => tg.competencyId));
@@ -133,8 +154,9 @@ export default function GroupAssignmentsScreen() {
       setKpis(framework.kpis);
       setMembers(groupMembers);
 
+      setCountsUnavailable(counts === null);
       const byAssignment: SubmissionCounts = {};
-      for (const c of counts) {
+      for (const c of counts || []) {
         byAssignment[c.assignmentId] = {
           submitted: c.submitted,
           approved: c.approved,
@@ -412,7 +434,12 @@ export default function GroupAssignmentsScreen() {
           // exactly the rows assignment_has_submissions sees. So this can no
           // longer disagree with the trigger the way the old client-side count
           // did once a submitting student left the group.
-          const canEditTerms = counts.submitted === 0;
+          // countsUnavailable is a lock, not a zero. With no counts the screen
+          // cannot tell an untouched assignment from an assessed one, and
+          // guessing "untouched" would enable fields the trigger refuses --
+          // exactly the contradiction the server-side counts removed. Guess the
+          // restrictive way instead, and say so in the hint below.
+          const canEditTerms = !countsUnavailable && counts.submitted === 0;
           // trg_assignment_within_scope is BEFORE INSERT only, deliberately, so
           // an advisor may switch a competency off after assigning from it.
           // Nothing else surfaces that: the assignment stays in the student's
@@ -460,14 +487,24 @@ export default function GroupAssignmentsScreen() {
                 <Text style={styles.warning}>{t('advisor.assignmentOutOfScope')}</Text>
               )}
               {/* approved and "sent back" are subsets of submitted, not further
-                  buckets alongside it -- the parenthesis is what says so. */}
+                  buckets alongside it -- the parenthesis is what says so. The
+                  member count is a separate question and survives a counts
+                  failure, so it is printed either way; printing 0/0/0 in place
+                  of counts nobody could load would just be a lie. */}
               <Text style={styles.subtle}>
-                {t('advisor.submittedCount', { count: counts.submitted })}
-                {' ('}
-                {t('advisor.approvedCount', { count: counts.approved })}
-                {', '}
-                {t('advisor.revisionCount', { count: counts.needsRevision })}
-                {') / '}
+                {countsUnavailable ? (
+                  t('advisor.assignmentCountsUnavailable')
+                ) : (
+                  <>
+                    {t('advisor.submittedCount', { count: counts.submitted })}
+                    {' ('}
+                    {t('advisor.approvedCount', { count: counts.approved })}
+                    {', '}
+                    {t('advisor.revisionCount', { count: counts.needsRevision })}
+                    {')'}
+                  </>
+                )}
+                {' / '}
                 {t('advisor.memberCount', { count: members.length })}
               </Text>
 
@@ -518,8 +555,16 @@ export default function GroupAssignmentsScreen() {
                     multiline
                   />
 
+                  {/* Two different reasons for one locked state, and they must
+                      not be confused: "students have already submitted" is a
+                      fact, and asserting it when the counts never loaded would
+                      be inventing one. */}
                   {!canEditTerms && (
-                    <Text style={styles.lockedHint}>{t('advisor.assignmentTermsLocked')}</Text>
+                    <Text style={styles.lockedHint}>
+                      {countsUnavailable
+                        ? t('advisor.assignmentTermsLockedUnknown')
+                        : t('advisor.assignmentTermsLocked')}
+                    </Text>
                   )}
 
                   <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>

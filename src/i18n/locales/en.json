@@ -247,6 +247,8 @@
     "editAssignment": "Edit assignment",
     "assignmentUpdated": "Assignment updated.",
     "assignmentTermsLocked": "Students have already submitted this task, so the objective and criterion are locked.",
+    "assignmentCountsUnavailable": "Submission counts unavailable",
+    "assignmentTermsLockedUnknown": "The submission counts could not be loaded, so the objective and criterion stay locked — this task may already have submissions.",
     "withdrawAssignment": "Withdraw",
     "withdrawConfirm": "Withdraw \"{{title}}\"? This cannot be undone.",
     "assignmentHasSubmissions": "This assignment already has submissions, so it can no longer be withdrawn.",

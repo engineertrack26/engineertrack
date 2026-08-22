@@ -187,37 +187,46 @@ BEGIN
   -- too. They carry the wording the deleted client-side block used to build
   -- from notifications.taskSubmittedTitle/Body; those two keys are gone from
   -- en.json with the only code that ever read them.
-  SELECT sp.mentor_id INTO the_mentor
-  FROM student_profiles sp WHERE sp.id = auth.uid();
+  -- A failed notification must never roll back a submission that succeeded.
+  -- All six client-side notify sites carry a .catch for exactly that reason,
+  -- and moving THIS one into the function is what dropped the protection: an
+  -- unhandled error in here aborts submit_assignment and takes the student's
+  -- submission with it. An exception block in plpgsql is a subtransaction, so
+  -- this restores the same rule server-side -- the notification rolls back on
+  -- failure, the submission does not.
+  --
+  -- EVERY statement that composes the notification is inside the block,
+  -- including the two lookups. The mentor lookup used to sit above it, and it
+  -- had the same exposure as the rest: it picks the recipient, so it composes
+  -- the notification, and student_profiles is a table dependency this change
+  -- newly introduced into submit_assignment -- before it, this function never
+  -- touched that table. A bare SELECT ... INTO returns NULL rather than raising
+  -- when it finds no row, so the realistic probability is very low, but that is
+  -- the same "will not fail, not cannot fail" reasoning this block already
+  -- rejects for the INSERT, and it does not get an exception here.
+  --
+  -- Both known failure paths are closed today (notifications has no FORCE ROW
+  -- LEVEL SECURITY, so the definer bypasses RLS; student_profiles.mentor_id and
+  -- notifications.user_id both reference profiles(id) with the default NO
+  -- ACTION, so mentor_id cannot dangle). That is an argument this will not
+  -- fail, not that it cannot: notifications is a table someone will add a
+  -- constraint or a trigger to eventually, and the symptom would be students
+  -- unable to submit, with the cause three files away.
+  --
+  -- WHEN OTHERS is deliberately broad, but NOT silent. This is the .catch, not
+  -- a place to decide which failures matter -- the submission has already been
+  -- written and returning it is the contract -- but it leaves a trace on the
+  -- way past. See the handler.
+  BEGIN
+    SELECT sp.mentor_id INTO the_mentor
+    FROM student_profiles sp WHERE sp.id = auth.uid();
 
-  -- A student whose mentor is not linked yet is a normal state, not an error.
-  -- Skip silently rather than raising, or a missing link would fail a
-  -- submission that has already been written.
-  IF the_mentor IS NOT NULL THEN
-    -- A failed notification must never roll back a submission that succeeded.
-    -- All six client-side notify sites carry a .catch for exactly that reason,
-    -- and moving THIS one into the function is what dropped the protection:
-    -- an unhandled error in here aborts submit_assignment and takes the
-    -- student's submission with it. An exception block in plpgsql is a
-    -- subtransaction, so this restores the same rule server-side -- the INSERT
-    -- rolls back on failure, the submission does not.
-    --
-    -- Both known failure paths are closed today (notifications has no FORCE
-    -- ROW LEVEL SECURITY, so the definer bypasses RLS; student_profiles
-    -- .mentor_id and notifications.user_id both reference profiles(id) with the
-    -- default NO ACTION, so mentor_id cannot dangle). That is an argument this
-    -- will not fail, not that it cannot: notifications is a table someone will
-    -- add a constraint or a trigger to eventually, and the symptom would be
-    -- students unable to submit, with the cause three files away.
-    --
-    -- The name lookup is inside the block too. It is part of composing the
-    -- notification and a failure there has the identical consequence.
-    --
-    -- WHEN OTHERS is deliberately broad, but NOT silent. This is the .catch,
-    -- not a place to decide which failures matter -- the submission has
-    -- already been written and returning it is the contract -- but it leaves a
-    -- trace on the way past. See the handler.
-    BEGIN
+    -- A student whose mentor is not linked yet is a normal state, not a
+    -- failure, and it stays a plain condition: the NULL case leaves this block
+    -- through the ordinary path, never through the handler below. Moving the
+    -- lookup inside the block does not change that -- only genuine errors
+    -- reach the EXCEPTION arm.
+    IF the_mentor IS NOT NULL THEN
       SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
       INTO student_name FROM profiles p WHERE p.id = auth.uid();
 
@@ -230,18 +239,18 @@ BEGIN
         'task_submitted',
         jsonb_build_object('assignmentId', p_assignment_id)
       );
-    EXCEPTION WHEN OTHERS THEN
-      -- Silent would repeat the mistake this whole change exists to fix: the
-      -- client-side version of this notification failed with 42501 on every
-      -- submission from the day it shipped, and a deliberate catch is why
-      -- nobody knew. The transaction is still protected -- a WARNING aborts
-      -- neither the subtransaction nor the outer one -- but the failure leaves
-      -- a trace in the server log, which is where someone asking "why do
-      -- mentors never hear about submissions" would look, and where a Supabase
-      -- project's logs already collect.
-      RAISE WARNING 'submit_assignment: mentor notification failed: %', SQLERRM;
-    END;
-  END IF;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    -- Silent would repeat the mistake this whole change exists to fix: the
+    -- client-side version of this notification failed with 42501 on every
+    -- submission from the day it shipped, and a deliberate catch is why nobody
+    -- knew. The transaction is still protected -- a WARNING aborts neither the
+    -- subtransaction nor the outer one -- but the failure leaves a trace in the
+    -- server log, which is where someone asking "why do mentors never hear
+    -- about submissions" would look, and where a Supabase project's logs
+    -- already collect.
+    RAISE WARNING 'submit_assignment: mentor notification failed: %', SQLERRM;
+  END;
 
   RETURN submission;
 END;
