@@ -67,11 +67,19 @@ CREATE POLICY "advisor inserts assignments" ON group_assignments
 -- WITH CHECK matters as much as USING here: with only USING, an advisor
 -- could move a row to a group they do not own, because USING only tests the
 -- row as it stood BEFORE the update.
+--
+-- created_by = auth.uid() in the WITH CHECK for the same reason it is in the
+-- INSERT policy, and because without it the INSERT policy's clause buys
+-- nothing: an advisor would insert with their own id, pass that check, and
+-- then UPDATE created_by to any profile they liked. Attribution is immutable,
+-- and the policy is the right place to say so -- the freeze trigger only fires
+-- once an assignment carries a submission, and attribution must hold from the
+-- moment the row exists.
 DROP POLICY IF EXISTS "advisor updates assignments" ON group_assignments;
 CREATE POLICY "advisor updates assignments" ON group_assignments
   FOR UPDATE TO authenticated
   USING (owns_group(group_id))
-  WITH CHECK (owns_group(group_id));
+  WITH CHECK (owns_group(group_id) AND created_by = auth.uid());
 
 CREATE TABLE IF NOT EXISTS assignment_submissions (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -231,22 +239,46 @@ CREATE TRIGGER trg_assignment_within_scope
 -- it moves the assignment to a different KPI while existing observations keep
 -- the old kpi_id, so the record and its evidence disagree with no trace.
 --
+-- group_id is frozen too, and it is a term of assessment rather than
+-- presentation. trg_assignment_within_scope is BEFORE INSERT only, and
+-- "advisor updates assignments" happily moves a row between two groups the
+-- same advisor owns -- so without this the assignment can walk away from the
+-- students who submitted to it. What follows is worse than the move itself:
+-- review_assignment validates membership against the ASSIGNMENT's group, so
+-- every outstanding submission starts reporting STUDENT_LEFT_GROUP for a
+-- student who never left anything, and the mentor cannot even reject it back
+-- to the student. The group is who the assignment was set for; changing it
+-- after someone has been assessed rewrites who the assessment was about.
+--
 -- RLS has no column-level WITH CHECK, which is why this is a trigger and not a
 -- policy. title, description and due_date stay editable -- those are
 -- presentation, not the terms of assessment.
 --
 -- assignment_has_submissions is the same helper the DELETE policy uses. One
 -- definition of "this assignment is now a record", used by both rules.
+--
+-- NOT SECURITY DEFINER, unlike assignment_within_group_scope above. This
+-- function reads no table of its own; its single lookup goes through
+-- assignment_has_submissions, which is SECURITY DEFINER itself and so already
+-- answers the same way for every caller. The elevated privilege bought nothing
+-- and is removed. SET search_path is KEPT even so: it is not a privilege but a
+-- resolution guarantee -- the unqualified call to assignment_has_submissions
+-- must find the public one whatever search_path the session that triggers the
+-- UPDATE happens to carry.
+--
+-- Note for a re-apply: CREATE OR REPLACE FUNCTION reassigns every property not
+-- named in the command, so dropping the SECURITY DEFINER clause here is what
+-- actually turns the live function back into SECURITY INVOKER.
 CREATE OR REPLACE FUNCTION freeze_assessed_assignment()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
   IF (NEW.objective  IS DISTINCT FROM OLD.objective
    OR NEW.criterion  IS DISTINCT FROM OLD.criterion
-   OR NEW.triplet_id IS DISTINCT FROM OLD.triplet_id)
+   OR NEW.triplet_id IS DISTINCT FROM OLD.triplet_id
+   OR NEW.group_id   IS DISTINCT FROM OLD.group_id)
    AND assignment_has_submissions(OLD.id)
   THEN
     RAISE EXCEPTION 'ASSIGNMENT_LOCKED';
