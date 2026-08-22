@@ -242,6 +242,22 @@ export default function StudentDashboard() {
           </View>
         )}
 
+        {/* My Tasks */}
+        <TouchableOpacity
+          style={[styles.notifCard, { borderLeftColor: colors.primary, marginBottom: spacing.sm }]}
+          onPress={() => router.push('/(student)/my-tasks')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.notifIconWrap, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="list" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.notifContent}>
+            <Text style={styles.notifTitle}>{t('student.myTasks')}</Text>
+            <Text style={styles.notifDesc}>See what your advisor assigned</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Daily Survey Placeholder */}
         <TouchableOpacity
           style={[styles.notifCard, { borderLeftColor: colors.success, marginBottom: spacing.lg }]}

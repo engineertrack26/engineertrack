@@ -120,7 +120,20 @@
     "competencyNotStarted": "Not started",
     "competencyComplete": "Target reached",
     "whatIDidToday": "What did you demonstrate today?",
-    "whatIDidTodayHint": "Tick the behaviours you showed. Your mentor ticks separately — the two are compared, not merged."
+    "whatIDidTodayHint": "Tick the behaviours you showed. Your mentor ticks separately — the two are compared, not merged.",
+    "myTasks": "My Tasks",
+    "noTasks": "No tasks have been assigned to your group yet.",
+    "noGroupTasks": "You have not joined a group yet, so there are no tasks to show.",
+    "taskObjective": "Objective",
+    "taskCriterion": "You will be assessed on",
+    "taskNote": "Note (optional)",
+    "attachTodaysLog": "Attach today's log: {{title}}",
+    "submitTask": "Submit",
+    "taskSubmitted": "Task submitted.",
+    "stateRevise": "Needs revision",
+    "stateTodo": "To do",
+    "stateWaiting": "Waiting for review",
+    "stateDone": "Approved"
   },
   "gamification": {
     "points": "Points",
