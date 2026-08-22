@@ -64,10 +64,35 @@ CREATE TRIGGER tr_seed_group_competency_targets
   AFTER INSERT ON internship_groups
   FOR EACH ROW EXECUTE FUNCTION seed_group_competency_targets();
 
--- Backfill groups that already exist.
+-- Backfill the groups that predate the trigger above -- and ONLY those.
+--
+-- The row's existence IS the selection, as the header of this file says, so a
+-- competency an advisor deliberately unticked is represented by the ABSENCE of
+-- a row. `ON CONFLICT DO NOTHING` protects rows that exist; it cannot protect a
+-- deliberate absence, because an absent row does not conflict. Without the
+-- NOT EXISTS below, re-applying this file would re-insert every unticked
+-- competency at level 2 and silently widen a scope the advisor had narrowed.
+--
+-- That is not hypothetical. app/(advisor)/group-competencies.tsx calls
+-- competencyService.setGroupTargets, which DELETEs the group's rows and
+-- re-inserts only the ticked ones, precisely so that unticking removes one.
+-- And this file is no longer applied once: it declares
+-- kpi_observations.assignment_submission_id, which made "re-apply this file"
+-- step 1 of the C1 runbook. A one-shot backfill became a standing instruction.
+--
+-- So the unit of the backfill is the GROUP, not the (group, competency) pair:
+-- a group with no targets at all has never been configured and gets the whole
+-- framework; a group with even one target has been decided about, by the
+-- trigger or by an advisor, and is left exactly as it stands.
+--
+-- The ON CONFLICT stays as a second belt: it costs nothing and keeps a
+-- concurrent seed from turning this into a unique_violation.
 INSERT INTO group_competency_targets (group_id, competency_id, target_level)
 SELECT g.id, c.id, 2
 FROM internship_groups g CROSS JOIN competencies c
+WHERE NOT EXISTS (
+  SELECT 1 FROM group_competency_targets t WHERE t.group_id = g.id
+)
 ON CONFLICT (group_id, competency_id) DO NOTHING;
 
 -- ============================================
