@@ -25,6 +25,9 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   level_up: { name: 'arrow-up-circle', color: colors.gamification.levelUp },
   poll_available: { name: 'clipboard', color: colors.primary },
   general: { name: 'notifications', color: colors.primary },
+  task_assigned: { name: 'clipboard-outline', color: colors.info },
+  task_submitted: { name: 'paper-plane', color: colors.primary },
+  task_reviewed: { name: 'checkmark-done-circle', color: colors.success },
 };
 
 function timeAgo(dateStr: string): string {

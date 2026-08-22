@@ -9,7 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { logService } from '@/services/logs';
+import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
+import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
@@ -34,6 +36,7 @@ function fromIsoDate(s: string): Date | null {
 
 export default function PendingReviewsScreen() {
   const { t, i18n } = useTranslation();
+  const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,6 +125,24 @@ export default function PendingReviewsScreen() {
     setSubmitting(approved ? 'approve' : 'revise');
     try {
       await assignmentService.reviewAssignment(item.id, approved, note.trim());
+
+      // Notification delivery is best-effort: a failure here must never
+      // make a successful review look failed.
+      try {
+        const mentorName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Your mentor';
+        await notificationService.create(
+          item.studentId,
+          approved ? t('notifications.taskApprovedTitle') : t('notifications.taskRevisionTitle'),
+          approved
+            ? t('notifications.taskApprovedBody', { mentorName, title: item.assignment.title })
+            : t('notifications.taskRevisionBody', { mentorName, title: item.assignment.title }),
+          'task_reviewed',
+          { assignmentId: item.assignmentId },
+        );
+      } catch (e) {
+        console.warn('notify failed:', e);
+      }
+
       Alert.alert(
         t('common.done'),
         approved ? t('mentor.taskApproved') : t('mentor.taskRevisionRequested'),

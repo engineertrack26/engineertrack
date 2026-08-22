@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { competencyService } from '@/services/competency';
 import { groupService } from '@/services/group';
+import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
@@ -192,7 +193,7 @@ export default function GroupAssignmentsScreen() {
     }
     setSaving(true);
     try {
-      await assignmentService.createAssignment({
+      const created = await assignmentService.createAssignment({
         groupId,
         tripletId: pickedTriplet.id,
         title: title.trim(),
@@ -202,6 +203,22 @@ export default function GroupAssignmentsScreen() {
         dueDate: dueDate || undefined,
         createdBy: user.id,
       });
+
+      // Notification delivery is best-effort: a failure here must never make
+      // a successful assignment look failed to the advisor.
+      const assignedTitle = title.trim();
+      await Promise.all(
+        members.map((m) =>
+          notificationService.create(
+            m.id,
+            t('notifications.taskAssignedTitle'),
+            t('notifications.taskAssignedBody', { title: assignedTitle }),
+            'task_assigned',
+            { assignmentId: created.id },
+          ).catch((e) => console.warn('notify failed:', e)),
+        ),
+      );
+
       Alert.alert(t('common.done'), t('advisor.assignmentCreated'));
       resetForm();
       await loadData();

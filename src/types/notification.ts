@@ -6,7 +6,10 @@ export type NotificationType =
   | 'badge_earned'
   | 'level_up'
   | 'poll_available'
-  | 'general';
+  | 'general'
+  | 'task_assigned'
+  | 'task_submitted'
+  | 'task_reviewed';
 
 export interface AppNotification {
   id: string;

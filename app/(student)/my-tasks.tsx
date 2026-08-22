@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { groupService } from '@/services/group';
 import { logService } from '@/services/logs';
+import { notificationService } from '@/services/notifications';
+import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { groupAssignmentsByState } from '@/utils/assignmentGrouping';
@@ -102,6 +104,7 @@ export default function MyTasksScreen() {
   }
 
   async function handleSubmit(a: MyAssignment) {
+    if (!user) return;
     setSubmitting(true);
     try {
       await assignmentService.submitAssignment(
@@ -109,6 +112,28 @@ export default function MyTasksScreen() {
         note.trim(),
         attachLog && todayLog ? todayLog.id : null,
       );
+
+      // Notification delivery is best-effort: a failure here must never
+      // make a successful submission look failed. A student with no mentor
+      // linked yet is a normal state, not an error -- skip silently.
+      try {
+        const { data: profile } = await supabase
+          .from('student_profiles').select('mentor_id').eq('id', user.id).single();
+        const mentorId = (profile as Record<string, unknown> | null)?.mentor_id as string | undefined;
+        if (mentorId) {
+          const studentName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+          await notificationService.create(
+            mentorId,
+            t('notifications.taskSubmittedTitle'),
+            t('notifications.taskSubmittedBody', { studentName, title: a.title }),
+            'task_submitted',
+            { assignmentId: a.id },
+          );
+        }
+      } catch (e) {
+        console.warn('notify failed:', e);
+      }
+
       Alert.alert(t('common.done'), t('student.taskSubmitted'));
       setOpenId(null);
       setNote('');
