@@ -147,6 +147,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   8 student left group rejected STUDENT_LEFT_GROUP
 --   9 assignment locked  rejected ASSIGNMENT_LOCKED
 --   9b title editable    title changed on an assessed assignment
+--   9c group id frozen   rejected ASSIGNMENT_LOCKED
 --
 -- Needs an advisor and a student whose student_profiles.mentor_id is set.
 -- With neither present the script reports SKIP rather than failing, because
@@ -167,7 +168,7 @@ BEGIN;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; men UUID; grp UUID; comp UUID;
+  adv UUID; stu UUID; men UUID; grp UUID; grp2 UUID; comp UUID;
   kpi1 UUID; kpi2 UUID;
   asg UUID; sub UUID; resub UUID; asg8 UUID; sub8 UUID; lg UUID;
   n INT; n2 INT; lvl INT; st TEXT; log TEXT := '';
@@ -462,6 +463,39 @@ BEGIN
         || 'FAIL: the freeze blocked a title edit: ' || SQLERRM || E'\n';
   END;
 
+  -- 9c. The other frozen column, and the one with no assertion behind it until
+  --     now. group_id is a term of assessment, not presentation: it is WHO the
+  --     assignment was set for. trg_assignment_within_scope is BEFORE INSERT
+  --     only, and "advisor updates assignments" permits a move between two
+  --     groups the same advisor owns, so without the freeze an assessed
+  --     assignment could walk away from the students who submitted to it --
+  --     after which review_assignment, which validates membership against the
+  --     ASSIGNMENT's group, reports STUDENT_LEFT_GROUP for a student who never
+  --     left anything.
+  --
+  --     A SECOND group rather than a reuse of grp, because moving asg8 to the
+  --     group it is already in would not change group_id at all and
+  --     IS DISTINCT FROM would be false: the case would pass with the freeze
+  --     deleted. The seed trigger gives grp2 its own targets on INSERT, which
+  --     is irrelevant here -- the freeze fires before any scope question, and
+  --     no scope check runs on UPDATE anyway.
+  --
+  --     asg8 still carries sub8, so this is an assessed assignment. Like case
+  --     9 the UPDATE runs as the owner, which is the stronger test: RLS is
+  --     bypassed, so nothing but the trigger itself can be what refuses.
+  INSERT INTO internship_groups (advisor_id, name)
+  VALUES (adv, 'Probe assignment 2') RETURNING id INTO grp2;
+
+  BEGIN
+    UPDATE group_assignments a SET group_id = grp2 WHERE a.id = asg8;
+    log := log || '9c group id frozen' || E'\t'
+        || 'FAIL: group move accepted' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || '9c group id frozen' || E'\t'
+        || CASE WHEN SQLERRM = 'ASSIGNMENT_LOCKED' THEN 'rejected ASSIGNMENT_LOCKED'
+                ELSE 'FAIL (wrong error): ' || SQLERRM END || E'\n';
+  END;
+
   -- 6. A competency outside the group's scope must be refused at review time,
   --    or the student is approved and nothing moves.
   --
@@ -510,6 +544,7 @@ ROLLBACK;
 --   C1 delete unused      deleted
 --   C2 delete assessed    0 rows deleted, row still there
 --   C3 direct submission  refused by RLS (42501)
+--   C4 reattribute        refused by RLS (42501)
 --
 -- Parts A and B run as the table owner, and an owner bypasses RLS. Every RLS
 -- claim this project has made so far is therefore structural: it proves a
@@ -524,6 +559,14 @@ ROLLBACK;
 -- rows, so "it did not raise" proves nothing and the row itself has to be
 -- looked for afterwards. Only INSERT/WITH CHECK raises, which is why C3 can
 -- assert an error.
+--
+-- And why C4, also an UPDATE, asserts an error after all: an UPDATE policy has
+-- BOTH halves and they behave differently. USING is tested against the row as
+-- it stands and silently filters; WITH CHECK is tested against the row as it
+-- WOULD BE and raises 42501. C2 is refused by a USING qual, so it counts rows.
+-- C4 is refused by a WITH CHECK, so it catches an error -- and then looks at
+-- the row anyway, because an UPDATE that neither raised nor changed anything
+-- would also be an acceptable answer to the question being asked.
 --
 -- C3 is the one that matters most. assignment_submissions has no INSERT policy
 -- because review_assignment's approval writes a KPI observation; if a client
@@ -662,6 +705,50 @@ BEGIN
     log := log || 'C3 direct submission' || E'\t' || 'refused by RLS (42501)' || E'\n';
   WHEN OTHERS THEN
     log := log || 'C3 direct submission' || E'\t'
+        || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C4. Attribution must be immutable, not merely correct at INSERT. The
+  --     insert policy carries `created_by = auth.uid()` so an advisor cannot
+  --     attribute a new assignment to another profile; without the same clause
+  --     in the UPDATE policy's WITH CHECK that buys nothing, because the same
+  --     advisor can insert with their own id, pass that check, and then update
+  --     created_by to anybody.
+  --
+  --     This case has to live in Part C. It is a WITH CHECK on a policy, and
+  --     Parts A and B run as the table owner with RLS bypassed entirely -- a
+  --     Part B version would pass whatever the policy said, which is the exact
+  --     blind spot Part C exists to close.
+  --
+  --     a_spare, not a_used: a_spare carries no submission, so
+  --     freeze_assessed_assignment cannot be what refuses and the policy is the
+  --     only candidate left. (created_by is not in the freeze list either, so
+  --     this would work on a_used too -- but "the only thing that can refuse is
+  --     the thing under test" is worth the one-line choice.)
+  --
+  --     Back to the advisor: C3 above left the claims set to the student, and
+  --     a student cannot see this row at all, which would pass for the wrong
+  --     reason.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', adv)::text, true);
+  BEGIN
+    UPDATE group_assignments a SET created_by = stu WHERE a.id = a_spare;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    SELECT count(*) INTO n2 FROM group_assignments a
+    WHERE a.id = a_spare AND a.created_by = adv;
+    -- Did not raise. Still acceptable if nothing moved -- a USING-side refusal
+    -- would look like this -- but an accepted change is the finding.
+    log := log || 'C4 reattribute' || E'\t'
+        || CASE WHEN n = 0 AND n2 = 1 THEN '0 rows updated, attribution intact'
+                WHEN n <> 0 THEN 'FAIL: ' || n
+                     || ' rows updated -- created_by is mutable after insert'
+                ELSE 'FAIL: attribution changed' END || E'\n';
+  EXCEPTION WHEN insufficient_privilege THEN
+    -- The expected answer. 42501 is "new row violates row-level security
+    -- policy": the WITH CHECK saw created_by <> auth.uid() on the row as it
+    -- would be, and refused.
+    log := log || 'C4 reattribute' || E'\t' || 'refused by RLS (42501)' || E'\n';
+  WHEN OTHERS THEN
+    log := log || 'C4 reattribute' || E'\t'
         || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
