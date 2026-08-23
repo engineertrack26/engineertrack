@@ -263,3 +263,168 @@ WHERE line <> ''
 ORDER BY 1;
 
 ROLLBACK;
+
+
+-- ============================================================
+-- PART C — the evidence policy, actually evaluated.
+-- Submit BEGIN..ROLLBACK in one go.
+--
+--   C1 owner student reads   1 photo        (positive control)
+--   C2 unrelated student     0 photos
+--   C3 evidence on approved  refused by RLS (42501)
+--
+-- C1 is the positive control and is not optional. Without it, C2 returning
+-- zero is indistinguishable from the policy refusing everyone, or from the
+-- new branch never being reached at all.
+-- ============================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+  adv UUID; stu UUID; other UUID; grp UUID; kpi UUID;
+  a_open UUID; a_done UUID; s_open UUID; s_done UUID;
+BEGIN
+  SELECT id INTO adv   FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
+  SELECT id INTO stu   FROM profiles WHERE role = 'student'  ORDER BY created_at LIMIT 1;
+  SELECT id INTO other FROM profiles WHERE role = 'student' AND id <> stu
+                                     ORDER BY created_at LIMIT 1;
+
+  IF adv IS NULL OR stu IS NULL OR other IS NULL THEN
+    PERFORM set_config('probe.ready', 'no', true);
+    RETURN;
+  END IF;
+
+  INSERT INTO internship_groups (advisor_id, name)
+  VALUES (adv, 'Probe D1 policies') RETURNING id INTO grp;
+
+  SELECT k.id INTO kpi
+  FROM competency_kpis k
+  JOIN competencies c ON c.id = k.competency_id
+  WHERE k.level = 1 AND k.kpi_index = 1
+  ORDER BY c.display_order LIMIT 1;
+
+  INSERT INTO group_memberships (group_id, student_id) VALUES (grp, stu);
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe open', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 0 LIMIT 1
+  RETURNING id INTO a_open;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe done', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO a_done;
+
+  -- Written directly rather than through submit_assignment: this is the owner
+  -- session, and the point of the fixture is a known starting state, not an
+  -- exercise of the RPC. Direct writes are only possible here BECAUSE the
+  -- session is the owner -- which is exactly what C3 proves a client cannot do.
+  INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection)
+  VALUES (a_open, stu, 'submitted', 'probe') RETURNING id INTO s_open;
+
+  INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection)
+  VALUES (a_done, stu, 'approved', 'probe') RETURNING id INTO s_done;
+
+  INSERT INTO log_photos (submission_id, uri) VALUES (s_open, 'probe://open');
+  INSERT INTO log_photos (submission_id, uri) VALUES (s_done, 'probe://done');
+
+  PERFORM set_config('probe.ready',  'yes',        true);
+  PERFORM set_config('probe.stu',    stu::text,    true);
+  PERFORM set_config('probe.other',  other::text,  true);
+  PERFORM set_config('probe.s_open', s_open::text, true);
+  PERFORM set_config('probe.s_done', s_done::text, true);
+END $$;
+
+-- If this raises 42501 in your editor, STOP. Do not replace the cases below
+-- with catalog lookups: a structural check here would assert what Part A
+-- already asserts while reading as though it had proved more. Report Part C
+-- as unrunnable instead.
+SET LOCAL ROLE authenticated;
+
+DO $$
+DECLARE
+  stu UUID; other UUID; s_open UUID; s_done UUID;
+  n INT; log TEXT := '';
+BEGIN
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
+    PERFORM set_config('probe.results',
+      'C1-C3 policies' || E'\t'
+      || 'SKIP: needs one advisor and two student profiles' || E'\n', true);
+    RETURN;
+  END IF;
+
+  stu    := current_setting('probe.stu')::UUID;
+  other  := current_setting('probe.other')::UUID;
+  s_open := current_setting('probe.s_open')::UUID;
+  s_done := current_setting('probe.s_done')::UUID;
+
+  -- C1. The owning student reads their own evidence. POSITIVE CONTROL.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
+  log := log || 'C1 owner student reads' || E'\t'
+      || CASE WHEN n = 1 THEN '1 photo'
+              WHEN n = 0 THEN 'FAIL: 0 photos -- the submission branch is unreachable'
+              ELSE 'FAIL: ' || n || ' photos' END || E'\n';
+
+  -- C2. An unrelated student. The branch delegates to
+  --     assignment_submissions' own SELECT policy, which does not admit them.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', other)::text, true);
+  SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
+  log := log || 'C2 unrelated student' || E'\t'
+      || CASE WHEN n = 0 THEN '0 photos'
+              ELSE 'FAIL: ' || n || ' photos leaked' END || E'\n';
+
+  -- C3. Attaching evidence to an APPROVED submission. The insert policy's
+  --     status <> 'approved' clause must refuse: an approved submission has
+  --     produced a KPI observation, and changing the evidence under it means
+  --     a level standing on something the mentor never saw.
+  --
+  --     This one asserts an ERROR, unlike C2's row count, because INSERT is
+  --     the one command where a failed WITH CHECK raises 42501 instead of
+  --     silently filtering.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  BEGIN
+    INSERT INTO log_photos (submission_id, uri) VALUES (s_done, 'probe://late');
+    log := log || 'C3 evidence on approved' || E'\t'
+        || 'FAIL: accepted -- evidence changed under a written observation' || E'\n';
+  EXCEPTION WHEN insufficient_privilege THEN
+    log := log || 'C3 evidence on approved' || E'\t' || 'refused by RLS (42501)' || E'\n';
+  WHEN OTHERS THEN
+    log := log || 'C3 evidence on approved' || E'\t'
+        || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  PERFORM set_config('probe.results', log, true);
+END $$;
+
+-- Back to the owner before anything else reads the results, so a failure in the
+-- SELECT below cannot be blamed on the role change.
+RESET ROLE;
+
+SELECT split_part(line, E'\t', 1) AS step,
+       split_part(line, E'\t', 2) AS result
+FROM unnest(string_to_array(current_setting('probe.results'), E'\n')) AS line
+WHERE line <> ''
+ORDER BY 1;
+
+ROLLBACK;
+
+
+-- ============================================================
+-- How to run this
+--
+-- The three parts are submitted SEPARATELY. Parts B and C each go in as one
+-- block, BEGIN..ROLLBACK in a single submission -- the SQL editor gives each
+-- submission its own connection, so a transaction split across submissions
+-- loses its state (42P01).
+--
+-- Expected output: Part A one row reading PASS; Part B seven rows; Part C
+-- three rows. Any cell beginning FAIL, INCONCLUSIVE or SKIP is a real result
+-- to look at, not noise to scroll past.
+--
+-- This script requires the D1 SQL to already be applied, and that must NOT
+-- happen until D2 is complete: Task 2 dropped the submit_assignment
+-- signature the currently-shipped client still calls, so applying D1 early
+-- breaks every student on an old build. Run this at the end of D2, not now.
+-- ============================================================
