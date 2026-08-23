@@ -343,6 +343,7 @@
     "notInScope": "This competency is no longer in the group's scope. Check the group's competency targets.",
     "alreadyApproved": "This task has already been approved. Ask your mentor to reopen it if you need to change your submission.",
     "studentLeftGroup": "This student is no longer in the group this task was assigned to, so it can't be evaluated. Ask the advisor to check the student's group membership.",
-    "assignmentLocked": "Students have already submitted this task, so its objective and criterion can no longer be changed. The title, description and due date are still editable."
+    "assignmentLocked": "Students have already submitted this task, so its objective and criterion can no longer be changed. The title, description and due date are still editable.",
+    "reflectionRequired": "Write what you learned before submitting."
   }
 }

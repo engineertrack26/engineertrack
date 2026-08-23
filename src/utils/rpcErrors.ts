@@ -18,6 +18,7 @@ const ERROR_KEYS: Record<string, string> = {
   ALREADY_APPROVED: 'errors.alreadyApproved',
   STUDENT_LEFT_GROUP: 'errors.studentLeftGroup',
   ASSIGNMENT_LOCKED: 'errors.assignmentLocked',
+  REFLECTION_REQUIRED: 'errors.reflectionRequired',
 };
 
 /**

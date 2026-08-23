@@ -2,8 +2,9 @@ import { supabase } from './supabase';
 import { RpcError } from './rpcError';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
-  AssignmentCounts,
+  AssignmentCounts, PhotoEvidence, DocumentEvidence,
 } from '@/types/assignment';
+import { toPhotoPayload, toDocumentPayload } from '@/utils/evidenceMapping';
 
 function toAssignment(r: Record<string, unknown>): GroupAssignment {
   return {
@@ -26,6 +27,7 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
     studentId: (r.student_id as string) || '',
     status: (r.status as AssignmentSubmission['status']) || 'submitted',
     studentNote: (r.student_note as string) || undefined,
+    reflection: (r.reflection as string) || undefined,
     mentorNote: (r.mentor_note as string) || undefined,
     logId: (r.log_id as string) || undefined,
     submittedAt: (r.submitted_at as string) || '',
@@ -153,11 +155,23 @@ export const assignmentService = {
     }));
   },
 
-  async submitAssignment(assignmentId: string, note: string, logId: string | null): Promise<string> {
+  /** The `logId` parameter is gone. D1 dropped the three-argument signature --
+   *  a differing argument list would have made an OVERLOAD, and PostgREST
+   *  resolves overloads by the argument names the caller sends, so the old body
+   *  would have kept answering old callers with no error anywhere. */
+  async submitAssignment(
+    assignmentId: string,
+    note: string,
+    reflection: string,
+    photos: PhotoEvidence[],
+    documents: DocumentEvidence[],
+  ): Promise<string> {
     const { data, error } = await supabase.rpc('submit_assignment', {
       p_assignment_id: assignmentId,
       p_note: note,
-      p_log_id: logId,
+      p_reflection: reflection,
+      p_photos: toPhotoPayload(photos),
+      p_documents: toDocumentPayload(documents),
     });
     if (error) throw new RpcError(error.message);
     return data as string;

@@ -177,44 +177,74 @@ export const logService = {
     return data;
   },
 
-  // Photo attachments
-  async uploadPhoto(logId: string, userId: string, uri: string, caption?: string) {
-    const fileName = `${userId}/${logId}/${Date.now()}.jpg`;
-
-    // Use FormData REST API for reliable React Native upload
+  /** POST a photo to the log-photos bucket and return its public URL.
+   *
+   *  The storage policy keys on (storage.foldername(name))[1] = auth.uid()::text
+   *  -- only the FIRST path segment matters, so `scopeId` is free. The daily-log
+   *  path passes a log id; the task path passes an assignment id, because the
+   *  submission id does not exist until submit_assignment runs. */
+  async uploadPhotoFile(userId: string, scopeId: string, uri: string): Promise<string> {
+    const fileName = `${userId}/${scopeId}/${Date.now()}.jpg`;
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('No session');
 
     const formData = new FormData();
-    formData.append('', {
-      uri,
-      name: 'photo.jpg',
-      type: 'image/jpeg',
-    } as unknown as Blob);
+    formData.append('', { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
 
     const uploadRes = await fetch(
       `${supabaseUrl}/storage/v1/object/log-photos/${fileName}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      },
+      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
     );
     if (!uploadRes.ok) {
       const errBody = await uploadRes.text();
       throw new Error(errBody || 'Photo upload failed');
     }
 
-    const { data: urlData } = supabase.storage
-      .from('log-photos')
-      .getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from('log-photos').getPublicUrl(fileName);
+    return urlData.publicUrl;
+  },
+
+  /** POST a document to the log-documents bucket and return its public URL.
+   *  Same shape as uploadPhotoFile; see that comment for the scopeId note.
+   *  Takes no fileSize -- that is metadata the caller already has, and the
+   *  bucket does not need it. */
+  async uploadDocumentFile(
+    userId: string,
+    scopeId: string,
+    uri: string,
+    fileName: string,
+    fileType: string,
+  ): Promise<string> {
+    const storagePath = `${userId}/${scopeId}/${Date.now()}_${fileName}`;
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+
+    const formData = new FormData();
+    formData.append('', { uri, name: fileName, type: fileType } as unknown as Blob);
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/log-documents/${storagePath}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
+    );
+    if (!uploadRes.ok) {
+      const errBody = await uploadRes.text();
+      throw new Error(errBody || 'Document upload failed');
+    }
+
+    const { data: urlData } = supabase.storage.from('log-documents').getPublicUrl(storagePath);
+    return urlData.publicUrl;
+  },
+
+  // Photo attachments
+  async uploadPhoto(logId: string, userId: string, uri: string, caption?: string) {
+    const publicUrl = await this.uploadPhotoFile(userId, logId, uri);
 
     const { data, error } = await supabase
       .from('log_photos')
-      .insert({ log_id: logId, uri: urlData.publicUrl, caption })
+      .insert({ log_id: logId, uri: publicUrl, caption })
       .select()
       .single();
     if (error) throw error;
@@ -230,43 +260,13 @@ export const logService = {
     fileType: string,
     fileSize: number,
   ) {
-    const storagePath = `${userId}/${logId}/${Date.now()}_${fileName}`;
-
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('No session');
-
-    const formData = new FormData();
-    formData.append('', {
-      uri,
-      name: fileName,
-      type: fileType,
-    } as unknown as Blob);
-
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/log-documents/${storagePath}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      },
-    );
-    if (!uploadRes.ok) {
-      const errBody = await uploadRes.text();
-      throw new Error(errBody || 'Document upload failed');
-    }
-
-    const { data: urlData } = supabase.storage
-      .from('log-documents')
-      .getPublicUrl(storagePath);
+    const publicUrl = await this.uploadDocumentFile(userId, logId, uri, fileName, fileType);
 
     const { data, error } = await supabase
       .from('log_documents')
       .insert({
         log_id: logId,
-        uri: urlData.publicUrl,
+        uri: publicUrl,
         file_name: fileName,
         file_type: fileType,
         file_size: fileSize,

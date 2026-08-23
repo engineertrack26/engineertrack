@@ -27,6 +27,7 @@ export interface AssignmentSubmission {
   studentId: string;
   status: SubmissionStatus;
   studentNote?: string;
+  reflection?: string;
   mentorNote?: string;
   logId?: string;
   submittedAt: string;
@@ -49,4 +50,20 @@ export interface AssignmentCounts {
  *  is absent until they act on it. */
 export interface MyAssignment extends GroupAssignment {
   submission?: AssignmentSubmission;
+}
+
+/** One photo as the client holds it before submitting. `uri` is the PUBLIC
+ *  bucket URL returned by logService.uploadPhotoFile, not a device path -- the
+ *  file is already uploaded by the time it reaches submit_assignment, which
+ *  only writes the row. */
+export interface PhotoEvidence {
+  uri: string;
+  caption?: string;
+}
+
+export interface DocumentEvidence {
+  uri: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
 }
