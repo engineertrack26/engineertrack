@@ -41,6 +41,16 @@ export const BADGES: Badge[] = [
     category: 'milestone',
   },
   {
+    id: 'first_task',
+    key: 'first_task',
+    nameKey: 'badges.firstTask.name',
+    descriptionKey: 'badges.firstTask.description',
+    icon: 'pencil',
+    tier: 'bronze',
+    requirement: 1,
+    category: 'milestone',
+  },
+  {
     id: 'streak_7',
     key: 'streak_7',
     nameKey: 'badges.streak7.name',

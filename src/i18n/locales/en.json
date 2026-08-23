@@ -271,13 +271,17 @@
       "name": "First Step",
       "description": "Submit your first daily log"
     },
+    "firstTask": {
+      "name": "First Step",
+      "description": "Submit your first task"
+    },
     "streak7": {
       "name": "Week Warrior",
-      "description": "Maintain a 7-day streak"
+      "description": "Submit a task 4 weeks running"
     },
     "streak30": {
       "name": "Monthly Master",
-      "description": "Maintain a 30-day streak"
+      "description": "Submit a task 8 weeks running"
     },
     "quality10": {
       "name": "Quality Writer",
