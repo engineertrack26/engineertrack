@@ -21,6 +21,14 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
 }
 
 function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
+  // log_photos/log_documents are only embedded by listMyAssignments -- every
+  // other caller of toSubmission leaves these two undefined, which is exactly
+  // right for a select that never asked PostgREST for them.
+  const photosRaw = Array.isArray(r.log_photos)
+    ? (r.log_photos as Array<Record<string, unknown>>) : undefined;
+  const documentsRaw = Array.isArray(r.log_documents)
+    ? (r.log_documents as Array<Record<string, unknown>>) : undefined;
+
   return {
     id: (r.id as string) || '',
     assignmentId: (r.assignment_id as string) || '',
@@ -33,6 +41,16 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
     submittedAt: (r.submitted_at as string) || '',
     reviewedAt: (r.reviewed_at as string) || undefined,
     reviewedBy: (r.reviewed_by as string) || undefined,
+    photos: photosRaw?.map((p) => ({
+      uri: (p.uri as string) || '',
+      caption: (p.caption as string) || undefined,
+    })),
+    documents: documentsRaw?.map((d) => ({
+      uri: (d.uri as string) || '',
+      fileName: (d.file_name as string) || '',
+      fileType: (d.file_type as string) || '',
+      fileSize: (d.file_size as number) ?? 0,
+    })),
   };
 }
 
@@ -192,7 +210,11 @@ export const assignmentService = {
   async listMyAssignments(groupId: string, studentId: string): Promise<MyAssignment[]> {
     const { data, error } = await supabase
       .from('group_assignments')
-      .select('*, assignment_submissions(*)')
+      // Evidence is embedded here, not fetched separately, because opening a
+      // card must prefill it: submit_assignment deletes and rewrites
+      // log_photos/log_documents rather than appending, so a resubmission
+      // built from a blank picker would erase whatever was uploaded before.
+      .select('*, assignment_submissions(*, log_photos(*), log_documents(*))')
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
     if (error) throw error;

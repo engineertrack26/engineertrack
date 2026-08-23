@@ -33,6 +33,8 @@ export interface AssignmentSubmission {
   submittedAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
+  photos?: PhotoEvidence[];
+  documents?: DocumentEvidence[];
 }
 
 /** One assignment's tallies as the SERVER counts them, which is not the same

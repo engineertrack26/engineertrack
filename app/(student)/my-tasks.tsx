@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert, Switch,
+  TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +9,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { groupService } from '@/services/group';
-import { logService } from '@/services/logs';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { groupAssignmentsByState } from '@/utils/assignmentGrouping';
+import { EvidencePicker } from '@/components/forms';
 import { colors, spacing, borderRadius } from '@/theme';
-import type { MyAssignment } from '@/types/assignment';
+import type { MyAssignment, PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 import type { GroupSummary } from '@/types/group';
 
 type SectionKey = 'revise' | 'todo' | 'waiting' | 'done';
@@ -40,13 +40,6 @@ function fromIsoDate(s: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function todayIso(): string {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
 export default function MyTasksScreen() {
   const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
@@ -55,11 +48,12 @@ export default function MyTasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [group, setGroup] = useState<GroupSummary | null>(null);
   const [assignments, setAssignments] = useState<MyAssignment[]>([]);
-  const [todayLog, setTodayLog] = useState<{ id: string; title: string } | null>(null);
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [attachLog, setAttachLog] = useState(false);
+  const [reflection, setReflection] = useState('');
+  const [photos, setPhotos] = useState<PhotoEvidence[]>([]);
+  const [documents, setDocuments] = useState<DocumentEvidence[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -72,19 +66,10 @@ export default function MyTasksScreen() {
       setGroup(g);
       if (!g) {
         setAssignments([]);
-        setTodayLog(null);
         return;
       }
-      const [items, todayData] = await Promise.all([
-        assignmentService.listMyAssignments(g.id, user.id),
-        logService.getLogByDate(user.id, todayIso()),
-      ]);
+      const items = await assignmentService.listMyAssignments(g.id, user.id);
       setAssignments(items);
-      setTodayLog(
-        todayData
-          ? { id: (todayData.id as string) || '', title: (todayData.title as string) || '' }
-          : null,
-      );
     } catch (err) {
       console.error('My tasks load error:', err);
     } finally {
@@ -105,17 +90,23 @@ export default function MyTasksScreen() {
   function toggleOpen(a: MyAssignment) {
     if (openId === a.id) {
       setOpenId(null);
+      setNote('');
+      setReflection('');
+      setPhotos([]);
+      setDocuments([]);
       return;
     }
     setOpenId(a.id);
-    // Prefill rather than blank. submit_assignment's DO UPDATE overwrites
-    // student_note unconditionally, so a student asked only to attach a
-    // different log would resubmit with an empty note and the mentor's panel
-    // would render nothing where the note had been -- it gates on a truthy
-    // string. The note the student already wrote is the right starting point
-    // for the one they are about to send.
+    // Prefill all four rather than blank. submit_assignment's DO UPDATE
+    // overwrites student_note and reflection unconditionally, and it deletes
+    // and REWRITES the evidence rather than appending -- so a student asked
+    // only to add one photo, who finds the rest blank, resubmits and destroys
+    // the note and attachments they already had. Nothing errors; the mentor's
+    // panel simply renders empty where content used to be.
     setNote(a.submission?.studentNote || '');
-    setAttachLog(false);
+    setReflection(a.submission?.reflection || '');
+    setPhotos(a.submission?.photos || []);
+    setDocuments(a.submission?.documents || []);
   }
 
   async function handleSubmit(a: MyAssignment) {
@@ -123,9 +114,7 @@ export default function MyTasksScreen() {
     setSubmitting(true);
     try {
       await assignmentService.submitAssignment(
-        a.id,
-        note.trim(),
-        attachLog && todayLog ? todayLog.id : null,
+        a.id, note.trim(), reflection.trim(), photos, documents,
       );
 
       // The mentor's notification is written by submit_assignment itself, not
@@ -139,7 +128,9 @@ export default function MyTasksScreen() {
       Alert.alert(t('common.done'), t('student.taskSubmitted'));
       setOpenId(null);
       setNote('');
-      setAttachLog(false);
+      setReflection('');
+      setPhotos([]);
+      setDocuments([]);
       await loadData();
     } catch (err) {
       // ALREADY_APPROVED is the one a student will actually hit -- tapping
@@ -208,32 +199,44 @@ export default function MyTasksScreen() {
 
             {actionable && (
               <>
-                <Text style={styles.label}>{t('student.taskNote')}</Text>
+                <Text style={styles.label}>{t('student.whatIDid')}</Text>
                 <TextInput
                   style={[styles.input, styles.multilineInput]}
                   value={note}
                   onChangeText={setNote}
                   multiline
+                  editable={!submitting}
                   placeholderTextColor={colors.textDisabled}
                 />
 
-                {todayLog && (
-                  <View style={styles.toggleRow}>
-                    <Text style={styles.toggleLabel} numberOfLines={2}>
-                      {t('student.attachTodaysLog', { title: todayLog.title })}
-                    </Text>
-                    <Switch
-                      value={attachLog}
-                      onValueChange={setAttachLog}
-                      trackColor={{ false: colors.border, true: colors.primary }}
-                    />
-                  </View>
-                )}
+                <Text style={styles.label}>{t('student.whatILearned')}</Text>
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  value={reflection}
+                  onChangeText={setReflection}
+                  multiline
+                  editable={!submitting}
+                  placeholderTextColor={colors.textDisabled}
+                />
+
+                <View style={styles.evidenceWrap}>
+                  <EvidencePicker
+                    userId={user?.id || ''}
+                    scopeId={a.id}
+                    photos={photos}
+                    documents={documents}
+                    onChange={(nextPhotos, nextDocuments) => {
+                      setPhotos(nextPhotos);
+                      setDocuments(nextDocuments);
+                    }}
+                    disabled={submitting}
+                  />
+                </View>
 
                 <TouchableOpacity
-                  style={styles.primaryBtn}
+                  style={[styles.primaryBtn, !reflection.trim() && styles.primaryBtnDisabled]}
                   onPress={() => handleSubmit(a)}
-                  disabled={submitting}
+                  disabled={submitting || !reflection.trim()}
                   activeOpacity={0.7}
                 >
                   {submitting ? (
@@ -242,6 +245,12 @@ export default function MyTasksScreen() {
                     <Text style={styles.primaryBtnText}>{t('student.submitTask')}</Text>
                   )}
                 </TouchableOpacity>
+                {/* An inert button with no explanation is the commonest form
+                    of this bug -- the server refuses REFLECTION_REQUIRED too,
+                    but this is so the student is not told only after trying. */}
+                {!reflection.trim() && (
+                  <Text style={styles.hint}>{t('errors.reflectionRequired')}</Text>
+                )}
               </>
             )}
           </View>
@@ -414,17 +423,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  evidenceWrap: {
     marginTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  toggleLabel: {
-    fontSize: 13,
-    color: colors.text,
-    flex: 1,
   },
 
   primaryBtn: {
@@ -435,9 +435,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.md,
   },
+  primaryBtnDisabled: {
+    opacity: 0.5,
+  },
   primaryBtnText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#fff',
+  },
+  hint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 });
