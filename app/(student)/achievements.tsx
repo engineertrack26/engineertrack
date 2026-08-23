@@ -89,7 +89,11 @@ export default function AchievementsScreen() {
   }, [loadData]);
 
   const formatReason = (reason: string): string => {
+    // Reasons like 'assignment_submitted:9f3c8a2e-…' and the pre-existing
+    // 'assignment_approved:<id>' carry a trailing id after the first colon;
+    // strip it before formatting so the UUID never reaches the screen.
     return reason
+      .split(':')[0]
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
   };

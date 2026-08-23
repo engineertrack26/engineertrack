@@ -343,7 +343,7 @@ export default function MentorDashboard() {
                     {student.currentStreak > 0 && (
                       <View style={styles.metaItem}>
                         <Ionicons name="flame" size={13} color={colors.gamification.streak} />
-                        <Text style={styles.metaText}>{student.currentStreak}d</Text>
+                        <Text style={styles.metaText}>{student.currentStreak}w</Text>
                       </View>
                     )}
                   </View>

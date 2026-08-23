@@ -142,7 +142,7 @@
     "badges": "Badges",
     "level": "Level",
     "xp": "XP",
-    "streak": "Day Streak",
+    "streak": "Week Streak",
     "leaderboard": "Leaderboard",
     "rank": "Rank",
     "earnedBadge": "You earned a new badge!",
@@ -272,7 +272,7 @@
       "description": "Submit your first daily log"
     },
     "firstTask": {
-      "name": "First Step",
+      "name": "Task Kickoff",
       "description": "Submit your first task"
     },
     "streak7": {

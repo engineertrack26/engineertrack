@@ -293,7 +293,7 @@ export default function StudentDashboard() {
           <View style={styles.statsRow}>
             <StatCard
               title={t('student.streak')}
-              value={`${currentStreak}d`}
+              value={`${currentStreak}w`}
               icon="flame"
               color={colors.gamification.streak}
             />
