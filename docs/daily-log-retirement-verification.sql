@@ -74,8 +74,10 @@ SELECT 'PASS: schema assertions held' AS part_a;
 -- ============================================================
 -- PART B — behaviour, as owner. Submit BEGIN..ROLLBACK in one go.
 --
---   B1 both owners set     refused (23514)
---   B2 neither owner set   refused (23514)
+--   B1 both owners set          refused (23514)
+--   B2 neither owner set        refused (23514)
+--   B3 blank reflection         refused (REFLECTION_REQUIRED)
+--   B4 resubmit rewrites evidence   1 photo after removing one
 -- ============================================================
 
 BEGIN;
@@ -83,10 +85,56 @@ BEGIN;
 DO $$
 DECLARE
   log TEXT := '';
-  a_log UUID;
+  a_log UUID; adv UUID; the_student UUID; grp UUID; kpi UUID;
+  a_assign UUID; a_assign2 UUID;
+  n INT; n2 INT;
 BEGIN
-  -- Any existing log id will do; B1 only needs a value that satisfies the FK.
   SELECT id INTO a_log FROM daily_logs ORDER BY created_at LIMIT 1;
+
+  SELECT id INTO adv         FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
+  SELECT id INTO the_student FROM profiles WHERE role = 'student'  ORDER BY created_at LIMIT 1;
+
+  IF adv IS NULL OR the_student IS NULL THEN
+    PERFORM set_config('probe.results',
+      'B1-B7 behaviour' || E'\t' || 'SKIP: needs one advisor and one student profile' || E'\n', true);
+    RETURN;
+  END IF;
+
+  INSERT INTO internship_groups (advisor_id, name)
+  VALUES (adv, 'Probe D1') RETURNING id INTO grp;
+
+  -- tr_seed_group_competency_targets seeds every competency as a target on
+  -- that INSERT, so any triplet is in scope and trg_assignment_within_scope
+  -- lets both assignments through.
+  SELECT k.id INTO kpi
+  FROM competency_kpis k
+  JOIN competencies c ON c.id = k.competency_id
+  WHERE k.level = 1 AND k.kpi_index = 1
+  ORDER BY c.display_order LIMIT 1;
+
+  -- Two assignments, not one. B5 needs a SECOND submission in the same week;
+  -- a second call against a_assign would be a resubmission and would take the
+  -- guarded path instead of the streak branch under test.
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe one', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 0 LIMIT 1
+  RETURNING id INTO a_assign;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe two', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO a_assign2;
+
+  -- submit_assignment refuses a non-member with ROLE_NOT_ALLOWED, so the
+  -- membership is load-bearing, not scenery. The table is group_memberships;
+  -- there is no internship_group_members despite what one fix brief called it.
+  INSERT INTO group_memberships (group_id, student_id)
+  VALUES (grp, the_student);
+
+  -- submit_assignment reads auth.uid(). Without this every call below would
+  -- raise NOT_AUTHENTICATED and B3 would "pass" for the wrong reason.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', the_student)::text, true);
 
   -- B1. Both owners set. num_nonnulls = 2, so the CHECK must refuse. Guarded:
   -- on an empty or freshly-migrated database a_log is NULL, which would make
@@ -130,6 +178,38 @@ BEGIN
     log := log || 'B2 neither owner set' || E'\t'
         || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
+
+  -- B3. A blank reflection is refused. The whole reason the daily log was
+  --     removed is that reflection moved onto the task record; an optional
+  --     field would go empty and take the reason with it. Whitespace is not
+  --     a reflection, so the guard is btrim, not IS NULL.
+  BEGIN
+    PERFORM submit_assignment(a_assign, 'did the thing', '   ', '[]'::jsonb, '[]'::jsonb);
+    log := log || 'B3 blank reflection' || E'\t'
+        || 'FAIL: accepted -- whitespace passed as a reflection' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B3 blank reflection' || E'\t'
+        || CASE WHEN SQLERRM LIKE '%REFLECTION_REQUIRED%' THEN 'refused (REFLECTION_REQUIRED)'
+                ELSE 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM END || E'\n';
+  END;
+
+  -- B4. Resubmitting rewrites the evidence rather than appending to it. The
+  --     client holds the full list, so a student who removes a photo and
+  --     resubmits must end with one photo, not two.
+  PERFORM submit_assignment(a_assign, 'first go', 'learned one thing',
+    '[{"uri":"probe://p1","caption":"one"},{"uri":"probe://p2","caption":"two"}]'::jsonb,
+    '[]'::jsonb);
+  PERFORM submit_assignment(a_assign, 'second go', 'learned one thing',
+    '[{"uri":"probe://p1","caption":"one"}]'::jsonb,
+    '[]'::jsonb);
+
+  SELECT count(*) INTO n FROM log_photos p
+  WHERE p.submission_id = (SELECT s.id FROM assignment_submissions s
+                           WHERE s.assignment_id = a_assign AND s.student_id = the_student);
+  log := log || 'B4 resubmit rewrites evidence' || E'\t'
+      || CASE WHEN n = 1 THEN '1 photo after removing one'
+              WHEN n = 2 THEN 'FAIL: 2 photos -- evidence appended instead of rewritten'
+              ELSE 'FAIL: ' || n || ' photos, expected 1' END || E'\n';
 
   PERFORM set_config('probe.results', log, true);
 END $$;
