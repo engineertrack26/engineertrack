@@ -8,6 +8,13 @@
 -- mention logs, so nothing there needs touching.
 --
 -- Idempotent and safe to re-apply.
+--
+-- Apply order: this file first, then docs/daily-log-retirement-rpcs.sql, then
+-- docs/daily-log-retirement-verification.sql. Applying the RPC file before
+-- this one succeeds anyway -- a plpgsql body is not catalog-resolved at
+-- CREATE FUNCTION time -- and then fails at runtime on the first submission,
+-- because the old three-argument submit_assignment gets dropped while
+-- reflection and the new evidence columns do not exist yet.
 -- ============================================
 
 -- ---- assignment_submissions.reflection ----
@@ -17,6 +24,36 @@
 -- The requirement is enforced in submit_assignment, where btrim can be
 -- applied and a blank can be refused with a name.
 ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS reflection TEXT;
+
+-- ---- student_profiles streak counters are being redefined from days to weeks ----
+--
+-- current_streak used to count consecutive DAYS with a daily log; submit_assignment
+-- now writes consecutive WEEKS into the same column. Every existing row still
+-- holds a day count, and nothing converts it: a student sitting on
+-- current_streak = 6 from daily logs would read as a 6-week streak after a
+-- single task submission, hit 7 on the next one, and be awarded streak_30
+-- ("Submit a task 8 weeks running") after just two task submissions.
+--
+-- Both columns are reset, not just current_streak. longest_streak is fed by
+-- longest_streak = GREATEST(longest_streak, v_streak); left holding a
+-- day-scaled value, GREATEST would pin that maximum forever and a real week
+-- streak could never exceed it and surface. This UPDATE is naturally
+-- idempotent -- once every row is 0, re-running it changes nothing.
+UPDATE student_profiles SET current_streak = 0, longest_streak = 0;
+
+-- ---- trg_daily_logs_gamification retires along with daily_logs writes ----
+--
+-- This trigger (docs/gamification-server-side-migration.sql) still writes
+-- student_profiles.current_streak in DAYS on every daily_logs insert, while
+-- submit_assignment above writes the same column in WEEKS. Neither writer can
+-- detect the other, so leaving both installed reintroduces the exact bug the
+-- reset above just fixed. D1's SQL is applied only after D2 has deleted the
+-- daily-log screens (see the apply-order note at the top of this file), so by
+-- the time this runs nothing can insert into daily_logs any more and the
+-- trigger has no legitimate work left to do. No CASCADE: only the trigger is
+-- being retired. handle_log_gamification() itself is left in the catalog,
+-- unreferenced -- dropping the function is not needed to stop the double-write.
+DROP TRIGGER IF EXISTS trg_daily_logs_gamification ON daily_logs;
 
 -- ---- log_photos ----
 ALTER TABLE log_photos ALTER COLUMN log_id DROP NOT NULL;
