@@ -148,6 +148,17 @@ BEGIN
   -- snake_case, not the camelCase the TypeScript layer uses elsewhere. D2's
   -- service (src/services/assignments.ts) is responsible for that mapping;
   -- this comment is here so the two halves cannot drift apart unnoticed.
+  --
+  -- log_documents.file_name and file_type are NOT NULL at the table level
+  -- (docs/database-schema.sql). A client that drifts back to camelCase -- or
+  -- sends any other malformed element -- would leave those columns NULL and
+  -- raise 23502 AFTER the submission row and the photos above are already
+  -- written, so the student would simply be unable to submit. The WHERE below
+  -- filters uri, file_name and file_type the same way the photo INSERT
+  -- filters uri: a malformed document row is silently dropped, not allowed to
+  -- abort a submission that otherwise succeeded. file_size keeps the coalesce
+  -- rather than joining the filter, since 0 is a valid size for evidence whose
+  -- byte count could not be determined client-side.
   DELETE FROM log_photos    WHERE submission_id = submission;
   DELETE FROM log_documents WHERE submission_id = submission;
 
@@ -161,7 +172,7 @@ BEGIN
   SELECT submission, e.uri, e.file_name, e.file_type, coalesce(e.file_size, 0)
   FROM jsonb_to_recordset(coalesce(p_documents, '[]'::jsonb))
        AS e(uri TEXT, file_name TEXT, file_type TEXT, file_size INTEGER)
-  WHERE e.uri IS NOT NULL;
+  WHERE e.uri IS NOT NULL AND e.file_name IS NOT NULL AND e.file_type IS NOT NULL;
 
   -- Gamification, first submission only.
   --
