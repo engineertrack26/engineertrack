@@ -135,7 +135,14 @@
     "stateRevise": "Needs revision",
     "stateTodo": "To do",
     "stateWaiting": "Waiting for review",
-    "stateDone": "Approved"
+    "stateDone": "Approved",
+    "evidence": "Evidence",
+    "addPhoto": "Add Photo",
+    "addDocument": "Add Document",
+    "photoLimit": "Maximum {{max}} photos",
+    "uploadFailed": "Upload failed",
+    "retry": "Retry",
+    "caption": "Caption (optional)"
   },
   "gamification": {
     "points": "Points",
