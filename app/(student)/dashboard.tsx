@@ -1,61 +1,39 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, RefreshControl, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
-import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
-import { logService } from '@/services/logs';
+import { assignmentService } from '@/services/assignments';
+import { groupService } from '@/services/group';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import { StatCard, ProgressBar } from '@/components/common';
 import { AppNotification } from '@/types/notification';
-import { LogCard } from '@/components/cards';
 import { LEVELS } from '@/types/gamification';
-import { DailyLog } from '@/types/log';
+import type { MyAssignment } from '@/types/assignment';
+import type { GroupSummary } from '@/types/group';
+import { groupAssignmentsByState } from '@/utils/assignmentGrouping';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
-
-function mapDbLog(row: Record<string, unknown>): DailyLog {
-  return {
-    id: row.id as string,
-    studentId: (row.student_id as string) || '',
-    date: row.date as string,
-    title: (row.title as string) || '',
-    content: (row.content as string) || '',
-    activitiesPerformed: (row.activities_performed as string) || '',
-    skillsLearned: (row.skills_learned as string) || '',
-    challengesFaced: (row.challenges_faced as string) || '',
-    hoursSpent: (row.hours_spent as number) || 0,
-    status: (row.status as DailyLog['status']) || 'draft',
-    photos: [],
-    documents: [],
-    revisionHistory: [],
-    advisorNotes: (row.advisor_notes as string) || undefined,
-    xpEarned: (row.xp_earned as number) || 0,
-    createdAt: (row.created_at as string) || '',
-    updatedAt: (row.updated_at as string) || '',
-  };
-}
 
 export default function StudentDashboard() {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { logs, setLogs } = useLogStore();
   const { totalXp, currentLevel, currentStreak } = useGamificationStore();
   const setXp = useGamificationStore((s) => s.setXp);
   const setLevel = useGamificationStore((s) => s.setLevel);
   const setStreak = useGamificationStore((s) => s.setStreak);
 
-  const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
+  const [group, setGroup] = useState<GroupSummary | null>(null);
+  const [assignments, setAssignments] = useState<MyAssignment[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Notification state
-  const [revisionCount, setRevisionCount] = useState(0);
   const [feedbackCount, setFeedbackCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
@@ -66,11 +44,19 @@ export default function StudentDashboard() {
     : 1;
   const xpToNextLevel = nextLevelData ? nextLevelData.minXp - totalXp : 0;
 
+  // A missing submission row IS the "to do" state -- groupAssignmentsByState
+  // already encodes that rule, so counts derive from it rather than a second
+  // hand-rolled tally that could drift from what my-tasks.tsx shows.
+  const taskGroups = useMemo(() => groupAssignmentsByState(assignments), [assignments]);
+  const revisionCount = taskGroups.revise.length;
+  const todoCount = taskGroups.todo.length;
+  const approvedCount = taskGroups.done.length;
+  const submittedCount = taskGroups.revise.length + taskGroups.waiting.length + taskGroups.done.length;
+  const completionRate = submittedCount > 0 ? Math.round((approvedCount / submittedCount) * 100) : 0;
+
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const today = new Date().toISOString().split('T')[0];
-
       const { data: profile } = await supabase
         .from('student_profiles')
         .select(
@@ -94,18 +80,13 @@ export default function StudentDashboard() {
         return;
       }
 
-      const [logsData, todayData] = await Promise.all([
-        logService.getLogsByStudent(user.id),
-        logService.getLogByDate(user.id, today),
-      ]);
-
-      const mappedLogs: DailyLog[] = (logsData || []).map(mapDbLog);
-      setLogs(mappedLogs);
-      setTodayLog(todayData ? mapDbLog(todayData) : null);
-
-      // Count needs_revision logs
-      const revisionLogs = mappedLogs.filter((l) => l.status === 'needs_revision');
-      setRevisionCount(revisionLogs.length);
+      // listMyAssignments needs a group id, so the student's group has to be
+      // resolved first. A student in no group is a normal state, not an
+      // error -- there is simply nothing to show.
+      const g = await groupService.getMyGroup(user.id);
+      setGroup(g);
+      const items = g ? await assignmentService.listMyAssignments(g.id, user.id) : [];
+      setAssignments(items);
 
       // Fetch unread notifications from DB
       try {
@@ -140,15 +121,15 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, setLogs, setXp, setLevel, setStreak]);
+  }, [user, setXp, setLevel, setStreak]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Realtime: auto-refresh when log status changes
+  // Realtime: auto-refresh when a submission's status changes
   useRealtimeSubscription({
-    table: 'daily_logs',
+    table: 'assignment_submissions',
     filter: user ? `student_id=eq.${user.id}` : undefined,
     event: 'UPDATE',
     enabled: !!user,
@@ -162,11 +143,6 @@ export default function StudentDashboard() {
     await loadData();
     setRefreshing(false);
   }, [loadData]);
-
-  const recentLogs = logs.slice(0, 5);
-  const approvedCount = logs.filter((l) => l.status === 'approved' || l.status === 'validated').length;
-  const submittedCount = logs.filter((l) => l.status !== 'draft').length;
-  const completionRate = submittedCount > 0 ? Math.round((approvedCount / submittedCount) * 100) : 0;
 
   const hasNotifications = revisionCount > 0 || feedbackCount > 0;
 
@@ -203,7 +179,7 @@ export default function StudentDashboard() {
             {revisionCount > 0 && (
               <TouchableOpacity
                 style={[styles.notifCard, { borderLeftColor: colors.error }]}
-                onPress={() => router.push('/(student)/create-log')}
+                onPress={() => router.push('/(student)/my-tasks')}
                 activeOpacity={0.7}
               >
                 <View style={[styles.notifIconWrap, { backgroundColor: colors.error + '15' }]}>
@@ -212,7 +188,7 @@ export default function StudentDashboard() {
                 <View style={styles.notifContent}>
                   <Text style={styles.notifTitle}>Revision Needed</Text>
                   <Text style={styles.notifDesc}>
-                    {revisionCount} log{revisionCount > 1 ? 's' : ''} need{revisionCount === 1 ? 's' : ''} revision
+                    {revisionCount} task{revisionCount > 1 ? 's' : ''} need{revisionCount === 1 ? 's' : ''} revision
                   </Text>
                 </View>
                 <View style={[styles.notifBadge, { backgroundColor: colors.error }]}>
@@ -323,38 +299,29 @@ export default function StudentDashboard() {
           )}
         </View>
 
-        {/* Today's Log */}
+        {/* Tasks To Do */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('student.todayLog')}</Text>
-          {todayLog ? (
-            <LogCard log={todayLog} onPress={() => router.push('/(student)/create-log')} />
-          ) : (
-            <TouchableOpacity
-              style={styles.createLogButton}
-              onPress={() => router.push('/(student)/create-log')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle" size={32} color={colors.primary} />
-              <Text style={styles.createLogText}>{t('student.createLog')}</Text>
-              <Text style={styles.createLogHint}>Tap to create today's log</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.sectionTitle}>{t('student.tasksToDo')}</Text>
+          <TouchableOpacity
+            style={styles.taskCard}
+            onPress={() => router.push('/(student)/my-tasks')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="list-circle" size={32} color={colors.primary} />
+            <Text style={styles.taskCardTitle}>{t('student.tasksToDo')}</Text>
+            <Text style={styles.taskCardHint}>{t('student.tasksToDoCount', { count: todoCount })}</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Recent Logs */}
-        {recentLogs.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('student.logHistory')}</Text>
-              <TouchableOpacity onPress={() => router.push('/(student)/log-history')}>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            </View>
-            {recentLogs.map((log) => (
-              <LogCard key={log.id} log={log} />
-            ))}
-          </View>
-        )}
+        {/* Archive link */}
+        <TouchableOpacity
+          style={styles.archiveLink}
+          onPress={() => router.push('/(student)/log-history')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.archiveLinkText}>{t('student.pastLogs')}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
@@ -494,24 +461,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.sm,
   },
-  seeAll: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  createLogButton: {
+  taskCard: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
     padding: spacing.lg,
@@ -520,15 +476,26 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '30',
     borderStyle: 'dashed',
   },
-  createLogText: {
+  taskCardTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary,
     marginTop: spacing.sm,
   },
-  createLogHint: {
+  taskCardHint: {
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 4,
+  },
+  archiveLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  archiveLinkText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginRight: 4,
   },
 });

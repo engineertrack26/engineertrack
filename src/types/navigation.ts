@@ -10,7 +10,6 @@ export type AuthRoutes = {
 
 export type StudentRoutes = {
   dashboard: undefined;
-  'create-log': undefined;
   'log-history': undefined;
   achievements: undefined;
   leaderboard: undefined;

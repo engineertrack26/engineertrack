@@ -39,21 +39,18 @@ export default function StudentLayout() {
         }}
       />
       <Tabs.Screen
-        name="create-log"
+        name="my-tasks"
         options={{
-          title: 'New Log',
+          title: 'Tasks',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" size={size} color={color} />
+            <Ionicons name="checkbox-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="log-history"
         options={{
-          title: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -105,12 +102,6 @@ export default function StudentLayout() {
       />
       <Tabs.Screen
         name="internship-form"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="my-tasks"
         options={{
           href: null,
         }}
