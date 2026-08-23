@@ -88,23 +88,34 @@ BEGIN
   -- Any existing log id will do; B1 only needs a value that satisfies the FK.
   SELECT id INTO a_log FROM daily_logs ORDER BY created_at LIMIT 1;
 
-  -- B1. Both owners set. num_nonnulls = 2, so the CHECK must refuse.
-  BEGIN
-    INSERT INTO log_photos (log_id, submission_id, uri)
-    VALUES (a_log, gen_random_uuid(), 'probe://both');
+  -- B1. Both owners set. num_nonnulls = 2, so the CHECK must refuse. Guarded:
+  -- on an empty or freshly-migrated database a_log is NULL, which would make
+  -- this insert log_id = NULL, submission_id = <random>, i.e. num_nonnulls = 1
+  -- -- a value the CHECK is designed to ACCEPT, not the both-set case this
+  -- step claims to test. The FK on the random submission_id would then fire
+  -- and print the same INCONCLUSIVE line a real test would, so the case would
+  -- silently verify nothing while looking like it ran. SKIP instead.
+  IF a_log IS NULL THEN
     log := log || 'B1 both owners set' || E'\t'
-        || 'FAIL: accepted -- a row can belong to a log and a submission at once' || E'\n';
-  EXCEPTION WHEN check_violation THEN
-    log := log || 'B1 both owners set' || E'\t' || 'refused (23514)' || E'\n';
-  WHEN foreign_key_violation THEN
-    -- The random submission id has no row. That refusal is the FK, not the
-    -- CHECK, so it proves nothing about the constraint under test.
-    log := log || 'B1 both owners set' || E'\t'
-        || 'INCONCLUSIVE: refused by the FK before the CHECK was reached' || E'\n';
-  WHEN OTHERS THEN
-    log := log || 'B1 both owners set' || E'\t'
-        || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
-  END;
+        || 'SKIP: no daily_logs row to borrow a log_id from' || E'\n';
+  ELSE
+    BEGIN
+      INSERT INTO log_photos (log_id, submission_id, uri)
+      VALUES (a_log, gen_random_uuid(), 'probe://both');
+      log := log || 'B1 both owners set' || E'\t'
+          || 'FAIL: accepted -- a row can belong to a log and a submission at once' || E'\n';
+    EXCEPTION WHEN check_violation THEN
+      log := log || 'B1 both owners set' || E'\t' || 'refused (23514)' || E'\n';
+    WHEN foreign_key_violation THEN
+      -- The random submission id has no row. That refusal is the FK, not the
+      -- CHECK, so it proves nothing about the constraint under test.
+      log := log || 'B1 both owners set' || E'\t'
+          || 'INCONCLUSIVE: refused by the FK before the CHECK was reached' || E'\n';
+    WHEN OTHERS THEN
+      log := log || 'B1 both owners set' || E'\t'
+          || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+    END;
+  END IF;
 
   -- B2. Neither owner set. num_nonnulls = 0. An orphan row belongs to nobody
   --     and no policy can reach it, so it would be invisible and undeletable.
