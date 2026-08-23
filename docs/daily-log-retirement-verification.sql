@@ -78,6 +78,9 @@ SELECT 'PASS: schema assertions held' AS part_a;
 --   B2 neither owner set        refused (23514)
 --   B3 blank reflection         refused (REFLECTION_REQUIRED)
 --   B4 resubmit rewrites evidence   1 photo after removing one
+--   B5 same-week streak         unchanged
+--   B6 submit XP once           1 transaction after two submits
+--   B7 photo bonus sees evidence    6 XP for the two photos at first submit
 -- ============================================================
 
 BEGIN;
@@ -210,6 +213,45 @@ BEGIN
       || CASE WHEN n = 1 THEN '1 photo after removing one'
               WHEN n = 2 THEN 'FAIL: 2 photos -- evidence appended instead of rewritten'
               ELSE 'FAIL: ' || n || ' photos, expected 1' END || E'\n';
+
+  -- B5. Two submissions in the same week must not move the streak twice.
+  --     The daily version got this for free from UNIQUE(student_id, date).
+  --     Here it is a branch that can be deleted without any other case
+  --     noticing, which is exactly why it gets a case of its own.
+  SELECT current_streak INTO n FROM student_profiles WHERE id = the_student;
+
+  PERFORM submit_assignment(a_assign2, 'same week', 'learned another thing',
+    '[]'::jsonb, '[]'::jsonb);
+
+  SELECT current_streak INTO n2 FROM student_profiles WHERE id = the_student;
+  log := log || 'B5 same-week streak' || E'\t'
+      || CASE WHEN n2 = n THEN 'unchanged at ' || n
+              ELSE 'FAIL: moved ' || n || ' -> ' || n2
+                   || ' for a second task in the same week' END || E'\n';
+
+  -- B6. Submit XP is paid once per submission, not once per submit call.
+  --     B4 already called submit_assignment twice on a_assign.
+  SELECT count(*) INTO n FROM xp_transactions x
+  WHERE x.student_id = the_student
+    AND x.reason = 'assignment_submitted:' || (
+      SELECT s.id FROM assignment_submissions s
+      WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
+  log := log || 'B6 submit XP once' || E'\t'
+      || CASE WHEN n = 1 THEN '1 transaction after two submits'
+              ELSE 'FAIL: ' || n || ' transactions' END || E'\n';
+
+  -- B7. The photo bonus counts the evidence this function just wrote. A
+  --     trigger on assignment_submissions would fire before those rows exist
+  --     and always read zero -- the reason the awards live in the RPC.
+  SELECT coalesce(sum(x.amount), 0) INTO n FROM xp_transactions x
+  WHERE x.student_id = the_student
+    AND x.reason = 'assignment_photo:' || (
+      SELECT s.id FROM assignment_submissions s
+      WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
+  log := log || 'B7 photo bonus sees evidence' || E'\t'
+      || CASE WHEN n = 6 THEN '6 XP for the two photos at first submit'
+              WHEN n = 0 THEN 'FAIL: 0 XP -- the count ran before the evidence was written'
+              ELSE 'FAIL: ' || n || ' XP, expected 6' END || E'\n';
 
   PERFORM set_config('probe.results', log, true);
 END $$;

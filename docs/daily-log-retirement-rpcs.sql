@@ -36,6 +36,10 @@ DECLARE
   assignment_title TEXT;
   the_mentor       UUID;
   student_name     TEXT;
+  v_photos         INTEGER;
+  v_week           DATE;
+  v_prev_week      DATE;
+  v_streak         INTEGER;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'NOT_AUTHENTICATED';
@@ -158,6 +162,75 @@ BEGIN
   FROM jsonb_to_recordset(coalesce(p_documents, '[]'::jsonb))
        AS e(uri TEXT, file_name TEXT, file_type TEXT, file_size INTEGER)
   WHERE e.uri IS NOT NULL;
+
+  -- Gamification, first submission only.
+  --
+  -- All of it lives here rather than in a trigger, and that is not a style
+  -- choice. A trigger on assignment_submissions fires when the submission row
+  -- is written, which is BEFORE the evidence block above -- a photo count read
+  -- from a trigger is always zero. Approval XP stays in the
+  -- award_assignment_xp trigger, where no such ordering exists.
+  --
+  -- Doing it here is safe because this function is the only way a submission
+  -- row can exist: assignment_submissions has no write policy at all, so RLS
+  -- forbids direct inserts and only SECURITY DEFINER can write.
+  --
+  -- The guard is the submission id inside `reason`. That id is stable across
+  -- resubmissions because the statement above upserts, so a resubmit cannot
+  -- earn submit XP, the photo bonus or a streak step a second time. It is also
+  -- what stops a student resubmitting an old task in a quiet week to keep a
+  -- streak alive without doing new work.
+  IF NOT EXISTS (
+    SELECT 1 FROM xp_transactions x
+    WHERE x.student_id = auth.uid()
+      AND x.reason = 'assignment_submitted:' || submission::text
+  ) THEN
+    PERFORM award_xp_internal(auth.uid(), 10,
+      'assignment_submitted:' || submission::text, NULL);
+
+    -- Mirrors POINT_VALUES.photoAttached (3) and the daily log's cap of 5.
+    SELECT count(*) INTO v_photos FROM log_photos WHERE submission_id = submission;
+    IF v_photos > 0 THEN
+      PERFORM award_xp_internal(auth.uid(), 3 * LEAST(v_photos, 5),
+        'assignment_photo:' || submission::text, NULL);
+    END IF;
+
+    PERFORM award_badge_internal(auth.uid(), 'first_task');
+
+    -- Weekly streak: consecutive ISO weeks containing at least one submission.
+    -- date_trunc('week', ...) returns the Monday, so `- 7` is the week before.
+    v_week := date_trunc('week', now())::date;
+
+    SELECT MAX(date_trunc('week', s.submitted_at)::date) INTO v_prev_week
+    FROM assignment_submissions s
+    WHERE s.student_id = auth.uid() AND s.id <> submission;
+
+    -- IS DISTINCT FROM, not <>: a first-ever submission has a NULL prev_week,
+    -- and `NULL <> v_week` is NULL, which would skip the whole block and leave
+    -- the streak at 0 forever.
+    IF v_prev_week IS DISTINCT FROM v_week THEN
+      IF v_prev_week = v_week - 7 THEN
+        SELECT current_streak + 1 INTO v_streak
+        FROM student_profiles WHERE id = auth.uid();
+      ELSE
+        v_streak := 1;
+      END IF;
+
+      UPDATE student_profiles
+      SET current_streak = v_streak,
+          longest_streak = GREATEST(longest_streak, v_streak)
+      WHERE id = auth.uid();
+
+      -- 4 and 8 weeks, down from 7 and 30 days. The badge ids are kept so
+      -- rows students already hold are not orphaned; only the copy in
+      -- en.json changes.
+      IF v_streak >= 8 THEN
+        PERFORM award_badge_internal(auth.uid(), 'streak_30');
+      ELSIF v_streak >= 4 THEN
+        PERFORM award_badge_internal(auth.uid(), 'streak_7');
+      END IF;
+    END IF;
+  END IF;
 
   -- Tell the mentor, from here rather than from the client.
   --
