@@ -9,6 +9,7 @@ import { colors, spacing, borderRadius } from '@/theme';
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
 const MAX_PHOTOS = 5; // matches 3 * LEAST(v_photos, 5) in submit_assignment
+const MAX_DOCUMENTS = 3; // mirrors create-log.tsx's LIMITS.maxDocumentsPerLog
 
 interface EvidencePickerProps {
   userId: string;
@@ -53,6 +54,8 @@ export function EvidencePicker({
 
   const photoSlotCount = photos.length + pendingPhotos.length;
   const atPhotoLimit = photoSlotCount >= MAX_PHOTOS;
+  const documentSlotCount = documents.length + pendingDocuments.length;
+  const atDocumentLimit = documentSlotCount >= MAX_DOCUMENTS;
 
   // Sequential on purpose: each upload appends to the *result* of the
   // previous onChange call rather than to the `photos` prop captured in this
@@ -102,7 +105,13 @@ export function EvidencePicker({
 
     if (source === 'camera') {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) return;
+      if (!perm.granted) {
+        Alert.alert(
+          t('student.permissionRequiredTitle', 'Permission Required'),
+          t('student.cameraPermissionMessage', 'Camera permission is needed to take photos.'),
+        );
+        return;
+      }
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         quality: 0.7,
@@ -112,7 +121,13 @@ export function EvidencePicker({
       }
     } else {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return;
+      if (!perm.granted) {
+        Alert.alert(
+          t('student.permissionRequiredTitle', 'Permission Required'),
+          t('student.galleryPermissionMessage', 'Gallery permission is needed to select photos.'),
+        );
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.7,
@@ -194,7 +209,7 @@ export function EvidencePicker({
   }
 
   async function pickDocument() {
-    if (disabled) return;
+    if (disabled || atDocumentLimit) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({
         multiple: false,
@@ -205,7 +220,9 @@ export function EvidencePicker({
       }
     } catch {
       // Picker itself failed to open; nothing was added, so there is
-      // nothing to roll back.
+      // nothing to roll back -- but the user still needs to know why
+      // nothing happened.
+      Alert.alert(t('common.error', 'An error occurred'), t('student.documentPickerError', 'Could not open document picker.'));
     }
   }
 
@@ -297,7 +314,7 @@ export function EvidencePicker({
       <View style={styles.subsection}>
         <View style={styles.subsectionHeader}>
           <Ionicons name="document-attach-outline" size={16} color={colors.textSecondary} />
-          <Text style={styles.count}>{documents.length}</Text>
+          <Text style={styles.count}>{documentSlotCount}/{MAX_DOCUMENTS}</Text>
         </View>
 
         {documents.map((doc, index) => (
@@ -329,10 +346,14 @@ export function EvidencePicker({
           </View>
         ))}
 
+        {atDocumentLimit && (
+          <Text style={styles.limitText}>{t('student.documentLimit', { max: MAX_DOCUMENTS })}</Text>
+        )}
+
         <TouchableOpacity
-          style={[styles.addBtn, disabled && styles.addBtnDisabled]}
+          style={[styles.addBtn, (disabled || atDocumentLimit) && styles.addBtnDisabled]}
           onPress={pickDocument}
-          disabled={disabled}
+          disabled={disabled || atDocumentLimit}
           activeOpacity={0.7}
         >
           <Ionicons name="add" size={18} color={colors.primary} />

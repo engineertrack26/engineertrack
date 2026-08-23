@@ -142,7 +142,12 @@
     "photoLimit": "Maximum {{max}} photos",
     "uploadFailed": "Upload failed",
     "retry": "Retry",
-    "caption": "Caption (optional)"
+    "caption": "Caption (optional)",
+    "permissionRequiredTitle": "Permission Required",
+    "cameraPermissionMessage": "Camera permission is needed to take photos.",
+    "galleryPermissionMessage": "Gallery permission is needed to select photos.",
+    "documentPickerError": "Could not open document picker.",
+    "documentLimit": "Maximum {{max}} documents"
   },
   "gamification": {
     "points": "Points",
