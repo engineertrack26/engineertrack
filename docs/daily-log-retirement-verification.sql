@@ -4,6 +4,9 @@
 -- Run in the Supabase SQL editor. Anonymous $$ only: a named dollar tag
 -- fails with 42601 in that editor.
 --
+-- Apply order: docs/daily-log-retirement-migration.sql first, then
+-- docs/daily-log-retirement-rpcs.sql, then this file.
+--
 -- PART A is STRUCTURAL. The editor connects as the table owner and an owner
 -- bypasses RLS, so these assertions prove a column, a constraint or a policy
 -- EXISTS. They never prove a policy can be EVALUATED. On 2026-08-20 that
@@ -66,6 +69,35 @@ BEGIN
   IF n <> 2 THEN
     RAISE EXCEPTION 'FAIL: % of 2 submission indexes present', n;
   END IF;
+
+  -- The six evidence policies exist. Part A only proves existence -- Part C
+  -- is where they are actually evaluated -- but until this fix the file
+  -- asserted no policy at all, despite this header's own claim that it does.
+  SELECT count(*) INTO n FROM pg_policies
+  WHERE (tablename, policyname, cmd) IN (
+    ('log_photos',    'log_photos_select',    'SELECT'),
+    ('log_photos',    'log_photos_insert',    'INSERT'),
+    ('log_photos',    'log_photos_delete',    'DELETE'),
+    ('log_documents', 'log_documents_select', 'SELECT'),
+    ('log_documents', 'log_documents_insert', 'INSERT'),
+    ('log_documents', 'log_documents_delete', 'DELETE')
+  );
+  IF n <> 6 THEN
+    RAISE EXCEPTION 'FAIL: % of 6 evidence policies present on log_photos/log_documents', n;
+  END IF;
+
+  -- The old three-argument submit_assignment must actually be GONE, not just
+  -- overloaded. CREATE OR REPLACE with a different argument list creates an
+  -- overload rather than replacing the old signature, and PostgREST resolves
+  -- overloads by the argument names a caller sends -- so if both survive,
+  -- every five-argument call in Part B below resolves to the new body and
+  -- this script stays silent about the one failure mode the spec calls "not
+  -- optional": a stale client still sending the old three arguments would
+  -- keep hitting a live old body instead of erroring.
+  SELECT count(*) INTO n FROM pg_proc WHERE proname = 'submit_assignment';
+  IF n <> 1 THEN
+    RAISE EXCEPTION 'FAIL: % overloads of submit_assignment in pg_proc, expected exactly 1', n;
+  END IF;
 END $$;
 
 SELECT 'PASS: schema assertions held' AS part_a;
@@ -81,6 +113,7 @@ SELECT 'PASS: schema assertions held' AS part_a;
 --   B5 same-week streak         unchanged
 --   B6 submit XP once           1 transaction after two submits
 --   B7 photo bonus sees evidence    6 XP for the two photos at first submit
+--   B8 log_documents neither owner set  refused (23514)
 -- ============================================================
 
 BEGIN;
@@ -99,7 +132,7 @@ BEGIN
 
   IF adv IS NULL OR the_student IS NULL THEN
     PERFORM set_config('probe.results',
-      'B1-B7 behaviour' || E'\t' || 'SKIP: needs one advisor and one student profile' || E'\n', true);
+      'B1-B8 behaviour' || E'\t' || 'SKIP: needs one advisor and one student profile' || E'\n', true);
     RETURN;
   END IF;
 
@@ -127,6 +160,17 @@ BEGIN
   SELECT grp, tr.id, 'Probe two', tr.objective, tr.criterion, adv
   FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
   RETURNING id INTO a_assign2;
+
+  -- one_active_group_per_student (docs/internship-groups-migration.sql) is a
+  -- unique index on group_memberships(student_id) WHERE left_at IS NULL. On
+  -- any database that actually has the profiles this probe needs, the_student
+  -- is almost certainly already in an active group from real use, and the
+  -- INSERT below would raise 23505 unhandled -- losing every B-case result
+  -- and turning the reporting SELECT into 25P02. Close any existing active
+  -- membership first; this whole block is inside BEGIN..ROLLBACK, so it is
+  -- undone along with everything else this probe writes.
+  UPDATE group_memberships SET left_at = now()
+  WHERE student_id = the_student AND left_at IS NULL;
 
   -- submit_assignment refuses a non-member with ROLE_NOT_ALLOWED, so the
   -- membership is load-bearing, not scenery. The table is group_memberships;
@@ -199,59 +243,102 @@ BEGIN
   -- B4. Resubmitting rewrites the evidence rather than appending to it. The
   --     client holds the full list, so a student who removes a photo and
   --     resubmits must end with one photo, not two.
-  PERFORM submit_assignment(a_assign, 'first go', 'learned one thing',
-    '[{"uri":"probe://p1","caption":"one"},{"uri":"probe://p2","caption":"two"}]'::jsonb,
-    '[]'::jsonb);
-  PERFORM submit_assignment(a_assign, 'second go', 'learned one thing',
-    '[{"uri":"probe://p1","caption":"one"}]'::jsonb,
-    '[]'::jsonb);
+  --
+  --     Each case from here on is wrapped in its own BEGIN..EXCEPTION so an
+  --     unexpected throw in one case reports ABORTED for that case instead of
+  --     unwinding the whole DO block and losing every result gathered so far
+  --     -- combined with the fixture failure F4 fixes above, that used to be
+  --     the likely first run of this script, not an edge case.
+  BEGIN
+    PERFORM submit_assignment(a_assign, 'first go', 'learned one thing',
+      '[{"uri":"probe://p1","caption":"one"},{"uri":"probe://p2","caption":"two"}]'::jsonb,
+      '[]'::jsonb);
+    PERFORM submit_assignment(a_assign, 'second go', 'learned one thing',
+      '[{"uri":"probe://p1","caption":"one"}]'::jsonb,
+      '[]'::jsonb);
 
-  SELECT count(*) INTO n FROM log_photos p
-  WHERE p.submission_id = (SELECT s.id FROM assignment_submissions s
-                           WHERE s.assignment_id = a_assign AND s.student_id = the_student);
-  log := log || 'B4 resubmit rewrites evidence' || E'\t'
-      || CASE WHEN n = 1 THEN '1 photo after removing one'
-              WHEN n = 2 THEN 'FAIL: 2 photos -- evidence appended instead of rewritten'
-              ELSE 'FAIL: ' || n || ' photos, expected 1' END || E'\n';
+    SELECT count(*) INTO n FROM log_photos p
+    WHERE p.submission_id = (SELECT s.id FROM assignment_submissions s
+                             WHERE s.assignment_id = a_assign AND s.student_id = the_student);
+    log := log || 'B4 resubmit rewrites evidence' || E'\t'
+        || CASE WHEN n = 1 THEN '1 photo after removing one'
+                WHEN n = 2 THEN 'FAIL: 2 photos -- evidence appended instead of rewritten'
+                ELSE 'FAIL: ' || n || ' photos, expected 1' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B4 resubmit rewrites evidence' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B5. Two submissions in the same week must not move the streak twice.
   --     The daily version got this for free from UNIQUE(student_id, date).
   --     Here it is a branch that can be deleted without any other case
   --     noticing, which is exactly why it gets a case of its own.
-  SELECT current_streak INTO n FROM student_profiles WHERE id = the_student;
+  BEGIN
+    SELECT current_streak INTO n FROM student_profiles WHERE id = the_student;
 
-  PERFORM submit_assignment(a_assign2, 'same week', 'learned another thing',
-    '[]'::jsonb, '[]'::jsonb);
+    PERFORM submit_assignment(a_assign2, 'same week', 'learned another thing',
+      '[]'::jsonb, '[]'::jsonb);
 
-  SELECT current_streak INTO n2 FROM student_profiles WHERE id = the_student;
-  log := log || 'B5 same-week streak' || E'\t'
-      || CASE WHEN n2 = n THEN 'unchanged at ' || n
-              ELSE 'FAIL: moved ' || n || ' -> ' || n2
-                   || ' for a second task in the same week' END || E'\n';
+    SELECT current_streak INTO n2 FROM student_profiles WHERE id = the_student;
+    log := log || 'B5 same-week streak' || E'\t'
+        || CASE WHEN n2 = n THEN 'unchanged at ' || n
+                ELSE 'FAIL: moved ' || n || ' -> ' || n2
+                     || ' for a second task in the same week' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B5 same-week streak' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B6. Submit XP is paid once per submission, not once per submit call.
   --     B4 already called submit_assignment twice on a_assign.
-  SELECT count(*) INTO n FROM xp_transactions x
-  WHERE x.student_id = the_student
-    AND x.reason = 'assignment_submitted:' || (
-      SELECT s.id FROM assignment_submissions s
-      WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
-  log := log || 'B6 submit XP once' || E'\t'
-      || CASE WHEN n = 1 THEN '1 transaction after two submits'
-              ELSE 'FAIL: ' || n || ' transactions' END || E'\n';
+  BEGIN
+    SELECT count(*) INTO n FROM xp_transactions x
+    WHERE x.student_id = the_student
+      AND x.reason = 'assignment_submitted:' || (
+        SELECT s.id FROM assignment_submissions s
+        WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
+    log := log || 'B6 submit XP once' || E'\t'
+        || CASE WHEN n = 1 THEN '1 transaction after two submits'
+                ELSE 'FAIL: ' || n || ' transactions' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B6 submit XP once' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B7. The photo bonus counts the evidence this function just wrote. A
   --     trigger on assignment_submissions would fire before those rows exist
   --     and always read zero -- the reason the awards live in the RPC.
-  SELECT coalesce(sum(x.amount), 0) INTO n FROM xp_transactions x
-  WHERE x.student_id = the_student
-    AND x.reason = 'assignment_photo:' || (
-      SELECT s.id FROM assignment_submissions s
-      WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
-  log := log || 'B7 photo bonus sees evidence' || E'\t'
-      || CASE WHEN n = 6 THEN '6 XP for the two photos at first submit'
-              WHEN n = 0 THEN 'FAIL: 0 XP -- the count ran before the evidence was written'
-              ELSE 'FAIL: ' || n || ' XP, expected 6' END || E'\n';
+  BEGIN
+    SELECT coalesce(sum(x.amount), 0) INTO n FROM xp_transactions x
+    WHERE x.student_id = the_student
+      AND x.reason = 'assignment_photo:' || (
+        SELECT s.id FROM assignment_submissions s
+        WHERE s.assignment_id = a_assign AND s.student_id = the_student)::text;
+    log := log || 'B7 photo bonus sees evidence' || E'\t'
+        || CASE WHEN n = 6 THEN '6 XP for the two photos at first submit'
+                WHEN n = 0 THEN 'FAIL: 0 XP -- the count ran before the evidence was written'
+                ELSE 'FAIL: ' || n || ' XP, expected 6' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B7 photo bonus sees evidence' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B8. Mirrors B2, for log_documents. Part A's schema assertions confirm the
+  --     one-owner CHECK exists on log_documents, but nothing before this case
+  --     exercised it behaviourally -- structural existence is not proof of
+  --     correct behaviour, and log_documents was left asserted only the first
+  --     way.
+  BEGIN
+    INSERT INTO log_documents (log_id, submission_id, uri, file_name, file_type, file_size)
+    VALUES (NULL, NULL, 'probe://neither-doc', 'probe.txt', 'text/plain', 0);
+    log := log || 'B8 log_documents neither owner set' || E'\t'
+        || 'FAIL: accepted -- an orphan row no policy can reach' || E'\n';
+  EXCEPTION WHEN check_violation THEN
+    log := log || 'B8 log_documents neither owner set' || E'\t' || 'refused (23514)' || E'\n';
+  WHEN OTHERS THEN
+    log := log || 'B8 log_documents neither owner set' || E'\t'
+        || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   PERFORM set_config('probe.results', log, true);
 END $$;
@@ -269,13 +356,20 @@ ROLLBACK;
 -- PART C — the evidence policy, actually evaluated.
 -- Submit BEGIN..ROLLBACK in one go.
 --
---   C1 owner student reads   1 photo        (positive control)
---   C2 unrelated student     0 photos
---   C3 evidence on approved  refused by RLS (42501)
+--   C1 owner student reads      1 photo            (positive control)
+--   C2 unrelated student        0 photos
+--   C3 evidence on open submission  accepted        (positive control)
+--   C4 evidence on approved     refused by RLS (42501)
 --
--- C1 is the positive control and is not optional. Without it, C2 returning
--- zero is indistinguishable from the policy refusing everyone, or from the
--- new branch never being reached at all.
+-- C1 is the positive control for C2 and is not optional. Without it, C2
+-- returning zero is indistinguishable from the policy refusing everyone, or
+-- from the new branch never being reached at all.
+--
+-- C3 is the positive control for C4, for the same reason: insufficient_
+-- privilege is also what a missing table-level INSERT grant on log_photos
+-- would raise, so C4 passing would look identical whether the status <>
+-- 'approved' clause is doing its job or the role cannot INSERT into
+-- log_photos at all.
 -- ============================================================
 
 BEGIN;
@@ -304,6 +398,13 @@ BEGIN
   WHERE k.level = 1 AND k.kpi_index = 1
   ORDER BY c.display_order LIMIT 1;
 
+  -- Same unique-index hazard as Part B's fixture: one_active_group_per_student
+  -- (docs/internship-groups-migration.sql) admits only one active membership
+  -- per student, and stu is almost certainly already in one on a real
+  -- database. Close it first; this block is inside BEGIN..ROLLBACK.
+  UPDATE group_memberships SET left_at = now()
+  WHERE student_id = stu AND left_at IS NULL;
+
   INSERT INTO group_memberships (group_id, student_id) VALUES (grp, stu);
 
   INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
@@ -319,7 +420,7 @@ BEGIN
   -- Written directly rather than through submit_assignment: this is the owner
   -- session, and the point of the fixture is a known starting state, not an
   -- exercise of the RPC. Direct writes are only possible here BECAUSE the
-  -- session is the owner -- which is exactly what C3 proves a client cannot do.
+  -- session is the owner -- which is exactly what C4 proves a client cannot do.
   INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection)
   VALUES (a_open, stu, 'submitted', 'probe') RETURNING id INTO s_open;
 
@@ -349,7 +450,7 @@ DECLARE
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
     PERFORM set_config('probe.results',
-      'C1-C3 policies' || E'\t'
+      'C1-C4 policies' || E'\t'
       || 'SKIP: needs one advisor and two student profiles' || E'\n', true);
     RETURN;
   END IF;
@@ -359,23 +460,51 @@ BEGIN
   s_open := current_setting('probe.s_open')::UUID;
   s_done := current_setting('probe.s_done')::UUID;
 
+  -- Each case from here on is wrapped in its own BEGIN..EXCEPTION so an
+  -- unexpected throw in one case reports ABORTED for that case instead of
+  -- unwinding the whole DO block and losing every result gathered so far.
+
   -- C1. The owning student reads their own evidence. POSITIVE CONTROL.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
-  SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
-  log := log || 'C1 owner student reads' || E'\t'
-      || CASE WHEN n = 1 THEN '1 photo'
-              WHEN n = 0 THEN 'FAIL: 0 photos -- the submission branch is unreachable'
-              ELSE 'FAIL: ' || n || ' photos' END || E'\n';
+  BEGIN
+    SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
+    log := log || 'C1 owner student reads' || E'\t'
+        || CASE WHEN n = 1 THEN '1 photo'
+                WHEN n = 0 THEN 'FAIL: 0 photos -- the submission branch is unreachable'
+                ELSE 'FAIL: ' || n || ' photos' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C1 owner student reads' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- C2. An unrelated student. The branch delegates to
   --     assignment_submissions' own SELECT policy, which does not admit them.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', other)::text, true);
-  SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
-  log := log || 'C2 unrelated student' || E'\t'
-      || CASE WHEN n = 0 THEN '0 photos'
-              ELSE 'FAIL: ' || n || ' photos leaked' END || E'\n';
+  BEGIN
+    SELECT count(*) INTO n FROM log_photos p WHERE p.submission_id = s_open;
+    log := log || 'C2 unrelated student' || E'\t'
+        || CASE WHEN n = 0 THEN '0 photos'
+                ELSE 'FAIL: ' || n || ' photos leaked' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C2 unrelated student' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
-  -- C3. Attaching evidence to an APPROVED submission. The insert policy's
+  -- C3. The owning student attaches evidence to their OWN non-approved
+  --     submission. POSITIVE CONTROL for C4 -- see the header comment above:
+  --     insufficient_privilege is also what a missing table-level INSERT
+  --     grant would raise, so C4 alone cannot tell the two apart.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
+  BEGIN
+    INSERT INTO log_photos (submission_id, uri) VALUES (s_open, 'probe://open-again');
+    log := log || 'C3 evidence on open submission' || E'\t'
+        || 'accepted (positive control)' || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C3 evidence on open submission' || E'\t'
+        || 'FAIL: refused -- ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C4. Attaching evidence to an APPROVED submission. The insert policy's
   --     status <> 'approved' clause must refuse: an approved submission has
   --     produced a KPI observation, and changing the evidence under it means
   --     a level standing on something the mentor never saw.
@@ -386,12 +515,12 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu)::text, true);
   BEGIN
     INSERT INTO log_photos (submission_id, uri) VALUES (s_done, 'probe://late');
-    log := log || 'C3 evidence on approved' || E'\t'
+    log := log || 'C4 evidence on approved' || E'\t'
         || 'FAIL: accepted -- evidence changed under a written observation' || E'\n';
   EXCEPTION WHEN insufficient_privilege THEN
-    log := log || 'C3 evidence on approved' || E'\t' || 'refused by RLS (42501)' || E'\n';
+    log := log || 'C4 evidence on approved' || E'\t' || 'refused by RLS (42501)' || E'\n';
   WHEN OTHERS THEN
-    log := log || 'C3 evidence on approved' || E'\t'
+    log := log || 'C4 evidence on approved' || E'\t'
         || 'FAIL (wrong error): ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
@@ -414,14 +543,17 @@ ROLLBACK;
 -- ============================================================
 -- How to run this
 --
+-- Apply order before this script ever runs: docs/daily-log-retirement-migration.sql
+-- first, then docs/daily-log-retirement-rpcs.sql, then this file.
+--
 -- The three parts are submitted SEPARATELY. Parts B and C each go in as one
 -- block, BEGIN..ROLLBACK in a single submission -- the SQL editor gives each
 -- submission its own connection, so a transaction split across submissions
 -- loses its state (42P01).
 --
--- Expected output: Part A one row reading PASS; Part B seven rows; Part C
--- three rows. Any cell beginning FAIL, INCONCLUSIVE or SKIP is a real result
--- to look at, not noise to scroll past.
+-- Expected output: Part A one row reading PASS; Part B eight rows; Part C
+-- four rows. Any cell beginning FAIL, INCONCLUSIVE, ABORTED or SKIP is a real
+-- result to look at, not noise to scroll past.
 --
 -- This script requires the D1 SQL to already be applied, and that must NOT
 -- happen until D2 is complete: Task 2 dropped the submit_assignment
