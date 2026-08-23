@@ -21,9 +21,10 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
 }
 
 function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
-  // log_photos/log_documents are only embedded by listMyAssignments -- every
-  // other caller of toSubmission leaves these two undefined, which is exactly
-  // right for a select that never asked PostgREST for them.
+  // log_photos/log_documents are embedded by listMyAssignments and
+  // listPendingReviews -- every other caller of toSubmission leaves these two
+  // undefined, which is exactly right for a select that never asked
+  // PostgREST for them.
   const photosRaw = Array.isArray(r.log_photos)
     ? (r.log_photos as Array<Record<string, unknown>>) : undefined;
   const documentsRaw = Array.isArray(r.log_documents)
@@ -248,7 +249,11 @@ export const assignmentService = {
   async listPendingReviews(): Promise<Array<AssignmentSubmission & { assignment: GroupAssignment }>> {
     const { data, error } = await supabase
       .from('assignment_submissions')
-      .select('*, group_assignments!inner(*)')
+      // log_photos/log_documents embedded the same way listMyAssignments does,
+      // so the mentor sees the evidence the student attached, not just their
+      // note. The !inner on group_assignments is untouched -- see the comment
+      // on this function for why a left join there would be wrong.
+      .select('*, group_assignments!inner(*), log_photos(*), log_documents(*)')
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: true });
     if (error) throw error;

@@ -31,7 +31,9 @@
     "noNotifications": "No Notifications",
     "noNotificationsDesc": "You're all caught up! Check back later.",
     "somethingWentWrong": "Something went wrong",
-    "somethingWentWrongDesc": "An unexpected error occurred. Please try again."
+    "somethingWentWrongDesc": "An unexpected error occurred. Please try again.",
+    "fileSizeKB": "{{size}} KB",
+    "fileSizeMB": "{{size}} MB"
   },
   "auth": {
     "login": "Login",
@@ -184,10 +186,11 @@
     "noPendingReviews": "No submissions are waiting on your review.",
     "taskCriterion": "Assess against",
     "taskDueDate": "Due",
-    "studentNote": "Student's note",
     "taskDescription": "Description",
-    "linkedLog": "Linked log",
-    "linkedLogFailed": "Could not load the linked log.",
+    "taskObjective": "Objective",
+    "whatIDid": "What I did",
+    "whatILearned": "What I learned",
+    "evidence": "Evidence",
     "reviewNote": "Note (optional)",
     "approveTask": "Approve",
     "requestTaskRevision": "Request revision",

@@ -1,14 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Image, Modal, Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
-import { logService } from '@/services/logs';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -17,12 +16,6 @@ import { colors, spacing, borderRadius } from '@/theme';
 import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
 
 type PendingReview = AssignmentSubmission & { assignment: GroupAssignment };
-
-interface LinkedLogSummary {
-  title: string;
-  date: string;
-  content: string;
-}
 
 // The database column is DATE and the app passes it around as a 'YYYY-MM-DD'
 // string, so parsing stays in local time -- new Date('2026-09-01') is parsed
@@ -46,15 +39,9 @@ export default function PendingReviewsScreen() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState<'approve' | 'revise' | null>(null);
-  const [linkedLog, setLinkedLog] = useState<LinkedLogSummary | null>(null);
-  const [loadingLog, setLoadingLog] = useState(false);
-  const [logFailed, setLogFailed] = useState(false);
-  // Discards a linked-log fetch that a later tap has superseded. This is the
-  // guard commit 7fbd821 added to the advisor's level fetch as `levelRequest`,
-  // carried across rather than reinvented: setOpenId is synchronous and the
-  // fetch is not, so without it the last response to ARRIVE wins rather than
-  // the last one requested, and card A's log paints under card B's criterion.
-  const logRequest = useRef(0);
+  // Shared across every card -- only one can be open at a time, so a single
+  // lightbox is simpler than tracking one per card.
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -101,45 +88,13 @@ export default function PendingReviewsScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  async function toggleOpen(item: PendingReview) {
-    // Bumped before the close branch too: closing a card while its log is
-    // still in flight has to discard that response as much as opening
-    // another one does.
-    const request = ++logRequest.current;
+  function toggleOpen(item: PendingReview) {
     if (openId === item.id) {
       setOpenId(null);
-      setLinkedLog(null);
-      setLogFailed(false);
-      setLoadingLog(false);
       return;
     }
     setOpenId(item.id);
     setNote('');
-    setLinkedLog(null);
-    setLogFailed(false);
-    // Set from the card being opened rather than left over from the last one,
-    // or a card with no linked log inherits the previous card's spinner state.
-    setLoadingLog(!!item.logId);
-    if (item.logId) {
-      try {
-        const log = await logService.getLogWithDetails(item.logId);
-        if (request !== logRequest.current) return;
-        const l = (log || {}) as Record<string, unknown>;
-        setLinkedLog({
-          title: (l.title as string) || '',
-          date: (l.date as string) || '',
-          content: (l.content as string) || '',
-        });
-      } catch (err) {
-        console.error('Linked log load error:', err);
-        if (request !== logRequest.current) return;
-        setLogFailed(true);
-      } finally {
-        // Guarded for the same reason the setters above are: a superseded
-        // fetch must not clear the spinner the current one just raised.
-        if (request === logRequest.current) setLoadingLog(false);
-      }
-    }
   }
 
   async function handleReview(item: PendingReview, approved: boolean) {
@@ -170,8 +125,6 @@ export default function PendingReviewsScreen() {
       );
       setOpenId(null);
       setNote('');
-      setLinkedLog(null);
-      setLogFailed(false);
       await loadData();
     } catch (err) {
       // STUDENT_LEFT_GROUP and NOT_IN_SCOPE are the two reachable refusals
@@ -181,6 +134,24 @@ export default function PendingReviewsScreen() {
       Alert.alert(t('common.error'), t(key));
     } finally {
       setSubmitting(null);
+    }
+  }
+
+  // Below 1 MB in KB, at or above in MB with one decimal -- the same split a
+  // user picking the file already sees in their own OS file browser.
+  function formatFileSize(bytes: number): string {
+    if (bytes >= 1024 * 1024) {
+      return t('common.fileSizeMB', { size: (bytes / (1024 * 1024)).toFixed(1) });
+    }
+    return t('common.fileSizeKB', { size: Math.max(1, Math.round(bytes / 1024)) });
+  }
+
+  async function openDocument(uri: string) {
+    try {
+      await Linking.openURL(uri);
+    } catch (err) {
+      console.error('Open document error:', err);
+      Alert.alert(t('common.error'), t('common.tryAgain'));
     }
   }
 
@@ -213,19 +184,12 @@ export default function PendingReviewsScreen() {
 
         {isOpen && (
           <View style={styles.detail}>
-            {/* The criterion is what the mentor judges against, so it leads
-                the detail panel rather than sitting under the student's note. */}
-            <View style={styles.criterionBox}>
-              <Text style={styles.criterionLabel}>{t('mentor.taskCriterion')}</Text>
-              <Text style={styles.criterionText}>{item.assignment.criterion}</Text>
-            </View>
-
             {/* The advisor's own words about this task. It is the natural
                 place to put the real instructions -- the field sits right
                 under the title and says "Description (optional)" -- and until
-                now only the advisor's own card ever read it back. It sits
-                below the criterion, not above it: the criterion is what the
-                mentor judges against and still leads the panel. */}
+                now only the advisor's own card ever read it back. It leads the
+                panel, ahead of the objective and criterion, the same order the
+                student's own card uses. */}
             {!!item.assignment.description && (
               <>
                 <Text style={styles.label}>{t('mentor.taskDescription')}</Text>
@@ -233,31 +197,80 @@ export default function PendingReviewsScreen() {
               </>
             )}
 
+            <Text style={styles.label}>{t('mentor.taskObjective')}</Text>
+            <Text style={styles.detailText}>{item.assignment.objective}</Text>
+
+            {/* The criterion is what the mentor judges against, so it still
+                gets its own highlighted block even though it no longer leads
+                the panel -- description and objective now set it up. */}
+            <View style={styles.criterionBox}>
+              <Text style={styles.criterionLabel}>{t('mentor.taskCriterion')}</Text>
+              <Text style={styles.criterionText}>{item.assignment.criterion}</Text>
+            </View>
+
             {!!item.studentNote && (
               <>
-                <Text style={styles.label}>{t('mentor.studentNote')}</Text>
+                <Text style={styles.label}>{t('mentor.whatIDid')}</Text>
                 <Text style={styles.detailText}>{item.studentNote}</Text>
               </>
             )}
 
-            {!!item.logId && (
+            {!!item.reflection && (
               <>
-                <Text style={styles.label}>{t('mentor.linkedLog')}</Text>
-                {loadingLog ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : linkedLog ? (
-                  <View style={styles.logBox}>
-                    <Text style={styles.logTitle}>{linkedLog.title}</Text>
-                    {!!linkedLog.content && (
-                      <Text style={styles.detailText}>{linkedLog.content}</Text>
-                    )}
+                <Text style={styles.label}>{t('mentor.whatILearned')}</Text>
+                <Text style={styles.detailText}>{item.reflection}</Text>
+              </>
+            )}
+
+            {/* Nothing renders here at all when there is no evidence -- a bare
+                "Evidence" heading with nothing under it reads as a failed
+                load, the same defect D1's review flagged on the old
+                linked-log panel this replaced. */}
+            {((item.photos && item.photos.length > 0) || (item.documents && item.documents.length > 0)) && (
+              <>
+                <Text style={styles.label}>{t('mentor.evidence')}</Text>
+
+                {!!item.photos && item.photos.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.photosScroll}
+                  >
+                    {item.photos.map((photo, index) => (
+                      <TouchableOpacity
+                        key={`photo-${index}`}
+                        style={styles.photoWrapper}
+                        onPress={() => setLightboxUri(photo.uri)}
+                        activeOpacity={0.85}
+                      >
+                        <Image source={{ uri: photo.uri }} style={styles.photo} />
+                        <View style={styles.photoZoomHint}>
+                          <Ionicons name="expand-outline" size={14} color="#fff" />
+                        </View>
+                        {!!photo.caption && (
+                          <Text style={styles.photoCaption} numberOfLines={1}>{photo.caption}</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+
+                {!!item.documents && item.documents.length > 0 && (
+                  <View style={styles.docList}>
+                    {item.documents.map((doc, index) => (
+                      <TouchableOpacity
+                        key={`doc-${index}`}
+                        style={styles.docRow}
+                        onPress={() => openDocument(doc.uri)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="document-outline" size={20} color={colors.primary} />
+                        <Text style={styles.docName} numberOfLines={1}>{doc.fileName}</Text>
+                        <Text style={styles.docSize}>{formatFileSize(doc.fileSize)}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                ) : logFailed ? (
-                  // A bare "Linked log" heading with nothing under it reads as
-                  // an empty log rather than a failed fetch. The mentor is
-                  // about to judge against evidence they cannot see; say so.
-                  <Text style={styles.subtle}>{t('mentor.linkedLogFailed')}</Text>
-                ) : null}
+                )}
               </>
             )}
 
@@ -334,6 +347,36 @@ export default function PendingReviewsScreen() {
 
         <View style={{ height: spacing.xl }} />
       </ScrollView>
+
+      {/* One shared lightbox for every card -- only one can be open at a
+          time, so there is never more than one photo to enlarge at once. */}
+      <Modal
+        visible={lightboxUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxUri(null)}
+      >
+        <TouchableOpacity
+          style={styles.lightboxOverlay}
+          activeOpacity={1}
+          onPress={() => setLightboxUri(null)}
+        >
+          <TouchableOpacity activeOpacity={1}>
+            <Image
+              source={{ uri: lightboxUri ?? undefined }}
+              style={styles.lightboxImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.lightboxClose}
+            onPress={() => setLightboxUri(null)}
+            hitSlop={12}
+          >
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -447,18 +490,74 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  logBox: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    padding: spacing.sm,
-    backgroundColor: colors.background,
+  // Photos
+  photosScroll: {
+    marginTop: spacing.xs,
   },
-  logTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+  photoWrapper: {
+    marginRight: spacing.sm,
+    position: 'relative',
+  },
+  photo: {
+    width: 96,
+    height: 96,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.border,
+  },
+  photoZoomHint: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 10,
+    padding: 3,
+  },
+  photoCaption: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
+    width: 96,
+  },
+
+  // Lightbox
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxImage: {
+    width: 360,
+    height: 480,
+    borderRadius: borderRadius.sm,
+  },
+  lightboxClose: {
+    position: 'absolute',
+    top: 52,
+    right: 20,
+  },
+
+  // Documents
+  docList: {
+    marginTop: spacing.xs,
+  },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  docName: {
+    flex: 1,
+    fontSize: 13,
     color: colors.text,
-    marginBottom: spacing.xs,
+    fontWeight: '500',
+  },
+  docSize: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 
   input: {
