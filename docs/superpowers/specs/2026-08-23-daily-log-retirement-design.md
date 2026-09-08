@@ -299,6 +299,31 @@ The advisor's reports are the largest single piece of this. They are built
 entirely on daily logs, and reporting is one of the advisor's four documented
 duties — left alone they would show zeros for every new student.
 
+### What the reports measure — settled while planning D2 and D3
+
+Three decisions, recorded here so the plan that implements them does not
+re-litigate them:
+
+1. **Completion is competency level reached against target level**, read from
+   the existing `get_competency_progress` RPC — not a count of tasks. The
+   "minimum tasks per KPI" of decision 3 was never built (`group_competency_targets`
+   holds only `target_level`) and stays unbuilt; it belongs with the student's
+   catalogue pick in subsystem E.
+
+2. **The report is scoped to one group, chosen by a selector at the top of the
+   screen.** Today the reports do not know groups exist: `getAssignedStudents`
+   filters on `student_profiles.advisor_id`, a single column that
+   `join_group_by_code` overwrites whenever a student joins any of that
+   advisor's groups. So an advisor running two terms sees one flat list with no
+   group column and four headline numbers blended across both — figures that
+   describe neither group. An advisor with one group sees no change.
+
+3. **Only active memberships count** — the queries must filter
+   `group_memberships.left_at IS NULL`. Leaving a group does not clear
+   `advisor_id`, only sets `left_at`, and nothing in the reports reads it, so a
+   departed student is currently counted forever. This is wrong today even for
+   an advisor with a single group; the group dimension only compounds it.
+
 `src/services/logs.ts` stays: the read paths still serve the `log-history`
 archive.
 
