@@ -85,13 +85,19 @@ export default function GroupAssignmentsScreen() {
 
   const [pickedCompetency, setPickedCompetency] = useState<string | null>(null);
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
-  // Multi-select. The advisor assigns a whole batch at a level, so the picker
-  // holds a set of triplet ids rather than one triplet. Title, objective and
-  // criterion are no longer editable at creation time -- each assignment takes
-  // them from its own triplet, which is what "the triplet text is fixed and
-  // adaptation happens by selection" actually means. Per-assignment wording is
-  // still reachable afterwards through the edit panel on each card below.
-  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  // Multi-select: the advisor builds a batch across the whole framework, not
+  // within one screenful. Title, objective and criterion are not editable at
+  // creation time -- each assignment takes them from its own triplet, which is
+  // what "the triplet text is fixed and adaptation happens by selection"
+  // actually means. Per-assignment wording stays reachable afterwards through
+  // the edit panel on each card below.
+  //
+  // Holds the TRIPLETS, not just their ids, and that is load-bearing:
+  // `triplets` below only ever contains the level currently on screen, so an
+  // id-only set could not be resolved back to a task once the advisor moved to
+  // another competency. handleAssign would have created just the visible ones
+  // and reported success for all of them.
+  const [picked, setPicked] = useState<Map<string, KpiTriplet>>(new Map());
   const [triplets, setTriplets] = useState<KpiTriplet[]>([]);
   // Discards a level fetch that a later tap has superseded -- readable
   // inside the async continuation without re-rendering or a stale closure.
@@ -214,17 +220,19 @@ export default function GroupAssignmentsScreen() {
     setRefreshing(false);
   }, [loadData]);
 
+  // Browsing a different competency or level does NOT clear the selection. A
+  // batch is built across the framework, not within one screenful, and losing
+  // ticked tasks on a stray tap is the opposite of what multi-select is for.
+  // The running count in the summary below is what keeps it honest.
   function chooseCompetency(id: string) {
     setPickedCompetency(id);
     setPickedLevel(null);
-    setPickedIds(new Set());
     setTriplets([]);
   }
 
   async function chooseLevel(level: number) {
     const request = ++levelRequest.current;
     setPickedLevel(level);
-    setPickedIds(new Set());
     setTriplets([]);
     const levelKpis = kpis.filter(
       (k) => k.competencyId === pickedCompetency && k.level === level,
@@ -238,11 +246,11 @@ export default function GroupAssignmentsScreen() {
     setTriplets(lists.flat());
   }
 
-  function toggleTriplet(id: string) {
-    setPickedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  function toggleTriplet(tr: KpiTriplet) {
+    setPicked((prev) => {
+      const next = new Map(prev);
+      if (next.has(tr.id)) next.delete(tr.id);
+      else next.set(tr.id, tr);
       return next;
     });
   }
@@ -250,15 +258,18 @@ export default function GroupAssignmentsScreen() {
   function resetForm() {
     setPickedCompetency(null);
     setPickedLevel(null);
-    setPickedIds(new Set());
+    setPicked(new Map());
     setTriplets([]);
     setDueDate('');
   }
 
   async function handleAssign() {
-    if (!groupId || !user || pickedIds.size === 0) return;
+    if (!groupId || !user || picked.size === 0) return;
 
-    const chosen = triplets.filter((tr) => pickedIds.has(tr.id));
+    // From the selection itself, not from `triplets` -- that array holds only
+    // the level on screen, so filtering it would silently drop everything the
+    // advisor ticked under another competency and still report success.
+    const chosen = Array.from(picked.values());
     if (chosen.length === 0) return;
 
     setSaving(true);
@@ -313,10 +324,13 @@ export default function GroupAssignmentsScreen() {
         // Drop the ones that landed from the selection, so the summary counts
         // what is still outstanding rather than what was originally ticked --
         // and so a retry cannot re-send a row that already exists.
-        const failedIds = new Set(
-          chosen.filter((_, i) => results[i].status === 'rejected').map((tr) => tr.id),
+        setPicked(
+          new Map(
+            chosen
+              .filter((_, i) => results[i].status === 'rejected')
+              .map((tr) => [tr.id, tr]),
+          ),
         );
-        setPickedIds(failedIds);
 
         // Say which of the two numbers is which. "Some failed" leaves the
         // advisor unable to tell whether to retry the whole batch.
@@ -730,7 +744,7 @@ export default function GroupAssignmentsScreen() {
               <View key={group.kpiId} style={styles.kpiGroup}>
                 <Text style={styles.kpiStatement}>{group.statement}</Text>
                 {group.items.map(({ triplet: tr, alreadyAssigned }) => {
-                  const active = pickedIds.has(tr.id);
+                  const active = picked.has(tr.id);
                   return (
                     <TouchableOpacity
                       key={tr.id}
@@ -739,7 +753,7 @@ export default function GroupAssignmentsScreen() {
                         active && styles.tripletRowActive,
                         alreadyAssigned && styles.tripletRowAssigned,
                       ]}
-                      onPress={() => toggleTriplet(tr.id)}
+                      onPress={() => toggleTriplet(tr)}
                       disabled={alreadyAssigned}
                       activeOpacity={0.7}
                     >
@@ -778,11 +792,24 @@ export default function GroupAssignmentsScreen() {
           </View>
         )}
 
-        {pickedIds.size > 0 && (
+        {picked.size > 0 && (
           <View style={styles.card}>
-            <Text style={styles.selectedCount}>
-              {t('advisor.tripletsSelected', { count: pickedIds.size })}
-            </Text>
+            {/* The selection survives moving between competencies, so it can
+                include tasks that are not on screen. The count is the only
+                thing that shows them -- hence the clear, which is the way back
+                out without assigning. */}
+            <View style={styles.selectedHeader}>
+              <Text style={styles.selectedCount}>
+                {t('advisor.tripletsSelected', { count: picked.size })}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPicked(new Map())}
+                disabled={saving}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.clearLink}>{t('advisor.clearSelection')}</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.selectedHint}>{t('advisor.batchAssignHint')}</Text>
 
             <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>
@@ -1079,6 +1106,16 @@ const styles = StyleSheet.create({
   },
 
   // Batch summary
+  selectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  clearLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ADVISOR_COLOR,
+  },
   selectedCount: {
     fontSize: 15,
     fontWeight: '600',

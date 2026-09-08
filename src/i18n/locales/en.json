@@ -272,10 +272,11 @@
     "assignmentWithdrawn": "Assignment withdrawn.",
     "tripletsSelected_one": "{{count}} task selected",
     "tripletsSelected_other": "{{count}} tasks selected",
-    "batchAssignHint": "Each task keeps its own wording. The due date below applies to all of them.",
+    "batchAssignHint": "Each task keeps its own wording. The selection is kept while you browse other competencies, and the due date below applies to all of them.",
     "assignmentsCreated_one": "{{count}} task assigned.",
     "assignmentsCreated_other": "{{count}} tasks assigned.",
-    "assignmentsPartial": "{{created}} of {{total}} tasks were assigned. The rest are still selected — try again."
+    "assignmentsPartial": "{{created}} of {{total}} tasks were assigned. The rest are still selected — try again.",
+    "clearSelection": "Clear"
   },
   "levels": {
     "beginner": "Beginner",
