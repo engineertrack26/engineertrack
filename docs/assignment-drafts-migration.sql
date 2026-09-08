@@ -6,18 +6,37 @@
 
 -- published_at IS NULL means draft. A timestamp rather than a status enum
 -- because it also records WHEN a task was sent, which nothing captures today.
-ALTER TABLE group_assignments ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+--
+-- The ALTER and the backfill are bound together inside one guard keyed on
+-- the column's own existence, so the backfill can only ever run on the first
+-- application. A blanket `WHERE published_at IS NULL` would be correct today
+-- and destructive later: once drafts exist, a NULL published_at IS a draft,
+-- and re-applying this file would silently publish every draft an advisor
+-- was still preparing -- unfinished work sent to students, no error anywhere.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'group_assignments' AND column_name = 'published_at'
+  ) THEN
+    ALTER TABLE group_assignments ADD COLUMN published_at TIMESTAMPTZ;
+
+    -- Backfilled HERE, inside the block that creates the column, so it runs
+    -- once and only once. Every assignment that already exists was sent the
+    -- moment it was created; created_at is the closest true record of when.
+    -- Without this the new read policy hides the entire live catalogue from
+    -- every student and mentor at once -- the app looks empty, not broken.
+    UPDATE group_assignments SET published_at = created_at;
+  END IF;
+END $$;
 
 -- The storage PATH, not a URL. getPublicUrl on a private bucket is a dead link
 -- and a signed URL expires -- both already cost this branch a bug. The path is
--- the durable part; signing happens at read time.
+-- the durable part; signing happens at read time. No backfill needed -- these
+-- two are plain nullable columns with no existing meaning to preserve, so
+-- re-adding them is harmless.
 ALTER TABLE group_assignments ADD COLUMN IF NOT EXISTS document_path TEXT;
 ALTER TABLE group_assignments ADD COLUMN IF NOT EXISTS document_name TEXT;
-
--- Existing assignments were sent the moment they were created; created_at is
--- the closest true record of when. Without this the new read policy hides
--- every already-assigned task from the students working on it.
-UPDATE group_assignments SET published_at = created_at WHERE published_at IS NULL;
 
 -- ============================================
 -- The read policy: drafts are invisible to everyone but their author
