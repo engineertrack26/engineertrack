@@ -1,13 +1,15 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
+import { getNotifications } from './expoNotifications';
 import { supabase } from './supabase';
 
 /**
  * Set up Android notification channel (required for Android 8+).
  */
 async function setupAndroidChannel() {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Default',
@@ -35,6 +37,9 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   await setupAndroidChannel();
+
+  const Notifications = getNotifications();
+  if (!Notifications) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
