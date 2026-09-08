@@ -3,8 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
   TouchableOpacity, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';

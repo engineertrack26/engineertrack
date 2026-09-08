@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 60,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',

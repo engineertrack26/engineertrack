@@ -6,12 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a73e8"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.engineertrack.app",
@@ -25,7 +19,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a73e8"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.engineertrack.app",
       "permissions": [
         "android.permission.CAMERA",
@@ -48,7 +41,16 @@
       "expo-font",
       "expo-router",
       "@sentry/react-native",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1a73e8"
+        }
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "router": {},

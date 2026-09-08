@@ -3,8 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
