@@ -71,7 +71,12 @@ export function EvidencePicker({
         nextPhotos = [...nextPhotos, { uri: url }];
         onChange(nextPhotos, documents);
         setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
-      } catch {
+      } catch (err) {
+        // Never swallow this silently. The UI says "Upload failed" and offers a
+        // retry, but without the reason nobody can tell a permissions problem
+        // from a network one -- and a discarded catch on an upload path is the
+        // exact shape of the notification bug that went unnoticed for weeks.
+        console.warn("Evidence photo upload failed:", err instanceof Error ? err.message : err);
         setPendingPhotos((prev) => prev.map((p) => (
           p.localId === localId ? { ...p, status: 'failed' } : p
         )));
@@ -89,7 +94,12 @@ export function EvidencePicker({
       const url = await logService.uploadPhotoFile(userId, scopeId, item.uri);
       onChange([...photos, { uri: url }], documents);
       setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
-    } catch {
+    } catch (err) {
+      // Never swallow this silently. The UI says "Upload failed" and offers a
+      // retry, but without the reason nobody can tell a permissions problem
+      // from a network one -- and a discarded catch on an upload path is the
+      // exact shape of the notification bug that went unnoticed for weeks.
+      console.warn("Evidence photo upload failed:", err instanceof Error ? err.message : err);
       setPendingPhotos((prev) => prev.map((p) => (
         p.localId === localId ? { ...p, status: 'failed' } : p
       )));
@@ -182,7 +192,8 @@ export function EvidencePicker({
       const url = await logService.uploadDocumentFile(userId, scopeId, asset.uri, asset.name, fileType);
       onChange(photos, [...documents, { uri: url, fileName: asset.name, fileType, fileSize }]);
       setPendingDocuments((prev) => prev.filter((d) => d.localId !== localId));
-    } catch {
+    } catch (err) {
+      console.warn("Evidence document upload failed:", err instanceof Error ? err.message : err);
       setPendingDocuments((prev) => prev.map((d) => (
         d.localId === localId ? { ...d, status: 'failed' } : d
       )));
@@ -201,7 +212,8 @@ export function EvidencePicker({
         uri: url, fileName: item.fileName, fileType: item.fileType, fileSize: item.fileSize,
       }]);
       setPendingDocuments((prev) => prev.filter((d) => d.localId !== localId));
-    } catch {
+    } catch (err) {
+      console.warn("Evidence document upload failed:", err instanceof Error ? err.message : err);
       setPendingDocuments((prev) => prev.map((d) => (
         d.localId === localId ? { ...d, status: 'failed' } : d
       )));

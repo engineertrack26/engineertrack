@@ -102,8 +102,12 @@ export default function StudentDashboard() {
           createdAt: (n.created_at as string) || '',
         }));
         setNotifications(mapped);
+        // Count feedback from task reviews (pending-reviews: task_approved/task_revision_requested)
+        // and legacy log reviews (review-log: log_approved/log_revision_requested for backward compat).
+        // new_feedback is not emitted anywhere and has been removed.
         const fbCount = mapped.filter(
-          (n) => n.type === 'log_approved' || n.type === 'new_feedback',
+          (n) => n.type === 'task_approved' || n.type === 'task_revision_requested' ||
+                  n.type === 'log_approved' || n.type === 'log_revision_requested',
         ).length;
         setFeedbackCount(fbCount);
       } catch {
