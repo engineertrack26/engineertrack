@@ -16,6 +16,7 @@ import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { selectableTriplets } from '@/utils/tripletSelection';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
@@ -85,16 +86,19 @@ export default function GroupAssignmentsScreen() {
 
   const [pickedCompetency, setPickedCompetency] = useState<string | null>(null);
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
-  const [pickedTriplet, setPickedTriplet] = useState<KpiTriplet | null>(null);
+  // Multi-select. The advisor assigns a whole batch at a level, so the picker
+  // holds a set of triplet ids rather than one triplet. Title, objective and
+  // criterion are no longer editable at creation time -- each assignment takes
+  // them from its own triplet, which is what "the triplet text is fixed and
+  // adaptation happens by selection" actually means. Per-assignment wording is
+  // still reachable afterwards through the edit panel on each card below.
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
   const [triplets, setTriplets] = useState<KpiTriplet[]>([]);
   // Discards a level fetch that a later tap has superseded -- readable
   // inside the async continuation without re-rendering or a stale closure.
   const levelRequest = useRef(0);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [objective, setObjective] = useState('');
-  const [criterion, setCriterion] = useState('');
+  // One due date for the whole batch.
   const [dueDate, setDueDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -214,14 +218,14 @@ export default function GroupAssignmentsScreen() {
   function chooseCompetency(id: string) {
     setPickedCompetency(id);
     setPickedLevel(null);
-    setPickedTriplet(null);
+    setPickedIds(new Set());
     setTriplets([]);
   }
 
   async function chooseLevel(level: number) {
     const request = ++levelRequest.current;
     setPickedLevel(level);
-    setPickedTriplet(null);
+    setPickedIds(new Set());
     setTriplets([]);
     const levelKpis = kpis.filter(
       (k) => k.competencyId === pickedCompetency && k.level === level,
@@ -235,61 +239,98 @@ export default function GroupAssignmentsScreen() {
     setTriplets(lists.flat());
   }
 
-  function chooseTriplet(tr: KpiTriplet) {
-    setPickedTriplet(tr);
-    setTitle(tr.task);
-    setObjective(tr.objective);
-    setCriterion(tr.criterion);
+  function toggleTriplet(id: string) {
+    setPickedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function resetForm() {
     setPickedCompetency(null);
     setPickedLevel(null);
-    setPickedTriplet(null);
+    setPickedIds(new Set());
     setTriplets([]);
-    setTitle('');
-    setDescription('');
-    setObjective('');
-    setCriterion('');
     setDueDate('');
   }
 
   async function handleAssign() {
-    if (!groupId || !pickedTriplet || !user) return;
-    if (!title.trim()) {
-      Alert.alert(t('common.error'), t('advisor.assignmentTitleRequired'));
-      return;
-    }
+    if (!groupId || !user || pickedIds.size === 0) return;
+
+    const chosen = triplets.filter((tr) => pickedIds.has(tr.id));
+    if (chosen.length === 0) return;
+
     setSaving(true);
     try {
-      const created = await assignmentService.createAssignment({
-        groupId,
-        tripletId: pickedTriplet.id,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        objective: objective.trim(),
-        criterion: criterion.trim(),
-        dueDate: dueDate || undefined,
-        createdBy: user.id,
-      });
-
-      // Notification delivery is best-effort: a failure here must never make
-      // a successful assignment look failed to the advisor.
-      const assignedTitle = title.trim();
-      await Promise.all(
-        members.map((m) =>
-          notificationService.create(
-            m.id,
-            t('notifications.taskAssignedTitle'),
-            t('notifications.taskAssignedBody', { title: assignedTitle }),
-            'task_assigned',
-            { assignmentId: created.id },
-          ).catch((e) => console.warn('notify failed:', e)),
+      // allSettled, not all: one refused row must not discard the rows that
+      // were written. A partial result is reported as a partial result below
+      // rather than as a blanket success or a blanket failure.
+      const results = await Promise.allSettled(
+        chosen.map((tr) =>
+          assignmentService.createAssignment({
+            groupId,
+            tripletId: tr.id,
+            title: tr.task,
+            objective: tr.objective,
+            criterion: tr.criterion,
+            dueDate: dueDate || undefined,
+            createdBy: user.id,
+          }),
         ),
       );
 
-      Alert.alert(t('common.done'), t('advisor.assignmentCreated'));
-      resetForm();
+      const created = results.filter((r) => r.status === 'fulfilled').length;
+      const firstRejection = results.find((r) => r.status === 'rejected');
+
+      if (created > 0) {
+        // ONE notification per student for the whole batch. Notifying per
+        // assignment meant N tasks x M students: a student picking up twenty
+        // tasks got twenty separate alerts, which is noise, not news.
+        //
+        // Delivery stays best-effort -- a failure here must never make
+        // assignments that were written look like they failed.
+        const single = created === 1 ? chosen[0] : null;
+        await Promise.all(
+          members.map((m) =>
+            notificationService.create(
+              m.id,
+              t('notifications.taskAssignedTitle'),
+              single
+                ? t('notifications.taskAssignedBody', { title: single.task })
+                : t('notifications.tasksAssignedBody', { count: created }),
+              'task_assigned',
+              {},
+            ).catch((e) => console.warn('notify failed:', e)),
+          ),
+        );
+      }
+
+      if (created === chosen.length) {
+        Alert.alert(t('common.done'), t('advisor.assignmentsCreated', { count: created }));
+        resetForm();
+      } else if (created > 0) {
+        // Drop the ones that landed from the selection, so the summary counts
+        // what is still outstanding rather than what was originally ticked --
+        // and so a retry cannot re-send a row that already exists.
+        const failedIds = new Set(
+          chosen.filter((_, i) => results[i].status === 'rejected').map((tr) => tr.id),
+        );
+        setPickedIds(failedIds);
+
+        // Say which of the two numbers is which. "Some failed" leaves the
+        // advisor unable to tell whether to retry the whole batch.
+        Alert.alert(
+          t('common.error'),
+          t('advisor.assignmentsPartial', { created, total: chosen.length }),
+        );
+      } else if (firstRejection && firstRejection.status === 'rejected') {
+        const reason = firstRejection.reason;
+        const { key } = mapRpcError(reason instanceof Error ? reason.message : '');
+        Alert.alert(t('common.error'), t(key));
+      }
+
       await loadData();
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
@@ -398,7 +439,14 @@ export default function GroupAssignmentsScreen() {
   const tripletGroups = Array.from(new Set(triplets.map((tr) => tr.kpiId))).map((kpiId) => ({
     kpiId,
     statement: kpis.find((k) => k.id === kpiId)?.statement || '',
-    items: triplets.filter((tr) => tr.kpiId === kpiId),
+    // selectableTriplets marks the ones this group already carries. They stay
+    // in the list rather than being filtered out: nothing in the schema stops
+    // the same triplet being assigned twice, and a shorter catalogue would
+    // read as missing content rather than as work already out there.
+    items: selectableTriplets(
+      triplets.filter((tr) => tr.kpiId === kpiId),
+      assignments,
+    ),
   }));
 
   if (loading) {
@@ -682,16 +730,45 @@ export default function GroupAssignmentsScreen() {
             {tripletGroups.map((group) => (
               <View key={group.kpiId} style={styles.kpiGroup}>
                 <Text style={styles.kpiStatement}>{group.statement}</Text>
-                {group.items.map((tr) => {
-                  const active = pickedTriplet?.id === tr.id;
+                {group.items.map(({ triplet: tr, alreadyAssigned }) => {
+                  const active = pickedIds.has(tr.id);
                   return (
                     <TouchableOpacity
                       key={tr.id}
-                      style={[styles.tripletRow, active && styles.tripletRowActive]}
-                      onPress={() => chooseTriplet(tr)}
+                      style={[
+                        styles.tripletRow,
+                        active && styles.tripletRowActive,
+                        alreadyAssigned && styles.tripletRowAssigned,
+                      ]}
+                      onPress={() => toggleTriplet(tr.id)}
+                      disabled={alreadyAssigned}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.tripletText, active && styles.tripletTextActive]}>
+                      <Ionicons
+                        name={
+                          alreadyAssigned
+                            ? 'checkmark-done'
+                            : active
+                              ? 'checkbox'
+                              : 'square-outline'
+                        }
+                        size={18}
+                        color={
+                          alreadyAssigned
+                            ? colors.textDisabled
+                            : active
+                              ? '#fff'
+                              : colors.textSecondary
+                        }
+                        style={styles.tripletCheck}
+                      />
+                      <Text
+                        style={[
+                          styles.tripletText,
+                          active && styles.tripletTextActive,
+                          alreadyAssigned && styles.tripletTextAssigned,
+                        ]}
+                      >
                         {tr.task}
                       </Text>
                     </TouchableOpacity>
@@ -702,40 +779,12 @@ export default function GroupAssignmentsScreen() {
           </View>
         )}
 
-        {pickedTriplet && (
+        {pickedIds.size > 0 && (
           <View style={styles.card}>
-            <Text style={styles.label}>{t('advisor.assignmentTitle')}</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholderTextColor={colors.textDisabled}
-            />
-
-            <Text style={styles.label}>{t('advisor.assignmentDescription')}</Text>
-            <TextInput
-              style={[styles.input, styles.multilineInput]}
-              value={description}
-              onChangeText={setDescription}
-              placeholderTextColor={colors.textDisabled}
-              multiline
-            />
-
-            <Text style={styles.label}>{t('advisor.assignmentObjective')}</Text>
-            <TextInput
-              style={[styles.input, styles.multilineInput]}
-              value={objective}
-              onChangeText={setObjective}
-              multiline
-            />
-
-            <Text style={styles.label}>{t('advisor.assignmentCriterion')}</Text>
-            <TextInput
-              style={[styles.input, styles.multilineInput]}
-              value={criterion}
-              onChangeText={setCriterion}
-              multiline
-            />
+            <Text style={styles.selectedCount}>
+              {t('advisor.tripletsSelected', { count: pickedIds.size })}
+            </Text>
+            <Text style={styles.selectedHint}>{t('advisor.batchAssignHint')}</Text>
 
             <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>
             <TouchableOpacity
@@ -997,6 +1046,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   tripletRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.sm,
@@ -1009,12 +1060,36 @@ const styles = StyleSheet.create({
     backgroundColor: ADVISOR_COLOR,
     borderColor: ADVISOR_COLOR,
   },
+  tripletRowAssigned: {
+    backgroundColor: colors.surface,
+    borderStyle: 'dashed',
+  },
+  tripletCheck: {
+    marginRight: spacing.sm,
+  },
   tripletText: {
+    flex: 1,
     fontSize: 13,
     color: colors.text,
   },
   tripletTextActive: {
     color: '#fff',
+  },
+  tripletTextAssigned: {
+    color: colors.textDisabled,
+  },
+
+  // Batch summary
+  selectedCount: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  selectedHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
 
   // Due date

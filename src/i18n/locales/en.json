@@ -246,7 +246,6 @@
     "kpiUnavailable": "(completed indicator)",
     "ticksLoadFailed": "Could not load the tick comparison for this log. Try reopening it.",
     "assignments": "Assignments",
-    "assignmentCreated": "Assignment created.",
     "assignmentTitleRequired": "A title is required.",
     "pickCompetency": "Pick a competency",
     "pickLevel": "Pick a level",
@@ -270,7 +269,13 @@
     "withdrawAssignment": "Withdraw",
     "withdrawConfirm": "Withdraw \"{{title}}\"? This cannot be undone.",
     "assignmentHasSubmissions": "This assignment already has submissions, so it can no longer be withdrawn.",
-    "assignmentWithdrawn": "Assignment withdrawn."
+    "assignmentWithdrawn": "Assignment withdrawn.",
+    "tripletsSelected_one": "{{count}} task selected",
+    "tripletsSelected_other": "{{count}} tasks selected",
+    "batchAssignHint": "Each task keeps its own wording. The due date below applies to all of them.",
+    "assignmentsCreated_one": "{{count}} task assigned.",
+    "assignmentsCreated_other": "{{count}} tasks assigned.",
+    "assignmentsPartial": "{{created}} of {{total}} tasks were assigned. The rest are still selected — try again."
   },
   "levels": {
     "beginner": "Beginner",
@@ -316,7 +321,8 @@
     "taskApprovedTitle": "Task Approved!",
     "taskApprovedBody": "{{mentorName}} approved your task \"{{title}}\".",
     "taskRevisionTitle": "Revision Requested",
-    "taskRevisionBody": "{{mentorName}} requested revisions on your task \"{{title}}\"."
+    "taskRevisionBody": "{{mentorName}} requested revisions on your task \"{{title}}\".",
+    "tasksAssignedBody": "{{count}} new tasks have been assigned."
   },
   "legal": {
     "privacy": {
