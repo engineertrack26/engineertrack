@@ -7,7 +7,36 @@ import type {
 } from '@/types/assignment';
 import { toPhotoPayload, toDocumentPayload } from '@/utils/evidenceMapping';
 
+/** The nested embed every assignment query asks for, so the three roles cannot
+ *  drift on how a task's competency is resolved.
+ *
+ *  group_assignments.triplet_id -> kpi_triplets.kpi_id -> competency_kpis
+ *  (which holds the level) -> competencies (which holds the name). PostgREST
+ *  walks the foreign keys; the advisor screen used to do the same two hops by
+ *  hand with an extra round trip. */
+export const COMPETENCY_EMBED =
+  'kpi_triplets(competency_kpis(level, competencies(id, name)))';
+
+/** Dig the competency name and level out of the nested embed.
+ *
+ *  PostgREST returns a to-one embed as an object, but returns null when the
+ *  parent row's foreign key resolves to nothing, so every hop is checked
+ *  rather than assumed. */
+function readCompetency(
+  r: Record<string, unknown>,
+): { id?: string; name?: string; level?: number } {
+  const triplet = r.kpi_triplets as Record<string, unknown> | null | undefined;
+  const kpi = triplet?.competency_kpis as Record<string, unknown> | null | undefined;
+  const competency = kpi?.competencies as Record<string, unknown> | null | undefined;
+  return {
+    id: (competency?.id as string) || undefined,
+    name: (competency?.name as string) || undefined,
+    level: typeof kpi?.level === 'number' ? (kpi.level as number) : undefined,
+  };
+}
+
 function toAssignment(r: Record<string, unknown>): GroupAssignment {
+  const competency = readCompetency(r);
   return {
     id: (r.id as string) || '',
     groupId: (r.group_id as string) || '',
@@ -18,6 +47,9 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
     criterion: (r.criterion as string) || '',
     dueDate: (r.due_date as string) || undefined,
     createdAt: (r.created_at as string) || '',
+    competencyId: competency.id,
+    competencyName: competency.name,
+    level: competency.level,
   };
 }
 
@@ -105,7 +137,7 @@ export const assignmentService = {
   async listGroupAssignments(groupId: string): Promise<GroupAssignment[]> {
     const { data, error } = await supabase
       .from('group_assignments')
-      .select('*')
+      .select(`*, ${COMPETENCY_EMBED}`)
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -216,7 +248,7 @@ export const assignmentService = {
       // card must prefill it: submit_assignment deletes and rewrites
       // log_photos/log_documents rather than appending, so a resubmission
       // built from a blank picker would erase whatever was uploaded before.
-      .select('*, assignment_submissions(*, log_photos(*), log_documents(*))')
+      .select(`*, ${COMPETENCY_EMBED}, assignment_submissions(*, log_photos(*), log_documents(*))`)
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -261,7 +293,7 @@ export const assignmentService = {
       // so the mentor sees the evidence the student attached, not just their
       // note. The !inner on group_assignments is untouched -- see the comment
       // on this function for why a left join there would be wrong.
-      .select('*, group_assignments!inner(*), log_photos(*), log_documents(*)')
+      .select(`*, group_assignments!inner(*, ${COMPETENCY_EMBED}), log_photos(*), log_documents(*)`)
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: true });
     if (error) throw error;

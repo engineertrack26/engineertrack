@@ -19,6 +19,13 @@ export interface GroupAssignment {
   criterion: string;
   dueDate?: string;
   createdAt: string;
+  /** The competency and level the task's triplet belongs to, resolved by the
+   *  service so all three roles' cards read the same source. Optional because
+   *  the nested embed can come back empty for a triplet whose KPI row is gone;
+   *  the card then omits the line rather than showing a blank chip. */
+  competencyId?: string;
+  competencyName?: string;
+  level?: number;
 }
 
 export interface AssignmentSubmission {

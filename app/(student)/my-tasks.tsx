@@ -153,6 +153,11 @@ export default function MyTasksScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.cardHeaderText}>
+            {!!a.competencyName && (
+              <Text style={styles.competencyLine}>
+                {a.competencyName}{a.level ? ` · L${a.level}` : ''}
+              </Text>
+            )}
             <Text style={styles.cardTitle}>{a.title}</Text>
             {/* The advisor sets this to tell the STUDENT when the work is due,
                 and until now it reached the advisor's card and the mentor's
@@ -375,6 +380,17 @@ const styles = StyleSheet.create({
   cardHeaderText: {
     flex: 1,
     marginRight: spacing.sm,
+  },
+  // The task's competency and level, above the title. Same source on all
+  // three roles' cards: GroupAssignment.competencyName / .level, resolved
+  // once in assignmentService rather than derived per screen.
+  competencyLine: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   cardTitle: {
     fontSize: 15,

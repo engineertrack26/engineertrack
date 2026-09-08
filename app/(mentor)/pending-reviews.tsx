@@ -168,6 +168,11 @@ export default function PendingReviewsScreen() {
         >
           <View style={styles.cardHeaderText}>
             {!!name && <Text style={styles.studentName}>{name}</Text>}
+            {!!item.assignment.competencyName && (
+              <Text style={styles.competencyLine}>
+                {item.assignment.competencyName}{item.assignment.level ? ` · L${item.assignment.level}` : ''}
+              </Text>
+            )}
             <Text style={styles.cardTitle}>{item.assignment.title}</Text>
             {!!due && (
               <Text style={styles.subtle}>
@@ -438,6 +443,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.primary,
+  },
+  // The task's competency and level, above the title. Same source on all
+  // three roles' cards: GroupAssignment.competencyName / .level, resolved
+  // once in assignmentService rather than derived per screen.
+  competencyLine: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   cardTitle: {
     fontSize: 15,

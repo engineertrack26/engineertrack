@@ -74,10 +74,6 @@ export default function GroupAssignmentsScreen() {
   // in scope, so it can no longer answer "was this one dropped?" about an
   // assignment that already exists.
   const [inScope, setInScope] = useState<Set<string>>(new Set());
-  // assignment id -> the competency its triplet belongs to. Resolved once for
-  // the whole list, not per card.
-  const [assignmentCompetency, setAssignmentCompetency] =
-    useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -174,37 +170,7 @@ export default function GroupAssignmentsScreen() {
       }
       setSubmissionCounts(byAssignment);
 
-      // Which competency each existing assignment came from, so one whose
-      // competency the advisor has since switched off can be marked. The
-      // kpi -> competency half is already in framework.kpis; only the
-      // triplet -> kpi half needs fetching, and it is fetched for the whole
-      // list at once rather than per card. .in() with an empty array returns
-      // nothing anyway, so the guard is not just an optimisation.
-      if (existing.length > 0) {
-        const tripletIds = Array.from(
-          new Set(existing.map((a) => a.tripletId).filter(Boolean)),
-        );
-        const { data, error } = await supabase
-          .from('kpi_triplets')
-          .select('id, kpi_id')
-          .in('id', tripletIds);
-        if (error) throw error;
-        const kpiOfTriplet: Record<string, string> = {};
-        for (const row of data || []) {
-          const r = row as Record<string, unknown>;
-          kpiOfTriplet[r.id as string] = (r.kpi_id as string) || '';
-        }
-        const compOfAssignment: Record<string, string> = {};
-        for (const a of existing) {
-          const comp = framework.kpis.find(
-            (k) => k.id === kpiOfTriplet[a.tripletId],
-          )?.competencyId;
-          if (comp) compOfAssignment[a.id] = comp;
-        }
-        setAssignmentCompetency(compOfAssignment);
-      } else {
-        setAssignmentCompetency({});
-      }
+
     } catch (err) {
       console.error('Load assignments error:', err);
     } finally {
@@ -509,13 +475,23 @@ export default function GroupAssignmentsScreen() {
           // it. The advisor can, and this screen is where. An assignment whose
           // competency could not be resolved is not flagged -- no answer is not
           // the same as a negative one.
-          const assignedComp = assignmentCompetency[a.id];
-          const outOfScope = !!assignedComp && !inScope.has(assignedComp);
+          // a.competencyId comes from the same nested embed the card's
+          // competency chip reads, so the warning and the label can no longer
+          // disagree. This used to be a second round trip resolving
+          // triplet -> kpi -> competency by hand.
+          const outOfScope = !!a.competencyId && !inScope.has(a.competencyId);
           const isEditing = editingId === a.id;
           return (
             <View key={a.id} style={styles.card}>
               <View style={styles.cardHeaderRow}>
-                <Text style={[styles.cardTitle, styles.cardTitleFlex]}>{a.title}</Text>
+                <View style={styles.cardTitleFlex}>
+                  {!!a.competencyName && (
+                    <Text style={styles.competencyLine}>
+                      {a.competencyName}{a.level ? ` · L${a.level}` : ''}
+                    </Text>
+                  )}
+                  <Text style={styles.cardTitle}>{a.title}</Text>
+                </View>
                 <View style={styles.cardActions}>
                   <TouchableOpacity
                     onPress={() => (isEditing ? closeEdit() : openEdit(a))}
@@ -908,6 +884,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  // The task's competency and level, above the title. Same source on all
+  // three roles' cards: GroupAssignment.competencyName / .level, resolved
+  // once in assignmentService rather than derived per screen.
+  competencyLine: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   cardTitle: {
     fontSize: 16,
