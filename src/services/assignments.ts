@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { RpcError } from './rpcError';
+import { signEvidence } from './evidenceUrls';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
   AssignmentCounts, PhotoEvidence, DocumentEvidence,
@@ -220,18 +221,25 @@ export const assignmentService = {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return (data || []).map((row) => {
+    // Signed at read time, not stored: log-photos and log-documents are private
+    // buckets, so the getPublicUrl written at upload is a dead link, and a
+    // signed URL expires -- storing one would only postpone the broken link.
+    return Promise.all((data || []).map(async (row) => {
       const r = row as Record<string, unknown>;
       const all = Array.isArray(r.assignment_submissions) ? r.assignment_submissions : [];
       // PostgREST returns every submission on the assignment, not just this
       // student's — the RLS policy lets an advisor read them all.
       const mine = (all as Array<Record<string, unknown>>)
         .find((s) => s.student_id === studentId);
+      if (!mine) return { ...toAssignment(r), submission: undefined };
+
+      const submission = toSubmission(mine);
+      const signed = await signEvidence(submission.photos, submission.documents);
       return {
         ...toAssignment(r),
-        submission: mine ? toSubmission(mine) : undefined,
+        submission: { ...submission, ...signed },
       };
-    });
+    }));
   },
 
   /** Submissions waiting on this mentor. RLS already limits the rows to the
@@ -258,14 +266,21 @@ export const assignmentService = {
       .order('submitted_at', { ascending: true });
     if (error) throw error;
 
-    return (data || []).map((row) => {
+    // Same as listMyAssignments: the buckets are private, so the stored URL has
+    // to be exchanged for a signed one before the mentor can see anything. This
+    // is the screen where it matters most -- evidence the mentor cannot open is
+    // evidence they cannot judge.
+    return Promise.all((data || []).map(async (row) => {
       const r = row as Record<string, unknown>;
+      const submission = toSubmission(r);
+      const signed = await signEvidence(submission.photos, submission.documents);
       return {
-        ...toSubmission(r),
+        ...submission,
+        ...signed,
         // The `!inner` above is what actually prevents a parentless row from
         // reaching here; this fallback only keeps the mapper total.
         assignment: toAssignment((r.group_assignments || {}) as Record<string, unknown>),
       };
-    });
+    }));
   },
 };

@@ -1,24 +1,8 @@
 import { supabase } from './supabase';
+// One implementation, shared with the assignment evidence paths. Two copies
+// of this would drift the moment a bucket or a URL shape changed.
+import { extractStoragePath } from './evidenceUrls';
 import { LogStatus } from '@/types/log';
-
-function extractStoragePath(urlOrPath: string, bucket: string): string {
-  if (!urlOrPath) return '';
-  if (!urlOrPath.startsWith('http')) {
-    return urlOrPath.replace(new RegExp(`^${bucket}/`), '');
-  }
-
-  const markers = [
-    `/object/public/${bucket}/`,
-    `/object/sign/${bucket}/`,
-    `/object/${bucket}/`,
-  ];
-  const marker = markers.find((m) => urlOrPath.includes(m));
-  if (!marker) return '';
-
-  const after = urlOrPath.split(marker)[1] || '';
-  const path = after.split('?')[0] || '';
-  return decodeURIComponent(path);
-}
 
 interface CreateLogParams {
   studentId: string;
