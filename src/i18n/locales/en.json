@@ -144,7 +144,6 @@
     "evidence": "Evidence",
     "addPhoto": "Add Photo",
     "addDocument": "Add Document",
-    "photoLimit": "Maximum {{max}} photos",
     "uploadFailed": "Upload failed",
     "retry": "Retry",
     "caption": "Caption (optional)",
@@ -152,7 +151,10 @@
     "cameraPermissionMessage": "Camera permission is needed to take photos.",
     "galleryPermissionMessage": "Gallery permission is needed to select photos.",
     "documentPickerError": "Could not open document picker.",
-    "documentLimit": "Maximum {{max}} documents"
+    "photoLimit_one": "Maximum {{count}} photo",
+    "photoLimit_other": "Maximum {{count}} photos",
+    "documentLimit_one": "Maximum {{count}} document",
+    "documentLimit_other": "Maximum {{count}} documents"
   },
   "gamification": {
     "points": "Points",

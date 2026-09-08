@@ -8,8 +8,16 @@ import { logService } from '@/services/logs';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
-const MAX_PHOTOS = 5; // matches 3 * LEAST(v_photos, 5) in submit_assignment
-const MAX_DOCUMENTS = 3; // mirrors create-log.tsx's LIMITS.maxDocumentsPerLog
+// Evidence is meant to be the proof, not an album. Three photos and one
+// document is what a task submission needs.
+//
+// submit_assignment still awards 3 * LEAST(v_photos, 5), so its ceiling of five
+// is now unreachable and the photo bonus tops out at 9 XP rather than 15. That
+// is a defensive server-side cap, not a target, so it is left alone rather than
+// requiring another migration -- but the two numbers no longer match, and this
+// comment is the only thing that says so.
+const MAX_PHOTOS = 3;
+const MAX_DOCUMENTS = 1;
 
 interface EvidencePickerProps {
   userId: string;
@@ -308,7 +316,7 @@ export function EvidencePicker({
         ))}
 
         {atPhotoLimit && (
-          <Text style={styles.limitText}>{t('student.photoLimit', { max: MAX_PHOTOS })}</Text>
+          <Text style={styles.limitText}>{t('student.photoLimit', { count: MAX_PHOTOS })}</Text>
         )}
 
         <TouchableOpacity
@@ -359,7 +367,7 @@ export function EvidencePicker({
         ))}
 
         {atDocumentLimit && (
-          <Text style={styles.limitText}>{t('student.documentLimit', { max: MAX_DOCUMENTS })}</Text>
+          <Text style={styles.limitText}>{t('student.documentLimit', { count: MAX_DOCUMENTS })}</Text>
         )}
 
         <TouchableOpacity
