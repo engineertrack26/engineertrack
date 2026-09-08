@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { RpcError } from './rpcError';
-import { signEvidence } from './evidenceUrls';
+import { signEvidence, signAssignmentDocument, ASSIGNMENT_DOC_BUCKET } from './evidenceUrls';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
   AssignmentCounts, PhotoEvidence, DocumentEvidence,
@@ -50,6 +50,13 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
     competencyId: competency.id,
     competencyName: competency.name,
     level: competency.level,
+    publishedAt: (r.published_at as string) || undefined,
+    documentPath: (r.document_path as string) || undefined,
+    documentName: (r.document_name as string) || undefined,
+    // documentUrl is deliberately left unset here -- it is a signed URL, and
+    // signing is async while this mapper is not. Callers that need it await
+    // signAssignmentDocument(documentPath) themselves, the way listMyAssignments
+    // already awaits signEvidence rather than folding it into toSubmission.
   };
 }
 
@@ -141,7 +148,96 @@ export const assignmentService = {
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((r) => toAssignment(r as Record<string, unknown>));
+    // Signed at read time, the way listMyAssignments signs evidence -- a
+    // signed URL expires, so storing one on the row would only move the
+    // broken-link problem into the future.
+    return Promise.all((data || []).map(async (row) => {
+      const assignment = toAssignment(row as Record<string, unknown>);
+      return { ...assignment, documentUrl: await signAssignmentDocument(assignment.documentPath) };
+    }));
+  },
+
+  /** createAssignment's batch form, for the advisor's draft tray. The same
+   *  loop handleAssign already runs today, one insert per triplet -- the
+   *  only difference is that published_at stays NULL here, because a draft
+   *  is created, not sent. Promise.allSettled so one refused row (the
+   *  BEFORE INSERT trigger still checks scope at draft time) does not stop
+   *  the rest of the batch; the screen's partial-result reporting reads
+   *  these settlements directly, unchanged. */
+  async createDrafts(
+    inputs: Array<{
+      groupId: string; tripletId: string; title: string; objective: string;
+      criterion: string; dueDate?: string; createdBy: string;
+    }>,
+  ): Promise<PromiseSettledResult<GroupAssignment>[]> {
+    return Promise.allSettled(inputs.map((input) => this.createAssignment(input)));
+  },
+
+  /** Sends a batch of drafts to their students. An RPC rather than a plain
+   *  UPDATE because it re-checks competency scope -- a group's targets can
+   *  change between drafting and sending, and trg_assignment_within_scope
+   *  only fires on INSERT. Refuses the whole batch, naming the offending
+   *  task, rather than sending some and stopping partway.
+   *  See publish_assignments in docs/assignment-drafts-rpcs.sql. */
+  async publishAssignments(ids: string[]): Promise<number> {
+    const { data, error } = await supabase.rpc('publish_assignments', { p_ids: ids });
+    if (error) throw new RpcError(error.message);
+    return (data as number) ?? 0;
+  },
+
+  /** POSTs a brief document into the private assignment-docs bucket and
+   *  returns its storage path -- never a URL, since getPublicUrl on a
+   *  private bucket is a dead link (the exact bug evidenceUrls.ts already
+   *  exists to fix). Same FormData/fetch shape as
+   *  logService.uploadDocumentFile; the path this bucket wants is
+   *  <groupId>/<assignmentId>/<timestamp>_<filename>, group id first,
+   *  because the storage policies key on it. */
+  async uploadAssignmentDocument(
+    groupId: string,
+    assignmentId: string,
+    uri: string,
+    fileName: string,
+    fileType: string,
+  ): Promise<{ path: string; name: string }> {
+    const storagePath = `${groupId}/${assignmentId}/${Date.now()}_${fileName}`;
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('No session');
+
+    const formData = new FormData();
+    formData.append('', { uri, name: fileName, type: fileType } as unknown as Blob);
+
+    const uploadRes = await fetch(
+      `${supabaseUrl}/storage/v1/object/${ASSIGNMENT_DOC_BUCKET}/${storagePath}`,
+      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
+    );
+    if (!uploadRes.ok) {
+      const errBody = await uploadRes.text();
+      throw new Error(errBody || 'Document upload failed');
+    }
+
+    return { path: storagePath, name: fileName };
+  },
+
+  /** Writes the two document columns directly. A plain update, not an RPC --
+   *  attaching a document carries no scope re-check, only ownership, which
+   *  the existing UPDATE policy on group_assignments already enforces.
+   *  `null, null` detaches; the object itself is left in the bucket, same as
+   *  the student's evidence picker on replace, and just as deliberate. */
+  async setAssignmentDocument(
+    id: string,
+    path: string | null,
+    name: string | null,
+  ): Promise<GroupAssignment> {
+    const { data, error } = await supabase
+      .from('group_assignments')
+      .update({ document_path: path, document_name: name })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new RpcError(error.message);
+    return toAssignment(data as Record<string, unknown>);
   },
 
   /** title, description and due_date are always editable. objective, criterion

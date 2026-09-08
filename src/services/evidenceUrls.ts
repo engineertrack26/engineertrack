@@ -3,6 +3,7 @@ import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
 export const PHOTO_BUCKET = 'log-photos';
 export const DOCUMENT_BUCKET = 'log-documents';
+export const ASSIGNMENT_DOC_BUCKET = 'assignment-docs';
 
 /** Long enough to open a document or scroll a review, short enough that a URL
  *  copied out of the app stops working. */
@@ -52,6 +53,33 @@ async function sign(uri: string, bucket: string): Promise<string> {
     .from(bucket)
     .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
   if (error || !data?.signedUrl) return uri;
+  return data.signedUrl;
+}
+
+/** Sign one assignment's brief document for display.
+ *
+ *  Takes a PATH, not a URL -- document_path is what the column stores, unlike
+ *  the evidence tables this module already signs. It is still routed through
+ *  extractStoragePath, which accepts a bare path unchanged, so a row that
+ *  somehow holds a URL still resolves.
+ *
+ *  Unlike sign(), which returns the original URI on failure so a broken
+ *  evidence item keeps its shape, this returns undefined on failure (missing
+ *  path, or the sign call itself failing): a bare storage path is not a URL a
+ *  screen can open, so falling back to it would just trade one broken link
+ *  for another. A brief that will not open is worth more than a screen that
+ *  will not load. */
+export async function signAssignmentDocument(
+  path: string | undefined,
+): Promise<string | undefined> {
+  if (!path) return undefined;
+  const resolved = extractStoragePath(path, ASSIGNMENT_DOC_BUCKET);
+  if (!resolved) return undefined;
+
+  const { data, error } = await supabase.storage
+    .from(ASSIGNMENT_DOC_BUCKET)
+    .createSignedUrl(resolved, SIGNED_URL_TTL_SECONDS);
+  if (error || !data?.signedUrl) return undefined;
   return data.signedUrl;
 }
 

@@ -26,6 +26,20 @@ export interface GroupAssignment {
   competencyId?: string;
   competencyName?: string;
   level?: number;
+  /** Unset means draft: created but not yet sent, visible only to the
+   *  advisor who wrote it. publish_assignments sets it once, and re-running
+   *  it must not move it again -- it is the record of when students first
+   *  saw the task. */
+  publishedAt?: string;
+  /** The storage path in the private assignment-docs bucket, not a URL --
+   *  the same shape submission evidence already uses and for the same
+   *  reason. */
+  documentPath?: string;
+  documentName?: string;
+  /** Filled at read time by signing documentPath, never by the mapper --
+   *  see toAssignment in assignments.ts. Absent when there is no document,
+   *  or when signing failed. */
+  documentUrl?: string;
 }
 
 export interface AssignmentSubmission {

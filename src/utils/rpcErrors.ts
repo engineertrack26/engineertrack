@@ -1,6 +1,14 @@
 export interface RpcErrorInfo {
   code: string;
   key: string;
+  /** Whatever followed the raw message's first ':', trimmed -- e.g. the task
+   *  title in `NOT_IN_SCOPE: <title>` from publish_assignments. Undefined
+   *  when the code was raised bare, which is still how most callers raise
+   *  it (submit_assignment and review_assignment's NOT_IN_SCOPE carry no
+   *  detail at all). A caller that wants the title interpolated into a
+   *  sentence -- see errors.notInScopeTitled -- reads it from here rather
+   *  than mapRpcError special-casing one code. */
+  detail?: string;
 }
 
 const ERROR_KEYS: Record<string, string> = {
@@ -22,15 +30,21 @@ const ERROR_KEYS: Record<string, string> = {
 };
 
 /**
- * Our RPCs raise stable codes, optionally with a `:detail` payload.
- * Anything else is a genuine database failure and gets the generic key.
+ * Our RPCs raise stable codes, optionally with a `:detail` payload -- the
+ * code is matched as a PREFIX up to the first colon, not the whole string,
+ * so `NOT_IN_SCOPE: <title>` still resolves to the NOT_IN_SCOPE key rather
+ * than falling through to errors.unknown and losing the title. Anything
+ * that matches no known code is a genuine database failure and gets the
+ * generic key.
  */
 export function mapRpcError(message?: string): RpcErrorInfo {
   const raw = (message || '').trim();
-  const [code] = raw.split(':', 2);
+  const sep = raw.indexOf(':');
+  const code = sep === -1 ? raw : raw.slice(0, sep).trim();
+  const detail = sep === -1 ? undefined : (raw.slice(sep + 1).trim() || undefined);
   const key = ERROR_KEYS[code];
 
   if (!key) return { code: 'UNKNOWN', key: 'errors.unknown' };
 
-  return { code, key };
+  return { code, key, detail };
 }
