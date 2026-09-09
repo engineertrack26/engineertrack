@@ -326,7 +326,12 @@ export function AssignmentCard({
 
       {isEditing && (
         <View style={styles.editPanel}>
-          <Text style={styles.editPanelTitle}>{t('advisor.editAssignment')}</Text>
+          {/* No "Edit Assignment" heading here any more. It used to sit above
+              the Title field and name the whole panel; once title and
+              description moved onto the card it landed directly above
+              Objective and read as that field's label. The panel's top border
+              separates it, and the framed fields above already say the card is
+              being edited -- a heading would only repeat them. */}
 
           {/* Title and description are NOT here: they are edited in place at
               the top of the card, where they are already displayed. This panel
@@ -585,11 +590,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  editPanelTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
   },
   lockedHint: {
     fontSize: 12,

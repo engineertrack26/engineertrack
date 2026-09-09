@@ -276,7 +276,6 @@
     "approvedCount": "{{count}} approved",
     "revisionCount": "{{count}} sent back",
     "assignmentOutOfScope": "The group no longer targets this competency, so submissions cannot be approved until it does.",
-    "editAssignment": "Edit assignment",
     "assignmentUpdated": "Assignment updated.",
     "assignmentTermsLocked": "Students have already submitted this task, so the objective and criterion are locked.",
     "assignmentCountsUnavailable": "Submission counts unavailable",
