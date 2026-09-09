@@ -9,6 +9,39 @@ export const ASSIGNMENT_DOC_BUCKET = 'assignment-docs';
  *  copied out of the app stops working. */
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
+/** POST a file to a private bucket at an exact path.
+ *
+ *  One implementation for every upload in the app: log photos, log documents
+ *  and assignment briefs. They differ only in bucket and path, and each copy of
+ *  this block is somewhere an auth header or an error shape can drift.
+ *
+ *  Returns nothing -- the caller already knows the path it asked for, and the
+ *  URL is not knowable here: these buckets are private, so a URL only exists at
+ *  read time and only for as long as its signature lasts. */
+export async function uploadToBucket(
+  bucket: string,
+  path: string,
+  uri: string,
+  fileName: string,
+  fileType: string,
+): Promise<void> {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('No session');
+
+  const formData = new FormData();
+  formData.append('', { uri, name: fileName, type: fileType } as unknown as Blob);
+
+  const uploadRes = await fetch(
+    `${supabaseUrl}/storage/v1/object/${bucket}/${path}`,
+    { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
+  );
+  if (!uploadRes.ok) {
+    const errBody = await uploadRes.text();
+    throw new Error(errBody || 'Upload failed');
+  }
+}
+
 /** Recover the object path from whatever was stored in the row.
  *
  *  Uploads write `getPublicUrl(...)` into `uri`, which is a URL that only

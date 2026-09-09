@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import { RpcError } from './rpcError';
-import { signEvidence, signAssignmentDocument, ASSIGNMENT_DOC_BUCKET } from './evidenceUrls';
+import {
+  signEvidence, signAssignmentDocument, uploadToBucket, ASSIGNMENT_DOC_BUCKET,
+} from './evidenceUrls';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
   AssignmentCounts, PhotoEvidence, DocumentEvidence,
@@ -188,8 +190,8 @@ export const assignmentService = {
   /** POSTs a brief document into the private assignment-docs bucket and
    *  returns its storage path -- never a URL, since getPublicUrl on a
    *  private bucket is a dead link (the exact bug evidenceUrls.ts already
-   *  exists to fix). Same FormData/fetch shape as
-   *  logService.uploadDocumentFile; the path this bucket wants is
+   *  exists to fix). uploadToBucket is the one POST-to-bucket routine
+   *  logService's uploaders also call; the path this bucket wants is
    *  <groupId>/<assignmentId>/<timestamp>_<filename>, group id first,
    *  because the storage policies key on it. */
   async uploadAssignmentDocument(
@@ -200,23 +202,7 @@ export const assignmentService = {
     fileType: string,
   ): Promise<{ path: string; name: string }> {
     const storagePath = `${groupId}/${assignmentId}/${Date.now()}_${fileName}`;
-
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('No session');
-
-    const formData = new FormData();
-    formData.append('', { uri, name: fileName, type: fileType } as unknown as Blob);
-
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/${ASSIGNMENT_DOC_BUCKET}/${storagePath}`,
-      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
-    );
-    if (!uploadRes.ok) {
-      const errBody = await uploadRes.text();
-      throw new Error(errBody || 'Document upload failed');
-    }
-
+    await uploadToBucket(ASSIGNMENT_DOC_BUCKET, storagePath, uri, fileName, fileType);
     return { path: storagePath, name: fileName };
   },
 

@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 // One implementation, shared with the assignment evidence paths. Two copies
 // of this would drift the moment a bucket or a URL shape changed.
-import { extractStoragePath } from './evidenceUrls';
+import { extractStoragePath, uploadToBucket } from './evidenceUrls';
 import { LogStatus } from '@/types/log';
 
 interface CreateLogParams {
@@ -169,21 +169,7 @@ export const logService = {
    *  submission id does not exist until submit_assignment runs. */
   async uploadPhotoFile(userId: string, scopeId: string, uri: string): Promise<string> {
     const fileName = `${userId}/${scopeId}/${Date.now()}.jpg`;
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('No session');
-
-    const formData = new FormData();
-    formData.append('', { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
-
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/log-photos/${fileName}`,
-      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
-    );
-    if (!uploadRes.ok) {
-      const errBody = await uploadRes.text();
-      throw new Error(errBody || 'Photo upload failed');
-    }
+    await uploadToBucket('log-photos', fileName, uri, 'photo.jpg', 'image/jpeg');
 
     const { data: urlData } = supabase.storage.from('log-photos').getPublicUrl(fileName);
     return urlData.publicUrl;
@@ -201,22 +187,7 @@ export const logService = {
     fileType: string,
   ): Promise<string> {
     const storagePath = `${userId}/${scopeId}/${Date.now()}_${fileName}`;
-
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('No session');
-
-    const formData = new FormData();
-    formData.append('', { uri, name: fileName, type: fileType } as unknown as Blob);
-
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/log-documents/${storagePath}`,
-      { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: formData },
-    );
-    if (!uploadRes.ok) {
-      const errBody = await uploadRes.text();
-      throw new Error(errBody || 'Document upload failed');
-    }
+    await uploadToBucket('log-documents', storagePath, uri, fileName, fileType);
 
     const { data: urlData } = supabase.storage.from('log-documents').getPublicUrl(storagePath);
     return urlData.publicUrl;
