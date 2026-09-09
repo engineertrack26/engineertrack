@@ -233,16 +233,243 @@ ROLLBACK;
 
 
 -- ============================================================
+-- PART C — the draft policy, actually evaluated. Submit BEGIN..ROLLBACK in
+-- one go.
+--
+--   C1 advisor reads own draft               1 row  (positive control)
+--   C2 student reads a draft                 0 rows
+--   C3 student reads a published assignment  1 row  (second positive control)
+--   C4 student signs the advisor's document  succeeds
+--
+-- C1 is the positive control for C2: without it, C2 returning zero is
+-- indistinguishable from a policy that refuses everyone, or from a fixture
+-- that was never built.
+--
+-- C3 is the second positive control, from the other direction: without it, a
+-- policy that hid the entire table from students -- not just drafts -- would
+-- still pass C2 and look correct.
+-- ============================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+  adv UUID; stu UUID; grp UUID; kpi UUID;
+  a_draft UUID; a_pub UUID; obj_path TEXT;
+BEGIN
+  SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
+  SELECT id INTO stu FROM profiles WHERE role = 'student'  ORDER BY created_at LIMIT 1;
+
+  IF adv IS NULL OR stu IS NULL THEN
+    PERFORM set_config('probe.ready', 'no', true);
+    RETURN;
+  END IF;
+
+  INSERT INTO internship_groups (advisor_id, name)
+  VALUES (adv, 'Probe drafts policies') RETURNING id INTO grp;
+
+  -- tr_seed_group_competency_targets seeds every competency as a target on
+  -- that INSERT, so any triplet below is already in scope for
+  -- trg_assignment_within_scope. Unlike Part B's fixture, nothing here needs
+  -- to be taken out of scope -- Part C is testing the READ policy, not
+  -- publish_assignments' scope re-check.
+  SELECT k.id INTO kpi
+  FROM competency_kpis k
+  JOIN competencies c ON c.id = k.competency_id
+  WHERE k.level = 1 AND k.kpi_index = 1
+  ORDER BY c.display_order LIMIT 1;
+
+  IF kpi IS NULL THEN
+    PERFORM set_config('probe.ready', 'no', true);
+    RETURN;
+  END IF;
+
+  -- one_active_group_per_student (docs/internship-groups-migration.sql) is a
+  -- unique index on group_memberships(student_id) WHERE left_at IS NULL. On
+  -- any database that actually has the profiles this probe needs, stu is
+  -- almost certainly already in an active group from real use, and the INSERT
+  -- below would raise 23505 unhandled. Close any existing active membership
+  -- first; this whole block is inside BEGIN..ROLLBACK, so it is undone along
+  -- with everything else this probe writes.
+  UPDATE group_memberships SET left_at = now()
+  WHERE student_id = stu AND left_at IS NULL;
+
+  INSERT INTO group_memberships (group_id, student_id) VALUES (grp, stu);
+
+  -- a_draft: published_at left NULL. a_pub: published directly as the owner
+  -- with a real timestamp -- the point of this fixture is a known starting
+  -- state, not an exercise of publish_assignments, which Part B already
+  -- covers. Two distinct triplets under the same KPI, the same way Part B
+  -- needed a second assignment for B5.
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe draft', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 0 LIMIT 1
+  RETURNING id INTO a_draft;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by, published_at)
+  SELECT grp, tr.id, 'Probe published', tr.objective, tr.criterion, adv, now()
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO a_pub;
+
+  IF a_draft IS NULL OR a_pub IS NULL THEN
+    PERFORM set_config('probe.ready', 'no', true);
+    RETURN;
+  END IF;
+
+  -- The advisor's document, attached to the published assignment the student
+  -- can see. Written directly into storage.objects rather than through the
+  -- upload path: this is the owner session, and the point of the fixture is a
+  -- known object to attempt to read, not an exercise of the uploader. The
+  -- group id leads the path on purpose (docs/assignment-drafts-migration.sql)
+  -- -- a storage policy can only reason about the object's path, and
+  -- (storage.foldername(name))[1] is what owns_group / is_member_of_group /
+  -- mentors_a_member_of_group are handed.
+  obj_path := grp::text || '/' || a_pub::text || '/'
+              || extract(epoch FROM clock_timestamp())::bigint::text || '_brief.pdf';
+  INSERT INTO storage.objects (bucket_id, name) VALUES ('assignment-docs', obj_path);
+
+  PERFORM set_config('probe.ready',    'yes',         true);
+  PERFORM set_config('probe.adv',      adv::text,     true);
+  PERFORM set_config('probe.stu',      stu::text,     true);
+  PERFORM set_config('probe.a_draft',  a_draft::text, true);
+  PERFORM set_config('probe.a_pub',    a_pub::text,   true);
+  PERFORM set_config('probe.obj_path', obj_path,      true);
+END $$;
+
+-- If this raises 42501 in your editor, STOP. Do not replace the cases below
+-- with a catalog lookup against pg_policies -- that would assert only what
+-- Part A already asserts, while reading as though it had proved more. Report
+-- Part C as unrunnable instead.
+SET LOCAL ROLE authenticated;
+
+DO $$
+DECLARE
+  adv UUID; stu UUID; a_draft UUID; a_pub UUID; obj_path TEXT;
+  n INT; log TEXT := '';
+BEGIN
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
+    PERFORM set_config('probe.results',
+      'C1-C4 policies' || E'\t'
+      || 'SKIP: needs one advisor profile, one student profile, '
+      || 'and a KPI with two triplets' || E'\n', true);
+    RETURN;
+  END IF;
+
+  adv      := current_setting('probe.adv')::UUID;
+  stu      := current_setting('probe.stu')::UUID;
+  a_draft  := current_setting('probe.a_draft')::UUID;
+  a_pub    := current_setting('probe.a_pub')::UUID;
+  obj_path := current_setting('probe.obj_path');
+
+  -- Each case from here on is wrapped in its own BEGIN..EXCEPTION so an
+  -- unexpected throw in one case reports ABORTED for that case instead of
+  -- unwinding the whole DO block and losing every result gathered so far.
+  --
+  -- 'role': 'authenticated' is included alongside 'sub' in every claims
+  -- object below, not just for C4. auth.uid() only ever reads the 'sub' key,
+  -- but assignment_docs_read/insert/delete also test auth.role() =
+  -- 'authenticated', and auth.role() reads the 'role' key from this same GUC
+  -- -- it has nothing to do with the Postgres role SET LOCAL ROLE just
+  -- changed. Without it C4 would refuse for a reason that has nothing to do
+  -- with owns_group/is_member_of_group and everything to do with an absent
+  -- claim.
+
+  -- C1. The advisor reads their own draft. POSITIVE CONTROL for C2 -- see the
+  --     header comment above.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+  BEGIN
+    SELECT count(*) INTO n FROM group_assignments WHERE id = a_draft;
+    log := log || 'C1 advisor reads own draft' || E'\t'
+        || CASE WHEN n = 1 THEN '1 row'
+                WHEN n = 0 THEN 'FAIL: 0 rows -- the owner branch is unreachable'
+                ELSE 'FAIL: ' || n || ' rows' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C1 advisor reads own draft' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C2. A member student reads the same draft. published_at IS NULL and the
+  --     student is not the owner, so the policy must refuse.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+  BEGIN
+    SELECT count(*) INTO n FROM group_assignments WHERE id = a_draft;
+    log := log || 'C2 student reads a draft' || E'\t'
+        || CASE WHEN n = 0 THEN '0 rows'
+                ELSE 'FAIL: ' || n || ' rows leaked' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C2 student reads a draft' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C3. The same student reads the published assignment. POSITIVE CONTROL for
+  --     C2 from the other direction -- see the header comment above. Still
+  --     authenticated as stu from the case above.
+  BEGIN
+    SELECT count(*) INTO n FROM group_assignments WHERE id = a_pub;
+    log := log || 'C3 student reads a published assignment' || E'\t'
+        || CASE WHEN n = 1 THEN '1 row'
+                WHEN n = 0 THEN 'FAIL: 0 rows -- the published branch is unreachable'
+                ELSE 'FAIL: ' || n || ' rows' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C3 student reads a published assignment' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C4. The student reads the advisor's document. createSignedUrl itself is
+  --     an HTTP call to the storage microservice, not a SQL operation, so it
+  --     cannot literally be invoked from this editor. What CAN be driven is
+  --     the exact RLS gate the storage service evaluates before it will sign
+  --     anything: a SELECT against storage.objects under the student's own
+  --     role. A visible row here is what "succeeds" means for this case --
+  --     signing has nothing left to check once the row is readable.
+  BEGIN
+    SELECT count(*) INTO n FROM storage.objects
+    WHERE bucket_id = 'assignment-docs' AND name = obj_path;
+    log := log || 'C4 student signs the advisor''s document' || E'\t'
+        || CASE WHEN n = 1 THEN 'succeeds -- read gate open, object visible'
+                WHEN n = 0 THEN 'FAIL: 0 objects visible -- the member branch is unreachable'
+                ELSE 'FAIL: ' || n || ' objects visible' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C4 student signs the advisor''s document' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  PERFORM set_config('probe.results', log, true);
+END $$;
+
+-- Back to the owner before anything else reads the results, so a failure in
+-- the SELECT below cannot be blamed on the role change.
+RESET ROLE;
+
+SELECT split_part(line, E'\t', 1) AS step,
+       split_part(line, E'\t', 2) AS result
+FROM unnest(string_to_array(current_setting('probe.results'), E'\n')) AS line
+WHERE line <> ''
+ORDER BY 1;
+
+ROLLBACK;
+
+
+-- ============================================================
 -- How to run this
 --
--- Apply order before this script ever runs: docs/assignment-drafts-migration.sql
--- first, then docs/assignment-drafts-rpcs.sql, then this file.
+-- Apply order: docs/assignment-drafts-migration.sql, then
+-- docs/assignment-drafts-rpcs.sql, then this file -- and the client changes
+-- from the same plan must land together with the SQL, not in a later
+-- release: the advisor screen calls publish_assignments, which Task 2 added,
+-- and the student's read of the live catalogue depends on the migration's
+-- published_at backfill. Deploying the SQL without the client (or the client
+-- without the SQL) leaves one side calling an RPC or reading a column the
+-- other side does not yet know about.
 --
--- Part B is submitted as one block, BEGIN..ROLLBACK in a single submission --
--- the SQL editor gives each submission its own connection, so a transaction
--- split across submissions loses its state (42P01).
+-- The three parts are submitted SEPARATELY. Parts B and C each go in as one
+-- block, BEGIN..ROLLBACK in a single submission -- the SQL editor gives each
+-- submission its own connection, so a transaction split across submissions
+-- loses its state (42P01).
 --
--- Expected output: Part A one row reading PASS; Part B three rows. Any cell
--- beginning FAIL, ABORTED or SKIP is a real result to look at, not noise to
--- scroll past.
+-- Expected output: Part A one row reading PASS; Part B three rows; Part C
+-- four rows. Any cell beginning FAIL, SKIP, INCONCLUSIVE or ABORTED is a real
+-- result to look at, not noise to scroll past.
 -- ============================================================
