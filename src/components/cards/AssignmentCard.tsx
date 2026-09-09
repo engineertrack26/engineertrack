@@ -236,7 +236,21 @@ export function AssignmentCard({
               {a.competencyName}{a.level ? ` · L${a.level}` : ''}
             </Text>
           )}
-          <Text style={styles.cardTitle}>{a.title}</Text>
+          {/* Edited where it is read, not copied into a labelled box lower
+              down. The task text is a whole sentence, so a separate
+              single-line field showed a fragment of it and scrolled sideways;
+              here it wraps exactly as it does when not being edited. */}
+          {isEditing ? (
+            <TextInput
+              style={[styles.cardTitle, styles.inlineInput]}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholderTextColor={colors.textDisabled}
+              multiline
+            />
+          ) : (
+            <Text style={styles.cardTitle}>{a.title}</Text>
+          )}
         </View>
         <View style={styles.cardActions}>
           <TouchableOpacity
@@ -260,7 +274,21 @@ export function AssignmentCard({
           </TouchableOpacity>
         </View>
       </View>
-      {!!a.description && <Text style={styles.subtle}>{a.description}</Text>}
+      {/* Same treatment as the title. Rendered even when empty while editing,
+          so there is somewhere to type -- outside editing an absent
+          description stays absent rather than leaving a blank line. */}
+      {isEditing ? (
+        <TextInput
+          style={[styles.subtle, styles.inlineInput]}
+          value={editDescription}
+          onChangeText={setEditDescription}
+          placeholder={t('advisor.assignmentDescription')}
+          placeholderTextColor={colors.textDisabled}
+          multiline
+        />
+      ) : (
+        !!a.description && <Text style={styles.subtle}>{a.description}</Text>
+      )}
       {!!due && (
         <Text style={styles.subtle}>
           {t('advisor.assignmentDueDate')}: {due.toLocaleDateString(i18n.language)}
@@ -300,23 +328,9 @@ export function AssignmentCard({
         <View style={styles.editPanel}>
           <Text style={styles.editPanelTitle}>{t('advisor.editAssignment')}</Text>
 
-          <Text style={styles.label}>{t('advisor.assignmentTitle')}</Text>
-          <TextInput
-            style={styles.input}
-            value={editTitle}
-            onChangeText={setEditTitle}
-            placeholderTextColor={colors.textDisabled}
-          />
-
-          <Text style={styles.label}>{t('advisor.assignmentDescription')}</Text>
-          <TextInput
-            style={[styles.input, styles.multilineInput]}
-            value={editDescription}
-            onChangeText={setEditDescription}
-            placeholderTextColor={colors.textDisabled}
-            multiline
-          />
-
+          {/* Title and description are NOT here: they are edited in place at
+              the top of the card, where they are already displayed. This panel
+              holds only what the card does not show. */}
           <Text style={styles.label}>{t('advisor.assignmentObjective')}</Text>
           <TextInput
             style={[
@@ -540,6 +554,21 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     minHeight: 72,
+    textAlignVertical: 'top',
+  },
+  // Layered OVER cardTitle / subtle rather than replacing them, so the text
+  // keeps the size, weight and colour it has when it is not being edited --
+  // the point of editing in place is that nothing jumps. Only the frame is
+  // added, and it is what says "you can type here".
+  inlineInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: spacing.xs,
+    marginTop: 2,
+    marginBottom: spacing.xs,
     textAlignVertical: 'top',
   },
   inputDisabled: {
