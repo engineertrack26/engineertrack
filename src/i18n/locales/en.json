@@ -269,6 +269,7 @@
     "sendToStudents": "Send to students",
     "assignmentsSent_one": "{{count}} task sent to students.",
     "assignmentsSent_other": "{{count}} tasks sent to students.",
+    "assignmentsNoneSent": "Nothing was sent — these tasks were already published elsewhere. Refreshing the tray.",
     "assignmentDocument": "Document",
     "attachDocument": "Attach document",
     "replaceDocument": "Replace",

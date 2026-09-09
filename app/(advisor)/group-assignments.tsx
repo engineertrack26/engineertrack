@@ -309,26 +309,37 @@ export default function GroupAssignmentsScreen() {
     try {
       const count = await assignmentService.publishAssignments(drafts.map((d) => d.id));
 
-      // Same batch-notification shape handleAddToDraft's ancestor
-      // (handleAssign) used: one notification per student for the whole
-      // batch, best-effort so a delivery failure cannot make assignments
-      // that were actually sent look like they failed.
-      const single = drafts.length === 1 ? drafts[0] : null;
-      await Promise.all(
-        members.map((m) =>
-          notificationService.create(
-            m.id,
-            t('notifications.taskAssignedTitle'),
-            single
-              ? t('notifications.taskAssignedBody', { title: single.title })
-              : t('notifications.tasksAssignedBody', { count: drafts.length }),
-            'task_assigned',
-            {},
-          ).catch((e) => console.warn('notify failed:', e)),
-        ),
-      );
+      // count is 0 when every id in the tray was already published --
+      // another session (or another tab) sent the same batch first. Nothing
+      // moved, so nothing should notify: without this guard, every group
+      // member gets a "new task assigned" push for a publish that changed
+      // nothing, and the advisor reads "0 tasks sent to students" under a
+      // Done header. Reload instead, so the stale tray catches up to what is
+      // actually published.
+      if (count > 0) {
+        // Same batch-notification shape handleAddToDraft's ancestor
+        // (handleAssign) used: one notification per student for the whole
+        // batch, best-effort so a delivery failure cannot make assignments
+        // that were actually sent look like they failed.
+        const single = drafts.length === 1 ? drafts[0] : null;
+        await Promise.all(
+          members.map((m) =>
+            notificationService.create(
+              m.id,
+              t('notifications.taskAssignedTitle'),
+              single
+                ? t('notifications.taskAssignedBody', { title: single.title })
+                : t('notifications.tasksAssignedBody', { count: drafts.length }),
+              'task_assigned',
+              {},
+            ).catch((e) => console.warn('notify failed:', e)),
+          ),
+        );
 
-      Alert.alert(t('common.done'), t('advisor.assignmentsSent', { count }));
+        Alert.alert(t('common.done'), t('advisor.assignmentsSent', { count }));
+      } else {
+        Alert.alert(t('common.done'), t('advisor.assignmentsNoneSent'));
+      }
       await loadData();
     } catch (err) {
       const { code, key, detail } = mapRpcError(err instanceof Error ? err.message : '');
