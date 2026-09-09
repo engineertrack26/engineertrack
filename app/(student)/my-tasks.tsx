@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -86,6 +86,15 @@ export default function MyTasksScreen() {
   }, [loadData]);
 
   const groups = useMemo(() => groupAssignmentsByState(assignments), [assignments]);
+
+  async function openDocument(uri: string) {
+    try {
+      await Linking.openURL(uri);
+    } catch (err) {
+      console.error('Open document error:', err);
+      Alert.alert(t('common.error'), t('common.tryAgain'));
+    }
+  }
 
   function toggleOpen(a: MyAssignment) {
     if (openId === a.id) {
@@ -183,6 +192,23 @@ export default function MyTasksScreen() {
                 them back. */}
             {!!a.description && (
               <Text style={[styles.detailText, styles.description]}>{a.description}</Text>
+            )}
+
+            {/* Nothing renders here at all when there is no document -- a bare
+                "Brief" heading with nothing under it reads as a failed load,
+                the same defect already flagged once on this branch. */}
+            {!!a.documentName && (
+              <>
+                <Text style={styles.label}>{t('student.taskDocument')}</Text>
+                <TouchableOpacity
+                  style={styles.docRow}
+                  onPress={() => a.documentUrl && openDocument(a.documentUrl)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="document-outline" size={18} color={colors.primary} />
+                  <Text style={styles.docName} numberOfLines={1}>{a.documentName}</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             <Text style={styles.label}>{t('student.taskObjective')}</Text>
@@ -422,6 +448,20 @@ const styles = StyleSheet.create({
   },
   description: {
     marginBottom: spacing.xs,
+  },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  docName: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '500',
   },
 
   input: {

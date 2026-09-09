@@ -202,6 +202,25 @@ export default function PendingReviewsScreen() {
               </>
             )}
 
+            {/* Nothing renders here at all when there is no document -- a bare
+                "Brief" heading with nothing under it reads as a failed load,
+                the same defect already flagged once on this branch. The
+                mentor assesses against the criterion, and a brief the advisor
+                attached is part of what they are judging against. */}
+            {!!item.assignment.documentName && (
+              <>
+                <Text style={styles.label}>{t('mentor.taskDocument')}</Text>
+                <TouchableOpacity
+                  style={styles.docRow}
+                  onPress={() => item.assignment.documentUrl && openDocument(item.assignment.documentUrl)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="document-outline" size={20} color={colors.primary} />
+                  <Text style={styles.docName} numberOfLines={1}>{item.assignment.documentName}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
             <Text style={styles.label}>{t('mentor.taskObjective')}</Text>
             <Text style={styles.detailText}>{item.assignment.objective}</Text>
 
