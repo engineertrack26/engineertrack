@@ -196,18 +196,34 @@ export default function MyTasksScreen() {
 
             {/* Nothing renders here at all when there is no document -- a bare
                 "Brief" heading with nothing under it reads as a failed load,
-                the same defect already flagged once on this branch. */}
+                the same defect already flagged once on this branch. When a
+                document exists but signing it failed, the row stays visible
+                but disabled and muted, with a line explaining why -- hiding
+                it would trade a dead tap for a brief nobody knows exists. */}
             {!!a.documentName && (
               <>
                 <Text style={styles.label}>{t('student.taskDocument')}</Text>
                 <TouchableOpacity
                   style={styles.docRow}
-                  onPress={() => a.documentUrl && openDocument(a.documentUrl)}
+                  onPress={() => openDocument(a.documentUrl!)}
+                  disabled={!a.documentUrl}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="document-outline" size={18} color={colors.primary} />
-                  <Text style={styles.docName} numberOfLines={1}>{a.documentName}</Text>
+                  <Ionicons
+                    name="document-outline"
+                    size={18}
+                    color={a.documentUrl ? colors.primary : colors.textDisabled}
+                  />
+                  <Text
+                    style={[styles.docName, !a.documentUrl && styles.docNameDisabled]}
+                    numberOfLines={1}
+                  >
+                    {a.documentName}
+                  </Text>
                 </TouchableOpacity>
+                {!a.documentUrl && (
+                  <Text style={styles.docError}>{t('student.taskDocumentUnavailable')}</Text>
+                )}
               </>
             )}
 
@@ -462,6 +478,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     fontWeight: '500',
+  },
+  docNameDisabled: {
+    color: colors.textDisabled,
+  },
+  docError: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
 
   input: {

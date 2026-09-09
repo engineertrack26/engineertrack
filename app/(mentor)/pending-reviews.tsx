@@ -206,18 +206,34 @@ export default function PendingReviewsScreen() {
                 "Brief" heading with nothing under it reads as a failed load,
                 the same defect already flagged once on this branch. The
                 mentor assesses against the criterion, and a brief the advisor
-                attached is part of what they are judging against. */}
+                attached is part of what they are judging against. When a
+                document exists but signing it failed, the row stays visible
+                but disabled and muted, with a line explaining why -- hiding
+                it would trade a dead tap for a brief nobody knows exists. */}
             {!!item.assignment.documentName && (
               <>
                 <Text style={styles.label}>{t('mentor.taskDocument')}</Text>
                 <TouchableOpacity
                   style={styles.docRow}
-                  onPress={() => item.assignment.documentUrl && openDocument(item.assignment.documentUrl)}
+                  onPress={() => openDocument(item.assignment.documentUrl!)}
+                  disabled={!item.assignment.documentUrl}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="document-outline" size={20} color={colors.primary} />
-                  <Text style={styles.docName} numberOfLines={1}>{item.assignment.documentName}</Text>
+                  <Ionicons
+                    name="document-outline"
+                    size={20}
+                    color={item.assignment.documentUrl ? colors.primary : colors.textDisabled}
+                  />
+                  <Text
+                    style={[styles.docName, !item.assignment.documentUrl && styles.docNameDisabled]}
+                    numberOfLines={1}
+                  >
+                    {item.assignment.documentName}
+                  </Text>
                 </TouchableOpacity>
+                {!item.assignment.documentUrl && (
+                  <Text style={styles.docError}>{t('mentor.taskDocumentUnavailable')}</Text>
+                )}
               </>
             )}
 
@@ -593,6 +609,14 @@ const styles = StyleSheet.create({
   docSize: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  docNameDisabled: {
+    color: colors.textDisabled,
+  },
+  docError: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
 
   input: {
