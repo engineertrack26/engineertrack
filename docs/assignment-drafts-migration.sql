@@ -86,6 +86,16 @@ CREATE POLICY "assignment_docs_upload" ON storage.objects
     AND owns_group((storage.foldername(name))[1]::uuid)
   );
 
+-- The assignment id is path segment 2 (<groupId>/<assignmentId>/<file>), and
+-- it is consulted here for the same reason the table's "assignments read"
+-- policy learned about published_at: a draft is supposed to be invisible to
+-- everyone but its author, and that has to hold for the file the row points
+-- at, not just the row. The advisor keeps unconditional read of their own
+-- group's objects -- an advisor previewing an attachment they have not sent
+-- yet is not a leak. The member and mentor branches additionally require the
+-- owning assignment to be published; without this a student or mentor could
+-- list the bucket folder and sign a draft's brief straight from storage even
+-- though group_assignments hides the row itself.
 DROP POLICY IF EXISTS "assignment_docs_read" ON storage.objects;
 CREATE POLICY "assignment_docs_read" ON storage.objects
   FOR SELECT USING (
@@ -93,8 +103,17 @@ CREATE POLICY "assignment_docs_read" ON storage.objects
     AND auth.role() = 'authenticated'
     AND (
       owns_group((storage.foldername(name))[1]::uuid)
-      OR is_member_of_group((storage.foldername(name))[1]::uuid)
-      OR mentors_a_member_of_group((storage.foldername(name))[1]::uuid)
+      OR (
+        EXISTS (
+          SELECT 1 FROM group_assignments a
+          WHERE a.id = (storage.foldername(name))[2]::uuid
+            AND a.published_at IS NOT NULL
+        )
+        AND (
+          is_member_of_group((storage.foldername(name))[1]::uuid)
+          OR mentors_a_member_of_group((storage.foldername(name))[1]::uuid)
+        )
+      )
     )
   );
 

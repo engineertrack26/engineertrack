@@ -42,6 +42,15 @@ CREATE INDEX IF NOT EXISTS group_assignments_group_idx
 
 ALTER TABLE group_assignments ENABLE ROW LEVEL SECURITY;
 
+-- SUPERSEDED by docs/assignment-drafts-migration.sql, which rewrites this
+-- same policy to add a published_at check. Do NOT re-apply this file on its
+-- own against a database that already has drafts: this version has no idea
+-- published_at exists, so re-running it alone silently reverts the policy to
+-- this old shape and every draft in every group becomes visible to its
+-- whole group again -- no error, no warning, anywhere. If you re-apply this
+-- file (e.g. rebuilding a fresh database from the full migration history),
+-- you MUST re-apply docs/assignment-drafts-migration.sql immediately after
+-- it, before anything else reads group_assignments.
 DROP POLICY IF EXISTS "assignments read" ON group_assignments;
 CREATE POLICY "assignments read" ON group_assignments
   FOR SELECT TO authenticated USING (

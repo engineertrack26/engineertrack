@@ -54,6 +54,25 @@ BEGIN
     RAISE EXCEPTION 'FAIL: % of 3 assignment-docs storage policies present', n;
   END IF;
 
+  -- The read policy's SHAPE, not just its existence. docs/task-assignment-
+  -- migration.sql defines a policy of the very same name -- the old,
+  -- pre-drafts one -- and every migration in docs/ is written to be
+  -- re-runnable. Re-applying that file alone after this one silently
+  -- reverts "assignments read" to a version with no published_at clause at
+  -- all, and every draft in every group becomes visible again with no error
+  -- anywhere. A count of 1 policy named "assignments read" would still pass
+  -- after that revert; only reading its USING clause catches it.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'group_assignments'
+      AND policyname = 'assignments read'
+      AND qual LIKE '%published_at%'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: "assignments read" on group_assignments does not mention published_at -- '
+      'it looks reverted to the pre-drafts policy from docs/task-assignment-migration.sql; '
+      're-apply docs/assignment-drafts-migration.sql';
+  END IF;
+
   -- The backfill's proof, in a form that survives drafts existing. A task that
   -- carries submissions was unquestionably sent, so a NULL published_at there
   -- can only mean the backfill was missed. Asserting "no row is NULL" would be
@@ -236,10 +255,12 @@ ROLLBACK;
 -- PART C — the draft policy, actually evaluated. Submit BEGIN..ROLLBACK in
 -- one go.
 --
---   C1 advisor reads own draft               1 row  (positive control)
---   C2 student reads a draft                 0 rows
---   C3 student reads a published assignment  1 row  (second positive control)
---   C4 student signs the advisor's document  succeeds
+--   C1 advisor reads own draft                     1 row  (positive control)
+--   C2 student reads a draft                        0 rows
+--   C3 student reads a published assignment         1 row  (second positive control)
+--   C4 student signs the advisor's document         succeeds
+--   C5 student signs a DRAFT's document              0 rows
+--   C6 mentor reads a published assignment          1 row  (SKIP if no mentor fixture)
 --
 -- C1 is the positive control for C2: without it, C2 returning zero is
 -- indistinguishable from a policy that refuses everyone, or from a fixture
@@ -248,17 +269,35 @@ ROLLBACK;
 -- C3 is the second positive control, from the other direction: without it, a
 -- policy that hid the entire table from students -- not just drafts -- would
 -- still pass C2 and look correct.
+--
+-- C4 and C5 are the same pairing one level down, at the storage policy
+-- rather than the table policy. C4's object is attached to the published
+-- assignment, so on its own it cannot catch a storage policy that never
+-- learned about published_at at all -- it would pass either way. C5 attaches
+-- a second object to the DRAFT assignment and asserts the student reading it
+-- gets zero rows; both are needed for the same reason C1 and C3 are both
+-- needed alongside C2.
+--
+-- C6 is the one branch of the read policy no other case here exercises --
+-- mentors_a_member_of_group. The spec calls mentor access "not optional",
+-- and listPendingReviews uses group_assignments!inner, so if this branch
+-- broke, a mentor would lose the entire review card, not just a field.
 -- ============================================================
 
 BEGIN;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; grp UUID; kpi UUID;
-  a_draft UUID; a_pub UUID; obj_path TEXT;
+  adv UUID; stu UUID; mentor UUID; grp UUID; kpi UUID;
+  a_draft UUID; a_pub UUID; obj_path TEXT; obj_draft_path TEXT;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu FROM profiles WHERE role = 'student'  ORDER BY created_at LIMIT 1;
+
+  -- Optional: C6 needs a mentor profile with student_profiles.mentor_id
+  -- pointed at stu. When the database has none, mentor stays NULL and C6
+  -- alone SKIPs below -- the rest of Part C does not depend on it.
+  SELECT id INTO mentor FROM profiles WHERE role = 'mentor' ORDER BY created_at LIMIT 1;
 
   IF adv IS NULL OR stu IS NULL THEN
     PERFORM set_config('probe.ready', 'no', true);
@@ -296,6 +335,15 @@ BEGIN
 
   INSERT INTO group_memberships (group_id, student_id) VALUES (grp, stu);
 
+  -- C6's fixture: point stu's mentor_id at the mentor profile found above,
+  -- if there was one. This is what mentors_a_member_of_group actually reads
+  -- (docs/task-assignment-migration.sql), and it is undone by this probe's
+  -- ROLLBACK same as everything else here, including whatever mentor_id stu
+  -- already had.
+  IF mentor IS NOT NULL THEN
+    UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
+  END IF;
+
   -- a_draft: published_at left NULL. a_pub: published directly as the owner
   -- with a real timestamp -- the point of this fixture is a known starting
   -- state, not an exercise of publish_assignments, which Part B already
@@ -328,12 +376,21 @@ BEGIN
               || extract(epoch FROM clock_timestamp())::bigint::text || '_brief.pdf';
   INSERT INTO storage.objects (bucket_id, name) VALUES ('assignment-docs', obj_path);
 
-  PERFORM set_config('probe.ready',    'yes',         true);
-  PERFORM set_config('probe.adv',      adv::text,     true);
-  PERFORM set_config('probe.stu',      stu::text,     true);
-  PERFORM set_config('probe.a_draft',  a_draft::text, true);
-  PERFORM set_config('probe.a_pub',    a_pub::text,   true);
-  PERFORM set_config('probe.obj_path', obj_path,      true);
+  -- A second document, this one attached to the DRAFT assignment a_draft --
+  -- C5's fixture. See the header comment above for why C4's object alone
+  -- cannot catch a storage policy that never learned about published_at.
+  obj_draft_path := grp::text || '/' || a_draft::text || '/'
+              || extract(epoch FROM clock_timestamp())::bigint::text || '_draft_brief.pdf';
+  INSERT INTO storage.objects (bucket_id, name) VALUES ('assignment-docs', obj_draft_path);
+
+  PERFORM set_config('probe.ready',         'yes',         true);
+  PERFORM set_config('probe.adv',           adv::text,     true);
+  PERFORM set_config('probe.stu',           stu::text,     true);
+  PERFORM set_config('probe.mentor',        coalesce(mentor::text, ''), true);
+  PERFORM set_config('probe.a_draft',       a_draft::text, true);
+  PERFORM set_config('probe.a_pub',         a_pub::text,   true);
+  PERFORM set_config('probe.obj_path',      obj_path,      true);
+  PERFORM set_config('probe.obj_draft_path', obj_draft_path, true);
 END $$;
 
 -- If this raises 42501 in your editor, STOP. Do not replace the cases below
@@ -344,12 +401,13 @@ SET LOCAL ROLE authenticated;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; a_draft UUID; a_pub UUID; obj_path TEXT;
+  adv UUID; stu UUID; mentor UUID; a_draft UUID; a_pub UUID;
+  obj_path TEXT; obj_draft_path TEXT;
   n INT; log TEXT := '';
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
     PERFORM set_config('probe.results',
-      'C1-C4 policies' || E'\t'
+      'C1-C6 policies' || E'\t'
       || 'SKIP: needs one advisor profile, one student profile, '
       || 'and a KPI with two triplets' || E'\n', true);
     RETURN;
@@ -357,9 +415,13 @@ BEGIN
 
   adv      := current_setting('probe.adv')::UUID;
   stu      := current_setting('probe.stu')::UUID;
+  -- mentor is optional -- see the fixture comment above. Empty string means
+  -- the database had none, and C6 alone SKIPs for it below.
+  mentor   := NULLIF(current_setting('probe.mentor'), '')::UUID;
   a_draft  := current_setting('probe.a_draft')::UUID;
   a_pub    := current_setting('probe.a_pub')::UUID;
   obj_path := current_setting('probe.obj_path');
+  obj_draft_path := current_setting('probe.obj_draft_path');
 
   -- Each case from here on is wrapped in its own BEGIN..EXCEPTION so an
   -- unexpected throw in one case reports ABORTED for that case instead of
@@ -436,6 +498,45 @@ BEGIN
         || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
+  -- C5. The same student attempts to sign a document attached to the DRAFT
+  --     assignment (a_draft) instead. This is the case C4 alone cannot be --
+  --     see the header comment above and F1 in the review this responds to:
+  --     a storage policy gated only on the group, never on published_at,
+  --     would still pass C4 (obj_path's assignment IS published) while
+  --     leaking every draft's brief. Still authenticated as stu.
+  BEGIN
+    SELECT count(*) INTO n FROM storage.objects
+    WHERE bucket_id = 'assignment-docs' AND name = obj_draft_path;
+    log := log || 'C5 student signs a DRAFT''s document' || E'\t'
+        || CASE WHEN n = 0 THEN '0 rows -- draft document hidden'
+                ELSE 'FAIL: ' || n || ' rows leaked -- a draft''s brief is readable' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C5 student signs a DRAFT''s document' || E'\t'
+        || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- C6. A mentor of stu reads the published assignment. The one branch of
+  --     "assignments read" no other case here exercises --
+  --     mentors_a_member_of_group. SKIPs on its own, without failing the
+  --     rest of Part C, when the database has no mentor profile to attach.
+  IF mentor IS NULL THEN
+    log := log || 'C6 mentor reads a published assignment' || E'\t'
+        || 'SKIP: needs one mentor profile' || E'\n';
+  ELSE
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
+    BEGIN
+      SELECT count(*) INTO n FROM group_assignments WHERE id = a_pub;
+      log := log || 'C6 mentor reads a published assignment' || E'\t'
+          || CASE WHEN n = 1 THEN '1 row'
+                  WHEN n = 0 THEN 'FAIL: 0 rows -- the mentor branch is unreachable'
+                  ELSE 'FAIL: ' || n || ' rows' END || E'\n';
+    EXCEPTION WHEN OTHERS THEN
+      log := log || 'C6 mentor reads a published assignment' || E'\t'
+          || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+    END;
+  END IF;
+
   PERFORM set_config('probe.results', log, true);
 END $$;
 
@@ -470,6 +571,8 @@ ROLLBACK;
 -- loses its state (42P01).
 --
 -- Expected output: Part A one row reading PASS; Part B three rows; Part C
--- four rows. Any cell beginning FAIL, SKIP, INCONCLUSIVE or ABORTED is a real
--- result to look at, not noise to scroll past.
+-- six rows (C6 reads SKIP rather than a row count on a database with no
+-- mentor profile -- that is expected, not a failure). Any cell beginning
+-- FAIL, SKIP, INCONCLUSIVE or ABORTED is a real result to look at, not noise
+-- to scroll past.
 -- ============================================================
