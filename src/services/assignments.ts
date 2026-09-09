@@ -193,7 +193,17 @@ export const assignmentService = {
    *  exists to fix). uploadToBucket is the one POST-to-bucket routine
    *  logService's uploaders also call; the path this bucket wants is
    *  <groupId>/<assignmentId>/<timestamp>_<filename>, group id first,
-   *  because the storage policies key on it. */
+   *  because the storage policies key on it.
+   *
+   *  The filename SEGMENT is encodeURIComponent'd -- not the whole path, the
+   *  "/" separators are structural and must survive. uploadToBucket pastes
+   *  this path straight into a request URL by string concatenation, so a raw
+   *  "#" (or "?", "%", ...) in the picked filename is read as the start of a
+   *  URL fragment/query and everything after it is silently dropped from the
+   *  actual upload -- "Brief #2.pdf" reaches storage as "Brief ". document_path
+   *  then stores the full unencoded name while the real object goes by the
+   *  truncated one, and signing later fails outright. Encoding here keeps the
+   *  path that is stored, uploaded and later signed all the same string. */
   async uploadAssignmentDocument(
     groupId: string,
     assignmentId: string,
@@ -201,7 +211,7 @@ export const assignmentService = {
     fileName: string,
     fileType: string,
   ): Promise<{ path: string; name: string }> {
-    const storagePath = `${groupId}/${assignmentId}/${Date.now()}_${fileName}`;
+    const storagePath = `${groupId}/${assignmentId}/${Date.now()}_${encodeURIComponent(fileName)}`;
     await uploadToBucket(ASSIGNMENT_DOC_BUCKET, storagePath, uri, fileName, fileType);
     return { path: storagePath, name: fileName };
   },
