@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
+  View, Text, StyleSheet, ScrollView, RefreshControl,
   TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
 import { colors, spacing, borderRadius } from '@/theme';
+import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
@@ -78,6 +79,9 @@ export default function GroupAssignmentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  // "Send to students" publishes the whole tray in one RPC call, so one flag
+  // covers it -- unlike withdraw, there is no per-row identity to track here.
+  const [sending, setSending] = useState(false);
 
   const [pickedCompetency, setPickedCompetency] = useState<string | null>(null);
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
@@ -91,8 +95,8 @@ export default function GroupAssignmentsScreen() {
   // Holds the TRIPLETS, not just their ids, and that is load-bearing:
   // `triplets` below only ever contains the level currently on screen, so an
   // id-only set could not be resolved back to a task once the advisor moved to
-  // another competency. handleAssign would have created just the visible ones
-  // and reported success for all of them.
+  // another competency. handleAddToDraft would have created just the visible
+  // ones and reported success for all of them.
   const [picked, setPicked] = useState<Map<string, KpiTriplet>>(new Map());
   const [triplets, setTriplets] = useState<KpiTriplet[]>([]);
   // Discards a level fetch that a later tap has superseded -- readable
@@ -103,21 +107,11 @@ export default function GroupAssignmentsScreen() {
   const [dueDate, setDueDate] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // The edit sheet lives inline under the card being edited rather than as a
-  // separate modal, matching how the create form below is already laid out.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editObjective, setEditObjective] = useState('');
-  const [editCriterion, setEditCriterion] = useState('');
-  const [editDueDate, setEditDueDate] = useState('');
-  const [editShowDatePicker, setEditShowDatePicker] = useState(false);
-  const [editSaving, setEditSaving] = useState(false);
-  // Which assignment a withdrawal is in flight for. handleUpdate and
-  // handleAssign already had their own flags; without one here a double tap
-  // sends two deletes, and the second reports "already has submissions" for a
-  // row the first tap withdrew successfully.
-  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  // Per-card edit/withdraw/document state (title, objective, due date, the
+  // draft's document attach) lives inside AssignmentCard itself now -- see
+  // src/components/cards/AssignmentCard.tsx. This screen only needs to know
+  // that something changed, so it can re-run the one query both the draft
+  // tray and the sent list read from.
 
   const loadData = useCallback(async () => {
     if (!groupId) return;
@@ -229,7 +223,13 @@ export default function GroupAssignmentsScreen() {
     setDueDate('');
   }
 
-  async function handleAssign() {
+  // Writes the batch as drafts, not sent assignments -- createAssignment
+  // (singular, called once per triplet here) now leaves published_at unset,
+  // so the rows land in the tray rather than reaching students. Rows are
+  // written here, on this one tap, rather than on every tick: a
+  // tick-and-untick would otherwise be a write and a delete, and the
+  // multi-select would stop behaving like a selection.
+  async function handleAddToDraft() {
     if (!groupId || !user || picked.size === 0) return;
 
     // From the selection itself, not from `triplets` -- that array holds only
@@ -243,48 +243,23 @@ export default function GroupAssignmentsScreen() {
       // allSettled, not all: one refused row must not discard the rows that
       // were written. A partial result is reported as a partial result below
       // rather than as a blanket success or a blanket failure.
-      const results = await Promise.allSettled(
-        chosen.map((tr) =>
-          assignmentService.createAssignment({
-            groupId,
-            tripletId: tr.id,
-            title: tr.task,
-            objective: tr.objective,
-            criterion: tr.criterion,
-            dueDate: dueDate || undefined,
-            createdBy: user.id,
-          }),
-        ),
+      const results = await assignmentService.createDrafts(
+        chosen.map((tr) => ({
+          groupId,
+          tripletId: tr.id,
+          title: tr.task,
+          objective: tr.objective,
+          criterion: tr.criterion,
+          dueDate: dueDate || undefined,
+          createdBy: user.id,
+        })),
       );
 
       const created = results.filter((r) => r.status === 'fulfilled').length;
       const firstRejection = results.find((r) => r.status === 'rejected');
 
-      if (created > 0) {
-        // ONE notification per student for the whole batch. Notifying per
-        // assignment meant N tasks x M students: a student picking up twenty
-        // tasks got twenty separate alerts, which is noise, not news.
-        //
-        // Delivery stays best-effort -- a failure here must never make
-        // assignments that were written look like they failed.
-        const single = created === 1 ? chosen[0] : null;
-        await Promise.all(
-          members.map((m) =>
-            notificationService.create(
-              m.id,
-              t('notifications.taskAssignedTitle'),
-              single
-                ? t('notifications.taskAssignedBody', { title: single.task })
-                : t('notifications.tasksAssignedBody', { count: created }),
-              'task_assigned',
-              {},
-            ).catch((e) => console.warn('notify failed:', e)),
-          ),
-        );
-      }
-
       if (created === chosen.length) {
-        Alert.alert(t('common.done'), t('advisor.assignmentsCreated', { count: created }));
+        Alert.alert(t('common.done'), t('advisor.draftsCreated', { count: created }));
         resetForm();
       } else if (created > 0) {
         // Drop the ones that landed from the selection, so the summary counts
@@ -302,7 +277,7 @@ export default function GroupAssignmentsScreen() {
         // advisor unable to tell whether to retry the whole batch.
         Alert.alert(
           t('common.error'),
-          t('advisor.assignmentsPartial', { created, total: chosen.length }),
+          t('advisor.draftsPartial', { created, total: chosen.length }),
         );
       } else if (firstRejection && firstRejection.status === 'rejected') {
         const reason = firstRejection.reason;
@@ -310,6 +285,8 @@ export default function GroupAssignmentsScreen() {
         Alert.alert(t('common.error'), t(key));
       }
 
+      // The new cards appear in the tray -- no notification here. Nothing
+      // has reached a student yet; that is what "Send to students" is for.
       await loadData();
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
@@ -319,98 +296,61 @@ export default function GroupAssignmentsScreen() {
     }
   }
 
-  function openEdit(a: GroupAssignment) {
-    setEditingId(a.id);
-    setEditTitle(a.title);
-    setEditDescription(a.description || '');
-    setEditObjective(a.objective);
-    setEditCriterion(a.criterion);
-    setEditDueDate(a.dueDate || '');
-    setEditShowDatePicker(false);
-  }
-
-  function closeEdit() {
-    setEditingId(null);
-    setEditShowDatePicker(false);
-  }
-
-  async function handleUpdate(a: GroupAssignment, canEditTerms: boolean) {
-    if (!editTitle.trim()) {
-      Alert.alert(t('common.error'), t('advisor.assignmentTitleRequired'));
-      return;
-    }
-    // Send only what changed -- the server is still the authority on whether
-    // objective/criterion may move, but there is no reason to resend fields
-    // the advisor never touched.
-    const patch: {
-      title?: string; description?: string | null; dueDate?: string | null;
-      objective?: string; criterion?: string;
-    } = {};
-    const nextTitle = editTitle.trim();
-    if (nextTitle !== a.title) patch.title = nextTitle;
-    const nextDescription = editDescription.trim();
-    if (nextDescription !== (a.description || '')) patch.description = nextDescription || null;
-    if (editDueDate !== (a.dueDate || '')) patch.dueDate = editDueDate || null;
-    if (canEditTerms) {
-      const nextObjective = editObjective.trim();
-      const nextCriterion = editCriterion.trim();
-      if (nextObjective !== a.objective) patch.objective = nextObjective;
-      if (nextCriterion !== a.criterion) patch.criterion = nextCriterion;
-    }
-
-    if (Object.keys(patch).length === 0) {
-      closeEdit();
-      return;
-    }
-
-    setEditSaving(true);
+  // Publishes every draft currently in the tray. publish_assignments
+  // re-checks competency scope -- a group's targets can move between
+  // drafting and sending -- and refuses the WHOLE batch, naming the
+  // offending task, rather than sending some and stopping partway. So unlike
+  // handleAddToDraft there is no partial-result branch here: either every
+  // draft is published, or none are and the tray is untouched, which is
+  // exactly what leaves the advisor able to fix the named task and retry.
+  async function handleSendToStudents() {
+    if (drafts.length === 0) return;
+    setSending(true);
     try {
-      await assignmentService.updateAssignment(a.id, patch);
-      Alert.alert(t('common.done'), t('advisor.assignmentUpdated'));
-      closeEdit();
+      const count = await assignmentService.publishAssignments(drafts.map((d) => d.id));
+
+      // Same batch-notification shape handleAddToDraft's ancestor
+      // (handleAssign) used: one notification per student for the whole
+      // batch, best-effort so a delivery failure cannot make assignments
+      // that were actually sent look like they failed.
+      const single = drafts.length === 1 ? drafts[0] : null;
+      await Promise.all(
+        members.map((m) =>
+          notificationService.create(
+            m.id,
+            t('notifications.taskAssignedTitle'),
+            single
+              ? t('notifications.taskAssignedBody', { title: single.title })
+              : t('notifications.tasksAssignedBody', { count: drafts.length }),
+            'task_assigned',
+            {},
+          ).catch((e) => console.warn('notify failed:', e)),
+        ),
+      );
+
+      Alert.alert(t('common.done'), t('advisor.assignmentsSent', { count }));
       await loadData();
     } catch (err) {
-      const { key } = mapRpcError(err instanceof Error ? err.message : '');
-      Alert.alert(t('common.error'), t(key));
-    } finally {
-      setEditSaving(false);
-    }
-  }
-
-  function confirmWithdraw(a: GroupAssignment) {
-    Alert.alert(
-      t('advisor.withdrawAssignment'),
-      t('advisor.withdrawConfirm', { title: a.title }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('advisor.withdrawAssignment'), style: 'destructive', onPress: () => handleWithdraw(a) },
-      ],
-    );
-  }
-
-  async function handleWithdraw(a: GroupAssignment) {
-    // The delete itself is harmless twice -- the second affects zero rows --
-    // but a zero-row delete is indistinguishable from a refusal here, so the
-    // second tap reports "already has submissions" about an assignment the
-    // first tap withdrew successfully.
-    if (withdrawingId) return;
-    setWithdrawingId(a.id);
-    try {
-      const removed = await assignmentService.deleteAssignment(a.id);
-      if (!removed) {
-        Alert.alert(t('common.error'), t('advisor.assignmentHasSubmissions'));
-        return;
+      const { code, key, detail } = mapRpcError(err instanceof Error ? err.message : '');
+      // NOT_IN_SCOPE carries the offending task's title as `detail` -- an
+      // advisor told only "something is out of scope" has to hunt through
+      // the whole tray for it. The tray is deliberately left untouched (no
+      // loadData() here): the advisor has to fix the named task, and
+      // reloading could only ever confirm nothing changed.
+      if (code === 'NOT_IN_SCOPE' && detail) {
+        Alert.alert(t('common.error'), t('errors.notInScopeTitled', { title: detail }));
+      } else {
+        Alert.alert(t('common.error'), t(key));
       }
-      Alert.alert(t('common.done'), t('advisor.assignmentWithdrawn'));
-      if (editingId === a.id) closeEdit();
-      await loadData();
-    } catch (err) {
-      const { key } = mapRpcError(err instanceof Error ? err.message : '');
-      Alert.alert(t('common.error'), t(key));
     } finally {
-      setWithdrawingId(null);
+      setSending(false);
     }
   }
+
+  // Unset published_at means draft. Derived here, not queried separately --
+  // a second fetch is a second thing that can disagree with the first.
+  const drafts = assignments.filter((a) => !a.publishedAt);
+  const sentAssignments = assignments.filter((a) => !!a.publishedAt);
 
   // A level has two KPIs and each holds ten triplets, so the picker shows
   // twenty. Grouping under the KPI's statement reads "for this behaviour,
@@ -451,224 +391,63 @@ export default function GroupAssignmentsScreen() {
           <Text style={styles.hint}>{t('advisor.noAssignments')}</Text>
         )}
 
-        {assignments.map((a) => {
-          const counts = submissionCounts[a.id] || ZERO_COUNTS;
-          const due = a.dueDate ? fromIsoDate(a.dueDate) : null;
-          // Once any submission exists, trg_freeze_assessed_assignment refuses
-          // a change to objective/criterion/triplet_id/group_id. `submitted` is
-          // the whole tally -- approved and needs_revision are both subsets of
-          // it -- and it now comes from group_assignment_counts, which counts
-          // exactly the rows assignment_has_submissions sees. So this can no
-          // longer disagree with the trigger the way the old client-side count
-          // did once a submitting student left the group.
-          // countsUnavailable is a lock, not a zero. With no counts the screen
-          // cannot tell an untouched assignment from an assessed one, and
-          // guessing "untouched" would enable fields the trigger refuses --
-          // exactly the contradiction the server-side counts removed. Guess the
-          // restrictive way instead, and say so in the hint below.
-          const canEditTerms = !countsUnavailable && counts.submitted === 0;
-          // trg_assignment_within_scope is BEFORE INSERT only, deliberately, so
-          // an advisor may switch a competency off after assigning from it.
-          // Nothing else surfaces that: the assignment stays in the student's
-          // list, submit_assignment has no scope check, and the NOT_IN_SCOPE
-          // refusal finally lands on the MENTOR at review time, who cannot fix
-          // it. The advisor can, and this screen is where. An assignment whose
-          // competency could not be resolved is not flagged -- no answer is not
-          // the same as a negative one.
-          // a.competencyId comes from the same nested embed the card's
-          // competency chip reads, so the warning and the label can no longer
-          // disagree. This used to be a second round trip resolving
-          // triplet -> kpi -> competency by hand.
-          const outOfScope = !!a.competencyId && !inScope.has(a.competencyId);
-          const isEditing = editingId === a.id;
-          return (
-            <View key={a.id} style={styles.card}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardTitleFlex}>
-                  {!!a.competencyName && (
-                    <Text style={styles.competencyLine}>
-                      {a.competencyName}{a.level ? ` · L${a.level}` : ''}
-                    </Text>
-                  )}
-                  <Text style={styles.cardTitle}>{a.title}</Text>
-                </View>
-                <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    onPress={() => (isEditing ? closeEdit() : openEdit(a))}
-                    activeOpacity={0.7}
-                    style={styles.iconBtn}
-                  >
-                    <Ionicons name={isEditing ? 'close' : 'pencil-outline'} size={18} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => confirmWithdraw(a)}
-                    disabled={withdrawingId !== null}
-                    activeOpacity={0.7}
-                    style={styles.iconBtn}
-                  >
-                    {withdrawingId === a.id ? (
-                      <ActivityIndicator size="small" color={colors.error} />
-                    ) : (
-                      <Ionicons name="trash-outline" size={18} color={colors.error} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-              {!!a.description && <Text style={styles.subtle}>{a.description}</Text>}
-              {!!due && (
-                <Text style={styles.subtle}>
-                  {t('advisor.assignmentDueDate')}: {due.toLocaleDateString(i18n.language)}
-                </Text>
+        {/* One list, two views of it -- drafts and sent are both read from
+            `assignments`, never from a second query, so the two can no
+            longer disagree about a row's state. */}
+        {drafts.length > 0 && (
+          <>
+            <Text style={styles.sectionHeading}>{t('advisor.draftsHeading')}</Text>
+            {drafts.map((a) => (
+              <AssignmentCard
+                key={a.id}
+                assignment={a}
+                isDraft
+                counts={submissionCounts[a.id] || ZERO_COUNTS}
+                countsUnavailable={countsUnavailable}
+                memberCount={members.length}
+                outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
+                onChanged={loadData}
+              />
+            ))}
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleSendToStudents}
+              disabled={sending}
+              activeOpacity={0.7}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.primaryBtnText}>{t('advisor.sendToStudents')}</Text>
               )}
-              {outOfScope && (
-                <Text style={styles.warning}>{t('advisor.assignmentOutOfScope')}</Text>
-              )}
-              {/* approved and "sent back" are subsets of submitted, not further
-                  buckets alongside it -- the parenthesis is what says so. The
-                  member count is a separate question and survives a counts
-                  failure, so it is printed either way; printing 0/0/0 in place
-                  of counts nobody could load would just be a lie. */}
-              <Text style={styles.subtle}>
-                {countsUnavailable ? (
-                  t('advisor.assignmentCountsUnavailable')
-                ) : (
-                  <>
-                    {t('advisor.submittedCount', { count: counts.submitted })}
-                    {' ('}
-                    {t('advisor.approvedCount', { count: counts.approved })}
-                    {', '}
-                    {t('advisor.revisionCount', { count: counts.needsRevision })}
-                    {')'}
-                  </>
-                )}
-                {' / '}
-                {t('advisor.memberCount', { count: members.length })}
-              </Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-              {isEditing && (
-                <View style={styles.editPanel}>
-                  <Text style={styles.editPanelTitle}>{t('advisor.editAssignment')}</Text>
-
-                  <Text style={styles.label}>{t('advisor.assignmentTitle')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editTitle}
-                    onChangeText={setEditTitle}
-                    placeholderTextColor={colors.textDisabled}
-                  />
-
-                  <Text style={styles.label}>{t('advisor.assignmentDescription')}</Text>
-                  <TextInput
-                    style={[styles.input, styles.multilineInput]}
-                    value={editDescription}
-                    onChangeText={setEditDescription}
-                    placeholderTextColor={colors.textDisabled}
-                    multiline
-                  />
-
-                  <Text style={styles.label}>{t('advisor.assignmentObjective')}</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.multilineInput,
-                      !canEditTerms && styles.inputDisabled,
-                    ]}
-                    value={editObjective}
-                    onChangeText={setEditObjective}
-                    editable={canEditTerms}
-                    multiline
-                  />
-
-                  <Text style={styles.label}>{t('advisor.assignmentCriterion')}</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.multilineInput,
-                      !canEditTerms && styles.inputDisabled,
-                    ]}
-                    value={editCriterion}
-                    onChangeText={setEditCriterion}
-                    editable={canEditTerms}
-                    multiline
-                  />
-
-                  {/* Two different reasons for one locked state, and they must
-                      not be confused: "students have already submitted" is a
-                      fact, and asserting it when the counts never loaded would
-                      be inventing one. */}
-                  {!canEditTerms && (
-                    <Text style={styles.lockedHint}>
-                      {countsUnavailable
-                        ? t('advisor.assignmentTermsLockedUnknown')
-                        : t('advisor.assignmentTermsLocked')}
-                    </Text>
-                  )}
-
-                  <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>
-                  <TouchableOpacity
-                    style={styles.dateField}
-                    onPress={() => setEditShowDatePicker(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={editDueDate ? styles.dateValue : styles.datePlaceholder}>
-                      {editDueDate
-                        ? fromIsoDate(editDueDate)?.toLocaleDateString(i18n.language)
-                        : t('student.selectDate', 'Select a date')}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-                  </TouchableOpacity>
-
-                  {editShowDatePicker && (
-                    <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
-                      <DateTimePicker
-                        value={fromIsoDate(editDueDate) || new Date()}
-                        mode="date"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={(event, selected) => {
-                          if (Platform.OS === 'android') setEditShowDatePicker(false);
-                          if (event.type === 'dismissed' || !selected) return;
-                          setEditDueDate(toIsoDate(selected));
-                        }}
-                      />
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          style={styles.iosPickerDone}
-                          onPress={() => setEditShowDatePicker(false)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.iosPickerDoneText}>{t('common.done')}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-
-                  <View style={styles.editActionsRow}>
-                    <TouchableOpacity
-                      style={styles.secondaryBtn}
-                      onPress={closeEdit}
-                      disabled={editSaving}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.secondaryBtnText}>{t('common.cancel')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.primaryBtn, styles.editSaveBtn]}
-                      onPress={() => handleUpdate(a, canEditTerms)}
-                      disabled={editSaving}
-                      activeOpacity={0.7}
-                    >
-                      {editSaving ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.primaryBtnText}>{t('common.save')}</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          );
-        })}
+        {sentAssignments.length > 0 && (
+          <>
+            <Text style={styles.sectionHeading}>{t('advisor.sentHeading')}</Text>
+            {sentAssignments.map((a) => (
+              <AssignmentCard
+                key={a.id}
+                assignment={a}
+                isDraft={false}
+                counts={submissionCounts[a.id] || ZERO_COUNTS}
+                countsUnavailable={countsUnavailable}
+                memberCount={members.length}
+                // trg_assignment_within_scope is BEFORE INSERT only,
+                // deliberately, so an advisor may switch a competency off
+                // after assigning from it. Nothing else surfaces that: the
+                // assignment stays in the student's list, submit_assignment
+                // has no scope check, and the NOT_IN_SCOPE refusal finally
+                // lands on the MENTOR at review time, who cannot fix it. The
+                // advisor can, and this screen is where.
+                outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
+                onChanged={loadData}
+              />
+            ))}
+          </>
+        )}
 
         <Text style={styles.label}>{t('advisor.pickCompetency')}</Text>
         {competencies.length === 0 && (
@@ -828,14 +607,14 @@ export default function GroupAssignmentsScreen() {
 
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={handleAssign}
+              onPress={handleAddToDraft}
               disabled={saving}
               activeOpacity={0.7}
             >
               {saving ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.primaryBtnText}>{t('advisor.assign')}</Text>
+                <Text style={styles.primaryBtnText}>{t('advisor.addToDraft')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -873,7 +652,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
-  // Card
+  // Card -- the assignment card itself (header, competency line, edit panel,
+  // document attach) lives in AssignmentCard now; this screen only still
+  // reuses `card` for the triplet-picker and batch-summary boxes below, and
+  // `label` for their field labels.
   card: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
@@ -885,112 +667,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
-  // The task's competency and level, above the title. Same source on all
-  // three roles' cards: GroupAssignment.competencyName / .level, resolved
-  // once in assignmentService rather than derived per screen.
-  competencyLine: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  cardTitleFlex: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  iconBtn: {
-    padding: spacing.xs,
-  },
-  subtle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
   label: {
     fontSize: 12,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
+  // Draft tray / sent list headings.
+  sectionHeading: {
     fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.background,
-    marginBottom: spacing.sm,
-  },
-  multilineInput: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  inputDisabled: {
-    backgroundColor: colors.surface,
-    color: colors.textDisabled,
-  },
-  warning: {
-    fontSize: 13,
-    color: colors.warning,
-    marginTop: spacing.xs,
-  },
-  editPanel: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  editPanelTitle: {
-    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
-  },
-  lockedHint: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: -spacing.xs,
     marginBottom: spacing.sm,
-  },
-  editActionsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  secondaryBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  editSaveBtn: {
-    flex: 1,
-    marginTop: 0,
+    marginTop: spacing.xs,
   },
 
   // Competency chips
