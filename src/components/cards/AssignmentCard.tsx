@@ -394,8 +394,14 @@ export function AssignmentCard({
             </View>
           )}
 
-          {isDraft && (
-            <>
+          {/* Not gated on isDraft: title, description and due_date stay
+              editable after a task is sent, and the brief is meant to as
+              well -- trg_freeze_assessed_assignment is what protects
+              objective/criterion/triplet_id once a submission exists, and
+              setAssignmentDocument plus the UPDATE policy already allow this
+              unconditionally. An advisor who sends a batch and then finds
+              the wrong PDF attached needs a way back. */}
+          <>
               <Text style={styles.label}>{t('advisor.assignmentDocument')}</Text>
               {a.documentName ? (
                 <View style={styles.documentRow}>
@@ -432,7 +438,6 @@ export function AssignmentCard({
                 </TouchableOpacity>
               )}
             </>
-          )}
 
           <View style={styles.editActionsRow}>
             <TouchableOpacity
