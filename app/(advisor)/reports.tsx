@@ -28,7 +28,15 @@ const ADVISOR_COLOR = colors.info;
  *  names are what an advisor reads to tell two exports apart, so mangling them
  *  defeats the point of naming the group at all. */
 function csvCell(value: string | number): string {
-  const s = String(value ?? '');
+  let s = String(value ?? '');
+  // Excel and Sheets read a cell opening with =, +, - or @ as a formula, so a
+  // student named "-Ali" or a group named "=2026" executes on open. A leading
+  // apostrophe is the standard neutraliser and the sheet does not display it.
+  // Numbers are exempt: every number here is our own arithmetic, and quoting a
+  // negative one would only stop it parsing as a number.
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -107,11 +115,23 @@ export default function ReportsScreen() {
     try {
       const list = await groupService.listMyGroups(user.id);
       setGroups(list);
-      // Stay on the group the advisor was reading if it still exists;
-      // otherwise take the first, in the order the service returns them.
+      // A previous failure has been superseded by this success. Without this,
+      // an advisor who genuinely has no groups keeps seeing the failure card
+      // for the rest of the session, and the retry it advises can never clear
+      // it: the no-groups path calls loadReport(null), which returns before
+      // reaching its own setFailed(false).
+      setFailed(false);
+      // Stay on the group the advisor was reading if it still exists.
+      // Otherwise take the first ACTIVE one: listMyGroups orders by created_at
+      // DESC, so list[0] is whatever was made last, and archiving a short or
+      // mistaken term would silently park the screen on an empty group --
+      // "Students 0, Avg. Completion 0%", the exact misreading the no-groups
+      // empty state exists to avoid. Only when every group is archived does
+      // list[0] win, because then there is nothing better to show.
       const current = selectedRef.current;
+      const fallback = list.find((g) => !g.isArchived) ?? list[0];
       const next =
-        current && list.some((g) => g.id === current) ? current : list[0]?.id ?? null;
+        current && list.some((g) => g.id === current) ? current : fallback?.id ?? null;
       selectGroup(next);
       return next;
     } catch (err) {
@@ -179,8 +199,10 @@ export default function ReportsScreen() {
         ]),
       );
       // Approved and sent back are subsets of submitted. A reader who summed
-      // the last three columns would otherwise double-count.
-      lines.push(csvRow([t('advisor.submissionSubsetNote')]));
+      // the last three columns would otherwise double-count. This note names
+      // both, unlike the on-screen one, because "Sent Back" is a real column
+      // here and is not shown on screen at all.
+      lines.push(csvRow([t('advisor.csvSubsetNote')]));
       lines.push('');
 
       lines.push(t('advisor.csvCompetencyHeader'));
@@ -250,11 +272,18 @@ export default function ReportsScreen() {
           <Text style={styles.screenTitle}>{t('advisor.reportsTitle')}</Text>
           {/* No groups means no figures, so there is nothing to export -- an
               export button here would hand the advisor an empty CSV. */}
+          {/* loadingReport is part of the condition because `data` still holds
+              the PREVIOUS group's report while the newly-tapped one loads.
+              Exporting then would hand the advisor group A's file under group
+              B's highlighted chip. */}
           {hasGroups && (
             <TouchableOpacity
-              style={[styles.exportBtn, (exporting || !data) && { opacity: 0.6 }]}
+              style={[
+                styles.exportBtn,
+                (exporting || loadingReport || !data) && { opacity: 0.6 },
+              ]}
               onPress={handleExportCSV}
-              disabled={exporting || !data}
+              disabled={exporting || loadingReport || !data}
               activeOpacity={0.7}
             >
               {exporting ? (
@@ -289,15 +318,25 @@ export default function ReportsScreen() {
               {groups.map((g) => {
                 const active = g.id === selectedGroupId;
                 return (
+                  // An archived term is still worth reporting on, so it keeps
+                  // its chip -- but it says so, in the same dimmed-plus-badge
+                  // language groups.tsx already uses for archived groups.
                   <TouchableOpacity
                     key={g.id}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={[
+                      styles.chip,
+                      active && styles.chipActive,
+                      g.isArchived && { opacity: 0.6 },
+                    ]}
                     onPress={() => handleSelectGroup(g.id)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
                       {g.name}
                     </Text>
+                    {g.isArchived && (
+                      <Text style={styles.chipBadge}>{t('advisor.archived')}</Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -349,7 +388,9 @@ export default function ReportsScreen() {
                 </View>
                 {/* Approved sits inside submitted, not beside it. Two stat
                     cards side by side read as buckets, so this line says
-                    otherwise in words. */}
+                    otherwise in words. It speaks only of approved: sent back
+                    is a CSV column, and naming it here would explain a number
+                    the advisor cannot see. */}
                 <Text style={styles.subsetNote}>{t('advisor.submissionSubsetNote')}</Text>
 
                 {/* Competency completion */}
@@ -506,6 +547,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.full,
@@ -524,6 +568,15 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#fff',
+  },
+  chipBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    backgroundColor: colors.divider,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
+    borderRadius: borderRadius.full,
   },
 
   // Stats
