@@ -48,7 +48,7 @@ export default function MentorLayout() {
         }}
       />
       <Tabs.Screen
-        name="review-log"
+        name="pending-reviews"
         options={{
           title: 'Review',
           tabBarIcon: ({ color, size }) => (
@@ -56,7 +56,6 @@ export default function MentorLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="pending-reviews" options={{ href: null }} />
       <Tabs.Screen
         name="feedback"
         options={{

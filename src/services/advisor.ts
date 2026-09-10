@@ -183,26 +183,6 @@ export const advisorService = {
     return studentId;
   },
 
-  async validateLog(logId: string, notes?: string) {
-    await this._assertAdvisorOfLog(logId);
-
-    const updateData: Record<string, unknown> = {
-      status: 'validated',
-      advisor_validated_at: new Date().toISOString(),
-    };
-    if (notes) {
-      updateData.advisor_notes = notes;
-    }
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .update(updateData)
-      .eq('id', logId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
   async sendBackToMentor(logId: string, notes: string) {
     await this._assertAdvisorOfLog(logId);
 

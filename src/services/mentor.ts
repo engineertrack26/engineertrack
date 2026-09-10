@@ -24,9 +24,9 @@ export const mentorService = {
     return data;
   },
 
-  // Still used by app/(mentor)/review-log.tsx, which is out of scope for the
-  // daily-log-retirement plan's D3 task 1 -- left as-is so that screen keeps
-  // working until a later task repoints it at assignment_submissions.
+  // Dead as of D3 task 5: app/(mentor)/review-log.tsx was its last caller and
+  // has been deleted. Kept only because the rest of the daily-log service layer
+  // is still standing; remove it when daily_logs itself goes.
   async getPendingReviewLogs(mentorId: string) {
     // First get assigned student IDs
     const { data: students, error: studentsError } = await supabase

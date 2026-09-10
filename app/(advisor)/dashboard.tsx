@@ -305,11 +305,6 @@ export default function AdvisorDashboard() {
                 <Text style={styles.countBadge}> ({stats.pendingCount})</Text>
               )}
             </Text>
-            {pendingLogs.length > 0 && (
-              <TouchableOpacity onPress={() => router.push('/(advisor)/validation')}>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {pendingLogs.length === 0 ? (
@@ -320,12 +315,7 @@ export default function AdvisorDashboard() {
             </View>
           ) : (
             pendingLogs.map((log) => (
-              <TouchableOpacity
-                key={log.id}
-                style={styles.pendingCard}
-                onPress={() => router.push('/(advisor)/validation')}
-                activeOpacity={0.7}
-              >
+              <View key={log.id} style={styles.pendingCard}>
                 <View style={styles.pendingLeft}>
                   <View style={styles.pendingAvatar}>
                     <Text style={styles.pendingInitials}>
@@ -355,9 +345,8 @@ export default function AdvisorDashboard() {
                 </View>
                 <View style={styles.pendingRight}>
                   <Text style={styles.waitTime}>{getWaitTime(log.createdAt)}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textDisabled} />
                 </View>
-              </TouchableOpacity>
+              </View>
             ))
           )}
         </View>

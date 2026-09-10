@@ -1,1 +1,1 @@
-export { KpiChecklist } from './KpiChecklist';
+export {};

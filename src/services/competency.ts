@@ -105,15 +105,6 @@ export const competencyService = {
     }));
   },
 
-  async recordObservations(studentId: string, logId: string | null, kpiIds: string[]): Promise<void> {
-    const { error } = await supabase.rpc('record_kpi_observations', {
-      p_student_id: studentId,
-      p_log_id: logId,
-      p_kpi_ids: kpiIds,
-    });
-    if (error) throw new RpcError(error.message);
-  },
-
   /** This observer's existing ticks on one log, so the checklist opens pre-filled. */
   async getObservedKpiIds(studentId: string, logId: string, observerId: string): Promise<string[]> {
     const { data, error } = await supabase

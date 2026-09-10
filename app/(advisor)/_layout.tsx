@@ -51,15 +51,6 @@ export default function AdvisorLayout() {
       <Tabs.Screen name="group-competencies" options={{ href: null }} />
       <Tabs.Screen name="group-assignments" options={{ href: null }} />
       <Tabs.Screen
-        name="validation"
-        options={{
-          title: 'Validate',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="shield-checkmark-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="reports"
         options={{
           title: 'Reports',
