@@ -351,7 +351,14 @@ export const advisorService = {
     if (groupError) throw groupError;
 
     const groupName = (group as Record<string, unknown> | null)?.name as string || '';
-    const studentIds = members.map((m) => m.id);
+    // group.ts maps a membership's student id as `(s.id as string) || ''` --
+    // an empty string reaches competencyService.getProgress('') below, which
+    // Postgres rejects as an invalid UUID (22P02) and, inside Promise.all,
+    // fails the whole report over one unresolvable row. Drop those before
+    // studentIds and the progress fan-out are built, rather than changing
+    // group.ts out from under its other callers.
+    const validMembers = members.filter((m) => m.id);
+    const studentIds = validMembers.map((m) => m.id);
 
     if (studentIds.length === 0) {
       return {
@@ -397,7 +404,7 @@ export const advisorService = {
       }),
     );
 
-    const studentProgress: StudentReportRow[] = members.map((m) => {
+    const studentProgress: StudentReportRow[] = validMembers.map((m) => {
       const progress = progressByStudent.get(m.id) || [];
       const { percent } = competencyCompletion(progress);
       const mySubmissions = submissions.filter((s) => s.student_id === m.id);
@@ -405,7 +412,12 @@ export const advisorService = {
         id: m.id,
         name: `${m.firstName} ${m.lastName}`.trim(),
         completionPercent: percent,
-        submitted: mySubmissions.filter((s) => s.status === 'submitted').length,
+        // submitted is the TOTAL count, not "awaiting review" -- approved and
+        // needs_revision are subsets of it, same convention as
+        // group_assignment_counts (docs/task-assignment-rpcs.sql) and
+        // AssignmentCard.tsx's canEditTerms, which reads submitted === 0 as
+        // "nobody has submitted at all".
+        submitted: mySubmissions.length,
         approved: mySubmissions.filter((s) => s.status === 'approved').length,
       };
     });
@@ -435,7 +447,9 @@ export const advisorService = {
       averageCompletion: averageCompletion(
         studentProgress.map((s) => ({ percent: s.completionPercent })),
       ),
-      submitted: submissions.filter((s) => s.status === 'submitted').length,
+      // Same convention as above: submitted is every submission, not just
+      // the ones still awaiting review.
+      submitted: submissions.length,
       approved: submissions.filter((s) => s.status === 'approved').length,
       needsRevision: submissions.filter((s) => s.status === 'needs_revision').length,
       competencyBreakdown: Array.from(competencyMap.values()),
