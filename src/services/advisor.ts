@@ -5,6 +5,11 @@ import { competencyCompletion, averageCompletion } from '@/utils/reportMetrics';
 import type { CompetencyProgress } from '@/types/competency';
 import type { CompetencyBreakdown, GroupReportData, StudentReportRow } from '@/types/report';
 
+/** Daily logs were daily, so three days of nothing meant something. Tasks
+ *  carry deadlines and a student may legitimately work several days on one,
+ *  so the silence that is worth an advisor's attention starts a week out. */
+const INACTIVITY_THRESHOLD_DAYS = 7;
+
 export const advisorService = {
   async getAssignedStudents(advisorId: string) {
     const { data, error } = await supabase
@@ -29,129 +34,40 @@ export const advisorService = {
     return data;
   },
 
-  async getPendingValidationLogs(advisorId: string) {
-    // First get assigned student IDs
-    const { data: students, error: studentsError } = await supabase
-      .from('student_profiles')
-      .select('id')
-      .eq('advisor_id', advisorId);
-    if (studentsError) throw studentsError;
-
-    const studentIds = (students || []).map((s) => s.id);
-    if (studentIds.length === 0) return [];
-
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .select(`
-        *,
-        profiles!daily_logs_student_id_fkey (
-          first_name,
-          last_name,
-          avatar_url
-        ),
-        mentor_feedbacks (
-          rating,
-          comments,
-          is_approved
-        )
-      `)
-      .in('status', ['submitted', 'approved'])
-      .in('student_id', studentIds)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    return data;
-  },
-
-  async getValidatedLogsCount(advisorId: string) {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    // Get assigned student IDs
-    const { data: students, error: studentsError } = await supabase
-      .from('student_profiles')
-      .select('id')
-      .eq('advisor_id', advisorId);
-    if (studentsError) throw studentsError;
-
-    const studentIds = (students || []).map((s) => s.id);
-    if (studentIds.length === 0) return 0;
-
-    const { count, error } = await supabase
-      .from('daily_logs')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'validated')
-      .in('student_id', studentIds)
-      .gte('updated_at', startOfWeek.toISOString());
-    if (error) throw error;
-    return count || 0;
-  },
-
+  /** Completion here is competency attainment -- level reached against target
+   *  -- and deliberately the same arithmetic `getReportsData` runs, because
+   *  two advisor screens describing the same students must not disagree. It
+   *  is NOT the old "distinct submitted log dates against the internship's
+   *  calendar length", which was an attendance measure the app no longer
+   *  makes and which nothing writes the rows for any more. */
   async getDashboardStats(advisorId: string) {
-    const [students, pendingLogs, validatedCount] = await Promise.all([
-      this.getAssignedStudents(advisorId),
-      this.getPendingValidationLogs(advisorId),
-      this.getValidatedLogsCount(advisorId),
-    ]);
+    const students = (await this.getAssignedStudents(advisorId)) || [];
 
-    const studentIds = (students || []).map((s) => s.id);
-    const { data: logs } = studentIds.length
-      ? await supabase
-          .from('daily_logs')
-          .select('student_id, date, status')
-          .in('student_id', studentIds)
-      : { data: [] as Array<Record<string, unknown>> };
+    // Same guard getReportsData carries: an empty id reaches the RPC as an
+    // invalid UUID (22P02) and, inside Promise.all, fails the whole dashboard
+    // over one unresolvable row.
+    const percentByStudent = new Map<string, number>();
+    await Promise.all(
+      students.map(async (s) => {
+        const id = (s as Record<string, unknown>).id as string;
+        if (!id) return;
+        const progress = await competencyService.getProgress(id);
+        percentByStudent.set(id, competencyCompletion(progress).percent);
+      }),
+    );
 
-    const submittedDaysByStudent = new Map<string, number>();
-    const seenDatesByStudent = new Map<string, Set<string>>();
-    (logs || []).forEach((l) => {
-      const row = l as Record<string, unknown>;
-      const sid = row.student_id as string;
-      const status = (row.status as string) || 'draft';
-      const date = row.date as string;
-      if (!sid || !date || status === 'draft') return;
-      if (!seenDatesByStudent.has(sid)) {
-        seenDatesByStudent.set(sid, new Set<string>());
-      }
-      seenDatesByStudent.get(sid)!.add(date);
-    });
-    seenDatesByStudent.forEach((dates, sid) => {
-      submittedDaysByStudent.set(sid, dates.size);
-    });
-
-    // Calculate average completion percentage across students based on submitted days
-    const completionPercentages = (students || []).map((s) => {
+    const withPercent = students.map((s) => {
       const row = s as Record<string, unknown>;
-      const submittedDays = submittedDaysByStudent.get(row.id as string) || 0;
-      const start = row.internship_start_date as string | null;
-      const end = row.internship_end_date as string | null;
-      if (!start || !end || submittedDays <= 0) return 0;
-      const startDate = new Date(start).getTime();
-      const endDate = new Date(end).getTime();
-      const total = endDate - startDate;
-      if (total <= 0) return 0;
-      const totalDays = Math.max(1, Math.ceil(total / (1000 * 60 * 60 * 24)));
-      return Math.min(100, Math.max(0, Math.round((submittedDays / totalDays) * 100)));
+      return {
+        ...row,
+        completionPercent: percentByStudent.get(row.id as string) || 0,
+      };
     });
-    const avgCompletion =
-      completionPercentages.length > 0
-        ? Math.round(completionPercentages.reduce((a, b) => a + b, 0) / completionPercentages.length)
-        : 0;
 
     return {
-      assignedCount: students?.length || 0,
-      pendingCount: pendingLogs?.length || 0,
-      validatedThisWeek: validatedCount,
-      avgCompletion,
-      students: (students || []).map((s) => {
-        const row = s as Record<string, unknown>;
-        return {
-          ...row,
-          submitted_days: submittedDaysByStudent.get(row.id as string) || 0,
-        };
-      }),
-      pendingLogs: pendingLogs || [],
+      assignedCount: students.length,
+      avgCompletion: averageCompletion(withPercent.map((s) => ({ percent: s.completionPercent }))),
+      students: withPercent,
     };
   },
 
@@ -199,29 +115,76 @@ export const advisorService = {
     return data;
   },
 
+  /** Who has gone quiet on the task path. Two rules carry this, and both are
+   *  about not making a false accusation on the first screen an advisor sees:
+   *
+   *  1. The window is 7 days, not the daily log's 3. Logs were daily; a task
+   *     has a deadline and a student may legitimately spend several days on
+   *     one without that being silence.
+   *  2. A student whose group has no PUBLISHED assignment is never inactive.
+   *     Reaching "has never submitted" for someone nobody has given anything
+   *     to do is the same false accusation in a new form. A draft is the
+   *     advisor's own unsent preparation and RLS does not hide it from the
+   *     advisor the way it hides it from students, so `published_at IS NOT
+   *     NULL` is the only thing separating "assigned" from "being prepared". */
   async getInactiveStudents(advisorId: string) {
     const students = await this.getAssignedStudents(advisorId);
     if (!students || students.length === 0) return [];
 
-    const studentIds = students.map((s) => s.id);
-    const threshold = new Date();
-    threshold.setDate(threshold.getDate() - 3);
+    const studentIds = students.map((s) => s.id as string).filter(Boolean);
+    if (studentIds.length === 0) return [];
 
-    // Get the latest log date for each student
-    const { data: logs, error: logsError } = await supabase
-      .from('daily_logs')
-      .select('student_id, date')
+    // `left_at IS NULL` is "still a member": a group the student has left
+    // must not vouch for them having work to do.
+    const { data: memberships, error: membershipsError } = await supabase
+      .from('group_memberships')
+      .select('student_id, group_id')
       .in('student_id', studentIds)
-      .order('date', { ascending: false });
-    if (logsError) throw logsError;
+      .is('left_at', null);
+    if (membershipsError) throw membershipsError;
 
-    // Find the most recent log per student
-    const latestLogByStudent = new Map<string, string>();
-    (logs || []).forEach((l) => {
-      const row = l as Record<string, unknown>;
+    const groupByStudent = new Map<string, string>();
+    (memberships || []).forEach((m) => {
+      const row = m as Record<string, unknown>;
+      groupByStudent.set(row.student_id as string, row.group_id as string);
+    });
+
+    const groupIds = Array.from(new Set(groupByStudent.values()));
+    const groupsWithPublishedWork = new Set<string>();
+    if (groupIds.length > 0) {
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('group_assignments')
+        .select('group_id')
+        .in('group_id', groupIds)
+        .not('published_at', 'is', null);
+      if (assignmentsError) throw assignmentsError;
+      (assignments || []).forEach((a) => {
+        groupsWithPublishedWork.add((a as Record<string, unknown>).group_id as string);
+      });
+    }
+
+    // Rule 2 applied before anything is measured: a student with no published
+    // assignment is not considered at all.
+    const eligibleIds = studentIds.filter((id) => {
+      const groupId = groupByStudent.get(id);
+      return !!groupId && groupsWithPublishedWork.has(groupId);
+    });
+    if (eligibleIds.length === 0) return [];
+    const eligible = new Set(eligibleIds);
+
+    const { data: submissions, error: submissionsError } = await supabase
+      .from('assignment_submissions')
+      .select('student_id, submitted_at')
+      .in('student_id', eligibleIds)
+      .order('submitted_at', { ascending: false });
+    if (submissionsError) throw submissionsError;
+
+    const lastSubmissionByStudent = new Map<string, string>();
+    (submissions || []).forEach((s) => {
+      const row = s as Record<string, unknown>;
       const sid = row.student_id as string;
-      if (!latestLogByStudent.has(sid)) {
-        latestLogByStudent.set(sid, row.date as string);
+      if (!lastSubmissionByStudent.has(sid)) {
+        lastSubmissionByStudent.set(sid, row.submitted_at as string);
       }
     });
 
@@ -229,32 +192,36 @@ export const advisorService = {
       id: string;
       firstName: string;
       lastName: string;
-      daysSinceLastLog: number;
+      /** `null` is "has never submitted" -- an honest absence the screen
+       *  renders as "no submissions yet", not a sentinel day count. */
+      daysSinceLastSubmission: number | null;
     }[] = [];
 
     students.forEach((s) => {
       const row = s as Record<string, unknown>;
+      const id = row.id as string;
+      if (!eligible.has(id)) return;
       const profile = row.profiles as Record<string, unknown> | null;
-      const lastDate = latestLogByStudent.get(row.id as string);
-      let daysSince: number;
-      if (!lastDate) {
-        // No logs exist yet for this student.
-        daysSince = 999;
-      } else {
-        daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
-      }
+      const last = lastSubmissionByStudent.get(id);
+      const daysSince = last
+        ? Math.floor((Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24))
+        : null;
 
-      if (daysSince >= 3) {
+      if (daysSince === null || daysSince >= INACTIVITY_THRESHOLD_DAYS) {
         inactiveStudents.push({
-          id: row.id as string,
+          id,
           firstName: (profile?.first_name as string) || '',
           lastName: (profile?.last_name as string) || '',
-          daysSinceLastLog: daysSince,
+          daysSinceLastSubmission: daysSince,
         });
       }
     });
 
-    return inactiveStudents.sort((a, b) => b.daysSinceLastLog - a.daysSinceLastLog);
+    // Never-submitted first, then the longest silence.
+    const rank = (d: number | null) => (d === null ? Number.MAX_SAFE_INTEGER : d);
+    return inactiveStudents.sort(
+      (a, b) => rank(b.daysSinceLastSubmission) - rank(a.daysSinceLastSubmission),
+    );
   },
 
   async getStudentDetailedProgress(studentId: string) {

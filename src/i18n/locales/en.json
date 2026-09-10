@@ -326,7 +326,12 @@
     "csvColTargetLevel": "Target Level",
     "csvColStudentsAtTarget": "Students At Target",
     "csvColName": "Name",
-    "csvColCompletion": "Completion (%)"
+    "csvColCompletion": "Completion (%)",
+    "daysSinceLastSubmission_one": "{{count}} day since last submission",
+    "daysSinceLastSubmission_other": "{{count}} days since last submission",
+    "noSubmissionsYet": "No submissions yet",
+    "reminderTitle": "Task Reminder",
+    "reminderBody": "{{advisor}} noticed you have not submitted a task recently. Please take a look at your tasks."
   },
   "levels": {
     "beginner": "Beginner",
