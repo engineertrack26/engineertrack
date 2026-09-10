@@ -3,18 +3,35 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { colors, spacing, borderRadius } from '@/theme';
 
-interface FeedbackItem {
+// Two distinct histories, never merged into one shape: a task review has an
+// outcome and a note, a legacy log review has a 1-5 rating. Forcing them into
+// one interface is how you end up with a card that shows stars for a task
+// that was never rated, or an outcome column blank for an old log review.
+interface TaskFeedbackItem {
+  kind: 'task';
+  id: string;
+  assignmentTitle: string;
+  note: string;
+  approved: boolean;
+  reviewedAt: string;
+  studentFirstName: string;
+  studentLastName: string;
+}
+
+interface LegacyFeedbackItem {
+  kind: 'legacy';
   id: string;
   logId: string;
   rating: number;
@@ -28,7 +45,31 @@ interface FeedbackItem {
   logDate: string;
 }
 
-function mapFeedback(row: Record<string, unknown>): FeedbackItem {
+type FeedbackItem = TaskFeedbackItem | LegacyFeedbackItem;
+
+interface FeedbackSection {
+  key: string;
+  title: string;
+  hint?: string;
+  data: FeedbackItem[];
+}
+
+function mapTaskFeedback(row: Record<string, unknown>): TaskFeedbackItem {
+  const assignment = row.group_assignments as Record<string, unknown> | null;
+  const profile = row.profiles as Record<string, unknown> | null;
+  return {
+    kind: 'task',
+    id: row.id as string,
+    assignmentTitle: (assignment?.title as string) || '',
+    note: (row.mentor_note as string) || '',
+    approved: (row.status as string) === 'approved',
+    reviewedAt: (row.reviewed_at as string) || '',
+    studentFirstName: (profile?.first_name as string) || '',
+    studentLastName: (profile?.last_name as string) || '',
+  };
+}
+
+function mapLegacyFeedback(row: Record<string, unknown>): LegacyFeedbackItem {
   const dailyLog = row.daily_logs as Record<string, unknown> | null;
   let studentFirstName = '';
   let studentLastName = '';
@@ -40,6 +81,7 @@ function mapFeedback(row: Record<string, unknown>): FeedbackItem {
   }
 
   return {
+    kind: 'legacy',
     id: row.id as string,
     logId: (row.log_id as string) || '',
     rating: (row.rating as number) || 0,
@@ -69,19 +111,34 @@ function StarDisplay({ value, size = 14 }: { value: number; size?: number }) {
   );
 }
 
+const getInitials = (first: string, last: string) =>
+  `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
+
 export default function FeedbackScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [taskFeedback, setTaskFeedback] = useState<TaskFeedbackItem[]>([]);
+  const [legacyFeedback, setLegacyFeedback] = useState<LegacyFeedbackItem[]>([]);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await mentorService.getFeedbackHistory(user.id);
-      setFeedbacks(
-        (data || []).map((f) => mapFeedback(f as unknown as Record<string, unknown>)),
+      // Two independent histories -- the task path (assignment_submissions
+      // this mentor reviewed) and what predates it (mentor_feedbacks, still
+      // real). Neither is dropped; they render as separately-labelled groups
+      // below.
+      const [taskData, legacyData] = await Promise.all([
+        mentorService.getFeedbackHistory(user.id),
+        mentorService.getLegacyFeedbackHistory(user.id),
+      ]);
+      setTaskFeedback(
+        (taskData || []).map((f) => mapTaskFeedback(f as unknown as Record<string, unknown>)),
+      );
+      setLegacyFeedback(
+        (legacyData || []).map((f) => mapLegacyFeedback(f as unknown as Record<string, unknown>)),
       );
     } catch (err) {
       console.error('Feedback history load error:', err);
@@ -102,10 +159,56 @@ export default function FeedbackScreen() {
     setRefreshing(false);
   }, [loadData]);
 
-  const getInitials = (first: string, last: string) =>
-    `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
+  const renderTaskCard = (item: TaskFeedbackItem) => {
+    const reviewedDate = item.reviewedAt
+      ? new Date(item.reviewedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : '';
 
-  const renderFeedback = ({ item }: { item: FeedbackItem }) => {
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardTop}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.initials}>
+              {getInitials(item.studentFirstName, item.studentLastName)}
+            </Text>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.studentName} numberOfLines={1}>
+              {item.studentFirstName} {item.studentLastName}
+            </Text>
+            <Text style={styles.logDate}>{reviewedDate}</Text>
+          </View>
+          <View style={[styles.statusBadge, item.approved ? styles.approvedBadge : styles.rejectedBadge]}>
+            <Ionicons
+              name={item.approved ? 'checkmark-circle' : 'refresh-outline'}
+              size={13}
+              color={item.approved ? colors.success : colors.error}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: item.approved ? colors.success : colors.error },
+              ]}
+            >
+              {item.approved ? t('mentor.statusApproved') : t('mentor.statusRevision')}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.logTitle} numberOfLines={1}>{item.assignmentTitle}</Text>
+
+        {!!item.note && (
+          <Text style={styles.comments} numberOfLines={3}>{item.note}</Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderLegacyCard = (item: LegacyFeedbackItem) => {
     const formattedDate = item.logDate
       ? new Date(item.logDate).toLocaleDateString('en-US', {
           month: 'short',
@@ -122,7 +225,6 @@ export default function FeedbackScreen() {
 
     return (
       <View style={styles.card}>
-        {/* Top Row */}
         <View style={styles.cardTop}>
           <View style={styles.avatarContainer}>
             <Text style={styles.initials}>
@@ -147,24 +249,20 @@ export default function FeedbackScreen() {
                 { color: item.isApproved ? colors.success : colors.error },
               ]}
             >
-              {item.isApproved ? 'Approved' : 'Revision'}
+              {item.isApproved ? t('mentor.statusApproved') : t('mentor.statusRevision')}
             </Text>
           </View>
         </View>
 
-        {/* Log Title */}
         <Text style={styles.logTitle} numberOfLines={1}>{item.logTitle}</Text>
 
-        {/* Rating */}
         <View style={styles.ratingRow}>
           <StarDisplay value={item.rating} />
           <Text style={styles.ratingText}>{item.rating}/5</Text>
         </View>
 
-        {/* Comments */}
         <Text style={styles.comments} numberOfLines={2}>{item.comments}</Text>
 
-        {/* Revision Notes — only show if not yet approved */}
         {!item.isApproved && item.revisionNotes ? (
           <View style={styles.revisionBox}>
             <Text style={styles.revisionLabel}>Revision Notes:</Text>
@@ -172,7 +270,6 @@ export default function FeedbackScreen() {
           </View>
         ) : null}
 
-        {/* Footer */}
         <Text style={styles.feedbackDate}>Reviewed {feedbackDate}</Text>
       </View>
     );
@@ -188,17 +285,42 @@ export default function FeedbackScreen() {
     );
   }
 
+  const totalCount = taskFeedback.length + legacyFeedback.length;
+
+  // The old mentor_feedbacks rows are real feedback, not a fallback -- they
+  // stay visible in their own labelled group rather than being dropped or
+  // rendered with a blank star column now that the task path has no rating.
+  const sections: FeedbackSection[] = [];
+  if (taskFeedback.length > 0) {
+    sections.push({ key: 'task', title: t('mentor.taskFeedback'), data: taskFeedback });
+  }
+  if (legacyFeedback.length > 0) {
+    sections.push({
+      key: 'legacy',
+      title: t('mentor.earlierFeedback'),
+      hint: t('mentor.earlierFeedbackHint'),
+      data: legacyFeedback,
+    });
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.headerContainer}>
-        <Text style={styles.screenTitle}>Feedback History</Text>
-        <Text style={styles.countText}>{feedbacks.length} review{feedbacks.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.screenTitle}>{t('mentor.feedbackHistory')}</Text>
+        <Text style={styles.countText}>{t('mentor.reviewCount', { count: totalCount })}</Text>
       </View>
 
-      <FlatList
-        data={feedbacks}
+      <SectionList<FeedbackItem, FeedbackSection>
+        sections={sections}
         keyExtractor={(item) => item.id}
-        renderItem={renderFeedback}
+        renderItem={({ item }) => (item.kind === 'task' ? renderTaskCard(item) : renderLegacyCard(item))}
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeaderText}>{section.title}</Text>
+            {!!section.hint && <Text style={styles.sectionHeaderHint}>{section.hint}</Text>}
+          </View>
+        )}
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -207,10 +329,8 @@ export default function FeedbackScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubble-outline" size={64} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No Feedback Yet</Text>
-            <Text style={styles.emptyText}>
-              Your review history will appear here after you review student logs.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('mentor.noFeedbackYet')}</Text>
+            <Text style={styles.emptyText}>{t('mentor.noFeedbackYetDesc')}</Text>
           </View>
         }
       />
@@ -249,6 +369,23 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+
+  // Section headers
+  sectionHeaderRow: {
+    backgroundColor: colors.background,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  sectionHeaderText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sectionHeaderHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
 
   // Card

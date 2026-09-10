@@ -24,6 +24,9 @@ export const mentorService = {
     return data;
   },
 
+  // Still used by app/(mentor)/review-log.tsx, which is out of scope for the
+  // daily-log-retirement plan's D3 task 1 -- left as-is so that screen keeps
+  // working until a later task repoints it at assignment_submissions.
   async getPendingReviewLogs(mentorId: string) {
     // First get assigned student IDs
     const { data: students, error: studentsError } = await supabase
@@ -52,51 +55,90 @@ export const mentorService = {
     return data;
   },
 
-  async getReviewedLogsCount(mentorId: string) {
+  /** Four dashboard numbers on the task path. Pending count and the pending
+   *  preview list are deliberately NOT computed here: the dashboard already
+   *  fetches the pending queue once through assignmentService.listPendingReviews,
+   *  and asking the same "status = submitted" question again here would let
+   *  this and that disagree. See app/(mentor)/dashboard.tsx. */
+  async getDashboardStats(mentorId: string) {
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const { count, error } = await supabase
-      .from('mentor_feedbacks')
-      .select('id', { count: 'exact', head: true })
-      .eq('mentor_id', mentorId)
-      .gte('created_at', startOfWeek.toISOString());
-    if (error) throw error;
-    return count || 0;
-  },
-
-  async getDashboardStats(mentorId: string) {
-    const [students, pendingLogs, reviewedCount] = await Promise.all([
+    const [students, reviewedResult, weekResult] = await Promise.all([
       this.getAssignedStudents(mentorId),
-      this.getPendingReviewLogs(mentorId),
-      this.getReviewedLogsCount(mentorId),
+      // Approval rate: approved / reviewed, over this mentor's own reviews.
+      // mentor_feedbacks.rating (a 1-5 score) has no equivalent on the task
+      // path -- the mentor only approves or sends back -- so this replaces
+      // the old average-rating card rather than faking a number for it.
+      supabase
+        .from('assignment_submissions')
+        .select('status')
+        .eq('reviewed_by', mentorId)
+        .in('status', ['approved', 'needs_revision']),
+      supabase
+        .from('assignment_submissions')
+        .select('id', { count: 'exact', head: true })
+        .eq('reviewed_by', mentorId)
+        .gte('reviewed_at', startOfWeek.toISOString()),
     ]);
 
-    // Calculate average rating from this mentor's feedbacks
-    const { data: feedbacks, error: fbError } = await supabase
-      .from('mentor_feedbacks')
-      .select('rating')
-      .eq('mentor_id', mentorId);
-    if (fbError) throw fbError;
+    if (reviewedResult.error) throw reviewedResult.error;
+    if (weekResult.error) throw weekResult.error;
 
-    const avgRating =
-      feedbacks && feedbacks.length > 0
-        ? feedbacks.reduce((sum, f) => sum + (f.rating || 0), 0) / feedbacks.length
-        : 0;
+    const reviewedRows = (reviewedResult.data || []) as Array<{ status: string }>;
+    const approvedCount = reviewedRows.filter((r) => r.status === 'approved').length;
+    // null (not 0) when this mentor has never reviewed anything -- 0% approved
+    // and "no data yet" are different facts, and the card below only shows
+    // '-' for the latter.
+    const approvalRate =
+      reviewedRows.length > 0 ? Math.round((approvedCount / reviewedRows.length) * 100) : null;
 
     return {
       assignedCount: students?.length || 0,
-      pendingCount: pendingLogs?.length || 0,
-      reviewedThisWeek: reviewedCount,
-      avgRating: Math.round(avgRating * 10) / 10,
+      reviewedThisWeek: weekResult.count || 0,
+      approvalRate,
       students: students || [],
-      pendingLogs: pendingLogs || [],
     };
   },
 
+  /** This mentor's reviews on task submissions -- assignment_submissions rows
+   *  they reviewed, with a note attached. This is the task-path replacement
+   *  for the old mentor_feedbacks-based history; mentor_feedbacks itself is
+   *  untouched and still real, see getLegacyFeedbackHistory. */
   async getFeedbackHistory(mentorId: string) {
+    const { data, error } = await supabase
+      .from('assignment_submissions')
+      .select(`
+        id,
+        assignment_id,
+        student_id,
+        status,
+        mentor_note,
+        reviewed_at,
+        group_assignments (
+          title
+        ),
+        profiles!assignment_submissions_student_id_fkey (
+          first_name,
+          last_name,
+          avatar_url
+        )
+      `)
+      .eq('reviewed_by', mentorId)
+      .not('mentor_note', 'is', null)
+      .order('reviewed_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  /** The pre-task-path review history: mentor_feedbacks rows, with their 1-5
+   *  rating intact. This is real feedback that predates the task path, not a
+   *  fallback -- feedback.tsx shows it in its own clearly-labelled "earlier
+   *  feedback" group rather than dropping it or rendering it with a blank
+   *  star column. */
+  async getLegacyFeedbackHistory(mentorId: string) {
     const { data, error } = await supabase
       .from('mentor_feedbacks')
       .select(`
@@ -125,5 +167,24 @@ export const mentorService = {
       seen.add(logId);
       return true;
     });
+  },
+
+  /** Per-student submission counts for the mentor's student list -- replaces
+   *  the old logService.getLogsByStudent(student.id) count now that review
+   *  work happens on assignment_submissions, not daily_logs. No mentor filter
+   *  is needed: RLS already scopes this read to is_mentor_of(student_id). */
+  async getSubmissionCountsByStudent(studentId: string) {
+    const { data, error } = await supabase
+      .from('assignment_submissions')
+      .select('status')
+      .eq('student_id', studentId);
+    if (error) throw error;
+
+    const rows = (data || []) as Array<{ status: string }>;
+    return {
+      total: rows.length,
+      approved: rows.filter((r) => r.status === 'approved').length,
+      pending: rows.filter((r) => r.status === 'submitted').length,
+    };
   },
 };

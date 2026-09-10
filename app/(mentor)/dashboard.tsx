@@ -15,8 +15,10 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { assignmentService } from '@/services/assignments';
+import { supabase } from '@/services/supabase';
 import { StatCard } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
+import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
 
 interface StudentItem {
   id: string;
@@ -30,14 +32,7 @@ interface StudentItem {
   internshipEndDate?: string;
 }
 
-interface PendingLogItem {
-  id: string;
-  title: string;
-  date: string;
-  createdAt: string;
-  studentFirstName: string;
-  studentLastName: string;
-}
+type PendingReviewPreview = AssignmentSubmission & { assignment: GroupAssignment };
 
 function mapStudent(row: Record<string, unknown>): StudentItem {
   const profile = row.profiles as Record<string, unknown> | null;
@@ -54,18 +49,6 @@ function mapStudent(row: Record<string, unknown>): StudentItem {
   };
 }
 
-function mapPendingLog(row: Record<string, unknown>): PendingLogItem {
-  const profile = row.profiles as Record<string, unknown> | null;
-  return {
-    id: row.id as string,
-    title: (row.title as string) || '',
-    date: row.date as string,
-    createdAt: (row.created_at as string) || '',
-    studentFirstName: (profile?.first_name as string) || '',
-    studentLastName: (profile?.last_name as string) || '',
-  };
-}
-
 export default function MentorDashboard() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -73,45 +56,68 @@ export default function MentorDashboard() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    assignedCount: number;
+    pendingCount: number;
+    reviewedThisWeek: number;
+    approvalRate: number | null;
+  }>({
     assignedCount: 0,
     pendingCount: 0,
     reviewedThisWeek: 0,
-    avgRating: 0,
+    approvalRate: null,
   });
   const [students, setStudents] = useState<StudentItem[]>([]);
-  const [pendingLogs, setPendingLogs] = useState<PendingLogItem[]>([]);
-  // Task-assignment reviews are a separate domain from the daily-log reviews
-  // above -- mentorService.getDashboardStats knows nothing about them, so
-  // their count is its own fetch.
-  const [pendingTaskCount, setPendingTaskCount] = useState(0);
+  const [pendingPreview, setPendingPreview] = useState<PendingReviewPreview[]>([]);
+  const [studentNames, setStudentNames] = useState<Record<string, { firstName: string; lastName: string }>>({});
 
   const loadData = useCallback(async () => {
     if (!user) return;
     try {
-      const [result, pendingTasks] = await Promise.all([
+      // One fetch for the pending-review queue: its length is the "Pending
+      // Reviews" count and its first few rows are the preview list below.
+      // This used to be two separate questions -- getDashboardStats counting
+      // daily_logs, and listPendingReviews counting assignment_submissions --
+      // that could disagree once both read the same table.
+      const [result, pendingReviews] = await Promise.all([
         mentorService.getDashboardStats(user.id),
-        // One count on one card must not be able to empty this whole screen.
-        // Promise.all rejects as a unit, so a failure in the new
-        // task-assignment query would take the stats, the student list and the
-        // pending-log list down with it -- a daily-log dashboard that worked
-        // before this branch, hostage to a number beside it. Same guard
-        // achievements.tsx puts on competencyService.getProgress.
-        assignmentService.listPendingReviews().catch(() => []),
+        assignmentService.listPendingReviews(),
       ]);
       setStats({
         assignedCount: result.assignedCount,
-        pendingCount: result.pendingCount,
+        pendingCount: pendingReviews.length,
         reviewedThisWeek: result.reviewedThisWeek,
-        avgRating: result.avgRating,
+        approvalRate: result.approvalRate,
       });
       setStudents(
         (result.students || []).slice(0, 5).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
       );
-      setPendingLogs(
-        (result.pendingLogs || []).slice(0, 5).map((l) => mapPendingLog(l as unknown as Record<string, unknown>)),
-      );
-      setPendingTaskCount(pendingTasks.length);
+
+      const preview = pendingReviews.slice(0, 5);
+      setPendingPreview(preview);
+
+      // The submission/assignment shape carries a student id, not a name --
+      // resolved the same way app/(mentor)/pending-reviews.tsx resolves it:
+      // one batched query keyed by the ids already in hand.
+      const ids = Array.from(new Set(preview.map((p) => p.studentId).filter(Boolean)));
+      if (ids.length > 0) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', ids);
+        if (error) throw error;
+        const names: Record<string, { firstName: string; lastName: string }> = {};
+        for (const row of data || []) {
+          const r = row as Record<string, unknown>;
+          names[r.id as string] = {
+            firstName: (r.first_name as string) || '',
+            lastName: (r.last_name as string) || '',
+          };
+        }
+        setStudentNames(names);
+      } else {
+        setStudentNames({});
+      }
     } catch (err) {
       console.error('Mentor dashboard load error:', err);
     } finally {
@@ -206,94 +212,76 @@ export default function MentorDashboard() {
             />
             <View style={{ width: spacing.sm }} />
             <StatCard
-              title="Avg Rating"
-              value={stats.avgRating > 0 ? stats.avgRating.toFixed(1) : '-'}
-              icon="star"
-              color={colors.gamification.gold}
+              title={t('mentor.approvalRate')}
+              value={stats.approvalRate !== null ? `${stats.approvalRate}%` : '-'}
+              icon="thumbs-up"
+              color={colors.success}
             />
           </View>
         </View>
 
-        {/* Pending Reviews */}
+        {/* Pending Reviews -- task submissions awaiting this mentor's review.
+            One queue, fetched once (see loadData): the count above, the
+            preview list here, and the full list on pending-reviews.tsx all
+            read the same assignment_submissions rows. */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Pending Reviews
+              {t('mentor.pendingTaskReviews')}
               {stats.pendingCount > 0 && (
                 <Text style={styles.countBadge}> ({stats.pendingCount})</Text>
               )}
             </Text>
-            {pendingLogs.length > 0 && (
-              <TouchableOpacity onPress={() => router.push('/(mentor)/review-log')}>
+            {pendingPreview.length > 0 && (
+              <TouchableOpacity onPress={() => router.push('/(mentor)/pending-reviews')}>
                 <Text style={styles.seeAll}>See all</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {pendingLogs.length === 0 ? (
+          {pendingPreview.length === 0 ? (
             <View style={styles.emptyCard}>
               <Ionicons name="checkmark-circle" size={40} color={colors.success} />
               <Text style={styles.emptyTitle}>All caught up!</Text>
-              <Text style={styles.emptyText}>No pending reviews at the moment.</Text>
+              <Text style={styles.emptyText}>{t('mentor.noPendingReviews')}</Text>
             </View>
           ) : (
-            pendingLogs.map((log) => (
-              <TouchableOpacity
-                key={log.id}
-                style={styles.pendingCard}
-                onPress={() => router.push('/(mentor)/review-log')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.pendingLeft}>
-                  <View style={styles.pendingAvatar}>
-                    <Text style={styles.pendingInitials}>
-                      {getInitials(log.studentFirstName, log.studentLastName)}
-                    </Text>
+            pendingPreview.map((item) => {
+              const name = studentNames[item.studentId];
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.pendingCard}
+                  onPress={() => router.push('/(mentor)/pending-reviews')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.pendingLeft}>
+                    <View style={styles.pendingAvatar}>
+                      <Text style={styles.pendingInitials}>
+                        {getInitials(name?.firstName || '', name?.lastName || '')}
+                      </Text>
+                    </View>
+                    <View style={styles.pendingInfo}>
+                      <Text style={styles.pendingStudent} numberOfLines={1}>
+                        {name ? `${name.firstName} ${name.lastName}` : ''}
+                      </Text>
+                      <Text style={styles.pendingTitle} numberOfLines={1}>{item.assignment.title}</Text>
+                      <Text style={styles.pendingDate}>
+                        {new Date(item.submittedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.pendingInfo}>
-                    <Text style={styles.pendingStudent} numberOfLines={1}>
-                      {log.studentFirstName} {log.studentLastName}
-                    </Text>
-                    <Text style={styles.pendingTitle} numberOfLines={1}>{log.title}</Text>
-                    <Text style={styles.pendingDate}>
-                      {new Date(log.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
+                  <View style={styles.pendingRight}>
+                    <Text style={styles.waitTime}>{getWaitTime(item.submittedAt)}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textDisabled} />
                   </View>
-                </View>
-                <View style={styles.pendingRight}>
-                  <Text style={styles.waitTime}>{getWaitTime(log.createdAt)}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textDisabled} />
-                </View>
-              </TouchableOpacity>
-            ))
+                </TouchableOpacity>
+              );
+            })
           )}
-        </View>
-
-        {/* Pending Task Reviews -- a separate queue from the daily-log
-            reviews above: task submissions carry a criterion the mentor
-            judges against, and an approval writes a KPI observation. */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.taskReviewCard}
-            onPress={() => router.push('/(mentor)/pending-reviews')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.taskReviewLeft}>
-              <View style={styles.taskReviewIconWrap}>
-                <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
-              </View>
-              <Text style={styles.taskReviewTitle}>
-                {t('mentor.pendingTaskReviews')}
-                {pendingTaskCount > 0 && (
-                  <Text style={styles.countBadge}> ({pendingTaskCount})</Text>
-                )}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
-          </TouchableOpacity>
         </View>
 
         {/* My Students */}
@@ -463,41 +451,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: spacing.xs,
-  },
-
-  // Pending Task Reviews
-  taskReviewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-  },
-  taskReviewLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  taskReviewIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  taskReviewTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 1,
   },
 
   // Pending Cards

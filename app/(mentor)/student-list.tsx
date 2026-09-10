@@ -16,9 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
-import { logService } from '@/services/logs';
 import { studentCodeService } from '@/services/studentCode';
-import { DailyLog } from '@/types/log';
 import { colors, spacing, borderRadius } from '@/theme';
 import { parseStudentCode } from '@/utils/codes';
 import { mapRpcError } from '@/utils/rpcErrors';
@@ -101,21 +99,14 @@ export default function StudentListScreen() {
 
   const handleStudentPress = useCallback(async (student: StudentItem) => {
     try {
-      const logs = await logService.getLogsByStudent(student.id);
-      const logCount = logs?.length || 0;
-      const approvedCount = (logs || []).filter(
-        (l: Record<string, unknown>) => l.status === 'approved' || l.status === 'validated',
-      ).length;
-      const submittedCount = (logs || []).filter(
-        (l: Record<string, unknown>) => l.status === 'submitted',
-      ).length;
+      const counts = await mentorService.getSubmissionCountsByStudent(student.id);
 
       Alert.alert(
         `${student.firstName} ${student.lastName}`,
         [
-          `Total Logs: ${logCount}`,
-          `Approved: ${approvedCount}`,
-          `Pending Review: ${submittedCount}`,
+          t('mentor.studentTotalTasks', { count: counts.total }),
+          t('mentor.studentApprovedTasks', { count: counts.approved }),
+          t('mentor.studentPendingTasks', { count: counts.pending }),
           `XP: ${student.totalXp}`,
           `Level: ${student.currentLevel}`,
           `Streak: ${student.currentStreak} days`,
@@ -125,7 +116,7 @@ export default function StudentListScreen() {
     } catch {
       Alert.alert('Error', 'Failed to load student details.');
     }
-  }, []);
+  }, [t]);
 
   const handleLinkStudent = useCallback(async () => {
     if (!user || !codeInput.trim()) return;
