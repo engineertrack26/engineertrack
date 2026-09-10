@@ -32,8 +32,10 @@ interface StudentMonitorItem {
   internshipStartDate?: string;
   internshipEndDate?: string;
   completionPct: number;
-  daysCurrent: number;
-  daysTotal: number;
+  /** Both `null` together when the internship span is unknown: a missing or
+   *  unusable date is not day zero, so the counter is not rendered at all. */
+  daysCurrent: number | null;
+  daysTotal: number | null;
 }
 
 function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
@@ -46,15 +48,29 @@ function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
   const completionPct = (row.completionPercent as number) || 0;
   const start = row.internship_start_date as string | null;
   const end = row.internship_end_date as string | null;
-  // The day counter lost its source with the daily log and reads 0 either way
-  // -- left for the task that owns this screen rather than invented here.
-  const daysCurrent = 0;
-  let daysTotal = 0;
+  // Elapsed calendar days of the internship, which is what "Day 12 of 60"
+  // has always claimed to mean. It used to be driven by `submitted_days`, so
+  // it was really an attendance count wearing a calendar's label, and once
+  // that field went it read "Day 0" for everyone -- including a student two
+  // months in. Nothing here is submission-derived; both dates come off the
+  // row `getAssignedStudents` already selects.
+  const msPerDay = 1000 * 60 * 60 * 24;
+  let daysCurrent: number | null = null;
+  let daysTotal: number | null = null;
   if (start && end) {
     const startDate = new Date(start).getTime();
     const endDate = new Date(end).getTime();
-    const msPerDay = 1000 * 60 * 60 * 24;
-    daysTotal = Math.ceil((endDate - startDate) / msPerDay);
+    const span = Math.ceil((endDate - startDate) / msPerDay);
+    // An unparseable date gives NaN, and an end on or before the start gives
+    // a span of zero or less. Neither is a span we can honestly count within,
+    // so both leave the counter unrendered rather than showing "Day 0/0".
+    if (Number.isFinite(span) && span > 0) {
+      daysTotal = span;
+      // Clamped at both ends: an internship that has not started yet is day 0
+      // rather than a negative number, and one that has run past its end date
+      // reads "Day 60/60" rather than "Day 71/60".
+      daysCurrent = Math.max(0, Math.min(span, Math.ceil((Date.now() - startDate) / msPerDay)));
+    }
   }
   return {
     id: row.id as string,
@@ -237,9 +253,14 @@ export default function StudentMonitorScreen() {
       <View style={styles.progressSection}>
         <View style={styles.progressLabel}>
           <Text style={styles.progressLabelText}>Internship Progress</Text>
-          <Text style={styles.progressDays}>
-            Day {item.daysCurrent}/{item.daysTotal}
-          </Text>
+          {item.daysCurrent !== null && item.daysTotal !== null && (
+            <Text style={styles.progressDays}>
+              {t('advisor.internshipDay', {
+                current: item.daysCurrent,
+                total: item.daysTotal,
+              })}
+            </Text>
+          )}
         </View>
         <ProgressBar
           progress={item.completionPct / 100}
