@@ -38,24 +38,23 @@ interface StudentMonitorItem {
 
 function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
   const profile = row.profiles as Record<string, unknown> | null;
-  const submittedDays = (row.submitted_days as number) || 0;
+  // Competency attainment, straight off the service row -- the same number
+  // the advisor's dashboard and reports screen quote for this student. It was
+  // recomputed here from `submitted_days`, which getDashboardStats stopped
+  // returning when the daily log was retired; the Record<string, unknown>
+  // cast hid that from tsc, so this silently read 0 for everyone.
+  const completionPct = (row.completionPercent as number) || 0;
   const start = row.internship_start_date as string | null;
   const end = row.internship_end_date as string | null;
-  let completionPct = 0;
-  let daysCurrent = 0;
+  // The day counter lost its source with the daily log and reads 0 either way
+  // -- left for the task that owns this screen rather than invented here.
+  const daysCurrent = 0;
   let daysTotal = 0;
   if (start && end) {
     const startDate = new Date(start).getTime();
     const endDate = new Date(end).getTime();
-    const total = endDate - startDate;
     const msPerDay = 1000 * 60 * 60 * 24;
-    daysTotal = Math.ceil(total / msPerDay);
-    daysCurrent = Math.max(0, Math.min(daysTotal, submittedDays));
-    if (total > 0) {
-      completionPct = daysTotal > 0
-        ? Math.min(100, Math.max(0, Math.round((daysCurrent / daysTotal) * 100)))
-        : 0;
-    }
+    daysTotal = Math.ceil((endDate - startDate) / msPerDay);
   }
   return {
     id: row.id as string,

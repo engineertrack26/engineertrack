@@ -43,20 +43,31 @@ export const advisorService = {
   async getDashboardStats(advisorId: string) {
     const students = (await this.getAssignedStudents(advisorId)) || [];
 
-    // Same guard getReportsData carries: an empty id reaches the RPC as an
-    // invalid UUID (22P02) and, inside Promise.all, fails the whole dashboard
-    // over one unresolvable row.
-    const percentByStudent = new Map<string, number>();
-    await Promise.all(
-      students.map(async (s) => {
-        const id = (s as Record<string, unknown>).id as string;
-        if (!id) return;
-        const progress = await competencyService.getProgress(id);
-        percentByStudent.set(id, competencyCompletion(progress).percent);
-      }),
+    // Same guard getReportsData carries in `validMembers`: an empty id reaches
+    // the RPC as an invalid UUID (22P02), and a row with no id cannot be
+    // rendered or keyed anyway, so it leaves the population entirely rather
+    // than sitting in it scoring 0 and dragging the average down.
+    const resolvable = students.filter((s) => !!(s as Record<string, unknown>).id);
+
+    // allSettled, not all: a bare Promise.all turns one student's failed RPC
+    // into a rejected load, which dashboard.tsx catches into a console.error,
+    // leaving the advisor looking at 0 students and 0% with nothing on screen
+    // saying anything went wrong. A figure computed without one student beats
+    // a screen of zeros.
+    const settled = await Promise.allSettled(
+      resolvable.map((s) =>
+        competencyService.getProgress((s as Record<string, unknown>).id as string),
+      ),
     );
 
-    const withPercent = students.map((s) => {
+    const percentByStudent = new Map<string, number>();
+    settled.forEach((result, i) => {
+      if (result.status !== 'fulfilled') return;
+      const id = (resolvable[i] as Record<string, unknown>).id as string;
+      percentByStudent.set(id, competencyCompletion(result.value).percent);
+    });
+
+    const withPercent = resolvable.map((s) => {
       const row = s as Record<string, unknown>;
       return {
         ...row,
@@ -65,8 +76,15 @@ export const advisorService = {
     });
 
     return {
-      assignedCount: students.length,
-      avgCompletion: averageCompletion(withPercent.map((s) => ({ percent: s.completionPercent }))),
+      assignedCount: resolvable.length,
+      // Only students whose progress actually resolved are in the average. A
+      // student whose RPC failed stays in the list and the headcount -- they
+      // are a real assigned student, and hiding them from their advisor is
+      // worse -- but scoring them 0 here would report a read failure as a
+      // lack of progress.
+      avgCompletion: averageCompletion(
+        Array.from(percentByStudent.values()).map((percent) => ({ percent })),
+      ),
       students: withPercent,
     };
   },
@@ -150,43 +168,102 @@ export const advisorService = {
     });
 
     const groupIds = Array.from(new Set(groupByStudent.values()));
-    const groupsWithPublishedWork = new Set<string>();
+    // Assignment ids, not just group ids: the eligibility gate is scoped to
+    // published work, so the activity measure must be too. Counting *any*
+    // submission a student ever made lets a transfer hide a silence -- submit
+    // to the old group's task, move groups two days later, ignore everything
+    // the new group has published, and stay unflagged for five more days on
+    // the strength of work done for a group you are no longer in.
+    const publishedIdsByGroup = new Map<string, string[]>();
     if (groupIds.length > 0) {
       const { data: assignments, error: assignmentsError } = await supabase
         .from('group_assignments')
-        .select('group_id')
+        .select('id, group_id')
         .in('group_id', groupIds)
         .not('published_at', 'is', null);
       if (assignmentsError) throw assignmentsError;
       (assignments || []).forEach((a) => {
-        groupsWithPublishedWork.add((a as Record<string, unknown>).group_id as string);
+        const row = a as Record<string, unknown>;
+        const gid = row.group_id as string;
+        const list = publishedIdsByGroup.get(gid);
+        if (list) {
+          list.push(row.id as string);
+        } else {
+          publishedIdsByGroup.set(gid, [row.id as string]);
+        }
       });
     }
 
     // Rule 2 applied before anything is measured: a student with no published
     // assignment is not considered at all.
-    const eligibleIds = studentIds.filter((id) => {
+    const publishedIdsForStudent = (id: string): string[] => {
       const groupId = groupByStudent.get(id);
-      return !!groupId && groupsWithPublishedWork.has(groupId);
-    });
+      return groupId ? publishedIdsByGroup.get(groupId) || [] : [];
+    };
+    const eligibleIds = studentIds.filter((id) => publishedIdsForStudent(id).length > 0);
     if (eligibleIds.length === 0) return [];
-    const eligible = new Set(eligibleIds);
+    const allPublishedIds = Array.from(
+      new Set(eligibleIds.flatMap((id) => publishedIdsForStudent(id))),
+    );
 
-    const { data: submissions, error: submissionsError } = await supabase
+    // Two bounded reads rather than one unbounded one. A single
+    // `.in('student_id', ...).order('submitted_at')` over the whole cohort
+    // leans on PostgREST's db.max_rows (1000 on Supabase) to decide where to
+    // stop: a semester of weekly tasks across thirty students crosses it, the
+    // *quietest* students fall off the end of the descending page, and they
+    // render as "No submissions yet" -- precisely the false accusation this
+    // function exists to prevent, and silently, because a truncated page is
+    // not an error.
+    //
+    // Read one: who submitted inside the window? Bounded by the window, and
+    // truncating it is harmless -- anyone it drops is resolved exactly below.
+    //
+    // The cutoff is raw milliseconds, not `setDate(getDate() - 7)`, so it is
+    // exactly the arithmetic the day count below uses and cannot drift by an
+    // hour across a DST boundary. `.gt` and not `.gte` for the same reason:
+    // a submission landing exactly on the cutoff is 7 days old, which is
+    // `daysSince >= 7` and therefore flagged, as it was before this split.
+    const cutoff = new Date(Date.now() - INACTIVITY_THRESHOLD_DAYS * 24 * 60 * 60 * 1000);
+
+    const { data: recent, error: recentError } = await supabase
       .from('assignment_submissions')
-      .select('student_id, submitted_at')
+      .select('student_id, assignment_id')
       .in('student_id', eligibleIds)
-      .order('submitted_at', { ascending: false });
-    if (submissionsError) throw submissionsError;
+      .in('assignment_id', allPublishedIds)
+      .gt('submitted_at', cutoff.toISOString());
+    if (recentError) throw recentError;
 
-    const lastSubmissionByStudent = new Map<string, string>();
-    (submissions || []).forEach((s) => {
-      const row = s as Record<string, unknown>;
+    const activeIds = new Set<string>();
+    (recent || []).forEach((r) => {
+      const row = r as Record<string, unknown>;
       const sid = row.student_id as string;
-      if (!lastSubmissionByStudent.has(sid)) {
-        lastSubmissionByStudent.set(sid, row.submitted_at as string);
+      // The `.in` above is a cross product over the advisor's groups; this
+      // narrows each row to the student's own current group's work.
+      if (publishedIdsForStudent(sid).includes(row.assignment_id as string)) {
+        activeIds.add(sid);
       }
     });
+
+    const silentIds = eligibleIds.filter((id) => !activeIds.has(id));
+    if (silentIds.length === 0) return [];
+
+    // Read two: only for the students who did not appear -- the handful about
+    // to be flagged -- and exactly one row each, so nothing can be truncated.
+    const lastSubmissionByStudent = new Map<string, string>();
+    await Promise.all(
+      silentIds.map(async (id) => {
+        const { data, error } = await supabase
+          .from('assignment_submissions')
+          .select('submitted_at')
+          .eq('student_id', id)
+          .in('assignment_id', publishedIdsForStudent(id))
+          .order('submitted_at', { ascending: false })
+          .limit(1);
+        if (error) throw error;
+        const row = (data || [])[0] as Record<string, unknown> | undefined;
+        if (row) lastSubmissionByStudent.set(id, row.submitted_at as string);
+      }),
+    );
 
     const inactiveStudents: {
       id: string;
@@ -197,10 +274,15 @@ export const advisorService = {
       daysSinceLastSubmission: number | null;
     }[] = [];
 
+    // `silent` and not `eligible`: a student who appeared in read one has
+    // submitted inside the window and is not considered further. Reading them
+    // off `lastSubmissionByStudent`, which read two never filled for them,
+    // would hand them a `null` and call them "No submissions yet".
+    const silent = new Set(silentIds);
     students.forEach((s) => {
       const row = s as Record<string, unknown>;
       const id = row.id as string;
-      if (!eligible.has(id)) return;
+      if (!silent.has(id)) return;
       const profile = row.profiles as Record<string, unknown> | null;
       const last = lastSubmissionByStudent.get(id);
       const daysSince = last
