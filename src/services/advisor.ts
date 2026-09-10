@@ -1,4 +1,9 @@
 import { supabase } from './supabase';
+import { competencyService } from './competency';
+import { groupService } from './group';
+import { competencyCompletion, averageCompletion } from '@/utils/reportMetrics';
+import type { CompetencyProgress } from '@/types/competency';
+import type { CompetencyBreakdown, GroupReportData, StudentReportRow } from '@/types/report';
 
 export const advisorService = {
   async getAssignedStudents(advisorId: string) {
@@ -331,95 +336,110 @@ export const advisorService = {
     };
   },
 
-  async getReportsData(advisorId: string) {
-    const students = await this.getAssignedStudents(advisorId);
-    const studentIds = (students || []).map((s) => s.id);
+  /** Competency attainment and task volume for one group, scoped to its
+   *  active students -- not `getAssignedStudents`, whose `advisor_id` column
+   *  is a single value `join_group_by_code` overwrites per advisor and never
+   *  clears on leaving, so it cannot tell two groups apart and keeps counting
+   *  a departed student forever. `groupService.listMembers` already reads
+   *  `group_memberships` scoped to this group with `left_at IS NULL`, which
+   *  is exactly "only active memberships count". */
+  async getReportsData(groupId: string): Promise<GroupReportData> {
+    const [{ data: group, error: groupError }, members] = await Promise.all([
+      supabase.from('internship_groups').select('id, name').eq('id', groupId).single(),
+      groupService.listMembers(groupId),
+    ]);
+    if (groupError) throw groupError;
+
+    const groupName = (group as Record<string, unknown> | null)?.name as string || '';
+    const studentIds = members.map((m) => m.id);
+
     if (studentIds.length === 0) {
       return {
-        totalStudents: 0,
-        totalLogs: 0,
-        approvedRate: 0,
-        avgMentorScore: 0,
+        groupId,
+        groupName,
+        studentCount: 0,
+        averageCompletion: 0,
+        submitted: 0,
+        approved: 0,
+        needsRevision: 0,
+        competencyBreakdown: [],
         studentProgress: [],
-        statusBreakdown: { draft: 0, submitted: 0, approved: 0, validated: 0, needs_revision: 0 },
       };
     }
 
-    // Get all logs for assigned students
-    const { data: allLogs, error: logsError } = await supabase
-      .from('daily_logs')
-      .select('id, status, student_id, date')
-      .in('student_id', studentIds);
-    if (logsError) throw logsError;
+    // Published assignments only -- a draft is preparation the advisor has
+    // not sent yet. The RLS read policy does not hide drafts from the
+    // advisor the way it hides them from students and mentors, so this
+    // filter is the only thing separating "assigned" from "being prepared".
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('group_assignments')
+      .select('id')
+      .eq('group_id', groupId)
+      .not('published_at', 'is', null);
+    if (assignmentsError) throw assignmentsError;
+    const assignmentIds = (assignments || []).map((a) => (a as Record<string, unknown>).id as string);
 
-    const statusBreakdown = { draft: 0, submitted: 0, approved: 0, validated: 0, needs_revision: 0 };
-    (allLogs || []).forEach((l) => {
-      const status = (l as Record<string, unknown>).status as string;
-      if (status in statusBreakdown) {
-        statusBreakdown[status as keyof typeof statusBreakdown]++;
-      }
+    let submissions: Array<{ student_id: string; status: string }> = [];
+    if (assignmentIds.length > 0) {
+      const { data: subs, error: subsError } = await supabase
+        .from('assignment_submissions')
+        .select('student_id, status')
+        .in('assignment_id', assignmentIds)
+        .in('student_id', studentIds);
+      if (subsError) throw subsError;
+      submissions = (subs || []) as Array<{ student_id: string; status: string }>;
+    }
+
+    const progressByStudent = new Map<string, CompetencyProgress[]>();
+    await Promise.all(
+      studentIds.map(async (id) => {
+        progressByStudent.set(id, await competencyService.getProgress(id));
+      }),
+    );
+
+    const studentProgress: StudentReportRow[] = members.map((m) => {
+      const progress = progressByStudent.get(m.id) || [];
+      const { percent } = competencyCompletion(progress);
+      const mySubmissions = submissions.filter((s) => s.student_id === m.id);
+      return {
+        id: m.id,
+        name: `${m.firstName} ${m.lastName}`.trim(),
+        completionPercent: percent,
+        submitted: mySubmissions.filter((s) => s.status === 'submitted').length,
+        approved: mySubmissions.filter((s) => s.status === 'approved').length,
+      };
     });
 
-    const totalLogs = allLogs?.length || 0;
-    const approvedOrValidated = statusBreakdown.approved + statusBreakdown.validated;
-    const approvedRate = totalLogs > 0 ? Math.round((approvedOrValidated / totalLogs) * 100) : 0;
-
-    // Get average mentor score
-    const { data: feedbacks, error: fbError } = await supabase
-      .from('mentor_feedbacks')
-      .select('rating')
-      .in('log_id', (allLogs || []).map((l) => (l as Record<string, unknown>).id || '').filter(Boolean));
-
-    let avgMentorScore = 0;
-    if (!fbError && feedbacks && feedbacks.length > 0) {
-      avgMentorScore =
-        feedbacks.reduce((sum, f) => sum + ((f as Record<string, unknown>).rating as number || 0), 0) /
-        feedbacks.length;
-    }
-
-    // Build student progress list
-    const studentProgress = (students || []).map((s) => {
-      const row = s as Record<string, unknown>;
-      const profile = row.profiles as Record<string, unknown> | null;
-      const studentLogs = (allLogs || []).filter(
-        (l) => (l as Record<string, unknown>).student_id === row.id,
-      );
-      const start = row.internship_start_date as string | null;
-      const end = row.internship_end_date as string | null;
-      let completionPct = 0;
-      if (start && end) {
-        const submittedDays = new Set(
-          studentLogs
-            .filter((l) => ((l as Record<string, unknown>).status as string) !== 'draft')
-            .map((l) => (l as Record<string, unknown>).date as string)
-            .filter(Boolean),
-        ).size;
-        const startDate = new Date(start).getTime();
-        const endDate = new Date(end).getTime();
-        const total = endDate - startDate;
-        if (total > 0) {
-          const totalDays = Math.max(1, Math.ceil(total / (1000 * 60 * 60 * 24)));
-          completionPct = Math.min(100, Math.max(0, Math.round((submittedDays / totalDays) * 100)));
+    const competencyMap = new Map<string, CompetencyBreakdown>();
+    progressByStudent.forEach((progress) => {
+      progress.forEach((p) => {
+        const atTarget = p.currentLevel >= p.targetLevel ? 1 : 0;
+        const existing = competencyMap.get(p.competencyId);
+        if (existing) {
+          existing.studentsAtTarget += atTarget;
+        } else {
+          competencyMap.set(p.competencyId, {
+            competencyId: p.competencyId,
+            competencyName: p.name,
+            targetLevel: p.targetLevel,
+            studentsAtTarget: atTarget,
+          });
         }
-      }
-      return {
-        id: row.id as string,
-        firstName: (profile?.first_name as string) || '',
-        lastName: (profile?.last_name as string) || '',
-        totalLogs: studentLogs.length,
-        xp: (row.total_xp as number) || 0,
-        level: (row.current_level as number) || 1,
-        completionPct,
-      };
+      });
     });
 
     return {
-      totalStudents: students?.length || 0,
-      totalLogs,
-      approvedRate,
-      avgMentorScore: Math.round(avgMentorScore * 10) / 10,
+      groupId,
+      groupName,
+      studentCount: studentIds.length,
+      averageCompletion: averageCompletion(
+        studentProgress.map((s) => ({ percent: s.completionPercent })),
+      ),
+      submitted: submissions.filter((s) => s.status === 'submitted').length,
+      approved: submissions.filter((s) => s.status === 'approved').length,
+      needsRevision: submissions.filter((s) => s.status === 'needs_revision').length,
+      competencyBreakdown: Array.from(competencyMap.values()),
       studentProgress,
-      statusBreakdown,
     };
   },
 };
