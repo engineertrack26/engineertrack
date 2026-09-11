@@ -122,7 +122,7 @@ export default function StudentListScreen() {
     if (!user || !codeInput.trim()) return;
     setLinking(true);
     try {
-      const result = await studentCodeService.linkWithCode(codeInput.trim(), user.id, 'mentor');
+      const result = await studentCodeService.linkWithCode(codeInput.trim(), 'mentor');
       Alert.alert('Success', `Linked to student: ${result.studentName}`);
       setCodeInput('');
       await loadData();

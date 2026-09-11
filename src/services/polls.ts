@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Poll, PollQuestion, PollOption } from '@/types/poll';
+import { Poll, PollQuestion } from '@/types/poll';
 
 interface CreateQuestionInput {
   questionText: string;

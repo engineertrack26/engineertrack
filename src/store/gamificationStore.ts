@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { Badge } from '@/types/gamification';
 
 interface GamificationState {
   totalXp: number;

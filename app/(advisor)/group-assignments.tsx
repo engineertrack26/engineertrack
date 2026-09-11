@@ -12,7 +12,6 @@ import { assignmentService } from '@/services/assignments';
 import { competencyService } from '@/services/competency';
 import { groupService } from '@/services/group';
 import { notificationService } from '@/services/notifications';
-import { supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';

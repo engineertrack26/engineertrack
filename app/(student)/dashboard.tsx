@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,6 @@ import { StatCard, ProgressBar } from '@/components/common';
 import { AppNotification } from '@/types/notification';
 import { LEVELS } from '@/types/gamification';
 import type { MyAssignment } from '@/types/assignment';
-import type { GroupSummary } from '@/types/group';
 import { groupAssignmentsByState } from '@/utils/assignmentGrouping';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -28,14 +27,12 @@ export default function StudentDashboard() {
   const setLevel = useGamificationStore((s) => s.setLevel);
   const setStreak = useGamificationStore((s) => s.setStreak);
 
-  const [group, setGroup] = useState<GroupSummary | null>(null);
   const [assignments, setAssignments] = useState<MyAssignment[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Notification state
   const [feedbackCount, setFeedbackCount] = useState(0);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const currentLevelData = LEVELS.find((l) => l.level === currentLevel) || LEVELS[0];
   const nextLevelData = LEVELS.find((l) => l.level === currentLevel + 1);
@@ -84,7 +81,6 @@ export default function StudentDashboard() {
       // resolved first. A student in no group is a normal state, not an
       // error -- there is simply nothing to show.
       const g = await groupService.getMyGroup(user.id);
-      setGroup(g);
       const items = g ? await assignmentService.listMyAssignments(g.id, user.id) : [];
       setAssignments(items);
 
@@ -101,7 +97,6 @@ export default function StudentDashboard() {
           data: (n.data as Record<string, unknown>) || undefined,
           createdAt: (n.created_at as string) || '',
         }));
-        setNotifications(mapped);
         // Count feedback from task reviews (pending-reviews: task_approved/task_revision_requested)
         // and legacy log reviews (review-log: log_approved/log_revision_requested for backward compat).
         // new_feedback is not emitted anywhere and has been removed.
@@ -111,7 +106,6 @@ export default function StudentDashboard() {
         ).length;
         setFeedbackCount(fbCount);
       } catch {
-        setNotifications([]);
         setFeedbackCount(0);
       }
 
@@ -149,6 +143,18 @@ export default function StudentDashboard() {
   }, [loadData]);
 
   const hasNotifications = revisionCount > 0 || feedbackCount > 0;
+
+  // Until the first load lands, the task section would read as "no tasks"
+  // and the counts as zero -- both false rather than merely empty.
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -337,6 +343,11 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   container: {
     flex: 1,

@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { pollService } from '@/services/polls';
-import { notificationService } from '@/services/notifications';
 import { Poll, PollType, QuestionType } from '@/types/poll';
 import { colors, spacing, borderRadius } from '@/theme';
 

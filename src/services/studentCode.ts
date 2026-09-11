@@ -66,9 +66,10 @@ export const studentCodeService = {
     if (error) throw error;
   },
 
+  // No caller id: link_student_by_code reads auth.uid() itself, and taking
+  // one here would only invite passing someone else's.
   async linkWithCode(
     code: string,
-    userId: string,
     role: 'mentor' | 'advisor',
   ): Promise<{ studentId: string; studentName: string }> {
     const { data, error } = await supabase.rpc('link_student_by_code', {
