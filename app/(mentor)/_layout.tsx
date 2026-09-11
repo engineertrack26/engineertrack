@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 
 export default function MentorLayout() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
@@ -32,7 +34,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -41,7 +43,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="student-list"
         options={{
-          title: 'Students',
+          title: t('tabs.students'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
@@ -50,7 +52,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="pending-reviews"
         options={{
-          title: 'Review',
+          title: t('tabs.review'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkmark-circle-outline" size={size} color={color} />
           ),
@@ -59,7 +61,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="feedback"
         options={{
-          title: 'Feedback',
+          title: t('tabs.feedback'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
@@ -68,7 +70,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="polls"
         options={{
-          title: 'Polls',
+          title: t('tabs.polls'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
@@ -77,7 +79,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Alerts',
+          title: t('tabs.alerts'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
@@ -88,7 +90,7 @@ export default function MentorLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),

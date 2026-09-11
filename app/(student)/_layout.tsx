@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 
 export default function StudentLayout() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
@@ -32,7 +34,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -41,7 +43,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="my-tasks"
         options={{
-          title: 'Tasks',
+          title: t('tabs.tasks'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkbox-outline" size={size} color={color} />
           ),
@@ -56,7 +58,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="achievements"
         options={{
-          title: 'Badges',
+          title: t('tabs.badges'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" size={size} color={color} />
           ),
@@ -65,7 +67,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="leaderboard"
         options={{
-          title: 'Ranking',
+          title: t('tabs.ranking'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="podium-outline" size={size} color={color} />
           ),
@@ -74,7 +76,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="polls"
         options={{
-          title: 'Polls',
+          title: t('tabs.polls'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
           ),
@@ -83,7 +85,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Alerts',
+          title: t('tabs.alerts'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
@@ -94,7 +96,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),

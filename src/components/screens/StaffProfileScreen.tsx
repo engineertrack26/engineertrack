@@ -390,16 +390,6 @@ export function StaffProfileScreen({ role }: StaffProfileScreenProps) {
             </View>
           </TouchableOpacity>
 
-          {/* Theme (Coming Soon) */}
-          <View style={[styles.settingsRow, { opacity: 0.5 }]}>
-            <View style={styles.settingsLeft}>
-              <Ionicons name="color-palette-outline" size={22} color={colors.primary} />
-              <Text style={styles.settingsLabel}>{t('common.theme', 'Theme')}</Text>
-            </View>
-            <View style={styles.settingsRight}>
-              <Text style={styles.comingSoon}>Coming Soon</Text>
-            </View>
-          </View>
 
           {/* Privacy Policy */}
           <TouchableOpacity
@@ -718,11 +708,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
-  },
-  comingSoon: {
-    fontSize: 13,
-    color: colors.textDisabled,
-    fontStyle: 'italic',
   },
 
   // Change Password

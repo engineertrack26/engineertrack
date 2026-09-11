@@ -34,18 +34,18 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   task_revision_requested: { name: 'alert-circle', color: colors.error },
 };
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string, locale: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 1) return t('time.justNow');
+  if (diffMin < 60) return t('time.minutesAgo', { count: diffMin });
   const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffHrs < 24) return t('time.hoursAgo', { count: diffHrs });
   const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  if (diffDays < 7) return t('time.daysAgo', { count: diffDays });
+  return new Date(dateStr).toLocaleDateString(locale);
 }
 
 interface NotificationsScreenProps {
@@ -57,7 +57,7 @@ interface NotificationsScreenProps {
  *  their role -- they were byte-identical apart from that string, and a fix
  *  to one was three edits. */
 export function NotificationsScreen({ role }: NotificationsScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const {
     notifications,
@@ -129,7 +129,7 @@ export function NotificationsScreen({ role }: NotificationsScreenProps) {
           <Text style={styles.notifMessage} numberOfLines={2}>
             {item.body}
           </Text>
-          <Text style={styles.notifTime}>{timeAgo(item.createdAt)}</Text>
+          <Text style={styles.notifTime}>{timeAgo(item.createdAt, t, i18n.language)}</Text>
         </View>
         {!item.isRead && <View style={styles.unreadDot} />}
       </TouchableOpacity>
