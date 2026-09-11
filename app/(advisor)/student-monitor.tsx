@@ -38,6 +38,15 @@ interface StudentMonitorItem {
   daysTotal: number | null;
 }
 
+/** A `YYYY-MM-DD` date at the device's local midnight. `Date.parse` on the bare
+ *  string would give UTC midnight, which is a different calendar day for part
+ *  of every day anywhere but UTC. NaN for anything that is not a plain date. */
+function localMidnight(ymd: string): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
+  if (!m) return Number.NaN;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+}
+
 function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
   const profile = row.profiles as Record<string, unknown> | null;
   // Competency attainment, straight off the service row -- the same number
@@ -58,18 +67,28 @@ function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
   let daysCurrent: number | null = null;
   let daysTotal: number | null = null;
   if (start && end) {
-    const startDate = new Date(start).getTime();
-    const endDate = new Date(end).getTime();
-    const span = Math.ceil((endDate - startDate) / msPerDay);
+    // Both columns are Postgres `date`s. `new Date('2026-09-11')` would anchor
+    // them at UTC midnight while `Date.now()` is the device's absolute instant,
+    // which puts the counter a day out for part of every local day on any
+    // device not on UTC. Work in local calendar days instead: each date at the
+    // device's local midnight, today at the device's local midnight, and the
+    // difference rounded (not floored) so a DST hour cannot shave a day off.
+    const startDate = localMidnight(start);
+    const endDate = localMidnight(end);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const span = Math.round((endDate - startDate) / msPerDay);
     // An unparseable date gives NaN, and an end on or before the start gives
     // a span of zero or less. Neither is a span we can honestly count within,
     // so both leave the counter unrendered rather than showing "Day 0/0".
     if (Number.isFinite(span) && span > 0) {
       daysTotal = span;
-      // Clamped at both ends: an internship that has not started yet is day 0
-      // rather than a negative number, and one that has run past its end date
-      // reads "Day 60/60" rather than "Day 71/60".
-      daysCurrent = Math.max(0, Math.min(span, Math.ceil((Date.now() - startDate) / msPerDay)));
+      // Day one is the start date itself, so +1. Clamped at both ends: an
+      // internship that has not started yet is day 0 rather than a negative
+      // number, and one that has run past its end date reads "Day 60/60"
+      // rather than "Day 71/60".
+      const elapsed = Math.round((today.getTime() - startDate) / msPerDay) + 1;
+      daysCurrent = Math.max(0, Math.min(span, elapsed));
     }
   }
   return {
