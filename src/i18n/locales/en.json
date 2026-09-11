@@ -147,6 +147,7 @@
     "addPhoto": "Add Photo",
     "addDocument": "Add Document",
     "uploadFailed": "Upload failed",
+    "waitForUploads": "Wait for the upload to finish before submitting.",
     "retry": "Retry",
     "caption": "Caption (optional)",
     "permissionRequiredTitle": "Permission Required",

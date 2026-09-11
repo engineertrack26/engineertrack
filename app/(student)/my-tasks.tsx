@@ -55,6 +55,9 @@ export default function MyTasksScreen() {
   const [photos, setPhotos] = useState<PhotoEvidence[]>([]);
   const [documents, setDocuments] = useState<DocumentEvidence[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  // Evidence still on its way up. submit_assignment rewrites evidence from
+  // the arrays it is handed, so submitting now would drop the file mid-flight.
+  const [uploading, setUploading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -276,14 +279,15 @@ export default function MyTasksScreen() {
                       setPhotos(nextPhotos);
                       setDocuments(nextDocuments);
                     }}
+                    onUploadingChange={setUploading}
                     disabled={submitting}
                   />
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.primaryBtn, !reflection.trim() && styles.primaryBtnDisabled]}
+                  style={[styles.primaryBtn, (!reflection.trim() || uploading) && styles.primaryBtnDisabled]}
                   onPress={() => handleSubmit(a)}
-                  disabled={submitting || !reflection.trim()}
+                  disabled={submitting || uploading || !reflection.trim()}
                   activeOpacity={0.7}
                 >
                   {submitting ? (
@@ -295,9 +299,11 @@ export default function MyTasksScreen() {
                 {/* An inert button with no explanation is the commonest form
                     of this bug -- the server refuses REFLECTION_REQUIRED too,
                     but this is so the student is not told only after trying. */}
-                {!reflection.trim() && (
+                {!reflection.trim() ? (
                   <Text style={styles.hint}>{t('errors.reflectionRequired')}</Text>
-                )}
+                ) : uploading ? (
+                  <Text style={styles.hint}>{t('student.waitForUploads')}</Text>
+                ) : null}
               </>
             )}
           </View>

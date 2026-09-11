@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,11 @@ interface EvidencePickerProps {
   photos: PhotoEvidence[];
   documents: DocumentEvidence[];
   onChange: (photos: PhotoEvidence[], documents: DocumentEvidence[]) => void;
+  /** True while at least one upload is in flight. The parent must not let the
+   *  form submit while this is true: submit_assignment rewrites the evidence
+   *  from the arrays it is given, so a submission sent mid-upload silently
+   *  loses the file that was still on its way. */
+  onUploadingChange?: (uploading: boolean) => void;
   disabled?: boolean;
 }
 
@@ -50,7 +55,7 @@ function makeLocalId(): string {
 }
 
 export function EvidencePicker({
-  userId, scopeId, photos, documents, onChange, disabled,
+  userId, scopeId, photos, documents, onChange, onUploadingChange, disabled,
 }: EvidencePickerProps) {
   const { t } = useTranslation();
   // Uploads are NOT held in the parent's arrays until they succeed -- these
@@ -60,24 +65,62 @@ export function EvidencePicker({
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([]);
 
+  // Every change to the arrays goes through `commit`, which reads the CURRENT
+  // arrays from this ref rather than from the `photos`/`documents` captured
+  // when an upload started. Without it a photo and a document uploading at
+  // the same time each finish holding the other's stale array, and whichever
+  // lands second erases the first; a caption typed while a photo uploads is
+  // lost the same way. The ref is written through synchronously on commit
+  // (a parent setState is not applied until its next render, so two
+  // completions in one tick would otherwise still race) and re-synced from
+  // props on every render so a parent-driven reset wins.
+  const latest = useRef({ photos, documents });
+  latest.current = { photos, documents };
+
+  // Set false on unmount. The picker is unmounted when the student closes or
+  // switches task cards, but an upload started under the old card is still
+  // running; letting it call onChange would attach a file uploaded under the
+  // old task's scope to whichever form is open now.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+  function commit(next: Partial<{ photos: PhotoEvidence[]; documents: DocumentEvidence[] }>) {
+    if (!alive.current) return;
+    latest.current = { ...latest.current, ...next };
+    onChange(latest.current.photos, latest.current.documents);
+  }
+
+  const uploading =
+    pendingPhotos.some((p) => p.status === 'uploading') ||
+    pendingDocuments.some((d) => d.status === 'uploading');
+  useEffect(() => {
+    onUploadingChange?.(uploading);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploading]);
+  // On unmount, tell the parent nothing is uploading any more -- the upload
+  // may still be running, but its result can no longer reach the form.
+  useEffect(() => () => onUploadingChange?.(false), []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const photoSlotCount = photos.length + pendingPhotos.length;
   const atPhotoLimit = photoSlotCount >= MAX_PHOTOS;
   const documentSlotCount = documents.length + pendingDocuments.length;
   const atDocumentLimit = documentSlotCount >= MAX_DOCUMENTS;
 
-  // Sequential on purpose: each upload appends to the *result* of the
-  // previous onChange call rather than to the `photos` prop captured in this
-  // closure, so a multi-select gallery pick doesn't drop earlier appends to
-  // a stale array when several uploads resolve close together.
+  // Sequential on purpose so a multi-select gallery pick shows its files
+  // finishing in the order they were chosen; each completion commits against
+  // the current arrays, not this closure's.
   async function uploadPhotos(uris: string[]) {
-    let nextPhotos = photos;
     for (const uri of uris) {
       const localId = makeLocalId();
       setPendingPhotos((prev) => [...prev, { localId, uri, status: 'uploading' }]);
       try {
         const url = await logService.uploadPhotoFile(userId, scopeId, uri);
-        nextPhotos = [...nextPhotos, { uri: url }];
-        onChange(nextPhotos, documents);
+        commit({ photos: [...latest.current.photos, { uri: url }] });
         setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
       } catch (err) {
         // Never swallow this silently. The UI says "Upload failed" and offers a
@@ -100,7 +143,7 @@ export function EvidencePicker({
     )));
     try {
       const url = await logService.uploadPhotoFile(userId, scopeId, item.uri);
-      onChange([...photos, { uri: url }], documents);
+      commit({ photos: [...latest.current.photos, { uri: url }] });
       setPendingPhotos((prev) => prev.filter((p) => p.localId !== localId));
     } catch (err) {
       // Never swallow this silently. The UI says "Upload failed" and offers a
@@ -172,7 +215,7 @@ export function EvidencePicker({
   }
 
   function removePhoto(index: number) {
-    onChange(photos.filter((_, i) => i !== index), documents);
+    commit({ photos: latest.current.photos.filter((_, i) => i !== index) });
   }
 
   function removePendingPhoto(localId: string) {
@@ -180,9 +223,9 @@ export function EvidencePicker({
   }
 
   function updateCaption(index: number, caption: string) {
-    const next = photos.slice();
+    const next = latest.current.photos.slice();
     next[index] = { ...next[index], caption };
-    onChange(next, documents);
+    commit({ photos: next });
   }
 
   async function uploadDocumentAsset(asset: DocumentPicker.DocumentPickerAsset) {
@@ -198,7 +241,7 @@ export function EvidencePicker({
     ]);
     try {
       const url = await logService.uploadDocumentFile(userId, scopeId, asset.uri, asset.name, fileType);
-      onChange(photos, [...documents, { uri: url, fileName: asset.name, fileType, fileSize }]);
+      commit({ documents: [...latest.current.documents, { uri: url, fileName: asset.name, fileType, fileSize }] });
       setPendingDocuments((prev) => prev.filter((d) => d.localId !== localId));
     } catch (err) {
       console.warn("Evidence document upload failed:", err instanceof Error ? err.message : err);
@@ -216,9 +259,9 @@ export function EvidencePicker({
     )));
     try {
       const url = await logService.uploadDocumentFile(userId, scopeId, item.uri, item.fileName, item.fileType);
-      onChange(photos, [...documents, {
+      commit({ documents: [...latest.current.documents, {
         uri: url, fileName: item.fileName, fileType: item.fileType, fileSize: item.fileSize,
-      }]);
+      }] });
       setPendingDocuments((prev) => prev.filter((d) => d.localId !== localId));
     } catch (err) {
       console.warn("Evidence document upload failed:", err instanceof Error ? err.message : err);
@@ -251,7 +294,7 @@ export function EvidencePicker({
     // the bucket. Deleting from storage needs the object path, and this
     // component only holds the public URL; an orphaned object is cheaper
     // than a broken reference.
-    onChange(photos, documents.filter((_, i) => i !== index));
+    commit({ documents: latest.current.documents.filter((_, i) => i !== index) });
   }
 
   function removePendingDocument(localId: string) {
