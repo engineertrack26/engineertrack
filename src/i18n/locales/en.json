@@ -148,6 +148,7 @@
     "addDocument": "Add Document",
     "uploadFailed": "Upload failed",
     "waitForUploads": "Wait for the upload to finish before submitting.",
+    "unsentDraft": "Unsent changes",
     "retry": "Retry",
     "caption": "Caption (optional)",
     "permissionRequiredTitle": "Permission Required",

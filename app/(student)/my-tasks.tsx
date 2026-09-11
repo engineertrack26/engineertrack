@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Linking,
@@ -18,6 +18,13 @@ import type { MyAssignment, PhotoEvidence, DocumentEvidence } from '@/types/assi
 import type { GroupSummary } from '@/types/group';
 
 type SectionKey = 'revise' | 'todo' | 'waiting' | 'done';
+
+interface FormDraft {
+  note: string;
+  reflection: string;
+  photos: PhotoEvidence[];
+  documents: DocumentEvidence[];
+}
 
 // What the mentor sent back is the most urgent thing on the screen, so it
 // leads. A student cannot act on 'waiting' or 'done' items -- those are
@@ -58,6 +65,26 @@ export default function MyTasksScreen() {
   // Evidence still on its way up. submit_assignment rewrites evidence from
   // the arrays it is handed, so submitting now would drop the file mid-flight.
   const [uploading, setUploading] = useState(false);
+
+  // One form's state is shared by every card, so closing a card -- or tapping
+  // another to look at it -- used to throw away whatever was typed and every
+  // file already uploaded. Unsent work is parked here per task when its card
+  // closes and restored when it reopens; a successful submit clears it. Kept
+  // in memory only: it survives a mis-tap, not an app restart.
+  const drafts = useRef(new Map<string, FormDraft>());
+
+  function parkDraft(id: string) {
+    const empty = !note && !reflection && photos.length === 0 && documents.length === 0;
+    if (empty) drafts.current.delete(id);
+    else drafts.current.set(id, { note, reflection, photos, documents });
+  }
+
+  function clearForm() {
+    setNote('');
+    setReflection('');
+    setPhotos([]);
+    setDocuments([]);
+  }
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -100,15 +127,21 @@ export default function MyTasksScreen() {
   }
 
   function toggleOpen(a: MyAssignment) {
+    if (openId) parkDraft(openId);
     if (openId === a.id) {
       setOpenId(null);
-      setNote('');
-      setReflection('');
-      setPhotos([]);
-      setDocuments([]);
+      clearForm();
       return;
     }
     setOpenId(a.id);
+    const draft = drafts.current.get(a.id);
+    if (draft) {
+      setNote(draft.note);
+      setReflection(draft.reflection);
+      setPhotos(draft.photos);
+      setDocuments(draft.documents);
+      return;
+    }
     // Prefill all four rather than blank. submit_assignment's DO UPDATE
     // overwrites student_note and reflection unconditionally, and it deletes
     // and REWRITES the evidence rather than appending -- so a student asked
@@ -138,11 +171,9 @@ export default function MyTasksScreen() {
       // one of them impossible, is worse than one that works.
 
       Alert.alert(t('common.done'), t('student.taskSubmitted'));
+      drafts.current.delete(a.id);
       setOpenId(null);
-      setNote('');
-      setReflection('');
-      setPhotos([]);
-      setDocuments([]);
+      clearForm();
       await loadData();
     } catch (err) {
       // ALREADY_APPROVED is the one a student will actually hit -- tapping
@@ -178,6 +209,9 @@ export default function MyTasksScreen() {
               <Text style={styles.subtle}>
                 {t('student.taskDueDate')}: {due.toLocaleDateString(i18n.language)}
               </Text>
+            )}
+            {!isOpen && drafts.current.has(a.id) && (
+              <Text style={styles.draftLine}>{t('student.unsentDraft')}</Text>
             )}
           </View>
           <Ionicons
@@ -448,6 +482,12 @@ const styles = StyleSheet.create({
   subtle: {
     fontSize: 13,
     color: colors.textSecondary,
+    marginTop: 2,
+  },
+  draftLine: {
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: '500',
     marginTop: 2,
   },
 
