@@ -20,7 +20,7 @@ import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
-import { LoadFailedBanner } from '@/components/common';
+import { BackButton, LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
 const LEVELS = [1, 2, 3, 4];
@@ -411,6 +411,7 @@ export default function GroupAssignmentsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <BackButton href="/(advisor)/groups" />
         <View style={styles.loading}><ActivityIndicator size="large" color={ADVISOR_COLOR} /></View>
       </SafeAreaView>
     );
@@ -426,6 +427,7 @@ export default function GroupAssignmentsScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
+        <BackButton href="/(advisor)/groups" disabled={saving || sending} />
         <Text style={styles.screenTitle}>{t('advisor.assignments')}</Text>
 
         {assignments.length === 0 && (

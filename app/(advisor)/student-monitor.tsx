@@ -17,7 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGroupStore } from '@/store/groupStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
-import { ProgressBar, LoadFailedBanner } from '@/components/common';
+import { BackButton, ProgressBar, LoadFailedBanner } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { GroupMember } from '@/types/group';
 
@@ -188,6 +188,7 @@ export default function StudentMonitorScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <BackButton href={groupId ? '/(advisor)/groups' : '/(advisor)/dashboard'} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -199,7 +200,8 @@ export default function StudentMonitorScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerContainer}>
-          <Text style={styles.screenTitle} numberOfLines={1}>
+          <BackButton href="/(advisor)/groups" />
+          <Text style={styles.screenTitle}>
             {activeGroup?.name || t('advisor.studentMonitor')}
           </Text>
           <Text style={styles.countText}>{t('advisor.memberCount', { count: members.length })}</Text>
@@ -318,7 +320,8 @@ export default function StudentMonitorScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.headerContainer}>
-        <Text style={styles.screenTitle}>Student Monitor</Text>
+        <BackButton href="/(advisor)/dashboard" />
+        <Text style={styles.screenTitle}>{t('advisor.studentMonitor')}</Text>
         <Text style={styles.countText}>{students.length} student{students.length !== 1 ? 's' : ''}</Text>
       </View>
 
@@ -357,9 +360,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,

@@ -5,3 +5,4 @@ export { StatCard } from './StatCard';
 export { ProgressBar } from './ProgressBar';
 export { ErrorFallback } from './ErrorFallback';
 export { LoadFailedBanner } from './LoadFailedBanner';
+export { BackButton } from './BackButton';

@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Alert,
+  Modal,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -20,6 +20,8 @@ import { LogCard } from '@/components/cards';
 import { DailyLog, LogStatus } from '@/types/log';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
+import { BackButton, Button, LoadFailedBanner } from '@/components/common';
+import { router } from 'expo-router';
 
 type FilterOption = 'all' | LogStatus;
 
@@ -55,20 +57,24 @@ function mapDbLog(row: Record<string, unknown>): DailyLog {
 }
 
 export default function LogHistoryScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { logs, setLogs } = useLogStore();
   const [filter, setFilter] = useState<FilterOption>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
 
   const loadLogs = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       const data = await logService.getLogsByStudent(user.id);
       setLogs((data || []).map(mapDbLog));
     } catch (err) {
       console.error('Load logs error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -108,26 +114,13 @@ export default function LogHistoryScreen() {
     return `${m}m`;
   };
 
-  const handleLogPress = (log: DailyLog) => {
-    const date = new Date(log.date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    const timeStr = log.hoursSpent > 0 ? `\nTime Spent: ${formatTimeSpent(log.hoursSpent)}` : '';
-    Alert.alert(
-      log.title,
-      `Date: ${date}\nStatus: ${log.status.replace('_', ' ')}${timeStr}\n\n${log.content}${
-        log.xpEarned > 0 ? `\n\nXP Earned: +${log.xpEarned}` : ''
-      }`,
-    );
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* Header */}
-        <Text style={styles.header}>{t('student.logHistory')}</Text>
+        <BackButton href="/(student)/dashboard" />
+        <Text style={styles.header}>{t('student.pastLogs')}</Text>
+        {loadFailed && <LoadFailedBanner onRetry={loadLogs} />}
 
         {/* Filter Chips */}
         <ScrollView
@@ -166,7 +159,7 @@ export default function LogHistoryScreen() {
             data={filteredLogs}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <LogCard log={item} onPress={() => handleLogPress(item)} />
+              <LogCard log={item} onPress={() => setSelectedLog(item)} />
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -174,24 +167,63 @@ export default function LogHistoryScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
             }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
+              !loadFailed ? <View style={styles.emptyContainer}>
                 <Ionicons name="document-text-outline" size={48} color={colors.textDisabled} />
-                <Text style={styles.emptyTitle}>No logs yet</Text>
+                <Text style={styles.emptyTitle}>{t('flow.archiveEmpty')}</Text>
                 <Text style={styles.emptyText}>
                   {filter === 'all'
-                    ? 'Start by creating your first daily log'
-                    : `No logs with status "${filter.replace('_', ' ')}"`}
+                    ? t('flow.archiveHint')
+                    : t('flow.archiveFilteredEmpty')}
                 </Text>
-              </View>
+                <Button
+                  title={filter === 'all' ? t('student.myTasks') : t('flow.clearFilter')}
+                  onPress={() => filter === 'all' ? router.push('/(student)/my-tasks') : setFilter('all')}
+                  style={{ marginTop: spacing.md }}
+                />
+              </View> : null
             }
           />
         )}
       </View>
+      <Modal visible={selectedLog !== null} animationType="slide" onRequestClose={() => setSelectedLog(null)}>
+        <SafeAreaView style={styles.safeArea}>
+          <BackButton onPress={() => setSelectedLog(null)} />
+          {selectedLog && (
+            <ScrollView contentContainerStyle={styles.detailContent}>
+              <Text style={styles.detailTitle} accessibilityRole="header">{selectedLog.title}</Text>
+              <Text style={styles.detailMeta}>
+                {new Date(`${selectedLog.date}T12:00:00`).toLocaleDateString(i18n.language)}
+                {' · '}{selectedLog.status.replace(/_/g, ' ')}
+                {selectedLog.hoursSpent > 0 ? ` · ${formatTimeSpent(selectedLog.hoursSpent)}` : ''}
+                {selectedLog.xpEarned > 0 ? ` · +${selectedLog.xpEarned} XP` : ''}
+              </Text>
+              {[
+                ['student.content', selectedLog.content],
+                ['student.activitiesPerformed', selectedLog.activitiesPerformed],
+                ['student.skillsLearned', selectedLog.skillsLearned],
+                ['student.challengesFaced', selectedLog.challengesFaced],
+                ['flow.advisorNotes', selectedLog.advisorNotes],
+              ].map(([key, content]) => content ? (
+                <View key={key} style={styles.detailSection}>
+                  <Text style={styles.detailLabel} accessibilityRole="header">{t(key!)}</Text>
+                  <Text style={styles.detailBody} selectable>{content}</Text>
+                </View>
+              ) : null)}
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  detailContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  detailTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
+  detailMeta: { fontSize: 14, lineHeight: 22, color: colors.textSecondary, marginTop: spacing.sm },
+  detailSection: { marginTop: spacing.lg },
+  detailLabel: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
+  detailBody: { fontSize: 16, lineHeight: 24, color: colors.text },
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,

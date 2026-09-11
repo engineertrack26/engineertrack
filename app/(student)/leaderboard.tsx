@@ -14,7 +14,8 @@ import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
 import { LeaderboardRow } from '@/components/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
-import { LoadFailedBanner } from '@/components/common';
+import { Button, LoadFailedBanner } from '@/components/common';
+import { router } from 'expo-router';
 
 interface LeaderboardEntry {
   id: string;
@@ -104,11 +105,14 @@ export default function LeaderboardScreen() {
       <View style={styles.container}>
         <Text style={styles.header}>{t('student.leaderboard')}</Text>
 
-        {entries.length === 0 ? (
+        {entries.length === 0 && loadFailed ? (
+          <LoadFailedBanner onRetry={loadData} />
+        ) : entries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="podium-outline" size={48} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No rankings yet</Text>
-            <Text style={styles.emptyText}>Submit logs to appear on the leaderboard</Text>
+            <Text style={styles.emptyTitle}>{t('flow.rankingEmpty')}</Text>
+            <Text style={styles.emptyText}>{t('flow.rankingHint')}</Text>
+            <Button title={t('student.myTasks')} onPress={() => router.push('/(student)/my-tasks')} style={{ marginTop: spacing.md }} />
           </View>
         ) : (
           <FlatList

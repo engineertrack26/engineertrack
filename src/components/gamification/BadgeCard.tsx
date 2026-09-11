@@ -38,10 +38,10 @@ export function BadgeCard({ badge, earned }: BadgeCardProps) {
           <Ionicons name="lock-closed" size={24} color={colors.textDisabled} />
         )}
       </View>
-      <Text style={[styles.name, !earned && styles.textLocked]} numberOfLines={1}>
+      <Text style={[styles.name, !earned && styles.textLocked]}>
         {t(badge.nameKey)}
       </Text>
-      <Text style={[styles.description, !earned && styles.textLocked]} numberOfLines={2}>
+      <Text style={[styles.description, !earned && styles.textLocked]}>
         {t(badge.descriptionKey)}
       </Text>
       <View style={[styles.tierBadge, { backgroundColor: earned ? tierColor + '25' : colors.divider }]}>

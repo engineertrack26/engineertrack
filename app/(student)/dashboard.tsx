@@ -214,7 +214,7 @@ export default function StudentDashboard() {
             {feedbackCount > 0 && (
               <TouchableOpacity
                 style={[styles.notifCard, { borderLeftColor: colors.info }]}
-                onPress={() => router.push('/(student)/log-history')}
+                onPress={() => router.push('/(student)/notifications')}
                 activeOpacity={0.7}
               >
                 <View style={[styles.notifIconWrap, { backgroundColor: colors.info + '15' }]}>

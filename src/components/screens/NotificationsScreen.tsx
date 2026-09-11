@@ -123,10 +123,10 @@ export function NotificationsScreen({ role }: NotificationsScreenProps) {
           <Ionicons name={icon.name as keyof typeof Ionicons.glyphMap} size={22} color={icon.color} />
         </View>
         <View style={styles.notifBody}>
-          <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]} numberOfLines={1}>
+          <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]}>
             {item.title}
           </Text>
-          <Text style={styles.notifMessage} numberOfLines={2}>
+          <Text style={styles.notifMessage}>
             {item.body}
           </Text>
           <Text style={styles.notifTime}>{timeAgo(item.createdAt, t, i18n.language)}</Text>

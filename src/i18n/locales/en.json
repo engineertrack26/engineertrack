@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "No archived records",
+    "archiveHint": "This is your daily log archive. Continue your current work in My Tasks.",
+    "archiveFilteredEmpty": "No archived records match this filter.",
+    "clearFilter": "Clear filter",
+    "rankingEmpty": "No rankings yet",
+    "rankingHint": "Rankings show students in your internship group. Check your group in Profile and complete assigned tasks to earn XP.",
+    "advisorNotes": "Advisor notes"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",

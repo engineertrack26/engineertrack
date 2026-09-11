@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "Arşiv kaydı yok",
+    "archiveHint": "Burası geçmiş günlük kayıtlarınızın arşividir. Güncel çalışmalarınıza Görevlerim ekranından devam edin.",
+    "archiveFilteredEmpty": "Bu filtreye uygun arşiv kaydı bulunamadı.",
+    "clearFilter": "Filtreyi temizle",
+    "rankingEmpty": "Henüz sıralama yok",
+    "rankingHint": "Sıralama, staj grubunuzdaki öğrencileri gösterir. Profilinizden grubunuzu kontrol edin ve XP kazanmak için atanan görevleri tamamlayın.",
+    "advisorNotes": "Danışman notları"
+  },
   "common": {
     "loading": "Yükleniyor...",
     "error": "Bir hata oluştu",
