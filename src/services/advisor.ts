@@ -47,7 +47,29 @@ export const advisorService = {
     // the RPC as an invalid UUID (22P02), and a row with no id cannot be
     // rendered or keyed anyway, so it leaves the population entirely rather
     // than sitting in it scoring 0 and dragging the average down.
-    const resolvable = students.filter((s) => !!(s as Record<string, unknown>).id);
+    const withId = students.filter((s) => !!(s as Record<string, unknown>).id);
+
+    // "Active Students" means students with an active group membership -- the
+    // same population Reports counts. student_profiles.advisor_id is never
+    // cleared when a membership is closed, so without this a student the
+    // advisor removed on Student Monitor would stay in the headcount and sit
+    // in the average at 0% (no active group, so no targets, so no progress),
+    // while Reports for the same group had already stopped counting them.
+    const activeIds = new Set<string>();
+    if (withId.length > 0) {
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('group_memberships')
+        .select('student_id')
+        .in('student_id', withId.map((s) => (s as Record<string, unknown>).id as string))
+        .is('left_at', null);
+      if (membershipsError) throw membershipsError;
+      (memberships || []).forEach((m) => {
+        activeIds.add((m as Record<string, unknown>).student_id as string);
+      });
+    }
+    const resolvable = withId.filter((s) =>
+      activeIds.has((s as Record<string, unknown>).id as string),
+    );
 
     // allSettled, not all: a bare Promise.all turns one student's failed RPC
     // into a rejected load, which dashboard.tsx catches into a console.error,

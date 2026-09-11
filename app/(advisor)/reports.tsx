@@ -399,7 +399,17 @@ export default function ReportsScreen() {
                   {data.competencyBreakdown.length === 0 ? (
                     <View style={styles.emptyCard}>
                       <Ionicons name="school-outline" size={40} color={colors.textDisabled} />
-                      <Text style={styles.emptyText}>{t('advisor.noCompetencyData')}</Text>
+                      {/* getReportsData short-circuits before reading targets
+                          when the group has no active member, so an empty
+                          breakdown does not mean "no targets" in that case --
+                          say the true cause rather than a false one. */}
+                      <Text style={styles.emptyText}>
+                        {t(
+                          data.studentCount === 0
+                            ? 'advisor.noCompetencyDataNoStudents'
+                            : 'advisor.noCompetencyData',
+                        )}
+                      </Text>
                     </View>
                   ) : (
                     <View style={styles.breakdownCard}>
