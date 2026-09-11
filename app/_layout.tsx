@@ -93,6 +93,29 @@ export default function RootLayout() {
   const notificationListener = useRef<Notifications.EventSubscription>(null);
   const responseListener = useRef<Notifications.EventSubscription>(null);
 
+  // The user id the push token was last registered for. Registration must
+  // run once per sign-in, not once per app launch: SIGNED_OUT clears the
+  // token from the profile, so a user who signs out and back in on the same
+  // device has no token until they restart the app if only initAuth does it.
+  // Keyed by uid rather than a boolean so TOKEN_REFRESHED (hourly) does not
+  // re-prompt or re-save, but a different account signing in does register.
+  const pushRegisteredFor = useRef<string | null>(null);
+
+  async function registerPushFor(uid: string) {
+    if (pushRegisteredFor.current === uid) return;
+    pushRegisteredFor.current = uid;
+    try {
+      const pushToken = await registerForPushNotifications();
+      if (pushToken) {
+        await saveTokenToProfile(uid, pushToken);
+      }
+    } catch (err) {
+      // Let the next sign-in try again rather than remembering a failure.
+      pushRegisteredFor.current = null;
+      console.warn('Push notification setup failed:', err);
+    }
+  }
+
   // Listen for auth state changes
   useEffect(() => {
     async function initAuth() {
@@ -103,16 +126,7 @@ export default function RootLayout() {
           setSession(session);
           setUser(profile);
           applyUserLanguage(profile);
-
-          // Register for push notifications
-          try {
-            const pushToken = await registerForPushNotifications();
-            if (pushToken) {
-              await saveTokenToProfile(session.user.id, pushToken);
-            }
-          } catch (err) {
-            console.warn('Push notification setup failed:', err);
-          }
+          await registerPushFor(session.user.id);
         }
       } catch {
         // No active session
@@ -132,6 +146,7 @@ export default function RootLayout() {
           if (currentUser?.id) {
             removeToken(currentUser.id).catch(() => {});
           }
+          pushRegisteredFor.current = null;
           // Reset all stores so no previous user's data leaks to next user
           reset();
           resetLogStore();
@@ -150,6 +165,11 @@ export default function RootLayout() {
             setSession(session);
             setUser(profile);
             applyUserLanguage(profile);
+            // A sign-in that happened after launch -- the app opened with no
+            // session and the user logged in -- reaches here, not initAuth.
+            if (event === 'SIGNED_IN') {
+              await registerPushFor(uid);
+            }
           } catch (err) {
             console.warn('Auth state profile sync failed:', err);
           } finally {
