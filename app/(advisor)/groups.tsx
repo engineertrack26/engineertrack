@@ -13,6 +13,7 @@ import { useGroupStore } from '@/store/groupStore';
 import { groupService } from '@/services/group';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
+import { LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
 
@@ -28,13 +29,16 @@ export default function AdvisorGroupsScreen() {
   const [creating, setCreating] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       await fetchGroups(user.id);
       setCounts(await groupService.countMembersByGroup());
     } catch (err) {
       console.error('Groups load error:', err);
+      setLoadFailed(true);
     }
   }, [user, fetchGroups]);
 
@@ -111,6 +115,7 @@ export default function AdvisorGroupsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[ADVISOR_COLOR]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.screenTitle}>{t('advisor.myGroups')}</Text>
 
         <View style={styles.card}>

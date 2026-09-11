@@ -16,6 +16,7 @@ import { EvidencePicker } from '@/components/forms';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { MyAssignment, PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 import type { GroupSummary } from '@/types/group';
+import { LoadFailedBanner } from '@/components/common';
 
 type SectionKey = 'revise' | 'todo' | 'waiting' | 'done';
 
@@ -89,8 +90,10 @@ export default function MyTasksScreen() {
     setDocuments([]);
   }
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       // listMyAssignments needs a group id, so the student's group has to be
       // resolved first. A student in no group is a normal state, not an
@@ -105,6 +108,7 @@ export default function MyTasksScreen() {
       setAssignments(items);
     } catch (err) {
       console.error('My tasks load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -381,6 +385,7 @@ export default function MyTasksScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.screenTitle}>{t('student.myTasks')}</Text>
 
         {!group && (

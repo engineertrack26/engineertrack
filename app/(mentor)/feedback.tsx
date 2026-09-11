@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { colors, spacing, borderRadius } from '@/theme';
+import { LoadFailedBanner } from '@/components/common';
 
 // Two distinct histories, never merged into one shape: a task review has an
 // outcome and a note, a legacy log review has a 1-5 rating. Forcing them into
@@ -123,8 +124,10 @@ export default function FeedbackScreen() {
   const [taskFeedback, setTaskFeedback] = useState<TaskFeedbackItem[]>([]);
   const [legacyFeedback, setLegacyFeedback] = useState<LegacyFeedbackItem[]>([]);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       // Two independent histories -- the task path (assignment_submissions
       // this mentor reviewed) and what predates it (mentor_feedbacks, still
@@ -142,6 +145,7 @@ export default function FeedbackScreen() {
       );
     } catch (err) {
       console.error('Feedback history load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -312,6 +316,7 @@ export default function FeedbackScreen() {
 
       <SectionList<FeedbackItem, FeedbackSection>
         sections={sections}
+        ListHeaderComponent={loadFailed ? <LoadFailedBanner onRetry={loadData} /> : null}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (item.kind === 'task' ? renderTaskCard(item) : renderLegacyCard(item))}
         renderSectionHeader={({ section }) => (

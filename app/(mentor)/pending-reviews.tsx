@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
+import { LoadFailedBanner } from '@/components/common';
 
 type PendingReview = AssignmentSubmission & { assignment: GroupAssignment };
 
@@ -48,7 +49,9 @@ export default function PendingReviewsScreen() {
   // lightbox is simpler than tracking one per card.
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
+    setLoadFailed(false);
     try {
       // No mentor id here on purpose -- RLS already scopes these rows to
       // is_mentor_of(student_id), so a parameter would be decoration over a
@@ -88,6 +91,7 @@ export default function PendingReviewsScreen() {
       }
     } catch (err) {
       console.error('Pending reviews load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -387,6 +391,7 @@ export default function PendingReviewsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.screenTitle}>{t('mentor.pendingReviews')}</Text>
 
         {pending.length === 0 ? (

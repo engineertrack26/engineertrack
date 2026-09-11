@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { assignmentService } from '@/services/assignments';
 import { supabase } from '@/services/supabase';
-import { StatCard } from '@/components/common';
+import { StatCard, LoadFailedBanner } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
 
@@ -71,8 +71,10 @@ export default function MentorDashboard() {
   const [pendingPreview, setPendingPreview] = useState<PendingReviewPreview[]>([]);
   const [studentNames, setStudentNames] = useState<Record<string, { firstName: string; lastName: string }>>({});
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       // One fetch for the pending-review queue: its length is the "Pending
       // Reviews" count and its first few rows are the preview list below.
@@ -120,6 +122,7 @@ export default function MentorDashboard() {
       }
     } catch (err) {
       console.error('Mentor dashboard load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -169,6 +172,7 @@ export default function MentorDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>

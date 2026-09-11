@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { competencyService } from '@/services/competency';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { Competency } from '@/types/competency';
+import { LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
 const LEVELS = [1, 2, 3, 4];
@@ -24,8 +25,10 @@ export default function GroupCompetenciesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!groupId) return;
+    setLoadFailed(false);
     try {
       const [{ competencies: cs }, ts] = await Promise.all([
         competencyService.listFramework(),
@@ -37,6 +40,7 @@ export default function GroupCompetenciesScreen() {
       setTargets(map);
     } catch (err) {
       console.error('Group competencies load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -109,6 +113,7 @@ export default function GroupCompetenciesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[ADVISOR_COLOR]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.screenTitle}>{t('advisor.competencyScope')}</Text>
         <Text style={styles.hint}>{t('advisor.competencyScopeHint')}</Text>
 

@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
 import { LeaderboardRow } from '@/components/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
+import { LoadFailedBanner } from '@/components/common';
 
 interface LeaderboardEntry {
   id: string;
@@ -40,7 +41,9 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
+    setLoadFailed(false);
     try {
       const data = await gamificationService.getGroupLeaderboard(50);
       const mapped = (data || []).map((item: Record<string, unknown>) => {
@@ -57,6 +60,7 @@ export default function LeaderboardScreen() {
       setEntries(mapped);
     } catch (err) {
       console.error('Leaderboard load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -114,7 +118,7 @@ export default function LeaderboardScreen() {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
             }
-            ListHeaderComponent={
+            ListHeaderComponent={<>{loadFailed && <LoadFailedBanner onRetry={loadData} />}
               <>
                 {/* Top 3 Podium */}
                 {topThree.length > 0 && (
@@ -176,7 +180,7 @@ export default function LeaderboardScreen() {
                   </View>
                 )}
               </>
-            }
+            </>}
             renderItem={({ item, index }) => (
               <LeaderboardRow
                 rank={index + 4}

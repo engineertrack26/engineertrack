@@ -4,6 +4,7 @@
     "error": "An error occurred",
     "required": "Required",
     "retry": "Retry",
+    "loadFailed": "Could not load. Check your connection and try again.",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",

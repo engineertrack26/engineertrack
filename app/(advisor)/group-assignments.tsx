@@ -20,6 +20,7 @@ import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
+import { LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
 const LEVELS = [1, 2, 3, 4];
@@ -113,8 +114,10 @@ export default function GroupAssignmentsScreen() {
   // that something changed, so it can re-run the one query both the draft
   // tray and the sent list read from.
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!groupId) return;
+    setLoadFailed(false);
     try {
       // The counts come from group_assignment_counts, not from a select on
       // assignment_submissions. That select is scoped by the table's SELECT
@@ -167,6 +170,7 @@ export default function GroupAssignmentsScreen() {
 
     } catch (err) {
       console.error('Load assignments error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -421,6 +425,7 @@ export default function GroupAssignmentsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[ADVISOR_COLOR]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.screenTitle}>{t('advisor.assignments')}</Text>
 
         {assignments.length === 0 && (

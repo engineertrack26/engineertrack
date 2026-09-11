@@ -20,6 +20,7 @@ import { studentCodeService } from '@/services/studentCode';
 import { colors, spacing, borderRadius } from '@/theme';
 import { parseStudentCode } from '@/utils/codes';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { LoadFailedBanner } from '@/components/common';
 
 interface StudentItem {
   id: string;
@@ -71,8 +72,10 @@ export default function StudentListScreen() {
   const codeShape = parseStudentCode(codeInput);
   const codeLooksValid = codeShape.kind === 'valid';
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       const data = await mentorService.getAssignedStudents(user.id);
       setStudents(
@@ -80,6 +83,7 @@ export default function StudentListScreen() {
       );
     } catch (err) {
       console.error('Student list load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -229,7 +233,7 @@ export default function StudentListScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
-        ListHeaderComponent={
+        ListHeaderComponent={<>{loadFailed && <LoadFailedBanner onRetry={loadData} />}
           <View style={styles.linkCard}>
             <Text style={styles.linkCardTitle}>Link a Student</Text>
             <Text style={styles.linkCardHint}>
@@ -268,7 +272,7 @@ export default function StudentListScreen() {
                 : t('student.codeInputHint')}
             </Text>
           </View>
-        }
+        </>}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={64} color={colors.textDisabled} />

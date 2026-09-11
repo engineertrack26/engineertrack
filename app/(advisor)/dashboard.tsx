@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { notificationService } from '@/services/notifications';
-import { StatCard } from '@/components/common';
+import { StatCard, LoadFailedBanner } from '@/components/common';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -67,8 +67,10 @@ export default function AdvisorDashboard() {
     daysSinceLastSubmission: number | null;
   }[]>([]);
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       const result = await advisorService.getDashboardStats(user.id);
       setStats({
@@ -88,6 +90,7 @@ export default function AdvisorDashboard() {
       }
     } catch (err) {
       console.error('Advisor dashboard load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -158,6 +161,7 @@ export default function AdvisorDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>

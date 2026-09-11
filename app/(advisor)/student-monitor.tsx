@@ -17,7 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGroupStore } from '@/store/groupStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
-import { ProgressBar } from '@/components/common';
+import { ProgressBar, LoadFailedBanner } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { GroupMember } from '@/types/group';
 
@@ -121,8 +121,10 @@ export default function StudentMonitorScreen() {
 
   const activeGroup = groupId ? groups.find((g) => g.id === groupId) : undefined;
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       if (groupId) {
         const [groupMembers] = await Promise.all([
@@ -138,6 +140,7 @@ export default function StudentMonitorScreen() {
       }
     } catch (err) {
       console.error('Student monitor load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -241,6 +244,7 @@ export default function StudentMonitorScreen() {
               </Text>
             </View>
           }
+          ListHeaderComponent={loadFailed ? <LoadFailedBanner onRetry={loadData} /> : null}
         />
       </SafeAreaView>
     );
@@ -336,6 +340,7 @@ export default function StudentMonitorScreen() {
             </Text>
           </View>
         }
+        ListHeaderComponent={loadFailed ? <LoadFailedBanner onRetry={loadData} /> : null}
       />
     </SafeAreaView>
   );

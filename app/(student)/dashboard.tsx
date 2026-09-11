@@ -10,7 +10,7 @@ import { assignmentService } from '@/services/assignments';
 import { groupService } from '@/services/group';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
-import { StatCard, ProgressBar } from '@/components/common';
+import { StatCard, ProgressBar, LoadFailedBanner } from '@/components/common';
 import { AppNotification } from '@/types/notification';
 import { LEVELS } from '@/types/gamification';
 import type { MyAssignment } from '@/types/assignment';
@@ -51,8 +51,10 @@ export default function StudentDashboard() {
   const submittedCount = taskGroups.revise.length + taskGroups.waiting.length + taskGroups.done.length;
   const completionRate = submittedCount > 0 ? Math.round((approvedCount / submittedCount) * 100) : 0;
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       const { data: profile } = await supabase
         .from('student_profiles')
@@ -116,6 +118,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.error('Dashboard load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -166,6 +169,7 @@ export default function StudentDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerText}>

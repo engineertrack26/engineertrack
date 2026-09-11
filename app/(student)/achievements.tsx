@@ -15,7 +15,7 @@ import { useGamificationStore } from '@/store/gamificationStore';
 import { gamificationService } from '@/services/gamification';
 import { competencyService } from '@/services/competency';
 import { supabase } from '@/services/supabase';
-import { ProgressBar } from '@/components/common';
+import { ProgressBar, LoadFailedBanner } from '@/components/common';
 import { BadgeCard } from '@/components/gamification';
 import { BADGES, LEVELS } from '@/types/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -45,8 +45,10 @@ export default function AchievementsScreen() {
     : 1;
   const xpToNextLevel = nextLevelData ? nextLevelData.minXp - totalXp : 0;
 
+  const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
     if (!user) return;
+    setLoadFailed(false);
     try {
       const [badges, history, profileRes, competencyProgress] = await Promise.all([
         gamificationService.getEarnedBadges(user.id),
@@ -73,6 +75,7 @@ export default function AchievementsScreen() {
       }
     } catch (err) {
       console.error('Achievements load error:', err);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,7 @@ export default function AchievementsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
         <Text style={styles.header}>{t('student.achievements')}</Text>
 
         {/* Level Section */}
