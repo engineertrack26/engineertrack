@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { routeForNotification } from '@/utils/notificationRoutes';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -54,7 +54,9 @@ export default function NotificationsScreen() {
     notifications,
     unreadCount,
     isLoading,
+    isLoadingMore,
     fetchNotifications,
+    fetchMore,
     markAsRead,
     markAllAsRead,
   } = useNotificationStore();
@@ -65,9 +67,18 @@ export default function NotificationsScreen() {
     if (user) await fetchNotifications(user.id);
   }, [user, fetchNotifications]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // On every focus, not only on mount: this tab stays mounted while the
+  // user is elsewhere, and rows marked read from a tapped push must show
+  // as read when they come back.
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
+
+  const loadMore = useCallback(() => {
+    if (user) fetchMore(user.id);
+  }, [user, fetchMore]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -160,6 +171,13 @@ export default function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
+          ) : null
         }
       />
     </SafeAreaView>

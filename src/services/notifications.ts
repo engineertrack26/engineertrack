@@ -41,13 +41,19 @@ export const notificationService = {
     return data;
   },
 
-  async getAll(userId: string, limit = 50) {
-    const { data, error } = await supabase
+  /** Newest first. `before` is a created_at cursor: pass the oldest row's
+   *  timestamp already on screen to get the page after it. Keyset rather
+   *  than offset so a notification arriving mid-scroll cannot shift the
+   *  pages and repeat or skip a row. */
+  async getAll(userId: string, limit = 50, before?: string) {
+    let query = supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
+    if (before) query = query.lt('created_at', before);
+    const { data, error } = await query;
     if (error) throw error;
     return data;
   },
