@@ -101,6 +101,7 @@ export default function GroupAssignmentsScreen() {
   // Discards a level fetch that a later tap has superseded -- readable
   // inside the async continuation without re-rendering or a stale closure.
   const levelRequest = useRef(0);
+  const [loadingTriplets, setLoadingTriplets] = useState(false);
 
   // One due date for the whole batch.
   const [dueDate, setDueDate] = useState('');
@@ -183,7 +184,18 @@ export default function GroupAssignmentsScreen() {
   // batch is built across the framework, not within one screenful, and losing
   // ticked tasks on a stray tap is the opposite of what multi-select is for.
   // The running count in the summary below is what keeps it honest.
+  // Every transition that empties the list also invalidates any level fetch
+  // still in flight, not only a newer level tap. Without this, switching from
+  // competency A to B while A's level was loading let A's late response land
+  // under B's heading -- the same stale-response bug chooseLevel guards
+  // against, reached from a different tap.
+  function invalidateLevelFetch() {
+    levelRequest.current += 1;
+    setLoadingTriplets(false);
+  }
+
   function chooseCompetency(id: string) {
+    invalidateLevelFetch();
     setPickedCompetency(id);
     setPickedLevel(null);
     setTriplets([]);
@@ -193,15 +205,28 @@ export default function GroupAssignmentsScreen() {
     const request = ++levelRequest.current;
     setPickedLevel(level);
     setTriplets([]);
+    setLoadingTriplets(true);
     const levelKpis = kpis.filter(
       (k) => k.competencyId === pickedCompetency && k.level === level,
     );
-    const lists = await Promise.all(levelKpis.map((k) => assignmentService.listTriplets(k.id)));
+    let lists: KpiTriplet[][];
+    try {
+      lists = await Promise.all(levelKpis.map((k) => assignmentService.listTriplets(k.id)));
+    } catch (err) {
+      if (request !== levelRequest.current) return;
+      setLoadingTriplets(false);
+      // An empty picker after a failed read looks like "no tasks at this
+      // level", which is a different fact. Say what happened.
+      console.warn('Triplet load failed:', err instanceof Error ? err.message : err);
+      Alert.alert(t('common.error'), t('advisor.tripletsLoadFailed'));
+      return;
+    }
     // A later tap already superseded this fetch. setPickedLevel is synchronous
     // and the fetch is not, so without this the last response to ARRIVE wins
     // rather than the last one requested, and the list can show one level's
     // triplets under another level's highlighted chip.
     if (request !== levelRequest.current) return;
+    setLoadingTriplets(false);
     setTriplets(lists.flat());
   }
 
@@ -215,6 +240,7 @@ export default function GroupAssignmentsScreen() {
   }
 
   function resetForm() {
+    invalidateLevelFetch();
     setPickedCompetency(null);
     setPickedLevel(null);
     setPicked(new Map());
@@ -500,6 +526,12 @@ export default function GroupAssignmentsScreen() {
               })}
             </View>
           </>
+        )}
+
+        {pickedLevel !== null && loadingTriplets && (
+          <View style={styles.card}>
+            <ActivityIndicator size="small" color={ADVISOR_COLOR} />
+          </View>
         )}
 
         {pickedLevel !== null && tripletGroups.length > 0 && (

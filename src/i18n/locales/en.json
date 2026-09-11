@@ -293,6 +293,7 @@
     "tripletsSelected_one": "{{count}} task selected",
     "tripletsSelected_other": "{{count}} tasks selected",
     "batchAssignHint": "Each task keeps its own wording. The selection is kept while you browse other competencies, and the due date below applies to all of them.",
+    "tripletsLoadFailed": "The tasks for this level could not be loaded. Check your connection and tap the level again.",
     "draftsCreated_one": "{{count}} task added to draft.",
     "draftsCreated_other": "{{count}} tasks added to draft.",
     "draftsPartial": "{{created}} of {{total}} tasks were added to draft. The rest are still selected — try again.",
