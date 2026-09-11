@@ -2,18 +2,19 @@ import { create } from 'zustand';
 import { groupService } from '@/services/group';
 import type { InternshipGroup } from '@/types/group';
 
+// The advisor's groups, shared between the groups list and Student Monitor.
+// Which group a screen is looking at is NOT held here: the per-group screens
+// take the group id as a route param and look it up in `groups`, so there is
+// exactly one source for "the current group" -- the URL.
 interface GroupState {
   groups: InternshipGroup[];
-  activeGroup: InternshipGroup | null;
   isLoading: boolean;
   fetchGroups: (advisorId: string) => Promise<void>;
-  setActiveGroup: (group: InternshipGroup | null) => void;
   reset: () => void;
 }
 
 export const useGroupStore = create<GroupState>((set) => ({
   groups: [],
-  activeGroup: null,
   isLoading: false,
 
   fetchGroups: async (advisorId: string) => {
@@ -26,6 +27,5 @@ export const useGroupStore = create<GroupState>((set) => ({
     }
   },
 
-  setActiveGroup: (group) => set({ activeGroup: group }),
-  reset: () => set({ groups: [], activeGroup: null, isLoading: false }),
+  reset: () => set({ groups: [], isLoading: false }),
 }));
