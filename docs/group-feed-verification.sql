@@ -33,6 +33,15 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_task_has_submission') THEN
     RAISE EXCEPTION 'FAIL: feed_posts_task_has_submission CHECK is missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_poll_question_length') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts_poll_question_length CHECK is missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_announcement_has_body') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts_announcement_has_body CHECK is missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_poll_votes_option_matches_post') THEN
+    RAISE EXCEPTION 'FAIL: feed_poll_votes_option_matches_post FOREIGN KEY is missing';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_see_post') THEN
     RAISE EXCEPTION 'FAIL: can_see_post() is missing';
@@ -46,6 +55,18 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_comment_notify' AND NOT tgisinternal) THEN
     RAISE EXCEPTION 'FAIL: trg_feed_comment_notify is missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_task_retract' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'FAIL: trg_feed_task_retract is missing';
+  END IF;
+
+  -- A task post is unforgeable: the direct-insert policy must exclude 'task'.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'feed_posts' AND cmd = 'INSERT'
+      AND with_check LIKE '%announcement%'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: feed_posts INSERT policy does not restrict to announcement/poll';
   END IF;
 
   -- Every child-table policy must route through can_see_post, never read

@@ -33,6 +33,11 @@ ALTER TABLE feed_posts DROP CONSTRAINT IF EXISTS feed_posts_poll_question_length
 ALTER TABLE feed_posts ADD CONSTRAINT feed_posts_poll_question_length
   CHECK (kind <> 'poll' OR (body IS NOT NULL AND char_length(body) <= 200));
 
+-- An announcement may not be empty.
+ALTER TABLE feed_posts DROP CONSTRAINT IF EXISTS feed_posts_announcement_has_body;
+ALTER TABLE feed_posts ADD CONSTRAINT feed_posts_announcement_has_body
+  CHECK (kind <> 'announcement' OR (body IS NOT NULL AND char_length(body) BETWEEN 1 AND 2000));
+
 CREATE INDEX IF NOT EXISTS idx_feed_posts_group_created
   ON feed_posts(group_id, created_at DESC);
 
@@ -45,6 +50,16 @@ CREATE TABLE IF NOT EXISTS feed_poll_options (
   UNIQUE (post_id, position)
 );
 
+-- A vote's option must belong to its post, structurally: feed_poll_options
+-- gets a second unique on (post_id, id) so feed_poll_votes can FK against
+-- the pair, not just option_id alone.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_poll_options_post_id_id_key') THEN
+    ALTER TABLE feed_poll_options ADD CONSTRAINT feed_poll_options_post_id_id_key UNIQUE (post_id, id);
+  END IF;
+END $$;
+
 -- ---- feed_poll_votes ----
 CREATE TABLE IF NOT EXISTS feed_poll_votes (
   post_id    UUID NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
@@ -53,6 +68,14 @@ CREATE TABLE IF NOT EXISTS feed_poll_votes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (post_id, user_id)
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_poll_votes_option_matches_post') THEN
+    ALTER TABLE feed_poll_votes ADD CONSTRAINT feed_poll_votes_option_matches_post
+      FOREIGN KEY (post_id, option_id) REFERENCES feed_poll_options(post_id, id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- ---- feed_likes ----
 CREATE TABLE IF NOT EXISTS feed_likes (
@@ -176,8 +199,12 @@ DECLARE
   v_name       TEXT;
   v_post       UUID;
 BEGIN
-  SELECT s.student_id, s.share_to_feed, s.status, a.title
-  INTO v_student, v_share, v_status, v_title
+  -- The assignment's own group, not the student's current active
+  -- membership: those coincide at approval time, but set_submission_sharing
+  -- (Task 2) can run after the student has transferred, and the post must
+  -- still land in the group the task was actually assigned in.
+  SELECT s.student_id, s.share_to_feed, s.status, a.title, a.group_id
+  INTO v_student, v_share, v_status, v_title, v_group
   FROM assignment_submissions s
   JOIN group_assignments a ON a.id = s.assignment_id
   WHERE s.id = p_submission_id;
@@ -187,17 +214,6 @@ BEGIN
   END IF;
 
   IF EXISTS (SELECT 1 FROM feed_posts WHERE submission_id = p_submission_id) THEN
-    RETURN NULL;
-  END IF;
-
-  -- The student's ACTIVE group. one_active_group_per_student guarantees at
-  -- most one row; none means the student has left every group and the post
-  -- has no feed to land in.
-  SELECT m.group_id INTO v_group
-  FROM group_memberships m
-  WHERE m.student_id = v_student AND m.left_at IS NULL
-  LIMIT 1;
-  IF v_group IS NULL THEN
     RETURN NULL;
   END IF;
 
@@ -252,6 +268,28 @@ CREATE TRIGGER trg_feed_task_post
   FOR EACH ROW
   WHEN (NEW.status = 'approved' AND OLD.status IS DISTINCT FROM 'approved')
   EXECUTE FUNCTION trg_feed_task_post_fn();
+
+-- ---- A retracted approval takes its post down with it ----
+-- Comments and likes cascade via feed_posts' own ON DELETE CASCADE FKs --
+-- same rule as the student withdrawing it through set_submission_sharing(false).
+CREATE OR REPLACE FUNCTION trg_feed_task_retract_fn()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM feed_posts WHERE submission_id = NEW.id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_feed_task_retract ON assignment_submissions;
+CREATE TRIGGER trg_feed_task_retract
+  AFTER UPDATE OF status ON assignment_submissions
+  FOR EACH ROW
+  WHEN (OLD.status = 'approved' AND NEW.status IS DISTINCT FROM 'approved')
+  EXECUTE FUNCTION trg_feed_task_retract_fn();
 
 -- ---- A comment notifies the post's author (not for their own comment) ----
 CREATE OR REPLACE FUNCTION trg_feed_comment_notify_fn()
