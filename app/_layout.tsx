@@ -11,6 +11,8 @@ import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 import type { User } from '@/types/user';
 import { useAuthStore } from '@/store/authStore';
+import { isConsentCurrent } from '@/utils/consent';
+import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
 import { routeForNotification } from '@/utils/notificationRoutes';
 import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
@@ -75,6 +77,10 @@ LogBox.ignoreLogs([
   'SafeAreaView has been deprecated and will be removed in a future release',
 ]);
 
+// Route groups that belong to exactly one role. A signed-in user found in a
+// group that is not theirs is sent back to "/" to be re-routed.
+const ROLE_GROUPS = ['(student)', '(mentor)', '(advisor)'];
+
 // Routes inside (auth) that an ALREADY authenticated user is legitimately on:
 // the consent gate that app/index.tsx sends them to, and the privacy policy,
 // which every role's profile links to. Without this exemption the bounce-back
@@ -82,7 +88,7 @@ LogBox.ignoreLogs([
 const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy'];
 
 export default function RootLayout() {
-  const { setUser, setSession, setLoading, reset, isAuthenticated } = useAuthStore();
+  const { setUser, setSession, setLoading, reset, isAuthenticated, user } = useAuthStore();
   const resetLogStore = useLogStore((s) => s.reset);
   const resetGamificationStore = useGamificationStore((s) => s.reset);
   const resetNotificationStore = useNotificationStore((s) => s.reset);
@@ -238,10 +244,32 @@ export default function RootLayout() {
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup && !isSharedAuthRoute) {
-      router.replace('/');
+      return;
     }
-  }, [isAuthenticated, appReady, segments]);
+    if (isAuthenticated && inAuthGroup && !isSharedAuthRoute) {
+      router.replace('/');
+      return;
+    }
+
+    // The two checks index.tsx makes are repeated here because index.tsx is
+    // only visited on the way in from "/". A push tap, a deep link or a
+    // restored navigation state lands directly on a role route and never
+    // passes through it -- so without this a mentor could sit on a student
+    // tab, and a user whose consent lapsed could keep using the app until
+    // they happened to hit "/". RLS still holds on the server; this is the
+    // client half of the same rule.
+    if (isAuthenticated && !inAuthGroup && user) {
+      if (!isConsentCurrent(user.consentVersion, PRIVACY_POLICY_VERSION)) {
+        router.replace('/(auth)/consent');
+        return;
+      }
+      const group = segments[0] as string | undefined;
+      const ownGroup = `(${user.role})`;
+      if (group && ROLE_GROUPS.includes(group) && group !== ownGroup) {
+        router.replace('/');
+      }
+    }
+  }, [isAuthenticated, appReady, segments, user]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
