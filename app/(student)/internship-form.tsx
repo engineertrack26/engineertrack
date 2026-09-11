@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
+import { BackButton } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -186,6 +187,7 @@ export default function InternshipFormScreen() {
   if (loading) {
     return (
       <ScreenWrapper>
+        <BackButton href="/(student)/profile" />
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>{t('common.loading', 'Loading...')}</Text>
         </View>
@@ -195,6 +197,7 @@ export default function InternshipFormScreen() {
 
   return (
     <ScreenWrapper>
+      <BackButton href="/(student)/profile" disabled={saving} />
       <View style={styles.header}>
         <Text style={styles.title}>
           {t('student.internshipFormTitle', 'Internship Information')}

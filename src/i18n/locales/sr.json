@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "Nema arhiviranih zapisa",
+    "archiveHint": "Ovo je arhiva vaših dnevnih zapisa. Nastavite trenutni rad u odeljku Moji zadaci.",
+    "archiveFilteredEmpty": "Nema arhiviranih zapisa koji odgovaraju ovom filteru.",
+    "clearFilter": "Ukloni filter",
+    "rankingEmpty": "Rang-lista još nije dostupna",
+    "rankingHint": "Rang-lista prikazuje studente iz vaše grupe za praksu. Proverite grupu u Profilu i završite dodeljene zadatke da biste osvojili XP.",
+    "advisorNotes": "Napomene akademskog savetnika"
+  },
   "common": {
     "loading": "Učitavanje...",
     "error": "Došlo je do greške",

@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "Nu există înregistrări arhivate",
+    "archiveHint": "Aici este arhiva jurnalelor tale zilnice. Continuă activitatea curentă în Sarcinile mele.",
+    "archiveFilteredEmpty": "Nicio înregistrare arhivată nu corespunde acestui filtru.",
+    "clearFilter": "Șterge filtrul",
+    "rankingEmpty": "Clasamentul nu este încă disponibil",
+    "rankingHint": "Clasamentul arată studenții din grupa ta de practică. Verifică grupa în Profil și finalizează sarcinile atribuite pentru a câștiga XP.",
+    "advisorNotes": "Notele coordonatorului"
+  },
   "common": {
     "loading": "Se încarcă...",
     "error": "A apărut o eroare",

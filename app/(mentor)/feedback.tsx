@@ -203,10 +203,10 @@ export default function FeedbackScreen() {
           </View>
         </View>
 
-        <Text style={styles.logTitle} numberOfLines={1}>{item.assignmentTitle}</Text>
+        <Text style={styles.logTitle}>{item.assignmentTitle}</Text>
 
         {!!item.note && (
-          <Text style={styles.comments} numberOfLines={3}>{item.note}</Text>
+          <Text style={styles.comments} selectable>{item.note}</Text>
         )}
       </View>
     );
@@ -258,19 +258,19 @@ export default function FeedbackScreen() {
           </View>
         </View>
 
-        <Text style={styles.logTitle} numberOfLines={1}>{item.logTitle}</Text>
+        <Text style={styles.logTitle}>{item.logTitle}</Text>
 
         <View style={styles.ratingRow}>
           <StarDisplay value={item.rating} />
           <Text style={styles.ratingText}>{item.rating}/5</Text>
         </View>
 
-        <Text style={styles.comments} numberOfLines={2}>{item.comments}</Text>
+        <Text style={styles.comments} selectable>{item.comments}</Text>
 
         {!item.isApproved && item.revisionNotes ? (
           <View style={styles.revisionBox}>
             <Text style={styles.revisionLabel}>Revision Notes:</Text>
-            <Text style={styles.revisionText} numberOfLines={2}>{item.revisionNotes}</Text>
+            <Text style={styles.revisionText} selectable>{item.revisionNotes}</Text>
           </View>
         ) : null}
 

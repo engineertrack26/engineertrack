@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "Nessuna voce archiviata",
+    "archiveHint": "Questo è l’archivio dei tuoi diari giornalieri. Continua il lavoro attuale in Le mie attività.",
+    "archiveFilteredEmpty": "Nessuna voce archiviata corrisponde a questo filtro.",
+    "clearFilter": "Rimuovi filtro",
+    "rankingEmpty": "Classifica non ancora disponibile",
+    "rankingHint": "La classifica mostra gli studenti del tuo gruppo di tirocinio. Controlla il gruppo nel Profilo e completa le attività assegnate per ottenere XP.",
+    "advisorNotes": "Note del tutor accademico"
+  },
   "common": {
     "loading": "Caricamento...",
     "error": "Si è verificato un errore",

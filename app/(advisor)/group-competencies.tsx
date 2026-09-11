@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { competencyService } from '@/services/competency';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { Competency } from '@/types/competency';
-import { LoadFailedBanner } from '@/components/common';
+import { BackButton, LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
 const LEVELS = [1, 2, 3, 4];
@@ -99,6 +99,7 @@ export default function GroupCompetenciesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <BackButton href="/(advisor)/groups" />
         <View style={styles.loading}><ActivityIndicator size="large" color={ADVISOR_COLOR} /></View>
       </SafeAreaView>
     );
@@ -114,6 +115,7 @@ export default function GroupCompetenciesScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
+        <BackButton href="/(advisor)/groups" disabled={saving} />
         <Text style={styles.screenTitle}>{t('advisor.competencyScope')}</Text>
         <Text style={styles.hint}>{t('advisor.competencyScopeHint')}</Text>
 

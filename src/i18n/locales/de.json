@@ -1,4 +1,13 @@
 {
+  "flow": {
+    "archiveEmpty": "Keine archivierten Einträge",
+    "archiveHint": "Hier finden Sie Ihre früheren Tagesberichte. Setzen Sie Ihre aktuelle Arbeit unter Meine Aufgaben fort.",
+    "archiveFilteredEmpty": "Keine archivierten Einträge entsprechen diesem Filter.",
+    "clearFilter": "Filter zurücksetzen",
+    "rankingEmpty": "Noch keine Rangliste",
+    "rankingHint": "Die Rangliste zeigt Studierende Ihrer Praktikumsgruppe. Prüfen Sie Ihre Gruppe im Profil und erledigen Sie zugewiesene Aufgaben, um XP zu sammeln.",
+    "advisorNotes": "Anmerkungen der Betreuung"
+  },
   "common": {
     "loading": "Wird geladen...",
     "error": "Ein Fehler ist aufgetreten",
