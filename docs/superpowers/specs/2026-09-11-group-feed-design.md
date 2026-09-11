@@ -39,9 +39,14 @@ companies, so a mentor has no relationship with the group as a whole.
 ## 3. Data model
 
 ### `assignment_submissions.share_to_feed`
-`BOOLEAN NOT NULL DEFAULT true`. `submit_assignment` gains a sixth
-parameter, `p_share BOOLEAN DEFAULT true`, so existing callers keep working.
-Changing it later goes through `set_submission_sharing`.
+`BOOLEAN NOT NULL DEFAULT true`. `submit_assignment` is not changed: a
+sixth defaulted parameter would overload the five-argument signature and
+make every existing five-argument call ambiguous, and re-issuing a 150-line
+SECURITY DEFINER body to add one column is more risk than the column is
+worth. Instead the client calls `set_submission_sharing(id, false)`
+immediately after `submit_assignment` returns when the switch is off, and
+surfaces a failure of that second call rather than swallowing it. Changing
+the flag later goes through the same RPC.
 
 ### `feed_posts`
 | column | type | notes |
