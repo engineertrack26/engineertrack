@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
 import { LeaderboardRow } from '@/components/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
-import { Button, LoadFailedBanner } from '@/components/common';
+import { BackButton, Button, LoadFailedBanner } from '@/components/common';
 import { router } from 'expo-router';
 
 interface LeaderboardEntry {
@@ -103,6 +103,7 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <BackButton href="/(student)/dashboard" />
         <Text style={styles.header}>{t('student.leaderboard')}</Text>
 
         {entries.length === 0 && loadFailed ? (

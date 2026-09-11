@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { routeForNotification } from '@/utils/notificationRoutes';
+import { BackButton } from '@/components/common';
 import { useNotificationStore } from '@/store/notificationStore';
 import { AppNotification } from '@/types/notification';
 import type { UserRole } from '@/types/user';
@@ -152,6 +153,7 @@ export function NotificationsScreen({ role }: NotificationsScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
+      {role === 'student' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(student)/dashboard" /></View>}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>{t('common.notifications', 'Notifications')}</Text>
         {unreadCount > 0 && (

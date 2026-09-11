@@ -333,8 +333,8 @@ export const assignmentService = {
   /** Every assignment for the student's group, with their own submission if
    *  they have acted on it. A student with no submission row has not started;
    *  the absence is the state, so this is a left join, not a filter. */
-  async listMyAssignments(groupId: string, studentId: string): Promise<MyAssignment[]> {
-    const { data, error } = await supabase
+  async listMyAssignments(groupId: string, studentId: string, assignmentId?: string): Promise<MyAssignment[]> {
+    let query = supabase
       .from('group_assignments')
       // Evidence is embedded here, not fetched separately, because opening a
       // card must prefill it: submit_assignment deletes and rewrites
@@ -343,6 +343,8 @@ export const assignmentService = {
       .select(`*, ${COMPETENCY_EMBED}, assignment_submissions(*, log_photos(*), log_documents(*))`)
       .eq('group_id', groupId)
       .order('created_at', { ascending: false });
+    if (assignmentId) query = query.eq('id', assignmentId);
+    const { data, error } = await query;
     if (error) throw error;
 
     // Signed at read time, not stored: log-photos and log-documents are private

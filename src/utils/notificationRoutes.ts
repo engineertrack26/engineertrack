@@ -27,8 +27,9 @@ export function routeForNotification(
         case 'task_assigned':
         case 'task_approved':
         case 'task_revision_requested':
-          // `open` expands that task's card once the list has loaded.
-          return { pathname: '/(student)/my-tasks', params: assignmentId ? { open: assignmentId } : undefined };
+          return assignmentId
+            ? { pathname: '/(student)/task-detail', params: { id: assignmentId } }
+            : { pathname: '/(student)/my-tasks', params: undefined };
         case 'log_approved':
         case 'log_revision_requested':
         case 'log_sent_back':

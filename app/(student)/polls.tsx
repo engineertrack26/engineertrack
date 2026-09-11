@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { BackButton } from '@/components/common';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
@@ -307,6 +308,7 @@ export default function StudentPollsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(student)/dashboard" /></View>
       <Text style={styles.screenTitle}>Polls & Quizzes</Text>
 
       {/* Segment control */}

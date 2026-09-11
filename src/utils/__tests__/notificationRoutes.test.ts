@@ -4,8 +4,8 @@ describe('routeForNotification', () => {
   it('sends a student to their task, opened, for task notifications', () => {
     for (const type of ['task_assigned', 'task_approved', 'task_revision_requested']) {
       expect(routeForNotification(type, { assignmentId: 'a1' }, 'student')).toEqual({
-        pathname: '/(student)/my-tasks',
-        params: { open: 'a1' },
+        pathname: '/(student)/task-detail',
+        params: { id: 'a1' },
       });
     }
   });

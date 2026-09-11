@@ -9,7 +9,6 @@ import { useNotificationStore } from '@/store/notificationStore';
 export default function StudentLayout() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
   const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
@@ -25,16 +24,17 @@ export default function StudentLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textDisabled,
+        tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: t('tabs.dashboard'),
+          title: t('studentFlow.home'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -58,7 +58,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="achievements"
         options={{
-          title: t('tabs.badges'),
+          title: t('studentFlow.growth'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" size={size} color={color} />
           ),
@@ -67,6 +67,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="leaderboard"
         options={{
+          href: null,
           title: t('tabs.ranking'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="podium-outline" size={size} color={color} />
@@ -76,6 +77,7 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="polls"
         options={{
+          href: null,
           title: t('tabs.polls'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="clipboard-outline" size={size} color={color} />
@@ -85,12 +87,11 @@ export default function StudentLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
+          href: null,
           title: t('tabs.alerts'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.error, fontSize: 11 },
         }}
       />
       <Tabs.Screen
@@ -101,6 +102,10 @@ export default function StudentLayout() {
             <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
+      />
+      <Tabs.Screen
+        name="task-detail"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="internship-form"

@@ -17,6 +17,7 @@ import { competencyService } from '@/services/competency';
 import { supabase } from '@/services/supabase';
 import { ProgressBar, LoadFailedBanner } from '@/components/common';
 import { BadgeCard } from '@/components/gamification';
+import { StudentHeader } from '@/components/student/StudentUI';
 import { BADGES, LEVELS } from '@/types/gamification';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { CompetencyProgress } from '@/types/competency';
@@ -122,7 +123,7 @@ export default function AchievementsScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        <Text style={styles.header}>{t('student.achievements')}</Text>
+        <StudentHeader title={t('studentFlow.growth')} />
 
         {/* Level Section */}
         <View style={styles.levelCard}>

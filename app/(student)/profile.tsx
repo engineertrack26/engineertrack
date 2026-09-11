@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { StudentHeader } from '@/components/student/StudentUI';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -321,7 +322,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.screenTitle}>{t('student.profile', 'Profile')}</Text>
+        <StudentHeader title={t('tabs.profile')} />
 
         {/* Avatar Section */}
         <View style={styles.avatarSection}>

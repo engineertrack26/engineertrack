@@ -1,4 +1,5 @@
 import type { MyAssignment } from '@/types/assignment';
+import { taskState } from './studentTasks';
 
 export interface AssignmentGroups {
   revise: MyAssignment[];
@@ -14,11 +15,7 @@ export interface AssignmentGroups {
 export function groupAssignmentsByState(items: MyAssignment[]): AssignmentGroups {
   const out: AssignmentGroups = { revise: [], todo: [], waiting: [], done: [] };
   for (const item of items) {
-    const status = item.submission?.status;
-    if (status === 'needs_revision') out.revise.push(item);
-    else if (status === 'submitted') out.waiting.push(item);
-    else if (status === 'approved') out.done.push(item);
-    else out.todo.push(item);
+    out[taskState(item)].push(item);
   }
   return out;
 }
