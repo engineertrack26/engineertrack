@@ -37,9 +37,27 @@ ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS reflection TEXT;
 -- Both columns are reset, not just current_streak. longest_streak is fed by
 -- longest_streak = GREATEST(longest_streak, v_streak); left holding a
 -- day-scaled value, GREATEST would pin that maximum forever and a real week
--- streak could never exceed it and surface. This UPDATE is naturally
--- idempotent -- once every row is 0, re-running it changes nothing.
-UPDATE student_profiles SET current_streak = 0, longest_streak = 0;
+-- streak could never exceed it and surface.
+--
+-- The reset runs ONCE. An unconditional UPDATE here was wrong: it is a no-op
+-- only while every row is still 0, and the moment students have earned real
+-- week streaks a re-apply of this file -- which the header promises is safe
+-- -- would wipe them. The first application is detected by the presence of
+-- trg_daily_logs_gamification, the trigger that wrote the day-scaled values
+-- and which this file drops a few lines down. Trigger present: the counters
+-- are still in days and must be zeroed. Trigger gone: this file has run, the
+-- counters are in weeks, leave them alone.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'trg_daily_logs_gamification'
+      AND tgrelid = 'public.daily_logs'::regclass
+      AND NOT tgisinternal
+  ) THEN
+    UPDATE student_profiles SET current_streak = 0, longest_streak = 0;
+  END IF;
+END $$;
 
 -- ---- trg_daily_logs_gamification retires along with daily_logs writes ----
 --
