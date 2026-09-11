@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Linking,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,8 @@ function fromIsoDate(s: string): Date | null {
 export default function MyTasksScreen() {
   const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  // Arrives from a tapped notification: the task to expand once loaded.
+  const { open: openParam } = useLocalSearchParams<{ open?: string }>();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,6 +74,7 @@ export default function MyTasksScreen() {
   // closes and restored when it reopens; a successful submit clears it. Kept
   // in memory only: it survives a mis-tap, not an app restart.
   const drafts = useRef(new Map<string, FormDraft>());
+  const consumedOpen = useRef<string | null>(null);
 
   function parkDraft(id: string) {
     const empty = !note && !reflection && photos.length === 0 && documents.length === 0;
@@ -106,6 +109,19 @@ export default function MyTasksScreen() {
       setLoading(false);
     }
   }, [user]);
+
+  // Expand the task a notification pointed at, once, after the list has
+  // loaded, and only if it is actually in this list -- a stale or foreign id
+  // opens nothing. Done in an effect rather than inside loadData so
+  // toggleOpen runs with the current form state, not the closure loadData
+  // was created with.
+  useEffect(() => {
+    if (!openParam || openParam === consumedOpen.current || assignments.length === 0) return;
+    consumedOpen.current = openParam;
+    const target = assignments.find((a) => a.id === openParam);
+    if (target && openId !== target.id) toggleOpen(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openParam, assignments]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 

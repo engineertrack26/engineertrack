@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { routeForNotification } from '@/utils/notificationRoutes';
 import { useNotificationStore } from '@/store/notificationStore';
 import { AppNotification } from '@/types/notification';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -79,6 +81,14 @@ export default function MentorNotificationsScreen() {
 
   const handlePress = (item: AppNotification) => {
     if (!item.isRead) markAsRead(item.id);
+    // A notification that points at a task or a review opens it; one that
+    // does not (general, or a type this role has no screen for) just
+    // marks itself read, as before.
+    const route = routeForNotification(item.type, item.data, 'mentor');
+    if (route) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(route as any);
+    }
   };
 
   const renderItem = ({ item }: { item: AppNotification }) => {

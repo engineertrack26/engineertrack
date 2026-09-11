@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Image, Modal, Linking,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,11 @@ export default function PendingReviewsScreen() {
   const [studentNames, setStudentNames] = useState<Record<string, string>>({});
 
   const [openId, setOpenId] = useState<string | null>(null);
+  // Arrives from a tapped task_submitted notification. The RPC that writes
+  // it knows the assignment, not the submission, so the first pending
+  // submission for that task is the one opened.
+  const { assignmentId: assignmentParam } = useLocalSearchParams<{ assignmentId?: string }>();
+  const consumedParam = useRef<string | null>(null);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState<'approve' | 'revise' | null>(null);
   // Shared across every card -- only one can be open at a time, so a single
@@ -50,6 +55,14 @@ export default function PendingReviewsScreen() {
       // rule the database enforces, and an invitation to pass someone else's.
       const items = await assignmentService.listPendingReviews();
       setPending(items);
+      if (assignmentParam && assignmentParam !== consumedParam.current) {
+        consumedParam.current = assignmentParam;
+        const target = items.find((it) => it.assignmentId === assignmentParam);
+        if (target) {
+          setOpenId(target.id);
+          setNote('');
+        }
+      }
 
       // The student's name is not on the returned shape, so it is resolved
       // with a second, batched query keyed by the student ids already in
@@ -78,7 +91,7 @@ export default function PendingReviewsScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [assignmentParam]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 

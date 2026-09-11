@@ -11,6 +11,7 @@ import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 import type { User } from '@/types/user';
 import { useAuthStore } from '@/store/authStore';
+import { routeForNotification } from '@/utils/notificationRoutes';
 import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -180,19 +181,17 @@ export default function RootLayout() {
     // User tapped on a notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const data = response.notification.request.content.data;
-        if (data?.type) {
-          // Navigate based on notification type
-          const type = data.type as string;
-          if (type === 'log_approved' || type === 'log_revision_requested' || type === 'log_sent_back') {
-            router.push('/(student)/log-history');
-          } else if (type === 'new_feedback') {
-            router.push('/(student)/log-history');
-          } else if (type === 'badge_earned' || type === 'level_up') {
-            router.push('/(student)/achievements');
-          } else if (type === 'poll_available') {
-            router.push('/(student)/polls');
-          }
+        const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+        if (!data?.type) return;
+        // The destination depends on who is signed in as much as on the
+        // type: task_submitted goes to the mentor's queue, task_approved to
+        // the student's task. Read the role at tap time, not at mount --
+        // this listener outlives sign-in.
+        const role = useAuthStore.getState().user?.role;
+        const route = routeForNotification(data.type as string, data, role);
+        if (route) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          router.push(route as any);
         }
       },
     );
