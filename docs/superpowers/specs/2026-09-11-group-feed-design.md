@@ -59,6 +59,19 @@ A task post copies nothing from the submission — title, competency, note,
 photos and document are read through the join, so there is one source of
 truth and the feed cannot drift from the review screen.
 
+**The feed is read through one RPC, `list_feed_posts`, not by selecting the
+tables directly.** `assignment_submissions`' read policy is
+`student_id = auth.uid() OR is_mentor_of OR is_group_advisor_of` — a
+student cannot select a classmate's submission, and `log_photos` /
+`log_documents` follow the same rule. Widening those policies would expose
+the reflection and the mentor's note, which decision 1 keeps private. So
+`list_feed_posts(p_group_id, p_before, p_limit)` runs `SECURITY DEFINER`,
+checks `owns_group OR is_member_of_group` itself, and projects exactly the
+shared fields: post, author name, task title, competency · level, the
+student's note, evidence paths, like and comment counts, and the caller's
+own like and vote. Reflection and mentor note never leave the function.
+Comments are selected directly (their policy is `can_see_post`).
+
 ### `feed_poll_options`
 `id`, `post_id` → `feed_posts` (cascade), `position` int, `label` text ≤ 80.
 UNIQUE (`post_id`, `position`).
