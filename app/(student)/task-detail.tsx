@@ -45,6 +45,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   // second call after submit_assignment returns.
   const [shareToFeed, setShareToFeed] = useState(true);
   const [sharingBusy, setSharingBusy] = useState(false);
+  const sharingInFlight = useRef(false);
   const reflectionInput = useRef<TextInput>(null);
   const generation = useRef(0);
   const saveVersion = useRef(0);
@@ -80,7 +81,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       currentDraft.current = value;
       setDraft(value);
       setTask(item);
-      setShareToFeed(item.submission?.shareToFeed ?? true);
+      if (!sharingInFlight.current) setShareToFeed(item.submission?.shareToFeed ?? true);
       setSaveState(restored ? 'saved' : 'idle');
     } catch {
       if (request === generation.current) setFailed(true);
@@ -151,17 +152,22 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
     const previous = shareToFeed;
     setShareToFeed(share);           // optimistic
     setSharingBusy(true);
+    sharingInFlight.current = true;
     try {
       await feedService.setSubmissionSharing(task.submission.id, share);
       setTask(current => current && current.submission
         ? { ...current, submission: { ...current.submission, shareToFeed: share } }
         : current);
+      // Re-assert from the confirmed value: a load() may have re-seeded
+      // shareToFeed from a stale fetch while this RPC was in flight.
+      setShareToFeed(share);
     } catch (error) {
       setShareToFeed(previous);
       const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
       Alert.alert(t('common.error'), t(mapRpcError(message).key));
     } finally {
       setSharingBusy(false);
+      sharingInFlight.current = false;
     }
   }
 
@@ -186,18 +192,23 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       // parameter (spec §3). It must not fail silently: a task shared
       // against the student's wish is the one outcome the switch exists to
       // prevent, so a failure is told to them, with where to fix it.
+      let sharingFailed = false;
       if (!shareToFeed) {
         try {
           await feedService.setSubmissionSharing(submissionId, false);
         } catch (error) {
+          sharingFailed = true;
           console.warn('Sharing update failed:', error instanceof Error ? error.message : error);
-          Alert.alert(t('common.error'), t('student.sharingUpdateFailed'));
         }
       }
       // Local cleanup failure must not turn a successful server submit into a
       // false failure / duplicate retry. Revision matching rejects this draft.
       try { await taskDraftStore.remove(userId, id); } catch { /* stale draft is ignored on next read */ }
-      Alert.alert(t('common.done'), t('student.taskSubmitted'));
+      // One dialog either way: a sharing-update failure is folded into the
+      // success alert instead of stacking a second one on top of it.
+      Alert.alert(t('common.done'), sharingFailed
+        ? t('student.taskSubmitted') + '\n\n' + t('student.sharingUpdateFailed')
+        : t('student.taskSubmitted'));
       router.replace('/(student)/my-tasks');
     } catch (error) {
       const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
