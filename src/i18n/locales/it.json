@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Studente",
+    "internship": "Scuola e tirocinio",
+    "incomplete": "Puoi completare le informazioni mancanti nella schermata di modifica.",
+    "showDetails": "Mostra tutte le informazioni",
+    "hideDetails": "Nascondi dettagli",
+    "editInternship": "Modifica informazioni tirocinio",
+    "group": "Il mio gruppo",
+    "groupCode": "Codice gruppo",
+    "copyCode": "Copia codice",
+    "noCode": "Non hai ancora un codice studente.",
+    "generateCode": "Genera codice",
+    "codeCreated": "Generazione del codice completata.",
+    "linked": "Persone collegate",
+    "mentor": "Mentore",
+    "advisor": "Tutor",
+    "notLinked": "Non ancora collegato"
+  },
   "mentorProfile": {
     "edit": "Modifica profilo",
     "preferences": "Preferenze",
@@ -258,6 +276,12 @@
     "admin": "Amministratore"
   },
   "student": {
+    "noGroupYet": "Non fai ancora parte di un gruppo.",
+    "joinGroup": "Unisciti al gruppo del tutor",
+    "joinGroupHint": "Inserisci il codice fornito dal tutor.",
+    "groupCodePlaceholder": "Codice di 6 caratteri",
+    "joinedGroup": "Ti sei unito a {{name}}.",
+    "join": "Unisciti",
     "dashboard": "Pannello",
     "createLog": "Crea diario",
     "logHistory": "Cronologia diari",

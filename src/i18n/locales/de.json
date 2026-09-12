@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Lernende Person",
+    "internship": "Schule und Praktikum",
+    "incomplete": "Fehlende Praktikumsangaben kannst du im Bearbeitungsformular ergänzen.",
+    "showDetails": "Alle Angaben anzeigen",
+    "hideDetails": "Details ausblenden",
+    "editInternship": "Praktikumsangaben bearbeiten",
+    "group": "Meine Gruppe",
+    "groupCode": "Gruppencode",
+    "copyCode": "Code kopieren",
+    "noCode": "Du hast noch keinen Schülercode.",
+    "generateCode": "Code erstellen",
+    "codeCreated": "Code wurde erstellt.",
+    "linked": "Verknüpfte Personen",
+    "mentor": "Mentor",
+    "advisor": "Betreuung",
+    "notLinked": "Noch nicht verknüpft"
+  },
   "mentorProfile": {
     "edit": "Profil bearbeiten",
     "preferences": "Einstellungen",
@@ -258,6 +276,12 @@
     "admin": "Administrator"
   },
   "student": {
+    "noGroupYet": "Du bist noch keiner Gruppe beigetreten.",
+    "joinGroup": "Der Gruppe deiner Betreuung beitreten",
+    "joinGroupHint": "Gib den Code deiner Betreuung ein.",
+    "groupCodePlaceholder": "6-stelliger Code",
+    "joinedGroup": "Du bist {{name}} beigetreten.",
+    "join": "Beitreten",
     "dashboard": "Übersicht",
     "createLog": "Eintrag erstellen",
     "logHistory": "Eintragsverlauf",

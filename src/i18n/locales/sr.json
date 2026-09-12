@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Učenik",
+    "internship": "Škola i praksa",
+    "incomplete": "Podatke o praksi koji nedostaju možeš dopuniti na ekranu za uređivanje.",
+    "showDetails": "Prikaži sve podatke",
+    "hideDetails": "Sakrij detalje",
+    "editInternship": "Uredi podatke o praksi",
+    "group": "Moja grupa",
+    "groupCode": "Kod grupe",
+    "copyCode": "Kopiraj kod",
+    "noCode": "Još nemaš učenički kod.",
+    "generateCode": "Napravi kod",
+    "codeCreated": "Pravljenje koda je završeno.",
+    "linked": "Povezane osobe",
+    "mentor": "Mentor",
+    "advisor": "Savetnik",
+    "notLinked": "Još nije povezano"
+  },
   "mentorProfile": {
     "edit": "Uredi profil",
     "preferences": "Podešavanja",
@@ -258,6 +276,12 @@
     "admin": "Administrator"
   },
   "student": {
+    "noGroupYet": "Još se nisi pridružio grupi.",
+    "joinGroup": "Pridruži se grupi savetnika",
+    "joinGroupHint": "Unesi kod koji ti je dao savetnik.",
+    "groupCodePlaceholder": "Kod od 6 znakova",
+    "joinedGroup": "Pridružio si se grupi {{name}}.",
+    "join": "Pridruži se",
     "dashboard": "Kontrolna tabla",
     "createLog": "Novi dnevnik",
     "logHistory": "Istorija dnevnika",

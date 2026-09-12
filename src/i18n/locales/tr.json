@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Öğrenci",
+    "internship": "Okul ve staj bilgileri",
+    "incomplete": "Eksik staj bilgilerini düzenleme ekranından tamamlayabilirsin.",
+    "showDetails": "Tüm bilgileri göster",
+    "hideDetails": "Ayrıntıları gizle",
+    "editInternship": "Staj bilgilerini düzenle",
+    "group": "Grubum",
+    "groupCode": "Grup kodu",
+    "copyCode": "Kodu kopyala",
+    "noCode": "Henüz öğrenci kodun yok.",
+    "generateCode": "Kod oluştur",
+    "codeCreated": "Kod oluşturma işlemi tamamlandı.",
+    "linked": "Bağlı kişiler",
+    "mentor": "Mentor",
+    "advisor": "Danışman",
+    "notLinked": "Henüz bağlı değil"
+  },
   "mentorProfile": {
     "edit": "Profili düzenle",
     "preferences": "Tercihler",
@@ -258,6 +276,12 @@
     "admin": "Yönetici"
   },
   "student": {
+    "noGroupYet": "Henüz bir gruba katılmadın.",
+    "joinGroup": "Danışmanının grubuna katıl",
+    "joinGroupHint": "Danışmanının verdiği kodu gir.",
+    "groupCodePlaceholder": "6 karakterli kod",
+    "joinedGroup": "{{name}} grubuna katıldın.",
+    "join": "Katıl",
     "dashboard": "Ana Sayfa",
     "createLog": "Günlük Oluştur",
     "logHistory": "Günlük Geçmişi",

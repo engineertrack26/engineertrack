@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Student",
+    "internship": "School and internship",
+    "incomplete": "You can complete missing internship information in the edit screen.",
+    "showDetails": "Show all information",
+    "hideDetails": "Hide details",
+    "editInternship": "Edit internship information",
+    "group": "My group",
+    "groupCode": "Group code",
+    "copyCode": "Copy code",
+    "noCode": "You do not have a student code yet.",
+    "generateCode": "Generate code",
+    "codeCreated": "Code generation completed.",
+    "linked": "Linked people",
+    "mentor": "Mentor",
+    "advisor": "Advisor",
+    "notLinked": "Not linked yet"
+  },
   "mentorProfile": {
     "edit": "Edit profile",
     "preferences": "Preferences",

@@ -23,7 +23,7 @@ describe('mentor profile validation', () => {
 
 const resources = Object.fromEntries(PROFILE_LANGUAGES.map(({ code }) => [code,
   JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/locales', code + '.json'), 'utf8'))]));
-const sources = ['src/components/mentor/MentorProfile.tsx', 'src/components/mentor/ProfileSheet.tsx', 'src/utils/mentorProfile.ts'];
+const sources = ['src/components/mentor/MentorProfile.tsx', 'src/components/common/AccountProfile.tsx', 'src/components/mentor/ProfileSheet.tsx', 'src/utils/mentorProfile.ts'];
 const keys = [...new Set(sources.flatMap(path => [...readFileSync(join(process.cwd(), path), 'utf8')
   .matchAll(/['"]((?:mentorProfile|common|auth|tabs)\.[A-Za-z]+)['"]/g)].map(match => match[1])))];
 it.each(PROFILE_LANGUAGES.map(item => item.code))('has profile translations in %s', language => {

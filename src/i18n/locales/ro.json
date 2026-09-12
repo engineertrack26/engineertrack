@@ -1,4 +1,22 @@
 {
+  "studentProfileView": {
+    "student": "Elev",
+    "internship": "Școală și stagiu",
+    "incomplete": "Poți completa informațiile lipsă despre stagiu în ecranul de editare.",
+    "showDetails": "Arată toate informațiile",
+    "hideDetails": "Ascunde detaliile",
+    "editInternship": "Editează informațiile stagiului",
+    "group": "Grupul meu",
+    "groupCode": "Cod grup",
+    "copyCode": "Copiază codul",
+    "noCode": "Încă nu ai un cod de elev.",
+    "generateCode": "Generează cod",
+    "codeCreated": "Generarea codului s-a încheiat.",
+    "linked": "Persoane asociate",
+    "mentor": "Mentor",
+    "advisor": "Consilier",
+    "notLinked": "Încă nu este asociat"
+  },
   "mentorProfile": {
     "edit": "Editează profilul",
     "preferences": "Preferințe",
@@ -258,6 +276,12 @@
     "admin": "Administrator"
   },
   "student": {
+    "noGroupYet": "Încă nu te-ai alăturat unui grup.",
+    "joinGroup": "Alătură-te grupului consilierului",
+    "joinGroupHint": "Introdu codul primit de la consilier.",
+    "groupCodePlaceholder": "Cod de 6 caractere",
+    "joinedGroup": "Te-ai alăturat grupului {{name}}.",
+    "join": "Alătură-te",
     "dashboard": "Panou",
     "createLog": "Creează jurnal",
     "logHistory": "Istoric jurnale",
