@@ -220,6 +220,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
           <FeedPostCard
             post={item}
             userId={user.id}
+            role={role}
             canModerate={canModerate}
             highlighted={item.id === highlightId}
             onChange={updatePost}

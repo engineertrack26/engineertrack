@@ -1,6 +1,6 @@
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
-export type FeedPostKind = 'task' | 'announcement' | 'poll';
+export type FeedPostKind = 'task' | 'announcement' | 'poll' | 'assignment';
 
 export interface FeedTask {
   submissionId: string;
@@ -12,6 +12,15 @@ export interface FeedTask {
    *  bucket is a dead link. */
   photos: PhotoEvidence[];
   documents: DocumentEvidence[];
+}
+
+export interface FeedAssignment {
+  id: string;
+  title: string;
+  competencyName?: string;
+  level?: number;
+  /** ISO date (YYYY-MM-DD) or undefined. */
+  dueDate?: string;
 }
 
 export interface FeedPollOption {
@@ -40,6 +49,7 @@ export interface FeedPost {
   likedByMe: boolean;
   task?: FeedTask;
   poll?: FeedPoll;
+  assignment?: FeedAssignment;
 }
 
 export interface FeedComment {

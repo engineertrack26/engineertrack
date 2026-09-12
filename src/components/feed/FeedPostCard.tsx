@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { feedService } from '@/services/feed';
 import { pollPercentages, withLike } from '@/utils/feedMetrics';
@@ -12,6 +13,9 @@ import { FeedComments } from './FeedComments';
 interface Props {
   post: FeedPost;
   userId: string;
+  /** Decides where an assignment card opens: the student's task detail or
+   *  the advisor's assignments list for the group. */
+  role: 'student' | 'advisor';
   /** The advisor of this post's group. */
   canModerate: boolean;
   highlighted?: boolean;
@@ -24,8 +28,9 @@ function initials(name: string): string {
   return name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() || '').join('');
 }
 
-export function FeedPostCard({ post, userId, canModerate, highlighted, onChange, onRemoved, onOpenPhoto }: Props) {
+export function FeedPostCard({ post, userId, role, canModerate, highlighted, onChange, onRemoved, onOpenPhoto }: Props) {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const [showComments, setShowComments] = useState(false);
   const isMine = post.authorId === userId;
 
@@ -97,6 +102,15 @@ export function FeedPostCard({ post, userId, canModerate, highlighted, onChange,
     ]);
   }
 
+  function openAssignment() {
+    if (!post.assignment) return;
+    if (role === 'student') {
+      router.push({ pathname: '/(student)/task-detail', params: { id: post.assignment.id } });
+    } else {
+      router.push(`/(advisor)/group-assignments?groupId=${post.groupId}`);
+    }
+  }
+
   const percentages = post.poll ? pollPercentages(post.poll.options) : [];
 
   return (
@@ -110,7 +124,10 @@ export function FeedPostCard({ post, userId, canModerate, highlighted, onChange,
             {post.kind === 'task' && <Text style={styles.subtle}>  {t('feed.sharedTask')}</Text>}
           </Text>
           <Text style={styles.subtle}>
-            {post.kind === 'announcement' ? t('feed.announcement') : post.kind === 'poll' ? t('feed.poll') : ''}
+            {post.kind === 'announcement' ? t('feed.announcement')
+              : post.kind === 'poll' ? t('feed.poll')
+              : post.kind === 'assignment' ? t('notifications.taskAssignedTitle')
+              : ''}
             {post.kind !== 'task' ? ' · ' : ''}
             {new Date(post.createdAt).toLocaleDateString(i18n.language)}
           </Text>
@@ -157,6 +174,25 @@ export function FeedPostCard({ post, userId, canModerate, highlighted, onChange,
 
       {post.kind === 'announcement' && (
         <Text style={styles.body}>{post.body}</Text>
+      )}
+
+      {post.kind === 'assignment' && post.assignment && (
+        <View style={styles.section}>
+          {!!post.assignment.competencyName && (
+            <Text style={styles.competency}>
+              {post.assignment.competencyName}{post.assignment.level ? ` · L${post.assignment.level}` : ''}
+            </Text>
+          )}
+          <Text style={styles.title}>{post.assignment.title}</Text>
+          {!!post.assignment.dueDate && (
+            <Text style={styles.subtle}>
+              {t('student.taskDueDate')}: {new Date(post.assignment.dueDate).toLocaleDateString(i18n.language)}
+            </Text>
+          )}
+          <TouchableOpacity style={styles.docRow} onPress={openAssignment} activeOpacity={0.7}>
+            <Text style={styles.docName}>{t('studentFlow.viewTask')} →</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {post.kind === 'poll' && post.poll && (

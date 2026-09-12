@@ -20,6 +20,10 @@ BEGIN
                  WHERE table_name = 'assignment_submissions' AND column_name = 'share_to_feed') THEN
     RAISE EXCEPTION 'FAIL: assignment_submissions.share_to_feed is missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'feed_posts' AND column_name = 'assignment_id') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts.assignment_id is missing';
+  END IF;
 
   FOREACH t IN ARRAY ARRAY['feed_posts','feed_poll_options','feed_poll_votes','feed_likes','feed_comments'] LOOP
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = t) THEN
@@ -42,6 +46,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_poll_votes_option_matches_post') THEN
     RAISE EXCEPTION 'FAIL: feed_poll_votes_option_matches_post FOREIGN KEY is missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_assignment_has_assignment') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts_assignment_has_assignment CHECK is missing';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_see_post') THEN
     RAISE EXCEPTION 'FAIL: can_see_post() is missing';
@@ -58,6 +65,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_task_retract' AND NOT tgisinternal) THEN
     RAISE EXCEPTION 'FAIL: trg_feed_task_retract is missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_assignment_post' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'FAIL: trg_feed_assignment_post is missing';
   END IF;
 
   -- A task post is unforgeable: the direct-insert policy must exclude 'task'.
@@ -103,13 +113,14 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B7 create_feed_post poll with 3 options         -> 3 options, 1 notification per ACTIVE student
 --   B8 vote twice as the same user                  -> 1 vote, on the second option
 --   B9 advisor remove_feed_post on the task post    -> post gone AND share_to_feed = false
--- Expected: nine rows, none beginning FAIL / SKIP / ABORTED.
+--   B10 publishing a task posts one card, once; deleting the task removes it
+-- Expected: ten rows, none beginning FAIL / SKIP / ABORTED.
 -- ============================================================
 BEGIN;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; stu2 UUID; grp UUID; kpi UUID; asg UUID; asg2 UUID; sub UUID; sub2 UUID;
+  adv UUID; stu UUID; stu2 UUID; grp UUID; kpi UUID; asg UUID; asg2 UUID; asg3 UUID; sub UUID; sub2 UUID;
   post UUID; opt1 UUID; opt2 UUID; n INT; m INT; log TEXT := '';
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -118,7 +129,7 @@ BEGIN
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
 
   IF adv IS NULL OR stu IS NULL OR kpi IS NULL THEN
-    PERFORM set_config('probe.results', 'B1-B9' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
+    PERFORM set_config('probe.results', 'B1-B10' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
     RETURN;
   END IF;
 
@@ -143,6 +154,14 @@ BEGIN
   SELECT grp, tr.id, 'Probe task 2', tr.objective, tr.criterion, adv, now()
   FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
   RETURNING id INTO asg2;
+
+  -- A third task left as a DRAFT (no published_at), so B10 can drive the
+  -- publish transition through the trigger. asg and asg2 were INSERTed
+  -- already published, which the AFTER UPDATE trigger never sees.
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT grp, tr.id, 'Probe task 3', tr.objective, tr.criterion, adv
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 2 LIMIT 1
+  RETURNING id INTO asg3;
 
   -- Two submissions by stu on two assignments would need two triplets; one
   -- assignment with the second submission by stu2 keeps the fixture small.
@@ -276,6 +295,28 @@ BEGIN
                 ELSE 'FAIL: ' || n || ' posts, ' || CASE WHEN m = 1 THEN 'sharing off' ELSE 'sharing still on' END END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B9 advisor removal turns the student''s sharing off' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B10: the publish transition (NULL -> now()) fires the trigger exactly
+  -- once; a published -> published UPDATE must not (the WHEN clause), and
+  -- deleting the task takes its card down through the FK cascade.
+  BEGIN
+    IF asg3 IS NULL THEN
+      log := log || 'B10 publishing a task posts one card, once; deleting the task removes it' || E'\t' || 'SKIP: the KPI has fewer than three triplets' || E'\n';
+    ELSE
+      UPDATE group_assignments SET published_at = now() WHERE id = asg3;
+      SELECT count(*) INTO n FROM feed_posts WHERE assignment_id = asg3;
+      UPDATE group_assignments SET published_at = now() WHERE id = asg3;
+      SELECT count(*) INTO m FROM feed_posts WHERE assignment_id = asg3;
+      DELETE FROM group_assignments WHERE id = asg3;
+      log := log || 'B10 publishing a task posts one card, once; deleting the task removes it' || E'\t'
+          || CASE WHEN n = 1 AND m = 1 AND (SELECT count(*) FROM feed_posts WHERE assignment_id = asg3) = 0
+                  THEN '1 card, still 1, then 0'
+                  ELSE 'FAIL: ' || n || ' after publish, ' || m || ' after republish, '
+                       || (SELECT count(*) FROM feed_posts WHERE assignment_id = asg3) || ' after delete' END || E'\n';
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B10 publishing a task posts one card, once; deleting the task removes it' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
   PERFORM set_config('probe.results', log, true);

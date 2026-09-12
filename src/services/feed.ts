@@ -9,6 +9,7 @@ export const FEED_PAGE_SIZE = 20;
 function toPost(raw: Record<string, unknown>): FeedPost {
   const task = raw.task as Record<string, unknown> | null;
   const poll = raw.poll as Record<string, unknown> | null;
+  const assignment = raw.assignment as Record<string, unknown> | null;
   return {
     id: raw.id as string,
     kind: raw.kind as FeedPostKind,
@@ -43,6 +44,15 @@ function toPost(raw: Record<string, unknown>): FeedPost {
           })),
           totalVotes: Number(poll.totalVotes) || 0,
           myOptionId: (poll.myOptionId as string) || undefined,
+        }
+      : undefined,
+    assignment: assignment
+      ? {
+          id: assignment.id as string,
+          title: (assignment.title as string) || '',
+          competencyName: (assignment.competencyName as string) || undefined,
+          level: typeof assignment.level === 'number' ? assignment.level : undefined,
+          dueDate: (assignment.dueDate as string) || undefined,
         }
       : undefined,
   };
