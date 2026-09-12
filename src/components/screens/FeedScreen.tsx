@@ -43,6 +43,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
   const request = useRef(0);
   const listRef = useRef<FlatList<FeedPost>>(null);
   const groupIdRef = useRef<string | null>(null);
+  const scrollRetries = useRef(0);
 
   const canModerate = role === 'advisor';
 
@@ -135,6 +136,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
     if (index < 0) return;
     consumedParam.current = postParam;
     setHighlightId(postParam);
+    scrollRetries.current = 0;
     listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.1 });
   }, [postParam, posts]);
 
@@ -233,6 +235,8 @@ export function FeedScreen({ role }: FeedScreenProps) {
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
         onScrollToIndexFailed={(info) => {
+          if (scrollRetries.current >= 3) { scrollRetries.current = 0; return; } // give up; the highlight still shows
+          scrollRetries.current += 1;
           listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
           setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 }), 50);
         }}
