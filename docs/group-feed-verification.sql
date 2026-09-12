@@ -109,7 +109,7 @@ BEGIN;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; stu2 UUID; grp UUID; kpi UUID; asg UUID; sub UUID; sub2 UUID;
+  adv UUID; stu UUID; stu2 UUID; grp UUID; kpi UUID; asg UUID; asg2 UUID; sub UUID; sub2 UUID;
   post UUID; opt1 UUID; opt2 UUID; n INT; m INT; log TEXT := '';
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -136,6 +136,14 @@ BEGIN
   FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index LIMIT 1
   RETURNING id INTO asg;
 
+  -- A second task under the same KPI, so B2 can approve a submission with
+  -- sharing OFF by the SAME student -- it must not depend on the database
+  -- having a second student profile.
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by, published_at)
+  SELECT grp, tr.id, 'Probe task 2', tr.objective, tr.criterion, adv, now()
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO asg2;
+
   -- Two submissions by stu on two assignments would need two triplets; one
   -- assignment with the second submission by stu2 keeps the fixture small.
   INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
@@ -151,17 +159,19 @@ BEGIN
     log := log || 'B1 approval creates a task post' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
-  -- B2
+  -- B2: the same student, a second task, sharing OFF. The publisher's
+  -- NOT v_share branch is the whole privacy promise; it must be exercised
+  -- on every database, not only ones with two student profiles.
   BEGIN
-    IF stu2 IS NOT NULL THEN
+    IF asg2 IS NULL THEN
+      log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'SKIP: the KPI has only one triplet' || E'\n';
+    ELSE
       INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
-      VALUES (asg, stu2, 'submitted', 'r', false) RETURNING id INTO sub2;
+      VALUES (asg2, stu, 'submitted', 'r', false) RETURNING id INTO sub2;
       UPDATE assignment_submissions SET status = 'approved' WHERE id = sub2;
       SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub2;
       log := log || 'B2 approval with sharing off creates nothing' || E'\t'
           || CASE WHEN n = 0 THEN '0 posts' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
-    ELSE
-      log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'SKIP: needs a second student' || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
