@@ -13,6 +13,8 @@ import { LoadFailedBanner } from '@/components/common';
 import { FeedPostCard, FeedComposer, UpcomingTasksBox } from '@/components/feed';
 import { isActionable } from '@/utils/studentTasks';
 import { upcomingTasks } from '@/utils/feedUpcoming';
+import { selectAdvisorGroup, groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
+import { AdvisorBell } from '@/components/advisor/GroupUI';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { FeedPost } from '@/types/feed';
 import type { InternshipGroup } from '@/types/group';
@@ -20,13 +22,14 @@ import type { UpcomingCandidate } from '@/utils/feedUpcoming';
 
 interface FeedScreenProps {
   role: 'student' | 'advisor';
+  initialGroupId?: string;
 }
 
 interface GroupChoice { id: string; name: string; isArchived?: boolean }
 
 /** The group feed for the student (their one active group) and the advisor
  *  (a selector over their groups, the same treatment Reports gives it). */
-export function FeedScreen({ role }: FeedScreenProps) {
+export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -63,7 +66,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
         const choices = list.map((g) => ({ id: g.id, name: g.name, isArchived: g.isArchived }));
         setGroups(choices);
         // Never default to an archived group while an active one exists.
-        setGroupId((cur) => cur && choices.some((g) => g.id === cur) ? cur : (choices.find((g) => !g.isArchived) ?? choices[0])?.id ?? null);
+        setGroupId((cur) => selectAdvisorGroup(choices, cur, initialGroupId));
       } else {
         const g = await groupService.getMyGroup(user.id);
         setGroups(g ? [{ id: g.id, name: g.name }] : []);
@@ -76,7 +79,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
     } finally {
       setLoadingGroups(false);
     }
-  }, [user, role]);
+  }, [user, role, initialGroupId]);
 
   const loadPosts = useCallback(async (gid: string | null) => {
     const req = ++request.current;
@@ -203,6 +206,14 @@ export function FeedScreen({ role }: FeedScreenProps) {
 
   const header = (
     <View>
+      {role === 'advisor' && groupId && <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => router.push(groupCenterRoute(groupId))}
+        style={{ paddingVertical: 12, minHeight: 48 }}>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.primaryDark }}>
+          {groups.find((g) => g.id === groupId)?.name} · {t('advisorGroups.groupCenter')}
+        </Text>
+      </TouchableOpacity>}
       {loadFailed && <LoadFailedBanner onRetry={() => { loadGroups(); loadPosts(groupId); }} />}
       {role === 'advisor' && groups.length > 1 && (
         <View style={styles.chipRow}>
@@ -223,7 +234,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
         tasks={upcoming}
         onOpen={(task) => {
           if (role === 'advisor') {
-            router.push(`/(advisor)/group-assignments?groupId=${groupId}`);
+            if (groupId) router.push(groupWorkspaceRoute('group-assignments', groupId));
           } else {
             router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
           }
@@ -255,7 +266,10 @@ export function FeedScreen({ role }: FeedScreenProps) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.titleRow}><Text style={styles.screenTitle}>{t('feed.title')}</Text></View>
+      <View style={[styles.titleRow, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+        <Text style={[styles.screenTitle, { flex: 1 }]}>{t('feed.title')}</Text>
+        {role === 'advisor' && <AdvisorBell />}
+      </View>
       <FlatList
         ref={listRef}
         data={posts}

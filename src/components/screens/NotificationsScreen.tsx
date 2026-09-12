@@ -180,6 +180,7 @@ function NotificationsContent({ role, userId }: NotificationsScreenProps & { use
           <View style={styles.header}>
             {role === 'student' && <BackButton href="/(student)/dashboard" />}
             {role === 'mentor' && <BackButton href="/(mentor)/dashboard" />}
+            {role === 'advisor' && <BackButton href="/(advisor)/dashboard" />}
             <Text accessibilityRole="header" style={styles.title}>{t('common.notifications')}</Text>
             {(loaded || notifications.length > 0 || unreadCount > 0) && <View style={styles.summary}>
               <Text style={styles.summaryText}>{t('notificationUi.unreadCount', { count: unreadCount })}</Text>

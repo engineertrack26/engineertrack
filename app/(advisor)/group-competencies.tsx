@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { competencyService } from '@/services/competency';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { Competency } from '@/types/competency';
+import { groupCenterRoute } from '@/utils/advisorGroups';
+import { GroupContextLabel } from '@/components/advisor/GroupUI';
 import { BackButton, LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
@@ -16,7 +18,8 @@ const LEVELS = [1, 2, 3, 4];
 
 export default function GroupCompetenciesScreen() {
   const { t } = useTranslation();
-  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
+  const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
 
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   // competencyId -> target level, absent means not selected
@@ -99,7 +102,7 @@ export default function GroupCompetenciesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <BackButton href="/(advisor)/groups" />
+        <BackButton href={groupBack} />
         <View style={styles.loading}><ActivityIndicator size="large" color={ADVISOR_COLOR} /></View>
       </SafeAreaView>
     );
@@ -115,7 +118,8 @@ export default function GroupCompetenciesScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        <BackButton href="/(advisor)/groups" disabled={saving} />
+        <BackButton href={groupBack} disabled={saving} />
+        <GroupContextLabel groupId={groupId} />
         <Text style={styles.screenTitle}>{t('advisor.competencyScope')}</Text>
         <Text style={styles.hint}>{t('advisor.competencyScopeHint')}</Text>
 

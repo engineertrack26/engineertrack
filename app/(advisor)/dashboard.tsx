@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { notificationService } from '@/services/notifications';
 import { StatCard, LoadFailedBanner } from '@/components/common';
+import { AdvisorBell } from '@/components/advisor/GroupUI';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { colors, spacing, borderRadius } from '@/theme';
 
@@ -170,6 +171,7 @@ export default function AdvisorDashboard() {
             </Text>
             <Text style={styles.subtitle}>Advisor Dashboard</Text>
           </View>
+          <AdvisorBell />
           <TouchableOpacity
             style={styles.avatarPlaceholder}
             onPress={() => router.push('/(advisor)/profile')}

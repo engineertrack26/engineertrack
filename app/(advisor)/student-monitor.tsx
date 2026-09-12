@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGroupStore } from '@/store/groupStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
+import { groupCenterRoute } from '@/utils/advisorGroups';
 import { BackButton, ProgressBar, LoadFailedBanner } from '@/components/common';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { GroupMember } from '@/types/group';
@@ -108,7 +109,8 @@ function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
 }
 
 export default function StudentMonitorScreen() {
-  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
+  const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const groups = useGroupStore((s) => s.groups);
@@ -188,7 +190,7 @@ export default function StudentMonitorScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <BackButton href={groupId ? '/(advisor)/groups' : '/(advisor)/dashboard'} />
+        <BackButton href={groupId ? groupBack : '/(advisor)/dashboard'} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -200,7 +202,7 @@ export default function StudentMonitorScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.headerContainer}>
-          <BackButton href="/(advisor)/groups" />
+          <BackButton href={groupBack} />
           <Text style={styles.screenTitle}>
             {activeGroup?.name || t('advisor.studentMonitor')}
           </Text>

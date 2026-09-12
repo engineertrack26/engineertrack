@@ -10,14 +10,15 @@ import {
   Share,
   Alert,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
-import { StatCard, ProgressBar } from '@/components/common';
+import { StatCard, ProgressBar, BackButton } from '@/components/common';
+import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
 import type { GroupReportData } from '@/types/report';
@@ -60,6 +61,14 @@ function completionColor(percent: number): string {
 }
 
 export default function ReportsScreen() {
+  const { groupId, entry } = useLocalSearchParams<{ groupId?: string; entry?: string }>();
+  const userId = useAuthStore((s) => s.user?.id);
+  const requested = typeof groupId === 'string' ? groupId : undefined;
+  return <ReportsContent key={(userId ?? '') + ':' + (requested ?? '') + ':' + (entry ?? '')} initialGroupId={requested} />;
+}
+
+function ReportsContent({ initialGroupId }: { initialGroupId?: string }) {
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
@@ -85,7 +94,8 @@ export default function ReportsScreen() {
   const selectGroup = useCallback((groupId: string | null) => {
     selectedRef.current = groupId;
     setSelectedGroupId(groupId);
-  }, []);
+    navigation.setParams({ activeGroupId: groupId ?? '' } as never);
+  }, [navigation]);
 
   const loadReport = useCallback(async (groupId: string | null) => {
     if (!groupId) {
@@ -129,9 +139,7 @@ export default function ReportsScreen() {
       // empty state exists to avoid. Only when every group is archived does
       // list[0] win, because then there is nothing better to show.
       const current = selectedRef.current;
-      const fallback = list.find((g) => !g.isArchived) ?? list[0];
-      const next =
-        current && list.some((g) => g.id === current) ? current : fallback?.id ?? null;
+      const next = selectAdvisorGroup(list, current, initialGroupId);
       selectGroup(next);
       return next;
     } catch (err) {
@@ -143,7 +151,7 @@ export default function ReportsScreen() {
     } finally {
       setLoadingGroups(false);
     }
-  }, [user, selectGroup]);
+  }, [user, selectGroup, initialGroupId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -268,6 +276,7 @@ export default function ReportsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
+        <BackButton href={selectedGroupId ? groupCenterRoute(selectedGroupId) : { pathname: '/(advisor)/groups', params: { groupId: '' } }} />
         <View style={styles.titleRow}>
           <Text style={styles.screenTitle}>{t('advisor.reportsTitle')}</Text>
           {/* No groups means no figures, so there is nothing to export -- an

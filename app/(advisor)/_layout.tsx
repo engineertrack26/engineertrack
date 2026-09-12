@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
@@ -7,9 +7,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 
 export default function AdvisorLayout() {
+  const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
   const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
@@ -25,16 +25,17 @@ export default function AdvisorLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textDisabled,
+        tabBarActiveTintColor: colors.primaryDark,
+        tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: t('tabs.dashboard'),
+          title: t('advisorGroups.overview'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -43,7 +44,7 @@ export default function AdvisorLayout() {
       <Tabs.Screen
         name="groups"
         options={{
-          title: t('tabs.groups'),
+          title: t('advisorGroups.groups'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
@@ -52,17 +53,20 @@ export default function AdvisorLayout() {
       <Tabs.Screen name="student-monitor" options={{ href: null }} />
       <Tabs.Screen name="group-competencies" options={{ href: null }} />
       <Tabs.Screen name="group-assignments" options={{ href: null }} />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: t('tabs.reports'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="reports" options={{ href: null }} />
       <Tabs.Screen
         name="feed"
+        listeners={({ navigation }) => ({ tabPress: (event) => {
+          const state = navigation.getState();
+          const active = state.routes[state.index];
+          if (active?.name === 'feed') return;
+          const params = active?.params as { groupId?: string; activeGroupId?: string } | undefined;
+          const groupId = params?.activeGroupId ?? params?.groupId;
+          if (groupId) {
+            event.preventDefault();
+            router.navigate({ pathname: '/(advisor)/feed', params: { groupId, entry: String(Date.now()) } });
+          }
+        } })}
         options={{
           title: t('tabs.feed'),
           tabBarIcon: ({ color, size }) => (
@@ -70,17 +74,7 @@ export default function AdvisorLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: t('tabs.alerts'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
-          ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.error, fontSize: 11 },
-        }}
-      />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{

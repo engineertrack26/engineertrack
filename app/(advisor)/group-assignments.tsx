@@ -20,6 +20,8 @@ import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
+import { groupCenterRoute } from '@/utils/advisorGroups';
+import { GroupContextLabel } from '@/components/advisor/GroupUI';
 import { BackButton, LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
@@ -55,7 +57,8 @@ const ZERO_COUNTS = { submitted: 0, approved: 0, needsRevision: 0 };
 
 export default function GroupAssignmentsScreen() {
   const { t, i18n } = useTranslation();
-  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
+  const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
   const user = useAuthStore((s) => s.user);
 
   const [assignments, setAssignments] = useState<GroupAssignment[]>([]);
@@ -411,7 +414,7 @@ export default function GroupAssignmentsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <BackButton href="/(advisor)/groups" />
+        <BackButton href={groupBack} />
         <View style={styles.loading}><ActivityIndicator size="large" color={ADVISOR_COLOR} /></View>
       </SafeAreaView>
     );
@@ -427,7 +430,8 @@ export default function GroupAssignmentsScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        <BackButton href="/(advisor)/groups" disabled={saving || sending} />
+        <BackButton href={groupBack} disabled={saving || sending} />
+        <GroupContextLabel groupId={groupId} />
         <Text style={styles.screenTitle}>{t('advisor.assignments')}</Text>
 
         {assignments.length === 0 && (
