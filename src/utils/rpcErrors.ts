@@ -27,6 +27,13 @@ const ERROR_KEYS: Record<string, string> = {
   STUDENT_LEFT_GROUP: 'errors.studentLeftGroup',
   ASSIGNMENT_LOCKED: 'errors.assignmentLocked',
   REFLECTION_REQUIRED: 'errors.reflectionRequired',
+  NOT_GROUP_OWNER: 'errors.notGroupOwner',
+  NOT_IN_GROUP: 'errors.notInGroup',
+  NOT_OWNER: 'errors.notOwner',
+  KIND_NOT_ALLOWED: 'errors.kindNotAllowed',
+  POLL_OPTIONS_RANGE: 'errors.pollOptionsRange',
+  OPTION_MISMATCH: 'errors.optionMismatch',
+  POST_NOT_FOUND: 'errors.postNotFound',
 };
 
 /**

@@ -10,7 +10,11 @@ export type NotificationType =
   | 'task_assigned'
   | 'task_submitted'
   | 'task_approved'
-  | 'task_revision_requested';
+  | 'task_revision_requested'
+  | 'feed_announcement'
+  | 'feed_poll'
+  | 'feed_comment'
+  | 'feed_task_post';
 
 export interface AppNotification {
   id: string;

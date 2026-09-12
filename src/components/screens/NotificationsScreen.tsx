@@ -33,6 +33,10 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   task_submitted: { name: 'paper-plane', color: colors.primary },
   task_approved: { name: 'checkmark-circle', color: colors.success },
   task_revision_requested: { name: 'alert-circle', color: colors.error },
+  feed_announcement: { name: 'megaphone', color: colors.primary },
+  feed_poll: { name: 'bar-chart', color: colors.primary },
+  feed_comment: { name: 'chatbubble-ellipses', color: colors.info },
+  feed_task_post: { name: 'clipboard-outline', color: colors.info },
 };
 
 function timeAgo(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string, locale: string): string {

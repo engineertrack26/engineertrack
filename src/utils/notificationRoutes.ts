@@ -38,8 +38,13 @@ export function routeForNotification(
         case 'badge_earned':
         case 'level_up':
           return { pathname: '/(student)/achievements' };
-        case 'poll_available':
-          return { pathname: '/(student)/polls' };
+        case 'feed_announcement':
+        case 'feed_poll':
+        case 'feed_comment':
+        case 'feed_task_post': {
+          const postId = str(data?.postId);
+          return { pathname: '/(student)/feed', params: postId ? { post: postId } : undefined };
+        }
         default:
           return null;
       }
@@ -50,15 +55,18 @@ export function routeForNotification(
           // payloads filter the queue rather than choosing an arbitrary student.
           if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)!, studentId: '', assignmentId: '' } };
           return { pathname: '/(mentor)/pending-reviews', params: { assignmentId: assignmentId || '', studentId: '' } };
-        case 'poll_available':
-          return { pathname: '/(mentor)/polls' };
         default:
           return null;
       }
     case 'advisor':
       switch (type) {
-        case 'poll_available':
-          return { pathname: '/(advisor)/polls' };
+        case 'feed_announcement':
+        case 'feed_poll':
+        case 'feed_comment':
+        case 'feed_task_post': {
+          const postId = str(data?.postId);
+          return { pathname: '/(advisor)/feed', params: postId ? { post: postId } : undefined };
+        }
         default:
           return null;
       }

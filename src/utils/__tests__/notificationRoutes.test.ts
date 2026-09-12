@@ -49,4 +49,21 @@ describe('routeForNotification', () => {
   it('ignores a non-string assignment id rather than building a bad param', () => {
     expect(routeForNotification('task_assigned', { assignmentId: 42 }, 'student')?.params).toBeUndefined();
   });
+
+  it('sends feed notifications to the role feed, opened on the post', () => {
+    for (const type of ['feed_announcement', 'feed_poll', 'feed_comment']) {
+      expect(routeForNotification(type, { postId: 'p1' }, 'student')).toEqual({
+        pathname: '/(student)/feed',
+        params: { post: 'p1' },
+      });
+    }
+    expect(routeForNotification('feed_task_post', { postId: 'p1' }, 'advisor')).toEqual({
+      pathname: '/(advisor)/feed',
+      params: { post: 'p1' },
+    });
+  });
+
+  it('never sends a mentor to a feed', () => {
+    expect(routeForNotification('feed_announcement', { postId: 'p1' }, 'mentor')).toBeNull();
+  });
 });
