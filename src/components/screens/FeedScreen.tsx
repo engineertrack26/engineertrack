@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, Image, Pressable } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { feedService, FEED_PAGE_SIZE } from '@/services/feed';
 import { groupService } from '@/services/group';
+import { assignmentService } from '@/services/assignments';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { LoadFailedBanner } from '@/components/common';
-import { FeedPostCard, FeedComposer } from '@/components/feed';
+import { FeedPostCard, FeedComposer, UpcomingTasksBox } from '@/components/feed';
+import { isActionable } from '@/utils/studentTasks';
+import { upcomingTasks } from '@/utils/feedUpcoming';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { FeedPost } from '@/types/feed';
 import type { InternshipGroup } from '@/types/group';
+import type { UpcomingCandidate } from '@/utils/feedUpcoming';
 
 interface FeedScreenProps {
   role: 'student' | 'advisor';
@@ -24,6 +28,7 @@ interface GroupChoice { id: string; name: string; isArchived?: boolean }
  *  (a selector over their groups, the same treatment Reports gives it). */
 export function FeedScreen({ role }: FeedScreenProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { post: postParam } = useLocalSearchParams<{ post?: string }>();
 
@@ -31,6 +36,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [upcoming, setUpcoming] = useState<UpcomingCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -41,6 +47,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const consumedParam = useRef<string | null>(null);
   const request = useRef(0);
+  const upcomingRequest = useRef(0);
   const listRef = useRef<FlatList<FeedPost>>(null);
   const groupIdRef = useRef<string | null>(null);
   const scrollRetries = useRef(0);
@@ -90,6 +97,30 @@ export function FeedScreen({ role }: FeedScreenProps) {
     }
   }, []);
 
+  // A counter of its own, not `request`: this box is auxiliary to the
+  // stream (fetched from group_assignments, not feed_posts) and must not be
+  // invalidated by, or invalidate, an unrelated posts refetch that happens
+  // to land around the same time.
+  const loadUpcoming = useCallback(async (gid: string | null) => {
+    const req = ++upcomingRequest.current;
+    if (!gid || !user) { setUpcoming([]); return; }
+    try {
+      const list = role === 'advisor'
+        ? (await assignmentService.listGroupAssignments(gid)).filter((a) => !!a.publishedAt)
+        : (await assignmentService.listMyAssignments(gid, user.id)).filter(isActionable);
+      if (req !== upcomingRequest.current) return;
+      setUpcoming(upcomingTasks(list, new Date()));
+    } catch (err) {
+      if (req !== upcomingRequest.current) return;
+      // Auxiliary to the stream: the stream's own LoadFailedBanner is the
+      // user-facing failure signal, and a box that quietly disappears is
+      // not a wrong statement -- unlike a banner, silence here claims
+      // nothing about whether anything is due.
+      console.warn('Upcoming tasks load failed:', err);
+      setUpcoming([]);
+    }
+  }, [role, user]);
+
   const loadMore = useCallback(async () => {
     if (!groupId || !hasMore || loadingMore || loading || posts.length === 0) return;
     setLoadingMore(true);
@@ -115,8 +146,9 @@ export function FeedScreen({ role }: FeedScreenProps) {
   useFocusEffect(useCallback(() => {
     loadGroups();
     loadPosts(groupIdRef.current);
-  }, [loadGroups, loadPosts]));
-  useEffect(() => { loadPosts(groupId); }, [groupId, loadPosts]);
+    loadUpcoming(groupIdRef.current);
+  }, [loadGroups, loadPosts, loadUpcoming]));
+  useEffect(() => { loadPosts(groupId); loadUpcoming(groupId); }, [groupId, loadPosts, loadUpcoming]);
 
   // A new post in the selected group: refetch the top page rather than
   // trusting the bare row -- the realtime payload has no author name,
@@ -155,8 +187,9 @@ export function FeedScreen({ role }: FeedScreenProps) {
     setRefreshing(true);
     await loadGroups();
     await loadPosts(groupId);
+    await loadUpcoming(groupId);
     setRefreshing(false);
-  }, [loadGroups, loadPosts, groupId]);
+  }, [loadGroups, loadPosts, loadUpcoming, groupId]);
 
   function updatePost(next: FeedPost) {
     setPosts((prev) => prev.map((p) => (p.id === next.id ? next : p)));
@@ -185,6 +218,16 @@ export function FeedScreen({ role }: FeedScreenProps) {
           ))}
         </View>
       )}
+      <UpcomingTasksBox
+        tasks={upcoming}
+        onOpen={(task) => {
+          if (role === 'advisor') {
+            router.push(`/(advisor)/group-assignments?groupId=${groupId}`);
+          } else {
+            router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
+          }
+        }}
+      />
       {role === 'advisor' && groupId && (
         <View style={styles.composeRow}>
           <TouchableOpacity style={styles.composeBtn} onPress={() => setComposer('announcement')} activeOpacity={0.7}>
