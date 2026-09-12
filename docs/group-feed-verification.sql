@@ -98,7 +98,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B2 approval with share_to_feed = false         -> no post
 --   B3 retract then re-approve leaves exactly one post
 --   B4 set_submission_sharing(false)                -> post AND its 2 comments gone
---   B5 set_submission_sharing(true)                 -> a post is back
+--   B5 set_submission_sharing(true), twice           -> a post is back, second call is a no-op
 --   B6 create_feed_post poll with 1 option          -> POLL_OPTIONS_RANGE
 --   B7 create_feed_post poll with 3 options         -> 3 options, 1 notification per ACTIVE student
 --   B8 vote twice as the same user                  -> 1 vote, on the second option
@@ -141,49 +141,72 @@ BEGIN
   VALUES (asg, stu, 'submitted', 'r', true) RETURNING id INTO sub;
 
   -- B1
-  UPDATE assignment_submissions SET status = 'approved' WHERE id = sub;
-  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
-  log := log || 'B1 approval creates a task post' || E'\t'
-      || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  BEGIN
+    UPDATE assignment_submissions SET status = 'approved' WHERE id = sub;
+    SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
+    log := log || 'B1 approval creates a task post' || E'\t'
+        || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B1 approval creates a task post' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B2
-  IF stu2 IS NOT NULL THEN
-    INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
-    VALUES (asg, stu2, 'submitted', 'r', false) RETURNING id INTO sub2;
-    UPDATE assignment_submissions SET status = 'approved' WHERE id = sub2;
-    SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub2;
-    log := log || 'B2 approval with sharing off creates nothing' || E'\t'
-        || CASE WHEN n = 0 THEN '0 posts' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
-  ELSE
-    log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'SKIP: needs a second student' || E'\n';
-  END IF;
+  BEGIN
+    IF stu2 IS NOT NULL THEN
+      INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
+      VALUES (asg, stu2, 'submitted', 'r', false) RETURNING id INTO sub2;
+      UPDATE assignment_submissions SET status = 'approved' WHERE id = sub2;
+      SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub2;
+      log := log || 'B2 approval with sharing off creates nothing' || E'\t'
+          || CASE WHEN n = 0 THEN '0 posts' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+    ELSE
+      log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'SKIP: needs a second student' || E'\n';
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B2 approval with sharing off creates nothing' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B3: re-fire the trigger condition. The retraction trigger deletes the
   -- post the instant status leaves 'approved', so this flip is delete-then-
   -- recreate, not a same-row update -- the assertion is still exactly one
   -- post, but it is a *new* post, not the original B1 row.
-  UPDATE assignment_submissions SET status = 'submitted' WHERE id = sub;
-  UPDATE assignment_submissions SET status = 'approved' WHERE id = sub;
-  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
-  log := log || 'B3 retract then re-approve leaves exactly one post' || E'\t'
-      || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  BEGIN
+    UPDATE assignment_submissions SET status = 'submitted' WHERE id = sub;
+    UPDATE assignment_submissions SET status = 'approved' WHERE id = sub;
+    SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
+    log := log || 'B3 retract then re-approve leaves exactly one post' || E'\t'
+        || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B3 retract then re-approve leaves exactly one post' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
-  -- B4
-  SELECT id INTO post FROM feed_posts WHERE submission_id = sub;
-  INSERT INTO feed_comments (post_id, author_id, body) VALUES (post, adv, 'c1'), (post, adv, 'c2');
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  PERFORM set_submission_sharing(sub, false);
-  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
-  SELECT count(*) INTO m FROM feed_comments WHERE post_id = post;
-  log := log || 'B4 sharing off removes post and comments' || E'\t'
-      || CASE WHEN n = 0 AND m = 0 THEN '0 posts, 0 comments'
-              ELSE 'FAIL: ' || n || ' posts, ' || m || ' comments' END || E'\n';
+  -- B4: SELECT id INTO post lives inside this block because it depends on
+  -- B3 having run -- if B3 aborted, this reports ABORTED too, truthfully.
+  BEGIN
+    SELECT id INTO post FROM feed_posts WHERE submission_id = sub;
+    INSERT INTO feed_comments (post_id, author_id, body) VALUES (post, adv, 'c1'), (post, adv, 'c2');
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+    PERFORM set_submission_sharing(sub, false);
+    SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
+    SELECT count(*) INTO m FROM feed_comments WHERE post_id = post;
+    log := log || 'B4 sharing off removes post and comments' || E'\t'
+        || CASE WHEN n = 0 AND m = 0 THEN '0 posts, 0 comments'
+                ELSE 'FAIL: ' || n || ' posts, ' || m || ' comments' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B4 sharing off removes post and comments' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
-  -- B5
-  PERFORM set_submission_sharing(sub, true);
-  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
-  log := log || 'B5 sharing on republishes' || E'\t'
-      || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  -- B5: called twice. If the publisher's "already has a post" EXISTS guard
+  -- ever regressed, the second call would hit 23505 instead of no-op'ing.
+  BEGIN
+    PERFORM set_submission_sharing(sub, true);
+    PERFORM set_submission_sharing(sub, true);
+    SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
+    log := log || 'B5 sharing on republishes, and again is a no-op' || E'\t'
+        || CASE WHEN n = 1 THEN '1 post' ELSE 'FAIL: ' || n || ' posts' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B5 sharing on republishes, and again is a no-op' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B6
   PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
@@ -197,26 +220,34 @@ BEGIN
   END;
 
   -- B7: stu2 leaves first; only stu (active) may be notified.
-  UPDATE group_memberships SET left_at = now() WHERE group_id = grp AND student_id = stu2;
-  DELETE FROM notifications WHERE type IN ('feed_poll', 'feed_announcement') AND user_id IN (stu, stu2);
-  post := create_feed_post(grp, 'poll', 'Which?', ARRAY['A', 'B', 'C']);
-  SELECT count(*) INTO n FROM feed_poll_options WHERE post_id = post;
-  SELECT count(*) INTO m FROM notifications WHERE type = 'feed_poll' AND (data->>'postId')::uuid = post;
-  log := log || 'B7 poll writes options and notifies active members' || E'\t'
-      || CASE WHEN n = 3 AND m = 1 THEN '3 options, 1 notification'
-              ELSE 'FAIL: ' || n || ' options, ' || m || ' notifications' END || E'\n';
+  BEGIN
+    UPDATE group_memberships SET left_at = now() WHERE group_id = grp AND student_id = stu2;
+    DELETE FROM notifications WHERE type IN ('feed_poll', 'feed_announcement') AND user_id IN (stu, stu2);
+    post := create_feed_post(grp, 'poll', 'Which?', ARRAY['A', 'B', 'C']);
+    SELECT count(*) INTO n FROM feed_poll_options WHERE post_id = post;
+    SELECT count(*) INTO m FROM notifications WHERE type = 'feed_poll' AND (data->>'postId')::uuid = post;
+    log := log || 'B7 poll writes options and notifies active members' || E'\t'
+        || CASE WHEN n = 3 AND m = 1 THEN '3 options, 1 notification'
+                ELSE 'FAIL: ' || n || ' options, ' || m || ' notifications' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B7 poll writes options and notifies active members' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   -- B8
-  SELECT id INTO opt1 FROM feed_poll_options WHERE post_id = post AND position = 0;
-  SELECT id INTO opt2 FROM feed_poll_options WHERE post_id = post AND position = 1;
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  PERFORM vote_feed_poll(post, opt1);
-  PERFORM vote_feed_poll(post, opt2);
-  SELECT count(*) INTO n FROM feed_poll_votes WHERE post_id = post AND user_id = stu;
-  SELECT count(*) INTO m FROM feed_poll_votes WHERE post_id = post AND user_id = stu AND option_id = opt2;
-  log := log || 'B8 second vote moves the first' || E'\t'
-      || CASE WHEN n = 1 AND m = 1 THEN '1 vote, on option 2'
-              ELSE 'FAIL: ' || n || ' votes, ' || m || ' on option 2' END || E'\n';
+  BEGIN
+    SELECT id INTO opt1 FROM feed_poll_options WHERE post_id = post AND position = 0;
+    SELECT id INTO opt2 FROM feed_poll_options WHERE post_id = post AND position = 1;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+    PERFORM vote_feed_poll(post, opt1);
+    PERFORM vote_feed_poll(post, opt2);
+    SELECT count(*) INTO n FROM feed_poll_votes WHERE post_id = post AND user_id = stu;
+    SELECT count(*) INTO m FROM feed_poll_votes WHERE post_id = post AND user_id = stu AND option_id = opt2;
+    log := log || 'B8 second vote moves the first' || E'\t'
+        || CASE WHEN n = 1 AND m = 1 THEN '1 vote, on option 2'
+                ELSE 'FAIL: ' || n || ' votes, ' || m || ' on option 2' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B8 second vote moves the first' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   PERFORM set_config('probe.results', log, true);
 END $$;

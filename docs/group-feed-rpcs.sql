@@ -64,7 +64,7 @@ BEGIN
   IF NOT owns_group(p_group_id) THEN
     RAISE EXCEPTION 'NOT_GROUP_OWNER';
   END IF;
-  IF p_kind NOT IN ('announcement', 'poll') THEN
+  IF coalesce(p_kind, '') NOT IN ('announcement', 'poll') THEN
     RAISE EXCEPTION 'KIND_NOT_ALLOWED';
   END IF;
   IF btrim(coalesce(p_body, '')) = '' THEN
