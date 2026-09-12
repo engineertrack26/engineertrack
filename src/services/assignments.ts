@@ -84,6 +84,7 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
     submittedAt: (r.submitted_at as string) || '',
     reviewedAt: (r.reviewed_at as string) || undefined,
     reviewedBy: (r.reviewed_by as string) || undefined,
+    shareToFeed: r.share_to_feed === undefined || r.share_to_feed === null ? true : !!r.share_to_feed,
     photos: photosRaw?.map((p) => ({
       uri: (p.uri as string) || '',
       caption: (p.caption as string) || undefined,

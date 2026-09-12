@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { assignmentService } from '@/services/assignments';
+import { feedService } from '@/services/feed';
 import { groupService } from '@/services/group';
 import { taskDraftStore } from '@/services/taskDrafts';
 import { DOCUMENT_BUCKET, PHOTO_BUCKET, extractStoragePath, signEvidence } from '@/services/evidenceUrls';
@@ -39,6 +40,11 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   const [uploading, setUploading] = useState(false);
   const [instructions, setInstructions] = useState(false);
   const [reflectionError, setReflectionError] = useState(false);
+  // Per-task, default on (spec decision 2). Not part of TaskDraft on purpose
+  // -- see the Task 5 brief. Seeded from the server on load; sent as a
+  // second call after submit_assignment returns.
+  const [shareToFeed, setShareToFeed] = useState(true);
+  const [sharingBusy, setSharingBusy] = useState(false);
   const reflectionInput = useRef<TextInput>(null);
   const generation = useRef(0);
   const saveVersion = useRef(0);
@@ -74,6 +80,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       currentDraft.current = value;
       setDraft(value);
       setTask(item);
+      setShareToFeed(item.submission?.shareToFeed ?? true);
       setSaveState(restored ? 'saved' : 'idle');
     } catch {
       if (request === generation.current) setFailed(true);
@@ -139,6 +146,25 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
     catch { Alert.alert(t('common.error'), t('common.tryAgain')); }
   }
 
+  async function changeSharing(share: boolean) {
+    if (!task?.submission || sharingBusy) return;
+    const previous = shareToFeed;
+    setShareToFeed(share);           // optimistic
+    setSharingBusy(true);
+    try {
+      await feedService.setSubmissionSharing(task.submission.id, share);
+      setTask(current => current && current.submission
+        ? { ...current, submission: { ...current.submission, shareToFeed: share } }
+        : current);
+    } catch (error) {
+      setShareToFeed(previous);
+      const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
+      Alert.alert(t('common.error'), t(mapRpcError(message).key));
+    } finally {
+      setSharingBusy(false);
+    }
+  }
+
   async function submit() {
     if (!task || !userId || !id || busy.current || !actionable || restoreFailed) return;
     if (!currentDraft.current.reflection.trim()) {
@@ -155,7 +181,19 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
         return;
       }
       const value = currentDraft.current;
-      await assignmentService.submitAssignment(id, value.note.trim(), value.reflection.trim(), value.photos, value.documents);
+      const submissionId = await assignmentService.submitAssignment(id, value.note.trim(), value.reflection.trim(), value.photos, value.documents);
+      // The sharing decision travels as a second call, not a sixth RPC
+      // parameter (spec §3). It must not fail silently: a task shared
+      // against the student's wish is the one outcome the switch exists to
+      // prevent, so a failure is told to them, with where to fix it.
+      if (!shareToFeed) {
+        try {
+          await feedService.setSubmissionSharing(submissionId, false);
+        } catch (error) {
+          console.warn('Sharing update failed:', error instanceof Error ? error.message : error);
+          Alert.alert(t('common.error'), t('student.sharingUpdateFailed'));
+        }
+      }
       // Local cleanup failure must not turn a successful server submit into a
       // false failure / duplicate retry. Revision matching rejects this draft.
       try { await taskDraftStore.remove(userId, id); } catch { /* stale draft is ignored on next read */ }
@@ -246,6 +284,19 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             </>}
           </View>
           {actionable && <Text style={ui.secondary}>{t('studentFlow.localDraft')}</Text>}
+          {(actionable || task.submission?.status === 'approved') && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={ui.label}>{t('student.shareToFeed')}</Text>
+              <Text style={ui.secondary}>{t('student.shareToFeedHint')}</Text>
+            </View>
+            <Switch
+              value={shareToFeed}
+              onValueChange={actionable ? setShareToFeed : changeSharing}
+              disabled={submitting || sharingBusy || restoreFailed}
+              accessibilityLabel={t('student.shareToFeed')}
+              trackColor={{ true: colors.primaryDark }}
+            />
+          </View>}
           {saveState === 'error' && <Pressable accessibilityRole="button" onPress={() => persist(currentDraft.current)}>
             <Text style={ui.link}>{t('common.retry')}</Text>
           </Pressable>}

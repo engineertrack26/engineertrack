@@ -56,6 +56,10 @@ export interface AssignmentSubmission {
   reviewedBy?: string;
   photos?: PhotoEvidence[];
   documents?: DocumentEvidence[];
+  /** The student's per-task decision to show this task in the group feed
+   *  once approved. Server default true; undefined on older rows reads as
+   *  true. Changed through feedService.setSubmissionSharing. */
+  shareToFeed?: boolean;
 }
 
 /** One assignment's tallies as the SERVER counts them, which is not the same
