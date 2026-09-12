@@ -3,7 +3,8 @@
 --
 -- Run in the Supabase SQL editor. Anonymous dollar-quoting only.
 -- Apply order: docs/group-feed-migration.sql, docs/group-feed-rpcs.sql,
--- then this file, ONE PART PER SUBMISSION.
+-- docs/group-feed-assignment-cards.sql, then this file, ONE PART PER
+-- SUBMISSION.
 --
 -- PART A is STRUCTURAL: the editor runs as the table owner and bypasses
 -- RLS, so these prove a table, column, constraint, trigger or policy
@@ -55,6 +56,12 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'feed_publish_submission') THEN
     RAISE EXCEPTION 'FAIL: feed_publish_submission() is missing';
+  END IF;
+  -- The one copy of list_feed_posts is in group-feed-assignment-cards.sql;
+  -- a stale re-apply of an older file would drop the key and every
+  -- assignment card would render header-only, silently.
+  IF pg_get_functiondef('list_feed_posts(uuid,timestamptz,int)'::regprocedure) NOT LIKE '%''assignment''%' THEN
+    RAISE EXCEPTION 'FAIL: list_feed_posts does not project the assignment kind -- re-apply docs/group-feed-assignment-cards.sql';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_task_post' AND NOT tgisinternal) THEN

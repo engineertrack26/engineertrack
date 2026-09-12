@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { feedService } from '@/services/feed';
 import { pollPercentages, withLike } from '@/utils/feedMetrics';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { taskDueDate } from '@/utils/studentTasks';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { FeedPost } from '@/types/feed';
 import { FeedComments } from './FeedComments';
@@ -112,6 +113,9 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
   }
 
   const percentages = post.poll ? pollPercentages(post.poll.options) : [];
+  // Local date from the bare YYYY-MM-DD; new Date(...) would read it as UTC
+  // midnight and show the previous day west of UTC.
+  const due = post.assignment ? taskDueDate(post.assignment.dueDate, i18n.language) : undefined;
 
   return (
     <View style={[styles.card, highlighted && styles.cardHighlighted]}>
@@ -184,10 +188,8 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
             </Text>
           )}
           <Text style={styles.title}>{post.assignment.title}</Text>
-          {!!post.assignment.dueDate && (
-            <Text style={styles.subtle}>
-              {t('student.taskDueDate')}: {new Date(post.assignment.dueDate).toLocaleDateString(i18n.language)}
-            </Text>
+          {!!due && (
+            <Text style={styles.subtle}>{t('student.taskDueDate')}: {due}</Text>
           )}
           <TouchableOpacity style={styles.docRow} onPress={openAssignment} activeOpacity={0.7}>
             <Text style={styles.docName}>{t('studentFlow.viewTask')} →</Text>

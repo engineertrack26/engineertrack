@@ -7,13 +7,15 @@
 -- its comments. No notification is sent here: task_assigned already covers
 -- the publish.
 --
--- Idempotent and safe to re-apply. Apply AFTER docs/group-feed-migration.sql
--- and docs/group-feed-rpcs.sql. Anonymous dollar-quoting only in the
--- Supabase SQL editor.
+-- Idempotent and safe to re-apply. Apply AFTER docs/assignment-drafts-migration.sql
+-- (it adds group_assignments.published_at, which the trigger below is
+-- keyed on -- without it CREATE TRIGGER fails with 42703),
+-- docs/group-feed-migration.sql and docs/group-feed-rpcs.sql. Anonymous
+-- dollar-quoting only in the Supabase SQL editor.
 --
--- This file SUPERSEDES list_feed_posts from docs/group-feed-rpcs.sql: the
--- copy there is unchanged and now stale; the CREATE OR REPLACE below is the
--- one that stands (it adds the 'assignment' key and nothing else).
+-- This file holds THE copy of list_feed_posts: docs/group-feed-rpcs.sql no
+-- longer defines it, so the CREATE OR REPLACE below is the one that stands
+-- (the committed body plus the 'assignment' key, nothing else).
 -- ============================================
 
 -- ---- feed_posts gains the 'assignment' kind ----
@@ -85,9 +87,9 @@ CREATE TRIGGER trg_feed_assignment_post
   WHEN (NEW.published_at IS NOT NULL AND OLD.published_at IS NULL)
   EXECUTE FUNCTION trg_feed_assignment_post_fn();
 
--- ---- list_feed_posts, re-issued with the 'assignment' key ----
--- Byte-identical to docs/group-feed-rpcs.sql except for the one
--- 'assignment' entry after 'poll'. Same signature, same GRANT.
+-- ---- list_feed_posts ----
+-- The only definition. The pre-assignment body from docs/group-feed-rpcs.sql
+-- plus the one 'assignment' entry after 'poll'. Same signature, same GRANT.
 -- THE read. SECURITY DEFINER because a student cannot select a classmate's
 -- assignment_submissions / log_photos / log_documents rows, and widening
 -- those policies would expose the reflection and the mentor's note. This
