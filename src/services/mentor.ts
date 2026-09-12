@@ -169,22 +169,4 @@ export const mentorService = {
     });
   },
 
-  /** Per-student submission counts for the mentor's student list -- replaces
-   *  the old logService.getLogsByStudent(student.id) count now that review
-   *  work happens on assignment_submissions, not daily_logs. No mentor filter
-   *  is needed: RLS already scopes this read to is_mentor_of(student_id). */
-  async getSubmissionCountsByStudent(studentId: string) {
-    const { data, error } = await supabase
-      .from('assignment_submissions')
-      .select('status')
-      .eq('student_id', studentId);
-    if (error) throw error;
-
-    const rows = (data || []) as Array<{ status: string }>;
-    return {
-      total: rows.length,
-      approved: rows.filter((r) => r.status === 'approved').length,
-      pending: rows.filter((r) => r.status === 'submitted').length,
-    };
-  },
 };

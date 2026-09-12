@@ -76,7 +76,7 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
   const shortcuts: { title: string; hint: string; icon: keyof typeof Ionicons.glyphMap; href: Href }[] = [
     { title: t('mentorHome.history'), hint: t('mentorHome.historyHint'), icon: 'time-outline', href: '/(mentor)/feedback' },
     { title: t('tabs.polls'), hint: t('mentorHome.pollsHint'), icon: 'clipboard-outline', href: '/(mentor)/polls' },
-    { title: t('mentorHome.students'), hint: t('mentorHome.studentsHint'), icon: 'people-outline', href: '/(mentor)/student-list' },
+    { title: t('mentorHome.students'), hint: t('mentorHome.studentsHint'), icon: 'people-outline', href: { pathname: '/(mentor)/student-list', params: { studentId: '' } } },
   ];
   const metrics = [
     { label: t('mentorHome.assigned'), value: stats?.assignedCount, icon: 'people-outline' as const },
@@ -103,7 +103,7 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
             <Text style={ui.secondary}>{t('mentorHome.oldestHint')}</Text>
             <Pressable accessibilityRole="button" style={ui.primary}
               accessibilityLabel={t('mentorFlow.inspect') + ': ' + next.assignment.title}
-              onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: next.id } })}>
+              onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: next.id, studentId: '', assignmentId: '' } })}>
               <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
               <Ionicons name="arrow-forward" size={20} color="#fff" />
             </Pressable>
@@ -114,7 +114,7 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
           </>}
       </View>
       <Pressable accessibilityRole="button" style={[ui.header, { minHeight: 48, justifyContent: 'center' }]}
-        onPress={() => router.push({ pathname: '/(mentor)/pending-reviews', params: { assignmentId: '' } })}>
+        onPress={() => router.push({ pathname: '/(mentor)/pending-reviews', params: { assignmentId: '', studentId: '' } })}>
         <Text style={[ui.link, { flexShrink: 1 }]}>{queue && !queueLoading ? t('mentorHome.allPending', { count: queue.items.length }) : t('mentorHome.openQueue')}</Text>
         <Ionicons name="arrow-forward" size={20} color={colors.primaryDark} />
       </Pressable>

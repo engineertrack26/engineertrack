@@ -24,6 +24,7 @@ export default function ReviewDetailScreen() {
 }
 
 function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
+  const { studentId, assignmentId } = useLocalSearchParams<{ studentId?: string; assignmentId?: string }>();
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { width, fontScale } = useWindowDimensions();
@@ -74,14 +75,14 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
 
   const goBack = useCallback(() => {
     if (busy.current) return;
-    const leave = () => router.replace('/(mentor)/pending-reviews');
+    const leave = () => router.replace({ pathname: '/(mentor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
     if (!finished.current && (approvalNote.trim() || reason.trim())) {
       Alert.alert(t('mentorFlow.unsentNote'), t('mentorFlow.leaveNote'), [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.back'), onPress: leave },
       ]);
     } else leave();
-  }, [approvalNote, reason, router, t]);
+  }, [approvalNote, reason, router, t, studentId, assignmentId]);
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { goBack(); return true; });
     return () => subscription.remove();
@@ -123,7 +124,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
       setApprovalNote('');
       setReason('');
       Alert.alert(t('common.done'), t(approved ? 'mentor.taskApproved' : 'mentor.taskRevisionRequested'));
-      router.replace('/(mentor)/pending-reviews');
+      router.replace({ pathname: '/(mentor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
     } catch (error) {
       if (request !== generation.current) return;
       const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';

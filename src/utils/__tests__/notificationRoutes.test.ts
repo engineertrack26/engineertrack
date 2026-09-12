@@ -21,16 +21,16 @@ describe('routeForNotification', () => {
   it('sends a mentor to the review queue for a submission', () => {
     expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'mentor')).toEqual({
       pathname: '/(mentor)/pending-reviews',
-      params: { assignmentId: 'a1' },
+      params: { assignmentId: 'a1', studentId: '' },
     });
   });
 
   it('opens an exact mentor review when the notification identifies the submission', () => {
     expect(routeForNotification('task_submitted', { submissionId: 's1', assignmentId: 'a1' }, 'mentor')).toEqual({
-      pathname: '/(mentor)/review-detail', params: { id: 's1' },
+      pathname: '/(mentor)/review-detail', params: { id: 's1', studentId: '', assignmentId: '' },
     });
     expect(routeForNotification('task_submitted', { submissionId: 123, assignmentId: 'a1' }, 'mentor')).toEqual({
-      pathname: '/(mentor)/pending-reviews', params: { assignmentId: 'a1' },
+      pathname: '/(mentor)/pending-reviews', params: { assignmentId: 'a1', studentId: '' },
     });
   });
 

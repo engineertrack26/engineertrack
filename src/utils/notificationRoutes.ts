@@ -48,8 +48,8 @@ export function routeForNotification(
         case 'task_submitted':
           // New payloads may identify a submission. Older assignment-only
           // payloads filter the queue rather than choosing an arbitrary student.
-          if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)! } };
-          return { pathname: '/(mentor)/pending-reviews', params: assignmentId ? { assignmentId } : undefined };
+          if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)!, studentId: '', assignmentId: '' } };
+          return { pathname: '/(mentor)/pending-reviews', params: { assignmentId: assignmentId || '', studentId: '' } };
         case 'poll_available':
           return { pathname: '/(mentor)/polls' };
         default:

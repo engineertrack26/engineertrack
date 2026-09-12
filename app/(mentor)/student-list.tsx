@@ -1,500 +1,126 @@
-import { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  TextInput,
-} from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
-import { mentorService } from '@/services/mentor';
-import { studentCodeService } from '@/services/studentCode';
-import { colors, spacing, borderRadius } from '@/theme';
-import { parseStudentCode } from '@/utils/codes';
-import { mapRpcError } from '@/utils/rpcErrors';
+import { mentorStudentService } from '@/services/mentorStudents';
+import { filterMentorStudents, MentorStudent } from '@/utils/mentorStudents';
 import { LoadFailedBanner } from '@/components/common';
-
-interface StudentItem {
-  id: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl?: string;
-  totalXp: number;
-  currentLevel: number;
-  currentStreak: number;
-  internshipStartDate?: string;
-  internshipEndDate?: string;
-}
-
-function mapStudent(row: Record<string, unknown>): StudentItem {
-  const profile = row.profiles as Record<string, unknown> | null;
-  return {
-    id: row.id as string,
-    firstName: (profile?.first_name as string) || '',
-    lastName: (profile?.last_name as string) || '',
-    avatarUrl: (profile?.avatar_url as string) || undefined,
-    totalXp: (row.total_xp as number) || 0,
-    currentLevel: (row.current_level as number) || 1,
-    currentStreak: (row.current_streak as number) || 0,
-    internshipStartDate: (row.internship_start_date as string) || undefined,
-    internshipEndDate: (row.internship_end_date as string) || undefined,
-  };
-}
-
-function getInternshipProgress(start?: string, end?: string): { current: number; total: number } {
-  if (!start || !end) return { current: 0, total: 0 };
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const now = new Date();
-  const total = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  const current = Math.max(0, Math.min(total, Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))));
-  return { current, total };
-}
+import { ui } from '@/components/common/workflowStyles';
+import { ReviewHeader } from '@/components/mentor/ReviewUI';
+import { StudentDates, StudentIdentity } from '@/components/mentor/StudentIdentity';
+import { StudentDetail } from '@/components/mentor/StudentDetail';
+import { LinkStudentSheet } from '@/components/mentor/LinkStudentSheet';
+import { colors } from '@/theme';
 
 export default function StudentListScreen() {
-  const { t } = useTranslation();
-  const user = useAuthStore((s) => s.user);
-
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [students, setStudents] = useState<StudentItem[]>([]);
-  const [codeInput, setCodeInput] = useState('');
-  const [linking, setLinking] = useState(false);
-
-  const codeShape = parseStudentCode(codeInput);
-  const codeLooksValid = codeShape.kind === 'valid';
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    setLoadFailed(false);
-    try {
-      const data = await mentorService.getAssignedStudents(user.id);
-      setStudents(
-        (data || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
-      );
-    } catch (err) {
-      console.error('Student list load error:', err);
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  const handleStudentPress = useCallback(async (student: StudentItem) => {
-    try {
-      const counts = await mentorService.getSubmissionCountsByStudent(student.id);
-
-      Alert.alert(
-        `${student.firstName} ${student.lastName}`,
-        [
-          t('mentor.studentTotalTasks', { count: counts.total }),
-          t('mentor.studentApprovedTasks', { count: counts.approved }),
-          t('mentor.studentPendingTasks', { count: counts.pending }),
-          `XP: ${student.totalXp}`,
-          `Level: ${student.currentLevel}`,
-          `Streak: ${student.currentStreak} days`,
-        ].join('\n'),
-        [{ text: 'OK' }],
-      );
-    } catch {
-      Alert.alert('Error', 'Failed to load student details.');
-    }
-  }, [t]);
-
-  const handleLinkStudent = useCallback(async () => {
-    if (!user || !codeInput.trim()) return;
-    setLinking(true);
-    try {
-      const result = await studentCodeService.linkWithCode(codeInput.trim(), 'mentor');
-      Alert.alert('Success', `Linked to student: ${result.studentName}`);
-      setCodeInput('');
-      await loadData();
-    } catch (error: any) {
-      const info = mapRpcError(error?.message);
-      Alert.alert(t('common.error'), t(info.key));
-    } finally {
-      setLinking(false);
-    }
-  }, [user, codeInput, loadData, t]);
-
-  const getInitials = (first: string, last: string) =>
-    `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
-
-  const renderStudent = ({ item }: { item: StudentItem }) => {
-    const progress = getInternshipProgress(item.internshipStartDate, item.internshipEndDate);
-    const progressPercent = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
-
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => handleStudentPress(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.cardTop}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.initials}>{getInitials(item.firstName, item.lastName)}</Text>
-          </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.studentName} numberOfLines={1}>
-              {item.firstName} {item.lastName}
-            </Text>
-            {progress.total > 0 && (
-              <Text style={styles.progressText}>
-                Day {progress.current} / {progress.total}
-              </Text>
-            )}
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textDisabled} />
-        </View>
-
-        {/* Progress Bar */}
-        {progress.total > 0 && (
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarTrack}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${Math.min(progressPercent, 100)}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressPercent}>{progressPercent}%</Text>
-          </View>
-        )}
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Ionicons name="flash" size={15} color={colors.gamification.xp} />
-            <Text style={styles.statValue}>{item.totalXp}</Text>
-            <Text style={styles.statLabel}>XP</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Ionicons name="arrow-up-circle" size={15} color={colors.gamification.levelUp} />
-            <Text style={styles.statValue}>{item.currentLevel}</Text>
-            <Text style={styles.statLabel}>Level</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Ionicons name="flame" size={15} color={colors.gamification.streak} />
-            <Text style={styles.statValue}>{item.currentStreak}</Text>
-            <Text style={styles.statLabel}>Streak</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.screenTitle}>My Students</Text>
-        <Text style={styles.countText}>{students.length} student{students.length !== 1 ? 's' : ''}</Text>
-      </View>
-
-      <FlatList
-        data={students}
-        keyExtractor={(item) => item.id}
-        renderItem={renderStudent}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-        }
-        ListHeaderComponent={<>{loadFailed && <LoadFailedBanner onRetry={loadData} />}
-          <View style={styles.linkCard}>
-            <Text style={styles.linkCardTitle}>Link a Student</Text>
-            <Text style={styles.linkCardHint}>
-              Link a student to add them to your list.
-            </Text>
-            <View style={styles.linkRow}>
-              <TextInput
-                style={styles.linkInput}
-                value={codeInput}
-                onChangeText={setCodeInput}
-                placeholder="e.g. ABC123"
-                placeholderTextColor={colors.textDisabled}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={6}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.linkBtn,
-                  (!codeInput.trim() || !codeLooksValid) && { opacity: 0.5 },
-                ]}
-                disabled={!codeInput.trim() || !codeLooksValid || linking}
-                onPress={handleLinkStudent}
-                activeOpacity={0.7}
-              >
-                {linking ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.linkBtnText}>Link</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.codeHint}>
-              {codeInput.trim() && !codeLooksValid
-                ? t('student.codeInputInvalid')
-                : t('student.codeInputHint')}
-            </Text>
-          </View>
-        </>}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No Students Yet</Text>
-            <Text style={styles.emptyText}>
-              Use the code above to link your first student.
-            </Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
-  );
+  const userId = useAuthStore(s => s.user?.id);
+  return userId ? <Students key={userId} userId={userId} /> : null;
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  countText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
+function Students({ userId }: { userId: string }) {
+  const router = useRouter();
+  const { studentId } = useLocalSearchParams<{ studentId?: string }>();
+  const [query, setQuery] = useState('');
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const back = useCallback(() => router.setParams({ studentId: '' }), [router]);
+  if (studentId) return <StudentDetail key={studentId} userId={userId} studentId={studentId} onBack={back} />;
+  return <StudentList userId={userId} query={query} setQuery={setQuery} pendingOnly={pendingOnly} setPendingOnly={setPendingOnly} />;
+}
 
-  // Link Student
-  linkCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  linkCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  linkCardHint: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    lineHeight: 18,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  linkInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: 2,
-    backgroundColor: colors.background,
-  },
-  linkBtn: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 70,
-  },
-  linkBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  codeHint: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
+function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
+  userId: string; query: string; setQuery: (value: string) => void;
+  pendingOnly: boolean; setPendingOnly: (value: boolean) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const [students, setStudents] = useState<MentorStudent[]>([]);
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [countsFailed, setCountsFailed] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [success, setSuccess] = useState('');
+  const generation = useRef(0);
+  const load = useCallback(async () => {
+    const request = ++generation.current;
+    const current = () => request === generation.current && useAuthStore.getState().user?.id === userId;
+    setRefreshing(true); setFailed(false); setCountsFailed(false);
+    try {
+      const result = await mentorStudentService.students(userId);
+      if (!current()) return;
+      setStudents(result); setCounts(null);
+      try {
+        const pending = await mentorStudentService.pendingCounts(result.map(item => item.id));
+        if (current()) setCounts(pending);
+      } catch { if (current()) setCountsFailed(true); }
+    } catch { if (current()) { setFailed(true); setStudents([]); setCounts(null); } }
+    finally { if (current()) { setLoading(false); setRefreshing(false); } }
+  }, [userId]);
+  useFocusEffect(useCallback(() => { void load(); return () => { generation.current++; }; }, [load]));
+  const visible = useMemo(() => filterMentorStudents(students, query, pendingOnly, counts, i18n.language),
+    [students, query, pendingOnly, counts, i18n.language]);
+  const pendingStudents = students.filter(student => (counts?.[student.id] || 0) > 0).length;
 
-  // Card
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  initials: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  studentName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  progressText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-
-  // Progress Bar
-  progressBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  progressBarTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: colors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  progressPercent: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    minWidth: 36,
-    textAlign: 'right',
-  },
-
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  statDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: colors.divider,
-  },
-
-  // Empty
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.xxl * 2,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-});
+  return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
+    <View style={[ui.content, { paddingTop: 12, paddingBottom: 12 }]}><ReviewHeader brand /></View>
+    <FlatList data={loading || failed ? [] : visible} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[ui.content, { flexGrow: 1 }]}
+      refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={load} />}
+      ListHeaderComponent={<View style={{ gap: 16 }}>
+        <Text accessibilityRole="header" style={ui.title}>{t('mentorHome.students')}</Text>
+        {!loading && !failed && <Text style={ui.secondary}>{t('mentorStudents.count', { count: students.length })}</Text>}
+        <View style={[ui.input, ui.header, { paddingVertical: 0 }]}>
+          <Ionicons name="search-outline" size={22} color={colors.textSecondary} />
+          <TextInput value={query} onChangeText={setQuery} placeholder={t('mentorStudents.search')}
+            accessibilityLabel={t('mentorStudents.search')} placeholderTextColor={colors.textSecondary}
+            style={{ flex: 1, fontSize: 16, minHeight: 52, color: colors.text }} returnKeyType="search" />
+          {!!query && <Pressable accessibilityRole="button" accessibilityLabel={t('mentorStudents.clearSearch')}
+            onPress={() => setQuery('')} style={ui.iconButton}><Ionicons name="close" size={22} color={colors.textSecondary} /></Pressable>}
+        </View>
+        <Pressable accessibilityRole="button" style={[ui.primary, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.primaryDark }]}
+          onPress={() => { setSuccess(''); setLinking(true); }}>
+          <Ionicons name="add" size={22} color={colors.primaryDark} />
+          <Text style={[ui.primaryText, { color: colors.primaryDark }]}>{t('mentorStudents.link')}</Text>
+        </Pressable>
+        {!!success && <Text accessibilityLiveRegion="polite" style={ui.body}>{success}</Text>}
+        <View style={[ui.header, { flexWrap: 'wrap' }]}>
+          {[false, true].map(value => <Pressable key={String(value)} accessibilityRole="button"
+            accessibilityState={{ selected: pendingOnly === value, disabled: value && counts === null }}
+            disabled={value && counts === null} onPress={() => setPendingOnly(value)}
+            style={[ui.badge, { minHeight: 48, justifyContent: 'center', backgroundColor: pendingOnly === value ? '#eaf2fe' : '#fff', borderWidth: 1, borderColor: colors.divider }]}>
+            <Text style={[ui.secondary, pendingOnly === value && { color: colors.primaryDark, fontWeight: '600' }]}>
+              {value ? t('mentorStudents.pendingFilter') : t('mentorStudents.all')} ({value ? counts === null ? '—' : pendingStudents : loading || failed ? '—' : students.length})
+            </Text>
+          </Pressable>)}
+        </View>
+        {(failed || countsFailed) && <LoadFailedBanner onRetry={load} />}
+        {loading && <ActivityIndicator color={colors.primaryDark} />}
+      </View>}
+      renderItem={({ item }) => <Pressable accessibilityRole="button"
+        accessibilityLabel={t('mentorStudents.viewDetail') + ': ' + (item.name || t('mentorFlow.unknownStudent'))}
+        onPress={() => router.setParams({ studentId: item.id })} style={({ pressed }) => [ui.card, { opacity: pressed ? 0.7 : 1 }]}>
+        <StudentIdentity student={item} />
+        <StudentDates student={item} />
+        <Text style={[ui.badge, { color: counts && counts[item.id] > 0 ? '#855000' : colors.textSecondary,
+          backgroundColor: counts && counts[item.id] > 0 ? '#fff7e8' : colors.background }]}>
+          {counts === null ? t('mentorStudents.countUnknown') : counts[item.id] > 0 ? t('mentorStudents.waiting', { count: counts[item.id] }) : t('mentorStudents.noPending')}
+        </Text>
+        <View style={[ui.header, { borderTopWidth: 1, borderColor: colors.divider, minHeight: 48 }]}>
+          <Text style={[ui.link, { flexShrink: 1 }]}>{t('mentorStudents.viewDetail')}</Text>
+          <Ionicons name="arrow-forward" size={20} color={colors.primaryDark} />
+        </View>
+      </Pressable>}
+      ListEmptyComponent={!loading && !failed && !(pendingOnly && counts === null) ? <View style={ui.card}>
+        <Text style={ui.section}>{t(students.length ? 'mentorStudents.noResults' : 'mentorStudents.empty')}</Text>
+        <Text style={ui.body}>{t(students.length ? 'mentorStudents.searchHint' : 'mentorStudents.emptyHint')}</Text>
+      </View> : null}
+      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={ui.secondary}>{t('mentorStudents.listHint')}</Text> : null}
+    />
+    {linking && <LinkStudentSheet userId={userId} onClose={() => setLinking(false)}
+      onLinked={name => { setLinking(false); setSuccess(t('mentorStudents.linked', { name })); void load(); }} />}
+  </SafeAreaView>;
+}

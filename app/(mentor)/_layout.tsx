@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
@@ -8,6 +8,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
 
 export default function MentorLayout() {
+  const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const pendingCount = useMentorReviewStore(s => s.ownerId === user?.id ? s.pendingCount : null);
@@ -48,6 +49,7 @@ export default function MentorLayout() {
       />
       <Tabs.Screen
         name="student-list"
+        listeners={{ tabPress: event => { event.preventDefault(); router.navigate({ pathname: '/(mentor)/student-list', params: { studentId: '' } }); } }}
         options={{
           title: t('tabs.students'),
           tabBarIcon: ({ color, size }) => (
@@ -57,6 +59,7 @@ export default function MentorLayout() {
       />
       <Tabs.Screen
         name="pending-reviews"
+        listeners={{ tabPress: event => { event.preventDefault(); router.navigate({ pathname: '/(mentor)/pending-reviews', params: { assignmentId: '', studentId: '' } }); } }}
         options={{
           title: t('tabs.review'),
           tabBarBadge: pendingCount && pendingCount > 0 ? (pendingCount > 99 ? '99+' : pendingCount) : undefined,

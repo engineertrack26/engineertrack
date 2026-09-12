@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,13 +21,14 @@ export default function PendingReviewsScreen() {
 function ReviewQueue({ userId }: { userId?: string }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { assignmentId } = useLocalSearchParams<{ assignmentId?: string }>();
+  const { assignmentId, studentId } = useLocalSearchParams<{ assignmentId?: string; studentId?: string }>();
   const [items, setItems] = useState<PendingReview[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
+  useEffect(() => { setQuery(''); }, [studentId, assignmentId]);
   const [order, setOrder] = useState<ReviewSort>('oldest');
   const generation = useRef(0);
   const load = useCallback(async () => {
@@ -53,15 +54,16 @@ function ReviewQueue({ userId }: { userId?: string }) {
     void load();
     return () => { generation.current++; };
   }, [load]));
-  const visible = useMemo(() => filterReviews(items, names, query, order, i18n.language, assignmentId),
-    [items, names, query, order, i18n.language, assignmentId]);
+  const visible = useMemo(() => filterReviews(items, names, query, order, i18n.language, assignmentId, studentId),
+    [items, names, query, order, i18n.language, assignmentId, studentId]);
 
   return <SafeAreaView style={ui.safe}>
     <FlatList data={loading ? [] : visible} keyExtractor={item => item.id}
       contentContainerStyle={[ui.content, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={load} />}
       ListHeaderComponent={<View style={{ gap: 16 }}>
-        <ReviewBack label={t('studentFlow.home')} onPress={() => router.replace('/(mentor)/dashboard')} />
+        <ReviewBack label={t(studentId ? 'mentorStudents.detail' : 'studentFlow.home')} onPress={() => studentId
+          ? router.replace({ pathname: '/(mentor)/student-list', params: { studentId } }) : router.replace('/(mentor)/dashboard')} />
         <ReviewHeader />
         {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: items.length })}</Text>}
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
@@ -74,9 +76,9 @@ function ReviewQueue({ userId }: { userId?: string }) {
             <Ionicons name="swap-vertical-outline" size={18} color={colors.primaryDark} />
           </Pressable>
         </View>
-        {!!assignmentId && <View style={ui.note}>
-          <Text style={ui.body}>{t('mentorFlow.notificationFilter')}</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.setParams({ assignmentId: undefined })}>
+        {!!(assignmentId || studentId) && <View style={ui.note}>
+          <Text style={ui.body}>{studentId ? t('mentorStudents.studentFilter', { name: names[studentId] || t('mentorFlow.unknownStudent') }) : t('mentorFlow.notificationFilter')}</Text>
+          <Pressable accessibilityRole="button" onPress={() => { setQuery(''); router.setParams({ assignmentId: '', studentId: '' }); }}>
             <Text style={ui.link}>{t('mentorFlow.showAll')}</Text>
           </Pressable>
         </View>}
@@ -84,7 +86,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
         {loading && <ActivityIndicator size="large" color={colors.primary} />}
       </View>}
       ListEmptyComponent={!loading && !failed ? <View style={ui.card}>
-        <Text style={ui.body}>{t(query.trim() || assignmentId ? 'mentorFlow.noResults' : 'mentor.noPendingReviews')}</Text>
+        <Text style={ui.body}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.noResults' : 'mentor.noPendingReviews')}</Text>
       </View> : null}
       renderItem={({ item }) => <View style={ui.card}>
         <ReviewIdentity name={names[item.studentId] || ''} submittedAt={item.submittedAt} />
@@ -95,12 +97,12 @@ function ReviewQueue({ userId }: { userId?: string }) {
           <Text style={[ui.secondary, { flex: 1 }]}>{t('mentorFlow.attachments', { photos: item.photos?.length || 0, documents: item.documents?.length || 0 })}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.inspect') + ': ' + (names[item.studentId] || t('mentorFlow.unknownStudent')) + ', ' + item.assignment.title}
-          onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id } })} style={ui.primary}>
+          onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })} style={ui.primary}>
           <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
         </Pressable>
       </View>}
-      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center' }]}>{t(query.trim() || assignmentId ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
+      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center' }]}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
     />
   </SafeAreaView>;
 }

@@ -13,9 +13,9 @@ export function reviewNoteError(approved: boolean, note: string): string | null 
   return null;
 }
 export function filterReviews(items: PendingReview[], names: Record<string, string>, query: string,
-  order: ReviewSort, locale: string, assignmentId?: string): PendingReview[] {
+  order: ReviewSort, locale: string, assignmentId?: string, studentId?: string): PendingReview[] {
   const needle = query.trim().toLocaleLowerCase(locale);
-  return items.filter(item => (!assignmentId || item.assignmentId === assignmentId) &&
+  return items.filter(item => (!assignmentId || item.assignmentId === assignmentId) && (!studentId || item.studentId === studentId) &&
     `${names[item.studentId] || ''} ${item.assignment.title}`.toLocaleLowerCase(locale).includes(needle))
     .sort((a, b) => {
       const time = (Date.parse(a.submittedAt) || 0) - (Date.parse(b.submittedAt) || 0);
