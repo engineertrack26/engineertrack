@@ -199,6 +199,7 @@ BEGIN
   -- B5: called twice. If the publisher's "already has a post" EXISTS guard
   -- ever regressed, the second call would hit 23505 instead of no-op'ing.
   BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
     PERFORM set_submission_sharing(sub, true);
     PERFORM set_submission_sharing(sub, true);
     SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
