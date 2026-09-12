@@ -16,8 +16,12 @@ describe('pollPercentages', () => {
     expect(pollPercentages([{ votes: 5 }, { votes: 0 }])).toEqual([100, 0]);
   });
 
-  it('breaks remainder ties in favour of the larger fraction', () => {
-    expect(pollPercentages([{ votes: 2 }, { votes: 1 }, { votes: 1 }])).toEqual([50, 25, 25]);
+  it('gives the leftover point to the larger fraction, not the first option', () => {
+    // 2/3 = 66.67, 1/3 = 33.33, 0: floors 66/33/0 leave one point, and it
+    // belongs to the .67, not to whichever option comes first.
+    expect(pollPercentages([{ votes: 2 }, { votes: 1 }, { votes: 0 }])).toEqual([67, 33, 0]);
+    // Same fractions, reversed order: the point still follows the .67.
+    expect(pollPercentages([{ votes: 0 }, { votes: 1 }, { votes: 2 }])).toEqual([0, 33, 67]);
   });
 });
 
