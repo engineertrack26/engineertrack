@@ -21,6 +21,7 @@ import { useAuthStore } from '@/store/authStore';
 import { pollService } from '@/services/polls';
 import { Poll, PollType, QuestionType } from '@/types/poll';
 import { colors, spacing, borderRadius } from '@/theme';
+import { BackButton } from '@/components/common';
 
 interface QuestionDraft {
   questionText: string;
@@ -556,6 +557,7 @@ export function PollsManagerScreen({ role: viewerRole }: PollsManagerScreenProps
   // ── LIST VIEW ──
   return (
     <SafeAreaView style={styles.safeArea}>
+      {viewerRole === 'mentor' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(mentor)/dashboard" /></View>}
       <View style={styles.listHeader}>
         <Text style={styles.screenTitle}>{t('polls.myPolls')}</Text>
         <TouchableOpacity

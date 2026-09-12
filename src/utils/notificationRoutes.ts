@@ -46,8 +46,9 @@ export function routeForNotification(
     case 'mentor':
       switch (type) {
         case 'task_submitted':
-          // The RPC that writes this carries the assignment id only, so the
-          // queue opens the first pending submission for that task.
+          // New payloads may identify a submission. Older assignment-only
+          // payloads filter the queue rather than choosing an arbitrary student.
+          if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)! } };
           return { pathname: '/(mentor)/pending-reviews', params: assignmentId ? { assignmentId } : undefined };
         case 'poll_available':
           return { pathname: '/(mentor)/polls' };

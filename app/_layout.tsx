@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Slot, useRouter, useSegments, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import type * as Notifications from 'expo-notifications';
-import { LogBox } from 'react-native';
+import { ActivityIndicator, LogBox, Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -26,6 +27,8 @@ import {
   removeToken,
 } from '@/services/pushNotifications';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
+import { deferAuthWork, withAuthTimeout } from '@/utils/authStartup';
+import { colors } from '@/theme';
 
 // Show notifications when app is in the foreground.
 //
@@ -43,7 +46,7 @@ getNotifications()?.setNotificationHandler({
   }),
 });
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Crash reporting — no-op unless a DSN is configured (EXPO_PUBLIC_SENTRY_DSN)
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -88,6 +91,7 @@ const ROLE_GROUPS = ['(student)', '(mentor)', '(advisor)'];
 const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy'];
 
 export default function RootLayout() {
+  const { t } = useTranslation();
   const { setUser, setSession, setLoading, reset, isAuthenticated, user } = useAuthStore();
   const resetLogStore = useLogStore((s) => s.reset);
   const resetGamificationStore = useGamificationStore((s) => s.reset);
@@ -96,6 +100,8 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const [appReady, setAppReady] = useState(false);
+  const [startupFailed, setStartupFailed] = useState(false);
+  const [startupAttempt, setStartupAttempt] = useState(0);
   const notificationListener = useRef<Notifications.EventSubscription>(null);
   const responseListener = useRef<Notifications.EventSubscription>(null);
 
@@ -122,73 +128,114 @@ export default function RootLayout() {
     }
   }
 
-  // Listen for auth state changes
+  // Never await Supabase work from its auth event callback: the emitter holds
+  // the session lock until that callback returns.
   useEffect(() => {
-    async function initAuth() {
+    let active = true;
+    let revision = 0;
+    const cancellations = new Set<() => void>();
+    const current = (request: number) => active && request === revision;
+    const schedule = (work: () => void) => {
+      const cancel = deferAuthWork(() => {
+        cancellations.delete(cancel);
+        if (active) work();
+      });
+      cancellations.add(cancel);
+    };
+    function clearStores() {
+      pushRegisteredFor.current = null;
+      reset();
+      resetLogStore();
+      resetGamificationStore();
+      resetNotificationStore();
+      resetGroupStore();
+    }
+    function ready(request: number) {
+      if (!current(request)) return;
+      setStartupFailed(false);
+      setLoading(false);
+      setAppReady(true);
+    }
+    function failed(request: number) {
+      if (!current(request)) return;
+      setStartupFailed(true);
+      setAppReady(false);
+      // Keep index.tsx from redirecting beneath the startup error screen.
+      setLoading(true);
+    }
+    async function syncSession(
+      session: Awaited<ReturnType<typeof authService.getSession>>, request: number,
+    ) {
       try {
-        const session = await authService.getSession();
-        if (session?.user) {
-          const profile = await authService.getProfileWithRetry(session.user.id);
-          setSession(session);
-          setUser(profile);
-          applyUserLanguage(profile);
-          await registerPushFor(session.user.id);
+        if (!session?.user) {
+          if (current(request)) { clearStores(); ready(request); }
+          return;
+        }
+        const profile = await withAuthTimeout(authService.getProfileWithRetry(session.user.id));
+        if (!current(request)) return;
+        setSession(session);
+        setUser(profile);
+        applyUserLanguage(profile);
+        ready(request);
+        // Push registration is optional; it must never delay opening the app.
+        void registerPushFor(session.user.id);
+      } catch {
+        failed(request);
+      }
+    }
+    async function initAuth() {
+      const request = ++revision;
+      setAppReady(false);
+      setStartupFailed(false);
+      setLoading(true);
+      try {
+        // One deadline covers both session restore and profile lookup.
+        const result = await withAuthTimeout((async () => {
+          const session = await authService.getSession();
+          const profile = session?.user
+            ? await authService.getProfileWithRetry(session.user.id) : null;
+          return { session, profile };
+        })());
+        if (!current(request)) return;
+        if (result.session?.user && result.profile) {
+          setSession(result.session);
+          setUser(result.profile);
+          applyUserLanguage(result.profile);
+          ready(request);
+          void registerPushFor(result.session.user.id);
+        } else {
+          clearStores();
+          ready(request);
         }
       } catch {
-        // No active session
-      } finally {
-        setLoading(false);
-        setAppReady(true);
+        failed(request);
       }
     }
 
-    initAuth();
-
-    const { data: { subscription } } = authService.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-          // Clear push token before resetting user state
-          const currentUser = useAuthStore.getState().user;
-          if (currentUser?.id) {
-            removeToken(currentUser.id).catch(() => {});
-          }
-          pushRegisteredFor.current = null;
-          // Reset all stores so no previous user's data leaks to next user
-          reset();
-          resetLogStore();
-          resetGamificationStore();
-          resetNotificationStore();
-          resetGroupStore();
-          setLoading(false);
-          return;
-        }
-
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-          try {
-            const uid = session?.user?.id;
-            if (!uid) return;
-            const profile = await authService.getProfileWithRetry(uid);
-            setSession(session);
-            setUser(profile);
-            applyUserLanguage(profile);
-            // A sign-in that happened after launch -- the app opened with no
-            // session and the user logged in -- reaches here, not initAuth.
-            if (event === 'SIGNED_IN') {
-              await registerPushFor(uid);
-            }
-          } catch (err) {
-            console.warn('Auth state profile sync failed:', err);
-          } finally {
-            setLoading(false);
-          }
-        }
-      },
-    );
+    const { data: { subscription } } = authService.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return; // handled by initAuth
+      if (event === 'SIGNED_OUT') {
+        const request = ++revision;
+        const uid = useAuthStore.getState().user?.id;
+        clearStores();
+        ready(request);
+        if (uid) schedule(() => { void removeToken(uid).catch(() => {}); });
+        return;
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        const request = ++revision;
+        schedule(() => { void syncSession(session, request); });
+      }
+    });
+    void initAuth();
 
     return () => {
+      active = false;
+      revision++;
       subscription.unsubscribe();
+      cancellations.forEach(cancel => cancel());
     };
-  }, []);
+  }, [startupAttempt]);
 
   // Set up notification listeners
   useEffect(() => {
@@ -228,12 +275,10 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Hide splash screen when ready
+  // Network/auth work gets a visible loading/error UI, never an endless logo.
   useEffect(() => {
-    if (appReady) {
-      SplashScreen.hideAsync();
-    }
-  }, [appReady]);
+    void SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   // Protected routing
   useEffect(() => {
@@ -276,6 +321,21 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="auto" />
         <Slot />
+        {!appReady && <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.background,
+          alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
+          {startupFailed ? <>
+            <Text accessibilityRole="alert" style={{ fontSize: 18, color: colors.text, textAlign: 'center' }}>
+              {t('common.loadFailed')}
+            </Text>
+            <Pressable accessibilityRole="button" onPress={() => setStartupAttempt(value => value + 1)}
+              style={{ minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: colors.primaryDark }}>
+              <Text style={{ color: '#fff', fontSize: 16 }}>{t('common.retry')}</Text>
+            </Pressable>
+          </> : <>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text accessibilityLiveRegion="polite" style={{ fontSize: 16, color: colors.textSecondary }}>{t('common.loading')}</Text>
+          </>}
+        </View>}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

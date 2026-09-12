@@ -154,6 +154,7 @@ export function NotificationsScreen({ role }: NotificationsScreenProps) {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       {role === 'student' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(student)/dashboard" /></View>}
+      {role === 'mentor' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(mentor)/dashboard" /></View>}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>{t('common.notifications', 'Notifications')}</Text>
         {unreadCount > 0 && (

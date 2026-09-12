@@ -5,11 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useMentorReviewStore } from '@/store/mentorReviewStore';
 
 export default function MentorLayout() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const pendingCount = useMentorReviewStore(s => s.ownerId === user?.id ? s.pendingCount : null);
+
+  useEffect(() => () => {
+    if (user?.id) useMentorReviewStore.getState().invalidate(user.id);
+  }, [user?.id]);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
   const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
@@ -25,16 +30,17 @@ export default function MentorLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textDisabled,
+        tabBarActiveTintColor: colors.primaryDark,
+        tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: t('tabs.dashboard'),
+          title: t('studentFlow.home'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -53,40 +59,21 @@ export default function MentorLayout() {
         name="pending-reviews"
         options={{
           title: t('tabs.review'),
+          tabBarBadge: pendingCount && pendingCount > 0 ? (pendingCount > 99 ? '99+' : pendingCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primaryDark },
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkmark-circle-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="feedback"
-        options={{
-          title: t('tabs.feedback'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-outline" size={size} color={color} />
-          ),
-        }}
+        name="review-detail"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
-      <Tabs.Screen
-        name="polls"
-        options={{
-          title: t('tabs.polls'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: t('tabs.alerts'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size} color={color} />
-          ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.error, fontSize: 11 },
-        }}
-      />
+      <Tabs.Screen name="feedback" options={{ href: null }} />
+      <Tabs.Screen name="polls" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{

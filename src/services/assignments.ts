@@ -385,8 +385,8 @@ export const assignmentService = {
    *  disappears — leaving a review card with no title, no task and, worst, no
    *  criterion, the one thing the mentor is supposed to judge against. A row
    *  they cannot evaluate is worse than a row they cannot see. */
-  async listPendingReviews(): Promise<Array<AssignmentSubmission & { assignment: GroupAssignment }>> {
-    const { data, error } = await supabase
+  async listPendingReviews(options: { submissionId?: string; signUrls?: boolean } = {}): Promise<Array<AssignmentSubmission & { assignment: GroupAssignment }>> {
+    let query = supabase
       .from('assignment_submissions')
       // log_photos/log_documents embedded the same way listMyAssignments does,
       // so the mentor sees the evidence the student attached, not just their
@@ -395,6 +395,8 @@ export const assignmentService = {
       .select(`*, group_assignments!inner(*, ${COMPETENCY_EMBED}), log_photos(*), log_documents(*)`)
       .eq('status', 'submitted')
       .order('submitted_at', { ascending: true });
+    if (options.submissionId) query = query.eq('id', options.submissionId);
+    const { data, error } = await query;
     if (error) throw error;
 
     // Same as listMyAssignments: the buckets are private, so the stored URL has
@@ -405,10 +407,13 @@ export const assignmentService = {
     return Promise.all((data || []).map(async (row) => {
       const r = row as Record<string, unknown>;
       const submission = toSubmission(r);
-      const signed = await signEvidence(submission.photos, submission.documents);
       // The `!inner` above is what actually prevents a parentless row from
       // reaching here; this fallback only keeps the mapper total.
       const assignment = toAssignment((r.group_assignments || {}) as Record<string, unknown>);
+      // The queue only displays counts. Sign private evidence when opening
+      // one review, rather than issuing storage requests for the entire queue.
+      if (options.signUrls === false) return { ...submission, assignment };
+      const signed = await signEvidence(submission.photos, submission.documents);
       const documentUrl = await signAssignmentDocument(assignment.documentPath);
       return {
         ...submission,

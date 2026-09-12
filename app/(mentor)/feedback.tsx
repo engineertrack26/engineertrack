@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { colors, spacing, borderRadius } from '@/theme';
-import { LoadFailedBanner } from '@/components/common';
+import { BackButton, LoadFailedBanner } from '@/components/common';
 
 // Two distinct histories, never merged into one shape: a task review has an
 // outcome and a note, a legacy log review has a 1-5 rating. Forcing them into
@@ -282,6 +282,7 @@ export default function FeedbackScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(mentor)/dashboard" /></View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -309,8 +310,9 @@ export default function FeedbackScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(mentor)/dashboard" /></View>
       <View style={styles.headerContainer}>
-        <Text style={styles.screenTitle}>{t('mentor.feedbackHistory')}</Text>
+        <Text style={styles.screenTitle}>{t('mentorHome.history')}</Text>
         <Text style={styles.countText}>{t('mentor.reviewCount', { count: totalCount })}</Text>
       </View>
 

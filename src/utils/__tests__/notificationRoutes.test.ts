@@ -25,6 +25,15 @@ describe('routeForNotification', () => {
     });
   });
 
+  it('opens an exact mentor review when the notification identifies the submission', () => {
+    expect(routeForNotification('task_submitted', { submissionId: 's1', assignmentId: 'a1' }, 'mentor')).toEqual({
+      pathname: '/(mentor)/review-detail', params: { id: 's1' },
+    });
+    expect(routeForNotification('task_submitted', { submissionId: 123, assignmentId: 'a1' }, 'mentor')).toEqual({
+      pathname: '/(mentor)/pending-reviews', params: { assignmentId: 'a1' },
+    });
+  });
+
   it('never routes a notification type into a screen of the wrong role', () => {
     expect(routeForNotification('task_approved', { assignmentId: 'a1' }, 'mentor')).toBeNull();
     expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'student')).toBeNull();

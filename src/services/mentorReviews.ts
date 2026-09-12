@@ -1,0 +1,37 @@
+import { assignmentService } from './assignments';
+import { supabase } from './supabase';
+import { notificationService } from './notifications';
+import { PendingReview, reviewNoteError, reviewVersion } from '@/utils/mentorReviews';
+
+export const mentorReviewService = {
+  async names(items: PendingReview[]): Promise<Record<string, string>> {
+    const ids = [...new Set(items.map(item => item.studentId).filter(Boolean))];
+    if (!ids.length) return {};
+    const { data, error } = await supabase.from('profiles').select('id, first_name, last_name').in('id', ids);
+    if (error) throw error;
+    return Object.fromEntries((data || []).map(row => [row.id, `${row.first_name || ''} ${row.last_name || ''}`.trim()]));
+  },
+  async list() {
+    const items = await assignmentService.listPendingReviews({ signUrls: false });
+    const names = await mentorReviewService.names(items);
+    return { items, names };
+  },
+  async get(id: string) {
+    const item = (await assignmentService.listPendingReviews({ submissionId: id }))[0] || null;
+    const names = item ? await mentorReviewService.names([item]) : {};
+    return { item, name: item ? names[item.studentId] || '' : '' };
+  },
+  async submit(item: PendingReview, approved: boolean, note: string, notification: { title: string; body: string }) {
+    const errorKey = reviewNoteError(approved, note);
+    if (errorKey) throw new Error(errorKey);
+    // Reject stale screens, including a submission reviewed elsewhere. This
+    // is a client freshness check; authorization remains in the existing RPC.
+    const latest = (await assignmentService.listPendingReviews({ submissionId: item.id, signUrls: false }))[0];
+    if (!latest || reviewVersion(latest) !== reviewVersion(item)) throw new Error('mentorFlow.reviewChanged');
+    await assignmentService.reviewAssignment(item.id, approved, note.trim());
+    // A notification failure must not offer a duplicate review submission.
+    void notificationService.create(item.studentId, notification.title, notification.body,
+      approved ? 'task_approved' : 'task_revision_requested', { assignmentId: item.assignmentId })
+      .catch(() => { console.warn('Review saved; notification delivery failed.'); });
+  },
+};
