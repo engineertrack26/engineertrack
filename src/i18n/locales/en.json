@@ -633,6 +633,7 @@
     "removePostConfirm": "Remove this post and its comments for everyone in the group?",
     "removeComment": "Remove comment",
     "remove": "Remove",
+    "removeFailed": "Could not remove.",
     "votes_one": "{{count}} vote",
     "votes_other": "{{count}} votes",
     "changeVote": "Tap another option to change your vote",

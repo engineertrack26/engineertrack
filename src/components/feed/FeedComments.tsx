@@ -63,7 +63,7 @@ export function FeedComments({ postId, userId, canModerate, onCountChange }: Pro
             onCountChange(-1);
           } catch (err) {
             console.warn('Feed comment delete failed:', err instanceof Error ? err.message : err);
-            Alert.alert(t('common.error'), t('common.loadFailed'));
+            Alert.alert(t('common.error'), t('feed.removeFailed'));
           }
         },
       },

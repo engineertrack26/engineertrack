@@ -42,6 +42,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
   const consumedParam = useRef<string | null>(null);
   const request = useRef(0);
   const listRef = useRef<FlatList<FeedPost>>(null);
+  const groupIdRef = useRef<string | null>(null);
 
   const canModerate = role === 'advisor';
 
@@ -71,7 +72,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
 
   const loadPosts = useCallback(async (gid: string | null) => {
     const req = ++request.current;
-    if (!gid) { setPosts([]); return; }
+    if (!gid) { setPosts([]); setLoading(false); return; }
     setLoading(true);
     setLoadFailed(false);
     try {
@@ -104,7 +105,16 @@ export function FeedScreen({ role }: FeedScreenProps) {
     }
   }, [groupId, hasMore, loadingMore, loading, posts]);
 
-  useFocusEffect(useCallback(() => { loadGroups(); }, [loadGroups]));
+  useEffect(() => { groupIdRef.current = groupId; }, [groupId]);
+
+  // Read groupId through a ref rather than depending on it directly: a
+  // dependency on groupId would re-fire this on every group switch (not
+  // just on refocus), since useFocusEffect re-runs its callback whenever
+  // the callback identity changes while the screen is focused.
+  useFocusEffect(useCallback(() => {
+    loadGroups();
+    loadPosts(groupIdRef.current);
+  }, [loadGroups, loadPosts]));
   useEffect(() => { loadPosts(groupId); }, [groupId, loadPosts]);
 
   // A new post in the selected group: refetch the top page rather than
@@ -126,9 +136,18 @@ export function FeedScreen({ role }: FeedScreenProps) {
     consumedParam.current = postParam;
     setHighlightId(postParam);
     listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.1 });
+  }, [postParam, posts]);
+
+  // Kept separate from the scroll effect above: that effect re-runs on
+  // every `posts` change (a like, a realtime refetch, loadMore), which
+  // would otherwise clear and restart -- or on a rerun after
+  // `consumedParam` is already set, simply drop -- this timer before it
+  // ever fires, leaving the highlight border on indefinitely.
+  useEffect(() => {
+    if (!highlightId) return;
     const timer = setTimeout(() => setHighlightId(null), 3000);
     return () => clearTimeout(timer);
-  }, [postParam, posts]);
+  }, [highlightId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -213,7 +232,10 @@ export function FeedScreen({ role }: FeedScreenProps) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
-        onScrollToIndexFailed={() => { /* the list re-renders; the highlight still shows */ }}
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 }), 50);
+        }}
         showsVerticalScrollIndicator={false}
       />
 

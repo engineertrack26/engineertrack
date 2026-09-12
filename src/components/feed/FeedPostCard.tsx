@@ -90,7 +90,7 @@ export function FeedPostCard({ post, userId, canModerate, highlighted, onChange,
             onRemoved(post.id);
           } catch (err) {
             console.warn('Feed post delete failed:', err instanceof Error ? err.message : err);
-            Alert.alert(t('common.error'), t('common.loadFailed'));
+            Alert.alert(t('common.error'), t('feed.removeFailed'));
           }
         },
       },
