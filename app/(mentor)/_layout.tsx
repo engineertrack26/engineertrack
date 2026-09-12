@@ -75,7 +75,6 @@ export default function MentorLayout() {
         options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
       <Tabs.Screen name="feedback" options={{ href: null }} />
-      <Tabs.Screen name="polls" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen
         name="profile"

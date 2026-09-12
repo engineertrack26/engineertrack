@@ -108,8 +108,8 @@ export default function StudentDashboard() {
         </Pressable>}
       </View>
       <View style={ui.card}>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/polls')}>
-          <Text style={ui.link}>{t('tabs.polls')} →</Text>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/feed')}>
+          <Text style={ui.link}>{t('tabs.feed')} →</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/leaderboard')}>
           <Text style={ui.link}>{t('tabs.ranking')} →</Text>

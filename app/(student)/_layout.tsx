@@ -75,12 +75,11 @@ export default function StudentLayout() {
         }}
       />
       <Tabs.Screen
-        name="polls"
+        name="feed"
         options={{
-          href: null,
-          title: t('tabs.polls'),
+          title: t('tabs.feed'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard-outline" size={size} color={color} />
+            <Ionicons name="newspaper-outline" size={size} color={color} />
           ),
         }}
       />
