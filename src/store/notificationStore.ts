@@ -15,11 +15,11 @@ interface NotificationState {
   isLoadingMore: boolean;
   hasMore: boolean;
 
-  fetchNotifications: (userId: string) => Promise<void>;
-  fetchMore: (userId: string) => Promise<void>;
+  fetchNotifications: (userId: string) => Promise<boolean>;
+  fetchMore: (userId: string) => Promise<boolean>;
   fetchUnreadCount: (userId: string) => Promise<void>;
-  markAsRead: (notificationId: string) => Promise<void>;
-  markAllAsRead: (userId: string) => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<boolean>;
+  markAllAsRead: (userId: string) => Promise<boolean>;
   subscribeToNotifications: (userId: string) => void;
   unsubscribe: () => void;
   reset: () => void;
@@ -38,6 +38,9 @@ function mapDbNotification(n: Record<string, unknown>): AppNotification {
   };
 }
 
+let generation = 0;
+let pageRequest = 0;
+
 let realtimeChannel: RealtimeChannel | null = null;
 
 const initialState = {
@@ -52,6 +55,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   ...initialState,
 
   fetchNotifications: async (userId: string) => {
+    const epoch = generation;
+    const request = ++pageRequest;
     set({ isLoading: true });
     try {
       // The badge count comes from its own COUNT query, not from the page:
@@ -61,51 +66,61 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         notificationService.getAll(userId, PAGE_SIZE),
         notificationService.getUnreadCount(userId),
       ]);
+      if (epoch !== generation || request !== pageRequest) return false;
       const mapped = (data || []).map((n: Record<string, unknown>) => mapDbNotification(n));
       set({ notifications: mapped, unreadCount, hasMore: mapped.length === PAGE_SIZE });
-    } catch (err) {
-      console.error('Fetch notifications error:', err);
+      return true;
+    } catch {
+      return false;
     } finally {
-      set({ isLoading: false });
+      if (epoch === generation && request === pageRequest) set({ isLoading: false });
     }
   },
 
   fetchMore: async (userId: string) => {
+    const epoch = generation;
+    const request = pageRequest;
     const { notifications, hasMore, isLoadingMore, isLoading } = get();
-    if (!hasMore || isLoadingMore || isLoading || notifications.length === 0) return;
+    if (!hasMore || isLoadingMore || isLoading || notifications.length === 0) return true;
     set({ isLoadingMore: true });
     try {
       const oldest = notifications[notifications.length - 1].createdAt;
       const data = await notificationService.getAll(userId, PAGE_SIZE, oldest);
       const mapped = (data || []).map((n: Record<string, unknown>) => mapDbNotification(n));
+      if (epoch !== generation || request !== pageRequest) return false;
+      const current = get().notifications;
       // Dedupe on id: a row sharing the cursor's exact created_at is
       // excluded by `lt` and would be lost, but one that slipped in through
       // the realtime prepend must not appear twice.
-      const seen = new Set(notifications.map((n) => n.id));
+      const seen = new Set(current.map((n) => n.id));
       const fresh = mapped.filter((n) => !seen.has(n.id));
       set({
-        notifications: [...notifications, ...fresh],
+        notifications: [...current, ...fresh],
         hasMore: mapped.length === PAGE_SIZE,
       });
-    } catch (err) {
-      console.error('Fetch more notifications error:', err);
+      return true;
+    } catch {
+      return false;
     } finally {
-      set({ isLoadingMore: false });
+      if (epoch === generation) set({ isLoadingMore: false });
     }
   },
 
   fetchUnreadCount: async (userId: string) => {
+    const epoch = generation;
     try {
       const count = await notificationService.getUnreadCount(userId);
-      set({ unreadCount: count });
+      if (epoch === generation) set({ unreadCount: count });
     } catch (err) {
       console.error('Fetch unread count error:', err);
     }
   },
 
   markAsRead: async (notificationId: string) => {
+    const epoch = generation;
     try {
       await notificationService.markAsRead(notificationId);
+      if (epoch !== generation) return false;
       const { notifications, unreadCount } = get();
       const wasUnread = notifications.some((n) => n.id === notificationId && !n.isRead);
       const updated = notifications.map((n) =>
@@ -113,19 +128,23 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       );
       // Decrement the server-derived count rather than recounting the page.
       set({ notifications: updated, unreadCount: wasUnread ? Math.max(0, unreadCount - 1) : unreadCount });
-    } catch (err) {
-      console.error('Mark as read error:', err);
+      return true;
+    } catch {
+      return false;
     }
   },
 
   markAllAsRead: async (userId: string) => {
+    const epoch = generation;
     try {
       await notificationService.markAllAsRead(userId);
+      if (epoch !== generation) return false;
       const { notifications } = get();
       const updated = notifications.map((n) => ({ ...n, isRead: true }));
       set({ notifications: updated, unreadCount: 0 });
-    } catch (err) {
-      console.error('Mark all as read error:', err);
+      return true;
+    } catch {
+      return false;
     }
   },
 
@@ -177,6 +196,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   reset: () => {
+    generation += 1;
+    pageRequest += 1;
     if (realtimeChannel) {
       supabase.removeChannel(realtimeChannel);
       realtimeChannel = null;

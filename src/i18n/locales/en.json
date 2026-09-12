@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Unread notifications: {{count}}",
+    "unread": "Unread",
+    "read": "Read",
+    "openHint": "Opens the related content.",
+    "markHint": "Marks this notification as read.",
+    "allRead": "All notifications marked as read.",
+    "readFailed": "Could not save read status. Please try again."
+  },
   "studentProfileView": {
     "student": "Student",
     "internship": "School and internship",

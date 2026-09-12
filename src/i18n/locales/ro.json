@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Notificări necitite: {{count}}",
+    "unread": "Necitită",
+    "read": "Citită",
+    "openHint": "Deschide conținutul asociat.",
+    "markHint": "Marchează notificarea ca citită.",
+    "allRead": "Toate notificările au fost marcate ca citite.",
+    "readFailed": "Starea de citire nu a putut fi salvată. Încearcă din nou."
+  },
   "studentProfileView": {
     "student": "Elev",
     "internship": "Școală și stagiu",

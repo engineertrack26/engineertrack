@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Notifiche non lette: {{count}}",
+    "unread": "Non letta",
+    "read": "Letta",
+    "openHint": "Apre il contenuto correlato.",
+    "markHint": "Segna questa notifica come letta.",
+    "allRead": "Tutte le notifiche sono state segnate come lette.",
+    "readFailed": "Impossibile salvare lo stato di lettura. Riprova."
+  },
   "studentProfileView": {
     "student": "Studente",
     "internship": "Scuola e tirocinio",

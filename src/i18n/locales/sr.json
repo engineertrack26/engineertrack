@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Nepročitana obaveštenja: {{count}}",
+    "unread": "Nepročitano",
+    "read": "Pročitano",
+    "openHint": "Otvara povezani sadržaj.",
+    "markHint": "Označava obaveštenje kao pročitano.",
+    "allRead": "Sva obaveštenja su označena kao pročitana.",
+    "readFailed": "Status čitanja nije sačuvan. Pokušajte ponovo."
+  },
   "studentProfileView": {
     "student": "Učenik",
     "internship": "Škola i praksa",

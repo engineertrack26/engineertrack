@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Okunmamış bildirim: {{count}}",
+    "unread": "Okunmadı",
+    "read": "Okundu",
+    "openHint": "İlgili içeriği açar.",
+    "markHint": "Bildirimi okundu işaretler.",
+    "allRead": "Tüm bildirimler okundu işaretlendi.",
+    "readFailed": "Okundu bilgisi kaydedilemedi. Lütfen tekrar deneyin."
+  },
   "studentProfileView": {
     "student": "Öğrenci",
     "internship": "Okul ve staj bilgileri",

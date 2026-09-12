@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,11 +15,12 @@ import { useTranslation } from 'react-i18next';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { routeForNotification } from '@/utils/notificationRoutes';
+import { notificationTimeAgo } from '@/utils/notificationTime';
 import { BackButton } from '@/components/common';
 import { useNotificationStore } from '@/store/notificationStore';
 import { AppNotification } from '@/types/notification';
 import type { UserRole } from '@/types/user';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors } from '@/theme';
 
 const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }> = {
   log_approved: { name: 'checkmark-circle', color: colors.success },
@@ -39,294 +41,205 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   feed_task_post: { name: 'clipboard-outline', color: colors.info },
 };
 
-function timeAgo(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string, locale: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return t('time.justNow');
-  if (diffMin < 60) return t('time.minutesAgo', { count: diffMin });
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return t('time.hoursAgo', { count: diffHrs });
-  const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 7) return t('time.daysAgo', { count: diffDays });
-  return new Date(dateStr).toLocaleDateString(locale);
-}
-
 interface NotificationsScreenProps {
   /** Decides where a tapped notification goes; see routeForNotification. */
   role: UserRole;
 }
 
-/** The one notifications list. The three role routes render this with
- *  their role -- they were byte-identical apart from that string, and a fix
- *  to one was three edits. */
 export function NotificationsScreen({ role }: NotificationsScreenProps) {
-  const { t, i18n } = useTranslation();
-  const user = useAuthStore((s) => s.user);
-  const {
-    notifications,
-    unreadCount,
-    isLoading,
-    isLoadingMore,
-    fetchNotifications,
-    fetchMore,
-    markAsRead,
-    markAllAsRead,
-  } = useNotificationStore();
+  const userId = useAuthStore((s) => s.user?.id);
+  return <NotificationsContent key={userId ?? 'signed-out'} role={role} userId={userId} />;
+}
 
+function NotificationsContent({ role, userId }: NotificationsScreenProps & { userId?: string }) {
+  const { t, i18n } = useTranslation();
+  const { notifications, unreadCount, isLoading, isLoadingMore, fetchNotifications,
+    fetchMore, markAsRead, markAllAsRead } = useNotificationStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<'success' | 'error' | null>(null);
+  const busy = useRef(false);
+  const focusVersion = useRef(0);
+  const loadSequence = useRef(0);
+  const isCurrentUser = () => useAuthStore.getState().user?.id === userId;
 
   const loadData = useCallback(async () => {
-    if (user) await fetchNotifications(user.id);
-  }, [user, fetchNotifications]);
+    if (!userId) return;
+    const request = ++loadSequence.current;
+    const ok = await fetchNotifications(userId);
+    if (useAuthStore.getState().user?.id !== userId || request !== loadSequence.current) return;
+    setLoadFailed(!ok);
+    if (ok) { setLoaded(true); setMoreFailed(false); }
+  }, [userId, fetchNotifications]);
 
-  // On every focus, not only on mount: this tab stays mounted while the
-  // user is elsewhere, and rows marked read from a tapped push must show
-  // as read when they come back.
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
+  useFocusEffect(useCallback(() => {
+    focusVersion.current += 1;
+    void loadData();
+    return () => {
+      focusVersion.current += 1;
+      loadSequence.current += 1;
+    };
+  }, [loadData]));
 
-  const loadMore = useCallback(() => {
-    if (user) fetchMore(user.id);
-  }, [user, fetchMore]);
-
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
+    if (busy.current || isLoading || isLoadingMore) return;
     setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  const handleMarkAllRead = () => {
-    if (user && unreadCount > 0) markAllAsRead(user.id);
+    setNotice(null);
+    try { await loadData(); } finally { setRefreshing(false); }
   };
-
-  const handlePress = (item: AppNotification) => {
-    if (!item.isRead) markAsRead(item.id);
-    // A notification that points at a task or a review opens it; one that
-    // does not (general, or a type this role has no screen for) just
-    // marks itself read, as before.
-    const route = routeForNotification(item.type, item.data, role);
-    if (route) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.push(route as any);
-    }
+  const loadMore = async (retry = false) => {
+    if (!userId || loadFailed || (moreFailed && !retry) || busy.current) return;
+    const ok = await fetchMore(userId);
+    if (isCurrentUser()) setMoreFailed(!ok);
   };
-
+  const handleMarkAllRead = async () => {
+    if (!userId || !unreadCount || busy.current || isLoading || isLoadingMore) return;
+    busy.current = true;
+    setMarkingAll(true);
+    setNotice(null);
+    try {
+      const ok = await markAllAsRead(userId);
+      if (isCurrentUser()) setNotice(ok ? 'success' : 'error');
+    } finally { busy.current = false; setMarkingAll(false); }
+  };
+  const handlePress = async (item: AppNotification) => {
+    if (busy.current || isLoading || isLoadingMore) return;
+    const focus = focusVersion.current;
+    busy.current = true;
+    setOpeningId(item.id);
+    setNotice(null);
+    try {
+      if (!item.isRead) {
+        const ok = await markAsRead(item.id);
+        if (!isCurrentUser() || focus !== focusVersion.current) return;
+        if (!ok) Alert.alert(t('common.notifications'), t('notificationUi.readFailed'));
+      }
+      // A delayed response must not reopen content after the user went back.
+      if (!isCurrentUser() || focus !== focusVersion.current) return;
+      const route = routeForNotification(item.type, item.data, role);
+      // Routing remains shared with push notifications, including Feed content.
+      if (route) router.push(route as never);
+    } finally { busy.current = false; setOpeningId(null); }
+  };
+  const failure = (retry: () => void) => (
+    <View style={styles.feedback} accessibilityLiveRegion="polite">
+      <Text style={styles.body}>{t('common.loadFailed')}</Text>
+      <TouchableOpacity accessibilityRole="button" onPress={retry} disabled={isLoading || isLoadingMore} style={styles.action}>
+        <Text style={styles.actionText}>{t('common.retry')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
   const renderItem = ({ item }: { item: AppNotification }) => {
     const icon = ICON_MAP[item.type] || ICON_MAP.general;
+    const route = routeForNotification(item.type, item.data, role);
+    const actionable = !!route || !item.isRead;
+    const timestamp = notificationTimeAgo(item.createdAt, t, i18n.language);
     return (
       <TouchableOpacity
-        style={[styles.notifItem, !item.isRead && styles.notifUnread]}
-        onPress={() => handlePress(item)}
-        activeOpacity={0.7}
+        style={[styles.card, !item.isRead && styles.unreadCard]}
+        onPress={() => void handlePress(item)}
+        disabled={!actionable || markingAll || openingId !== null || isLoading || isLoadingMore}
+        accessibilityRole={actionable ? 'button' : 'text'}
+        accessibilityState={{
+          busy: openingId === item.id,
+          disabled: !actionable || markingAll || openingId !== null || isLoading || isLoadingMore,
+        }}
+        accessibilityLabel={[item.isRead ? t('notificationUi.read') : t('notificationUi.unread'), item.title, item.body, timestamp].filter(Boolean).join('. ')}
+        accessibilityHint={actionable ? t(route ? 'notificationUi.openHint' : 'notificationUi.markHint') : undefined}
+        activeOpacity={0.75}
       >
-        <View style={[styles.iconWrap, { backgroundColor: icon.color + '15' }]}>
-          <Ionicons name={icon.name as keyof typeof Ionicons.glyphMap} size={22} color={icon.color} />
-        </View>
-        <View style={styles.notifBody}>
-          <Text style={[styles.notifTitle, !item.isRead && styles.notifTitleUnread]}>
-            {item.title}
+        <View style={styles.cardHeader}>
+          <View style={[styles.icon, { backgroundColor: icon.color + '18' }]} accessible={false}>
+            <Ionicons name={icon.name as keyof typeof Ionicons.glyphMap} size={22} color={colors.primaryDark} />
+          </View>
+          <Text style={[styles.status, !item.isRead && styles.unreadText]}>
+            {t(item.isRead ? 'notificationUi.read' : 'notificationUi.unread')}
           </Text>
-          <Text style={styles.notifMessage}>
-            {item.body}
-          </Text>
-          <Text style={styles.notifTime}>{timeAgo(item.createdAt, t, i18n.language)}</Text>
+          {openingId === item.id ? <ActivityIndicator color={colors.primaryDark} /> :
+            route ? <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} /> : null}
         </View>
-        {!item.isRead && <View style={styles.unreadDot} />}
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        {!!item.body && <Text style={styles.body}>{item.body}</Text>}
+        {!!timestamp && <Text style={styles.time}>{timestamp}</Text>}
       </TouchableOpacity>
     );
   };
-
-  const renderEmpty = () => {
-    if (isLoading) return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} />;
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="notifications-off-outline" size={64} color={colors.textDisabled} />
-        <Text style={styles.emptyTitle}>{t('common.noNotifications', 'No Notifications')}</Text>
-        <Text style={styles.emptyDesc}>
-          {t('common.noNotificationsDesc', "You're all caught up! Check back later.")}
-        </Text>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      {role === 'student' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(student)/dashboard" /></View>}
-      {role === 'mentor' && <View style={{ paddingHorizontal: spacing.lg }}><BackButton href="/(mentor)/dashboard" /></View>}
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>{t('common.notifications', 'Notifications')}</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead} hitSlop={8}>
-            <Text style={styles.markAllRead}>{t('common.markAllRead', 'Mark all read')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Unread badge */}
-      {unreadCount > 0 && (
-        <View style={styles.unreadBanner}>
-          <Ionicons name="mail-unread-outline" size={18} color={colors.primary} />
-          <Text style={styles.unreadBannerText}>
-            {unreadCount} unread notification{unreadCount > 1 ? 's' : ''}
-          </Text>
-        </View>
-      )}
-
       <FlatList
+        style={styles.viewport}
+        contentContainerStyle={styles.content}
         data={notifications}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={notifications.length === 0 ? styles.emptyList : styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        ListHeaderComponent={
+          <View style={styles.header}>
+            {role === 'student' && <BackButton href="/(student)/dashboard" />}
+            {role === 'mentor' && <BackButton href="/(mentor)/dashboard" />}
+            <Text accessibilityRole="header" style={styles.title}>{t('common.notifications')}</Text>
+            {(loaded || notifications.length > 0 || unreadCount > 0) && <View style={styles.summary}>
+              <Text style={styles.summaryText}>{t('notificationUi.unreadCount', { count: unreadCount })}</Text>
+              {unreadCount > 0 && <TouchableOpacity
+                style={styles.action} accessibilityRole="button"
+                accessibilityState={{ disabled: markingAll || openingId !== null || isLoading || isLoadingMore, busy: markingAll }}
+                disabled={markingAll || openingId !== null || isLoading || isLoadingMore}
+                onPress={() => void handleMarkAllRead()}>
+                {markingAll && <ActivityIndicator color={colors.primaryDark} />}
+                <Text style={styles.actionText}>{t('common.markAllRead')}</Text>
+              </TouchableOpacity>}
+            </View>}
+            {notice && <View style={styles.feedback} accessibilityLiveRegion="polite">
+              <Text style={styles.body}>{t(notice === 'success' ? 'notificationUi.allRead' : 'notificationUi.readFailed')}</Text>
+              {notice === 'error' && <TouchableOpacity style={styles.action} accessibilityRole="button" onPress={() => void handleMarkAllRead()}>
+                <Text style={styles.actionText}>{t('common.retry')}</Text>
+              </TouchableOpacity>}
+            </View>}
+            {loadFailed && failure(() => void loadData())}
+          </View>
         }
-        onEndReached={loadMore}
+        ListEmptyComponent={
+          isLoading || (!loaded && !loadFailed) ? <ActivityIndicator style={styles.empty} size="large" color={colors.primaryDark} /> :
+          loadFailed ? null : <View style={styles.empty}>
+            <Ionicons name="notifications-off-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.cardTitle}>{t('common.noNotifications')}</Text>
+            <Text style={[styles.body, styles.center]}>{t('common.noNotificationsDesc')}</Text>
+          </View>
+        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} colors={[colors.primaryDark]} tintColor={colors.primaryDark} />}
+        onEndReached={() => void loadMore()}
         onEndReachedThreshold={0.4}
-        ListFooterComponent={
-          isLoadingMore ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 16 }} />
-          ) : null
-        }
+        ListFooterComponent={isLoadingMore ? <ActivityIndicator style={styles.footer} color={colors.primaryDark} /> :
+          moreFailed ? failure(() => void loadMore(true)) : null}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  markAllRead: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-
-  // Unread banner
-  unreadBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '10',
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  unreadBannerText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primary,
-  },
-
-  // List
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-
-  // Notification item
-  notifItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-  },
-  notifUnread: {
-    backgroundColor: colors.primary + '08',
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  notifBody: {
-    flex: 1,
-  },
-  notifTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  notifTitleUnread: {
-    fontWeight: '700',
-  },
-  notifMessage: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  notifTime: {
-    fontSize: 11,
-    color: colors.textDisabled,
-    marginTop: 4,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-    marginLeft: spacing.sm,
-  },
-
-  // Empty
-  emptyContainer: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptyDesc: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 20,
-  },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  viewport: { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
+  content: { padding: 24, paddingBottom: 32, flexGrow: 1 },
+  header: { gap: 16, marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '700', color: colors.text },
+  summary: { backgroundColor: '#e8f0fe', borderRadius: 16, padding: 16, gap: 8 },
+  summaryText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.primaryDark },
+  action: { minHeight: 48, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  actionText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.primaryDark, flexShrink: 1 },
+  feedback: { padding: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12 },
+  card: { padding: 20, gap: 10, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider, marginBottom: 12 },
+  unreadCard: { borderColor: '#b7cdf0', backgroundColor: '#f0f5ff' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  status: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.textSecondary },
+  unreadText: { color: colors.primaryDark, fontWeight: '700' },
+  cardTitle: { fontSize: 18, lineHeight: 26, fontWeight: '600', color: colors.text },
+  body: { fontSize: 16, lineHeight: 24, color: colors.textSecondary },
+  time: { fontSize: 14, lineHeight: 21, color: colors.textSecondary },
+  empty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
+  center: { textAlign: 'center' },
+  footer: { paddingVertical: 20 },
 });

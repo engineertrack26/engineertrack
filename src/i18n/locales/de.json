@@ -1,4 +1,13 @@
 {
+  "notificationUi": {
+    "unreadCount": "Ungelesene Benachrichtigungen: {{count}}",
+    "unread": "Ungelesen",
+    "read": "Gelesen",
+    "openHint": "Öffnet den zugehörigen Inhalt.",
+    "markHint": "Markiert diese Benachrichtigung als gelesen.",
+    "allRead": "Alle Benachrichtigungen als gelesen markiert.",
+    "readFailed": "Lesestatus konnte nicht gespeichert werden. Bitte erneut versuchen."
+  },
   "studentProfileView": {
     "student": "Lernende Person",
     "internship": "Schule und Praktikum",
