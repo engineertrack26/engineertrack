@@ -102,6 +102,7 @@ export function FeedScreen({ role }: FeedScreenProps) {
   // invalidated by, or invalidate, an unrelated posts refetch that happens
   // to land around the same time.
   const loadUpcoming = useCallback(async (gid: string | null) => {
+    setUpcoming([]);
     const req = ++upcomingRequest.current;
     if (!gid || !user) { setUpcoming([]); return; }
     try {
