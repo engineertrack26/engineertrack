@@ -102,7 +102,8 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B6 create_feed_post poll with 1 option          -> POLL_OPTIONS_RANGE
 --   B7 create_feed_post poll with 3 options         -> 3 options, 1 notification per ACTIVE student
 --   B8 vote twice as the same user                  -> 1 vote, on the second option
--- Expected: eight rows, none beginning FAIL / SKIP / ABORTED.
+--   B9 advisor remove_feed_post on the task post    -> post gone AND share_to_feed = false
+-- Expected: nine rows, none beginning FAIL / SKIP / ABORTED.
 -- ============================================================
 BEGIN;
 
@@ -117,7 +118,7 @@ BEGIN
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
 
   IF adv IS NULL OR stu IS NULL OR kpi IS NULL THEN
-    PERFORM set_config('probe.results', 'B1-B8' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
+    PERFORM set_config('probe.results', 'B1-B9' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
     RETURN;
   END IF;
 
@@ -250,6 +251,23 @@ BEGIN
     log := log || 'B8 second vote moves the first' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
+  -- B9: the task post B5 republished, re-selected by submission (B7/B8
+  -- reassigned `post` to the poll). Removal by the advisor must also flip
+  -- the student's flag, or the switch reads "on" for a post that is gone
+  -- and toggling it off -> on silently undoes the moderation.
+  BEGIN
+    SELECT id INTO post FROM feed_posts WHERE submission_id = sub;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+    PERFORM remove_feed_post(post);
+    SELECT count(*) INTO n FROM feed_posts WHERE id = post;
+    SELECT count(*) INTO m FROM assignment_submissions WHERE id = sub AND share_to_feed = false;
+    log := log || 'B9 advisor removal turns the student''s sharing off' || E'\t'
+        || CASE WHEN n = 0 AND m = 1 THEN '0 posts, sharing off'
+                ELSE 'FAIL: ' || n || ' posts, ' || CASE WHEN m = 1 THEN 'sharing off' ELSE 'sharing still on' END END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B9 advisor removal turns the student''s sharing off' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
   PERFORM set_config('probe.results', log, true);
 END $$;
 
@@ -267,7 +285,7 @@ ROLLBACK;
 --   C4 member of group A reads B's vote              0 rows
 --   C5 member of group A calls list_feed_posts(B)    NOT_IN_GROUP
 --   C6 student inserts an announcement               refused (42501)
---   C7 mentor selects feed_posts                     0 rows
+--   C7 mentor selects all five feed tables           0 rows in each
 --   C8 student whose membership closed lists A       NOT_IN_GROUP; post still exists
 -- If SET LOCAL ROLE raises 42501 in your editor, STOP and report Part C as
 -- unrunnable -- do not replace these with pg_policies lookups.
@@ -311,7 +329,7 @@ SET LOCAL ROLE authenticated;
 DO $$
 DECLARE
   adv UUID; stu UUID; mentor UUID; grpA UUID; grpB UUID; postA UUID; postB UUID;
-  n INT; log TEXT := '';
+  n INT; log TEXT := ''; tname TEXT; leaked TEXT;
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
     PERFORM set_config('probe.results', 'C1-C8' || E'\t' || 'SKIP: needs an advisor and a student' || E'\n', true);
@@ -361,13 +379,23 @@ BEGIN
   END;
 
   IF mentor IS NULL THEN
-    log := log || 'C7 mentor sees nothing' || E'\t' || 'SKIP: no mentor profile' || E'\n';
+    log := log || 'C7 mentor sees nothing in any feed table' || E'\t' || 'SKIP: no mentor profile' || E'\n';
   ELSE
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
     BEGIN
-      SELECT count(*) INTO n FROM feed_posts;
-      log := log || 'C7 mentor sees nothing' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: ' || n || ' rows' END || E'\n';
-    EXCEPTION WHEN OTHERS THEN log := log || 'C7 mentor sees nothing' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
+      -- Every feed table, not only feed_posts: the four children route
+      -- through can_see_post, and a regression there would leak the
+      -- comments and votes while feed_posts still read 0.
+      leaked := '';
+      FOREACH tname IN ARRAY ARRAY['feed_posts','feed_poll_options','feed_poll_votes','feed_likes','feed_comments'] LOOP
+        EXECUTE format('SELECT count(*) FROM %I', tname) INTO n;
+        IF n <> 0 THEN
+          leaked := leaked || CASE WHEN leaked = '' THEN '' ELSE ', ' END || tname || ' ' || n;
+        END IF;
+      END LOOP;
+      log := log || 'C7 mentor sees nothing in any feed table' || E'\t'
+          || CASE WHEN leaked = '' THEN '0 rows in all five tables' ELSE 'FAIL: leaked ' || leaked END || E'\n';
+    EXCEPTION WHEN OTHERS THEN log := log || 'C7 mentor sees nothing in any feed table' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
   END IF;
 
   PERFORM set_config('probe.results', log, true);

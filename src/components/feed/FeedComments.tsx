@@ -19,19 +19,25 @@ const MAX = 2000;
 export function FeedComments({ postId, userId, canModerate, onCountChange }: Props) {
   const { t } = useTranslation();
   const [comments, setComments] = useState<FeedComment[] | null>(null);
+  // A failed fetch is not an empty thread. comments stays null and this flag
+  // swaps the spinner for a retry line, so "No comments yet" never stands in
+  // for a load error.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     let alive = true;
+    setLoadFailed(false);
     feedService.listComments(postId)
       .then((list) => { if (alive) setComments(list); })
       .catch((err) => {
         console.warn('Feed comments load failed:', err instanceof Error ? err.message : err);
-        if (alive) setComments([]);
+        if (alive) setLoadFailed(true);
       });
     return () => { alive = false; };
-  }, [postId]);
+  }, [postId, loadAttempt]);
 
   async function send() {
     const body = text.trim();
@@ -72,7 +78,14 @@ export function FeedComments({ postId, userId, canModerate, onCountChange }: Pro
 
   return (
     <View style={styles.wrap}>
-      {comments === null ? (
+      {loadFailed && comments === null ? (
+        <View style={styles.failedRow}>
+          <Text style={styles.empty}>{t('common.loadFailed')}</Text>
+          <TouchableOpacity onPress={() => setLoadAttempt((n) => n + 1)} hitSlop={8}>
+            <Text style={styles.retry}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : comments === null ? (
         <ActivityIndicator size="small" color={colors.primary} />
       ) : comments.length === 0 ? (
         <Text style={styles.empty}>{t('feed.noComments')}</Text>
@@ -113,6 +126,8 @@ export function FeedComments({ postId, userId, canModerate, onCountChange }: Pro
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
   empty: { fontSize: 13, color: colors.textSecondary },
+  failedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  retry: { fontSize: 13, fontWeight: '600', color: colors.primary },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   bubble: { flex: 1, backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.sm },
   author: { fontSize: 12, fontWeight: '600', color: colors.text, marginBottom: 2 },

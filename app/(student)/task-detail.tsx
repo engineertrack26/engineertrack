@@ -192,10 +192,16 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       // parameter (spec §3). It must not fail silently: a task shared
       // against the student's wish is the one outcome the switch exists to
       // prevent, so a failure is told to them, with where to fix it.
+      // The call is made whenever the switch differs from what the server
+      // holds, not only when it is off: a resubmission after a revision
+      // request keeps the row's share_to_feed (submit_assignment's ON
+      // CONFLICT never touches it), so an off -> on flip would otherwise
+      // never reach the server and approval would post nothing.
       let sharingFailed = false;
-      if (!shareToFeed) {
+      const serverShare = task.submission?.shareToFeed ?? true;
+      if (shareToFeed !== serverShare) {
         try {
-          await feedService.setSubmissionSharing(submissionId, false);
+          await feedService.setSubmissionSharing(submissionId, shareToFeed);
         } catch (error) {
           sharingFailed = true;
           console.warn('Sharing update failed:', error instanceof Error ? error.message : error);

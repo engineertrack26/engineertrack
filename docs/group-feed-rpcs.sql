@@ -144,6 +144,37 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION vote_feed_poll(UUID, UUID) TO authenticated;
 
+-- ---- remove_feed_post ----
+-- Advisor moderation. For a task post the student's sharing flag is turned
+-- off as well, so the removal cannot be undone by the switch reading "on".
+CREATE OR REPLACE FUNCTION remove_feed_post(p_post_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_group      UUID;
+  v_submission UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'NOT_AUTHENTICATED';
+  END IF;
+  SELECT group_id, submission_id INTO v_group, v_submission FROM feed_posts WHERE id = p_post_id;
+  IF v_group IS NULL THEN
+    RAISE EXCEPTION 'POST_NOT_FOUND';
+  END IF;
+  IF NOT owns_group(v_group) THEN
+    RAISE EXCEPTION 'NOT_GROUP_OWNER';
+  END IF;
+  IF v_submission IS NOT NULL THEN
+    UPDATE assignment_submissions SET share_to_feed = false WHERE id = v_submission;
+  END IF;
+  DELETE FROM feed_posts WHERE id = p_post_id;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION remove_feed_post(UUID) TO authenticated;
+
 -- ---- list_feed_posts ----
 -- THE read. SECURITY DEFINER because a student cannot select a classmate's
 -- assignment_submissions / log_photos / log_documents rows, and widening

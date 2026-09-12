@@ -93,8 +93,11 @@ export const feedService = {
   /** Direct table writes under RLS; user_id is the caller by policy. */
   async setLiked(postId: string, userId: string, liked: boolean): Promise<void> {
     if (liked) {
-      const { error } = await supabase.from('feed_likes').upsert({ post_id: postId, user_id: userId });
-      if (error) throw error;
+      // insert, not upsert: feed_likes has INSERT and DELETE policies but
+      // no UPDATE policy, so upsert's ON CONFLICT DO UPDATE would be refused.
+      // A duplicate (23505) means the like already stands, which is success.
+      const { error } = await supabase.from('feed_likes').insert({ post_id: postId, user_id: userId });
+      if (error && error.code !== '23505') throw error;
     } else {
       const { error } = await supabase.from('feed_likes').delete().eq('post_id', postId).eq('user_id', userId);
       if (error) throw error;
@@ -104,22 +107,39 @@ export const feedService = {
   async listComments(postId: string): Promise<FeedComment[]> {
     const { data, error } = await supabase
       .from('feed_comments')
-      .select('id, post_id, author_id, body, created_at, profiles:author_id(first_name, last_name)')
+      .select('id, post_id, author_id, body, created_at')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
     if (error) throw error;
-    return (data || []).map((r) => {
-      const row = r as Record<string, unknown>;
-      const p = row.profiles as Record<string, unknown> | null;
-      return {
-        id: row.id as string,
-        postId: row.post_id as string,
-        authorId: row.author_id as string,
-        authorName: `${(p?.first_name as string) || ''} ${(p?.last_name as string) || ''}`.trim(),
-        body: row.body as string,
-        createdAt: row.created_at as string,
-      };
-    });
+    const rows = (data || []) as Array<Record<string, unknown>>;
+
+    // Names come from profiles_public, not an embed on profiles: the
+    // profiles SELECT policy never lets a student read a classmate's or the
+    // advisor's row, so the embed came back null and the name rendered
+    // blank, silently. profiles_public's policy covers group-mates and the
+    // student's own advisor (shares_group_with), which is exactly who can
+    // comment here. One query for all distinct authors on the post.
+    const authorIds = Array.from(new Set(rows.map((r) => r.author_id as string)));
+    const names = new Map<string, string>();
+    if (authorIds.length > 0) {
+      const { data: people, error: peopleError } = await supabase
+        .from('profiles_public')
+        .select('id, first_name, last_name')
+        .in('id', authorIds);
+      if (peopleError) throw peopleError;
+      for (const p of (people || []) as Array<Record<string, unknown>>) {
+        names.set(p.id as string, `${(p.first_name as string) || ''} ${(p.last_name as string) || ''}`.trim());
+      }
+    }
+
+    return rows.map((row) => ({
+      id: row.id as string,
+      postId: row.post_id as string,
+      authorId: row.author_id as string,
+      authorName: names.get(row.author_id as string) || '',
+      body: row.body as string,
+      createdAt: row.created_at as string,
+    }));
   },
 
   async addComment(postId: string, userId: string, body: string): Promise<void> {
@@ -133,10 +153,12 @@ export const feedService = {
   },
 
   /** Advisor moderation. A student's own task post is removed through
-   *  setSubmissionSharing(false), never here. */
+   *  setSubmissionSharing(false), never here. The RPC also turns the
+   *  student's sharing flag off for a task post, so the switch cannot read
+   *  "on" for a post that is gone and quietly undo the removal. */
   async deletePost(postId: string): Promise<void> {
-    const { error } = await supabase.from('feed_posts').delete().eq('id', postId);
-    if (error) throw error;
+    const { error } = await supabase.rpc('remove_feed_post', { p_post_id: postId });
+    if (error) throw new RpcError(error.message);
   },
 
   async setSubmissionSharing(submissionId: string, share: boolean): Promise<void> {
