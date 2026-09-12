@@ -3,8 +3,8 @@
 --
 -- Run in the Supabase SQL editor. Anonymous dollar-quoting only.
 -- Apply order: docs/group-feed-migration.sql, docs/group-feed-rpcs.sql,
--- docs/group-feed-assignment-cards.sql, then this file, ONE PART PER
--- SUBMISSION.
+-- docs/group-feed-assignment-cards.sql, docs/group-feed-attachments.sql,
+-- docs/group-feed-read.sql, then this file, ONE PART PER SUBMISSION.
 --
 -- PART A is STRUCTURAL: the editor runs as the table owner and bypasses
 -- RLS, so these prove a table, column, constraint, trigger or policy
@@ -26,7 +26,7 @@ BEGIN
     RAISE EXCEPTION 'FAIL: feed_posts.assignment_id is missing';
   END IF;
 
-  FOREACH t IN ARRAY ARRAY['feed_posts','feed_poll_options','feed_poll_votes','feed_likes','feed_comments'] LOOP
+  FOREACH t IN ARRAY ARRAY['feed_posts','feed_poll_options','feed_poll_votes','feed_likes','feed_comments','feed_attachments'] LOOP
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = t) THEN
       RAISE EXCEPTION 'FAIL: table % is missing', t;
     END IF;
@@ -57,11 +57,29 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'feed_publish_submission') THEN
     RAISE EXCEPTION 'FAIL: feed_publish_submission() is missing';
   END IF;
-  -- The one copy of list_feed_posts is in group-feed-assignment-cards.sql;
-  -- a stale re-apply of an older file would drop the key and every
-  -- assignment card would render header-only, silently.
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'feed_shares_evidence') THEN
+    RAISE EXCEPTION 'FAIL: feed_shares_evidence() is missing -- apply docs/group-feed-attachments.sql';
+  END IF;
+  -- create_feed_post carries p_attachments as its fifth parameter, and the
+  -- old four-parameter overload must be gone: side by side, every call
+  -- with four arguments is ambiguous (42725).
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs = 5) THEN
+    RAISE EXCEPTION 'FAIL: create_feed_post does not take 5 arguments -- apply docs/group-feed-attachments.sql';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs <> 5) THEN
+    RAISE EXCEPTION 'FAIL: a stale create_feed_post overload is still present -- re-apply docs/group-feed-attachments.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'feed-attachments' AND public = false) THEN
+    RAISE EXCEPTION 'FAIL: feed-attachments bucket is missing or public';
+  END IF;
+  -- The one copy of list_feed_posts is in docs/group-feed-read.sql; a stale
+  -- re-apply of an older file would drop a key and every assignment card
+  -- would render header-only, or every attachment vanish, silently.
   IF pg_get_functiondef('list_feed_posts(uuid,timestamptz,int)'::regprocedure) NOT LIKE '%''assignment''%' THEN
-    RAISE EXCEPTION 'FAIL: list_feed_posts does not project the assignment kind -- re-apply docs/group-feed-assignment-cards.sql';
+    RAISE EXCEPTION 'FAIL: list_feed_posts does not project the assignment kind -- re-apply docs/group-feed-read.sql';
+  END IF;
+  IF pg_get_functiondef('list_feed_posts(uuid,timestamptz,int)'::regprocedure) NOT LIKE '%''attachments''%' THEN
+    RAISE EXCEPTION 'FAIL: list_feed_posts does not project attachments -- re-apply docs/group-feed-read.sql';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_task_post' AND NOT tgisinternal) THEN
@@ -121,7 +139,9 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B8 vote twice as the same user                  -> 1 vote, on the second option
 --   B9 advisor remove_feed_post on the task post    -> post gone AND share_to_feed = false
 --   B10 publishing a task posts one card, once; deleting the task removes it
--- Expected: ten rows, none beginning FAIL / SKIP / ABORTED.
+--   B11 announcement with one of each attachment  -> 3 feed_attachments rows
+--   B12 second photo -> ATTACHMENT_LIMIT; poll with an attachment -> KIND_NOT_ALLOWED
+-- Expected: twelve rows, none beginning FAIL / SKIP / ABORTED.
 -- ============================================================
 BEGIN;
 
@@ -136,7 +156,7 @@ BEGIN
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
 
   IF adv IS NULL OR stu IS NULL OR kpi IS NULL THEN
-    PERFORM set_config('probe.results', 'B1-B10' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
+    PERFORM set_config('probe.results', 'B1-B12' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
     RETURN;
   END IF;
 
@@ -326,6 +346,47 @@ BEGIN
     log := log || 'B10 publishing a task posts one card, once; deleting the task removes it' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
+  -- B11: one of each kind on an announcement, through the fifth parameter.
+  -- Three rows; the order they are handed in is deliberately not the order
+  -- list_feed_posts returns them in.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+  BEGIN
+    post := create_feed_post(grp, 'announcement', 'Read this', NULL,
+      ('[{"kind":"link","target":"https://example.org","name":"Example"},'
+       || '{"kind":"document","target":"' || grp::text || '/x/brief.pdf","name":"brief.pdf","mime":"application/pdf","size":10},'
+       || '{"kind":"photo","target":"' || grp::text || '/x/p.jpg","mime":"image/jpeg","size":10}]')::jsonb);
+    SELECT count(*) INTO n FROM feed_attachments WHERE post_id = post;
+    log := log || 'B11 announcement with one of each attachment stores three rows' || E'\t'
+        || CASE WHEN n = 3 THEN '3 rows' ELSE 'FAIL: ' || n || ' rows' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B11 announcement with one of each attachment stores three rows' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B12: the named refusals. A second photo is ATTACHMENT_LIMIT before any
+  -- row is written; an attachment on a poll is KIND_NOT_ALLOWED.
+  DECLARE
+    r1 TEXT; r2 TEXT;
+  BEGIN
+    BEGIN
+      PERFORM create_feed_post(grp, 'announcement', 'Two photos', NULL,
+        ('[{"kind":"photo","target":"' || grp::text || '/x/a.jpg","mime":"image/jpeg","size":10},'
+         || '{"kind":"photo","target":"' || grp::text || '/x/b.jpg","mime":"image/jpeg","size":10}]')::jsonb);
+      r1 := 'FAIL: second photo accepted';
+    EXCEPTION WHEN OTHERS THEN
+      r1 := CASE WHEN SQLERRM LIKE 'ATTACHMENT_LIMIT%' THEN 'ATTACHMENT_LIMIT' ELSE 'FAIL: ' || SQLERRM END;
+    END;
+    BEGIN
+      PERFORM create_feed_post(grp, 'poll', 'Which?', ARRAY['A', 'B'],
+        '[{"kind":"link","target":"https://example.org"}]'::jsonb);
+      r2 := 'FAIL: poll attachment accepted';
+    EXCEPTION WHEN OTHERS THEN
+      r2 := CASE WHEN SQLERRM LIKE 'KIND_NOT_ALLOWED%' THEN 'KIND_NOT_ALLOWED' ELSE 'FAIL: ' || SQLERRM END;
+    END;
+    log := log || 'B12 second photo and poll attachment refused' || E'\t'
+        || CASE WHEN r1 = 'ATTACHMENT_LIMIT' AND r2 = 'KIND_NOT_ALLOWED' THEN 'ATTACHMENT_LIMIT, KIND_NOT_ALLOWED'
+                ELSE 'FAIL: ' || r1 || ', ' || r2 END || E'\n';
+  END;
+
   PERFORM set_config('probe.results', log, true);
 END $$;
 
@@ -345,6 +406,9 @@ ROLLBACK;
 --   C6 student inserts an announcement               refused (42501)
 --   C7 mentor selects all five feed tables           0 rows in each
 --   C8 student whose membership closed lists A       NOT_IN_GROUP; post still exists
+--   C9 classmate reads a SHARED task's photo object  1 row   (log_photos_read, 4th disjunct)
+--   C10 classmate reads an UNSHARED task's photo     0 rows
+-- Ten cases. C9/C10 need a second student profile and SKIP without one.
 -- If SET LOCAL ROLE raises 42501 in your editor, STOP and report Part C as
 -- unrunnable -- do not replace these with pg_policies lookups.
 -- ============================================================
@@ -490,6 +554,107 @@ BEGIN
     log := log || 'C8b left member lists old group' || E'\t'
         || CASE WHEN SQLERRM LIKE 'NOT_IN_GROUP%' THEN 'NOT_IN_GROUP' ELSE 'FAIL: ' || SQLERRM END || E'\n';
   END;
+  PERFORM set_config('probe.results', log, true);
+END $$;
+RESET ROLE;
+
+-- C9/C10 fixture, as owner. Two published tasks in grpA, both with an
+-- APPROVED submission by stu: the first shared (trg_feed_task_post makes
+-- its post), the second with share_to_feed = false (no post). One probe
+-- object in log-photos under each, at <studentId>/<assignmentId>/<file> --
+-- the path log_photos_read reasons about. stu2, a SECOND student profile,
+-- joins grpA as an active member and is the classmate who reads. This needs
+-- two student profiles and a KPI with two triplets; C9/C10 SKIP otherwise.
+-- stu's own membership in grpA was closed by C8 -- irrelevant here, the
+-- disjunct asks whether the READER is in the post's group.
+DO $$
+DECLARE
+  adv UUID; stu UUID; stu2 UUID; grpA UUID; kpi UUID; asg UUID; asg_off UUID; sub UUID; sub_off UUID;
+  shared_path TEXT; unshared_path TEXT; n INT;
+BEGIN
+  PERFORM set_config('probe.c9ready', 'no', true);
+  PERFORM set_config('probe.c9fail', '', true);
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
+  adv := current_setting('probe.adv')::uuid; stu := current_setting('probe.stu')::uuid;
+  grpA := current_setting('probe.grpA')::uuid;
+  SELECT id INTO stu2 FROM profiles WHERE role = 'student' AND id <> stu ORDER BY created_at LIMIT 1;
+  SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
+  IF stu2 IS NULL OR kpi IS NULL THEN RETURN; END IF;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by, published_at)
+  SELECT grpA, tr.id, 'Probe evidence shared', tr.objective, tr.criterion, adv, now()
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index LIMIT 1
+  RETURNING id INTO asg;
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by, published_at)
+  SELECT grpA, tr.id, 'Probe evidence unshared', tr.objective, tr.criterion, adv, now()
+  FROM kpi_triplets tr WHERE tr.kpi_id = kpi ORDER BY tr.triplet_index OFFSET 1 LIMIT 1
+  RETURNING id INTO asg_off;
+  IF asg IS NULL OR asg_off IS NULL THEN RETURN; END IF;
+
+  INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
+  VALUES (asg, stu, 'submitted', 'r', true) RETURNING id INTO sub;
+  UPDATE assignment_submissions SET status = 'approved' WHERE id = sub;
+  INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, share_to_feed)
+  VALUES (asg_off, stu, 'submitted', 'r', false) RETURNING id INTO sub_off;
+  UPDATE assignment_submissions SET status = 'approved' WHERE id = sub_off;
+  -- The fixture itself must hold before the policy is asked about it; a
+  -- broken fixture is reported as its own FAIL line, never as a C9 verdict
+  -- and never by RAISE, which would abort the transaction and lose C1-C8.
+  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub;
+  IF n <> 1 THEN
+    PERFORM set_config('probe.c9fail', 'FAIL: fixture expected 1 post for the shared submission, found ' || n, true);
+    RETURN;
+  END IF;
+  SELECT count(*) INTO n FROM feed_posts WHERE submission_id = sub_off;
+  IF n <> 0 THEN
+    PERFORM set_config('probe.c9fail', 'FAIL: fixture expected 0 posts for the unshared submission, found ' || n, true);
+    RETURN;
+  END IF;
+
+  shared_path   := stu::text || '/' || asg::text     || '/probe.jpg';
+  unshared_path := stu::text || '/' || asg_off::text || '/probe2.jpg';
+  INSERT INTO storage.objects (bucket_id, name) VALUES ('log-photos', shared_path);
+  INSERT INTO storage.objects (bucket_id, name) VALUES ('log-photos', unshared_path);
+
+  UPDATE group_memberships SET left_at = now() WHERE student_id = stu2 AND left_at IS NULL;
+  INSERT INTO group_memberships (group_id, student_id) VALUES (grpA, stu2);
+
+  PERFORM set_config('probe.c9ready',       'yes',         true);
+  PERFORM set_config('probe.stu2',          stu2::text,    true);
+  PERFORM set_config('probe.shared_path',   shared_path,   true);
+  PERFORM set_config('probe.unshared_path', unshared_path, true);
+END $$;
+
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE stu2 UUID; shared_path TEXT; unshared_path TEXT; n INT; log TEXT;
+BEGIN
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
+  log := current_setting('probe.results', true);
+  IF coalesce(current_setting('probe.c9ready', true), 'no') <> 'yes' THEN
+    log := log || 'C9-C10 classmate evidence read' || E'\t'
+        || coalesce(nullif(current_setting('probe.c9fail', true), ''),
+                    'SKIP: needs a second student profile and a KPI with two triplets') || E'\n';
+    PERFORM set_config('probe.results', log, true);
+    RETURN;
+  END IF;
+  stu2 := current_setting('probe.stu2')::uuid;
+  shared_path := current_setting('probe.shared_path'); unshared_path := current_setting('probe.unshared_path');
+  -- 'role' alongside 'sub': log_photos_read tests auth.role() = 'authenticated'.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu2, 'role', 'authenticated')::text, true);
+
+  BEGIN
+    SELECT count(*) INTO n FROM storage.objects WHERE bucket_id = 'log-photos' AND name = shared_path;
+    log := log || 'C9 classmate reads a SHARED task''s photo object' || E'\t'
+        || CASE WHEN n = 1 THEN '1 row' ELSE 'FAIL: ' || n || ' rows' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN log := log || 'C9 classmate reads a SHARED task''s photo object' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
+  BEGIN
+    SELECT count(*) INTO n FROM storage.objects WHERE bucket_id = 'log-photos' AND name = unshared_path;
+    log := log || 'C10 classmate cannot read an UNSHARED task''s photo object' || E'\t'
+        || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: leaked' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN log := log || 'C10 classmate cannot read an UNSHARED task''s photo object' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
   PERFORM set_config('probe.results', log, true);
 END $$;
 RESET ROLE;

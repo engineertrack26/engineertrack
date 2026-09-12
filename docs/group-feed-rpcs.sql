@@ -39,6 +39,9 @@ $$;
 GRANT EXECUTE ON FUNCTION set_submission_sharing(UUID, BOOLEAN) TO authenticated;
 
 -- ---- create_feed_post ----
+-- STALE: the live definition is in docs/group-feed-attachments.sql (a fifth
+-- parameter, p_attachments, was added and this four-parameter overload is
+-- dropped there). Kept as the reference for the options logic B7 asserts.
 -- Advisor-only. Writes the post, the poll options, and one notification per
 -- ACTIVE student in the same transaction -- a client-side notification
 -- write failed with 42501 on every call once and a .catch hid it.
