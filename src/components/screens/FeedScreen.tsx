@@ -135,6 +135,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
   // upcoming box: it is auxiliary to the stream and must neither invalidate
   // nor be invalidated by a posts refetch landing around the same time.
   const loadPending = useCallback(async (gid: string | null) => {
+    setPending([]);
     const req = ++pendingRequest.current;
     if (!gid || role !== 'advisor') { setPending([]); return; }
     try {
@@ -185,12 +186,19 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
   // A new post in the selected group: refetch the top page rather than
   // trusting the bare row -- the realtime payload has no author name,
   // counts or signed evidence, and list_feed_posts is where those live.
-  // Event '*', not 'INSERT': create_feed_post now inserts every
+  // Event '*', not 'INSERT': create_feed_post inserts every
   // announcement/poll with published_at = NULL and publishing is an UPDATE.
-  // Realtime filters each event by RLS against that event's row, so a
-  // member never receives the INSERT (a draft at that instant) -- only the
-  // UPDATE that publishes it. Task and assignment posts still arrive as
-  // INSERTs (the column default publishes them); '*' covers both.
+  // Realtime evaluates RLS per event by looking the row up by primary key
+  // against the LIVE table, not the event's own image -- so for "post now"
+  // (INSERT NULL + UPDATE in one transaction) the row is already published
+  // by the time either event is checked, and a member usually receives the
+  // INSERT too. '*' is still required: a draft saved earlier and published
+  // later is UPDATE-only, and a saved draft's INSERT is withheld because
+  // the row is still NULL when it is checked. Task and assignment posts
+  // arrive as INSERTs (the column default publishes them); '*' covers all.
+  // Never set REPLICA IDENTITY FULL on feed_posts: Realtime does not apply
+  // RLS to DELETE events, and FULL identity would broadcast a deleted
+  // draft's old row (body included) to every subscribed member.
   useRealtimeSubscription({
     table: 'feed_posts',
     event: '*',
@@ -252,7 +260,10 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
             // The row moved from pending to the stream; refetch both rather
             // than moving it locally, because its createdAt is now the
             // publish moment and its counts come from list_feed_posts.
-            await Promise.all([loadPending(groupId), loadPosts(groupId)]);
+            // Through the ref, not the closed-over groupId: a group switch
+            // while publishPost was in flight must not have the stale
+            // group's refetch overwrite the new group's state.
+            await Promise.all([loadPending(groupIdRef.current), loadPosts(groupIdRef.current)]);
           } catch (err) {
             console.warn('Feed draft publish failed:', err instanceof Error ? err.message : err);
             const { key } = mapRpcError(err instanceof Error ? err.message : '');

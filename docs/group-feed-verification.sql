@@ -95,6 +95,11 @@ BEGIN
   IF pg_get_functiondef('can_see_post(uuid)'::regprocedure) NOT LIKE '%published_at%' THEN
     RAISE EXCEPTION 'FAIL: can_see_post does not check published_at -- re-apply docs/group-feed-drafts.sql';
   END IF;
+  -- Same drift on the policy itself: feed_posts_select is the door a bare
+  -- SELECT (and Realtime) goes through, and it does not call can_see_post.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'feed_posts' AND policyname = 'feed_posts_select' AND coalesce(qual, '') LIKE '%published_at%') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts_select does not check published_at -- re-apply docs/group-feed-drafts.sql';
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'feed-attachments' AND public = false) THEN
     RAISE EXCEPTION 'FAIL: feed-attachments bucket is missing or public';
   END IF;
@@ -495,7 +500,7 @@ ROLLBACK;
 --   C9 classmate reads a SHARED task's photo object  1 row   (log_photos_read, 4th disjunct)
 --   C10 classmate reads an UNSHARED task's photo     0 rows
 --   C11 member cannot see a draft, comment on it, or list it
---                                                    0 rows, refused 42501, not listed
+--                                                    0 rows, refused 42501, not listed, published still visible
 -- Eleven cases. C9/C10 need a second student profile and SKIP without one.
 -- If SET LOCAL ROLE raises 42501 in your editor, STOP and report Part C as
 -- unrunnable -- do not replace these with pg_policies lookups.
@@ -767,12 +772,12 @@ END $$;
 
 SET LOCAL ROLE authenticated;
 DO $$
-DECLARE stu UUID; grpA UUID; draft UUID; n INT; m INT; ins TEXT; log TEXT;
+DECLARE stu UUID; grpA UUID; draft UUID; postA UUID; n INT; m INT; k INT; ins TEXT; log TEXT;
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
   log := current_setting('probe.results', true);
   stu := current_setting('probe.stu')::uuid; grpA := current_setting('probe.grpA')::uuid;
-  draft := current_setting('probe.draft')::uuid;
+  draft := current_setting('probe.draft')::uuid; postA := current_setting('probe.postA')::uuid;
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
 
   -- Three doors, one rule: the row (feed_posts_select), a child write that
@@ -786,9 +791,14 @@ BEGIN
       ins := CASE WHEN SQLSTATE = '42501' THEN 'refused 42501' ELSE 'FAIL: ' || SQLSTATE || ' ' || SQLERRM END;
     END;
     SELECT count(*) INTO m FROM list_feed_posts(grpA) AS r WHERE r->>'id' = draft::text;
+    -- In-case positive control: the same member, same policy, must still
+    -- see grpA's PUBLISHED announcement -- otherwise "0 rows" above would
+    -- also be produced by a policy that hides everything.
+    SELECT count(*) INTO k FROM feed_posts WHERE id = postA;
     log := log || 'C11 member cannot see a draft, comment on it, or list it' || E'\t'
-        || CASE WHEN n = 0 AND ins = 'refused 42501' AND m = 0 THEN '0 rows, refused 42501, not listed'
-                ELSE 'FAIL: ' || n || ' rows, ' || ins || ', ' || CASE WHEN m = 0 THEN 'not listed' ELSE 'listed' END END || E'\n';
+        || CASE WHEN n = 0 AND ins = 'refused 42501' AND m = 0 AND k = 1 THEN '0 rows, refused 42501, not listed, published still visible'
+                ELSE 'FAIL: ' || n || ' rows, ' || ins || ', ' || CASE WHEN m = 0 THEN 'not listed' ELSE 'listed' END
+                     || ', ' || CASE WHEN k = 1 THEN 'published still visible' ELSE 'published hidden (' || k || ' rows)' END END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'C11 member cannot see a draft, comment on it, or list it' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;

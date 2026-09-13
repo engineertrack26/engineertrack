@@ -14,6 +14,9 @@
 -- docs/group-feed-attachments.sql, and BEFORE docs/group-feed-read.sql
 -- (list_feed_posts reads published_at). Anonymous dollar-quoting only in
 -- the Supabase SQL editor.
+--
+-- Never set REPLICA IDENTITY FULL on feed_posts: Realtime does not apply
+-- RLS to DELETE events and would broadcast a deleted draft's row to members.
 -- ============================================
 
 -- ---- The column, backfilled once ----
@@ -78,15 +81,16 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_group UUID; v_kind TEXT; v_body TEXT; v_author UUID; v_name TEXT; v_published TIMESTAMPTZ;
+  v_group UUID; v_kind TEXT; v_body TEXT; v_author UUID; v_name TEXT;
 BEGIN
-  SELECT group_id, kind, body, author_id, published_at
-  INTO v_group, v_kind, v_body, v_author, v_published
-  FROM feed_posts WHERE id = p_post_id;
-  IF v_group IS NULL OR v_published IS NOT NULL THEN
-    RETURN;
-  END IF;
-  UPDATE feed_posts SET published_at = now() WHERE id = p_post_id;
+  -- One atomic statement, not SELECT-then-UPDATE: two concurrent publishes
+  -- of the same draft both pass a prior SELECT, but only one of them wins
+  -- the row lock with published_at still NULL -- the other finds nothing
+  -- and returns, so the group is notified exactly once.
+  UPDATE feed_posts SET published_at = now()
+  WHERE id = p_post_id AND published_at IS NULL
+  RETURNING group_id, kind, body, author_id INTO v_group, v_kind, v_body, v_author;
+  IF NOT FOUND THEN RETURN; END IF;
 
   SELECT trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
   INTO v_name FROM profiles p WHERE p.id = v_author;
@@ -115,6 +119,9 @@ REVOKE EXECUTE ON FUNCTION feed_publish_post(UUID) FROM PUBLIC, authenticated;
 -- published_at = NULL, and the notification block is replaced by a call to
 -- feed_publish_post when this is not a draft -- so "post now" and
 -- "publish the draft later" are the same code path.
+-- The four-parameter overload too: a database that had the old rpcs file
+-- but never the old attachments file still carries it.
+DROP FUNCTION IF EXISTS create_feed_post(UUID, TEXT, TEXT, TEXT[]);
 DROP FUNCTION IF EXISTS create_feed_post(UUID, TEXT, TEXT, TEXT[], JSONB);
 
 CREATE OR REPLACE FUNCTION create_feed_post(
