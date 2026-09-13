@@ -770,6 +770,11 @@
     "linkUrlPlaceholder": "https://…",
     "linkTitlePlaceholder": "Link title (optional)",
     "invalidLink": "Enter a full address starting with http:// or https://",
-    "attachmentUploadFailed": "Attachment upload failed. Remove it or try again."
+    "attachmentUploadFailed": "Attachment upload failed. Remove it or try again.",
+    "postTo": "Post to",
+    "postedToAll_one": "Posted to {{count}} group.",
+    "postedToAll_other": "Posted to {{count}} groups.",
+    "postedToSome": "Posted to {{ok}} of {{total}} groups. Failed: {{failed}}",
+    "postedToNone": "Could not post to any group. Failed: {{failed}}"
   }
 }

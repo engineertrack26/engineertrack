@@ -307,6 +307,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
           visible
           kind={composer}
           groupId={groupId}
+          groups={groups}
           onClose={() => setComposer(null)}
           onPosted={() => { setComposer(null); loadPosts(groupId); }}
         />

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,12 +8,17 @@ import * as DocumentPicker from 'expo-document-picker';
 import { feedService } from '@/services/feed';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { isValidLink, attachmentsPayload, type AttachmentDraft } from '@/utils/feedAttachments';
+import { postableGroups, summarisePost, type PostOutcome, type TargetGroup } from '@/utils/feedTargets';
 import { colors, spacing, borderRadius } from '@/theme';
 
 interface Props {
   visible: boolean;
   kind: 'announcement' | 'poll';
+  /** The group open in the stream: always a target, cannot be deselected. */
   groupId: string;
+  /** Every group the advisor has; archived ones are offered only when
+   *  they are the current group. */
+  groups: TargetGroup[];
   onClose: () => void;
   onPosted: () => void;
 }
@@ -36,12 +41,20 @@ interface PickedFile {
   size?: number;
 }
 
-export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Props) {
+export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted }: Props) {
   const { t } = useTranslation();
   const [body, setBody] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [posting, setPosting] = useState(false);
   const max = kind === 'poll' ? QUESTION_MAX : BODY_MAX;
+
+  // Which groups receive the post. The current group is always in; other
+  // postable groups are added by tapping their chip. Each group gets its
+  // own post (own comments, own votes).
+  const [targets, setTargets] = useState<string[]>([groupId]);
+  useEffect(() => { setTargets([groupId]); }, [groupId]);
+  const postable = postableGroups(groups, groupId);
+  const currentName = groups.find((g) => g.id === groupId)?.name ?? '';
 
   // Announcement attachments: one slot per kind. `draft` holds only what
   // has finished uploading (a storage path) or the link as typed; `pending`
@@ -75,6 +88,7 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
     uploadToken.current.document += 1;
     setBody('');
     setOptions(['', '']);
+    setTargets([groupId]);
     setDraft({});
     setPending({});
     setUploading({});
@@ -82,24 +96,102 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
     setLinkOpen(false);
   }
 
+  function toggleTarget(id: string) {
+    if (id === groupId) return;
+    setTargets((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  /** The current group's attachments were uploaded into its folder; another
+   *  group needs its own copies, so re-upload the picked files there and
+   *  swap the storage paths. The link needs nothing. */
+  async function draftFor(targetGroupId: string, base: AttachmentDraft): Promise<AttachmentDraft> {
+    const next: AttachmentDraft = { ...base };
+    const photo = pending.photo;
+    if (photo && base.photo) {
+      const path = await feedService.uploadFeedAttachment(targetGroupId, photo.uri, photo.name, photo.mime);
+      next.photo = { ...base.photo, path };
+    }
+    const document = pending.document;
+    if (document && base.document) {
+      const path = await feedService.uploadFeedAttachment(targetGroupId, document.uri, document.name, document.mime);
+      next.document = { ...base.document, path };
+    }
+    return next;
+  }
+
   async function post() {
     if (!canPost || posting) return;
     setPosting(true);
     try {
       // An empty link row (opened but never typed in) is not an attachment.
-      const payload = attachmentsPayload(linkUrl.trim() ? draft : { ...draft, link: undefined });
-      await feedService.createPost(
-        groupId,
-        kind,
-        body.trim(),
-        kind === 'poll' ? filled : undefined,
-        kind === 'announcement' ? payload : undefined,
-      );
-      reset();
-      onPosted();
-    } catch (err) {
-      const { key } = mapRpcError(err instanceof Error ? err.message : '');
-      Alert.alert(t('common.error'), t(key));
+      const baseDraft = linkUrl.trim() ? draft : { ...draft, link: undefined };
+      // Current group first, then the other selected ones in postable order.
+      const list: TargetGroup[] = [
+        { id: groupId, name: currentName },
+        ...postable.filter((g) => g.id !== groupId && targets.includes(g.id)),
+      ];
+      const outcomes: PostOutcome[] = [];
+      let lastError: unknown;
+      for (const g of list) {
+        try {
+          let payload: ReturnType<typeof attachmentsPayload> | undefined;
+          if (kind === 'announcement') {
+            const groupDraft = g.id === groupId ? baseDraft : await draftFor(g.id, baseDraft);
+            payload = attachmentsPayload(groupDraft);
+          }
+          await feedService.createPost(
+            g.id,
+            kind,
+            body.trim(),
+            kind === 'poll' ? filled : undefined,
+            payload,
+          );
+          outcomes.push({ groupId: g.id, name: g.name, ok: true });
+        } catch (err) {
+          console.warn(`Feed post to group ${g.id} failed:`, err instanceof Error ? err.message : err);
+          lastError = err;
+          outcomes.push({ groupId: g.id, name: g.name, ok: false });
+        }
+      }
+
+      const s = summarisePost(outcomes);
+      if (s.failed.length === 0) {
+        Alert.alert(
+          t('common.done', 'Done'),
+          t('feed.postedToAll', {
+            count: s.ok,
+            defaultValue_one: 'Posted to {{count}} group.',
+            defaultValue_other: 'Posted to {{count}} groups.',
+          }),
+        );
+        reset();
+        onPosted();
+      } else if (s.ok > 0) {
+        Alert.alert(
+          t('common.done', 'Done'),
+          t('feed.postedToSome', {
+            ok: s.ok,
+            total: outcomes.length,
+            failed: s.failed.join(', '),
+            defaultValue: 'Posted to {{ok}} of {{total}} groups. Failed: {{failed}}',
+          }),
+        );
+        reset();
+        onPosted();
+      } else if (outcomes.length === 1) {
+        // A single-group post that failed reads exactly as before: the
+        // mapped RPC reason, not a list of one group name.
+        const { key } = mapRpcError(lastError instanceof Error ? lastError.message : '');
+        Alert.alert(t('common.error'), t(key));
+      } else {
+        Alert.alert(
+          t('common.error', 'An error occurred'),
+          t('feed.postedToNone', {
+            failed: s.failed.join(', '),
+            defaultValue: 'Could not post to any group. Failed: {{failed}}',
+          }),
+        );
+      }
     } finally {
       setPosting(false);
     }
@@ -282,6 +374,25 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {postable.length > 1 && (
+            <View style={styles.targetsRow}>
+              <Text style={styles.targetsLabel}>{t('feed.postTo', 'Post to')}</Text>
+              {postable.map((g) => {
+                const selected = g.id === groupId || targets.includes(g.id);
+                return (
+                  <TouchableOpacity
+                    key={g.id}
+                    style={[styles.targetChip, selected && styles.targetChipActive]}
+                    onPress={() => toggleTarget(g.id)}
+                    disabled={g.id === groupId}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.targetChipText, selected && styles.targetChipTextActive]} numberOfLines={1}>{g.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
           <TextInput
             style={styles.body}
             placeholder={kind === 'poll' ? t('feed.composerQuestionPlaceholder') : t('feed.composerBodyPlaceholder')}
@@ -400,6 +511,14 @@ const styles = StyleSheet.create({
   postBtn: { fontSize: 16, fontWeight: '600', color: colors.primary },
   postBtnDisabled: { color: colors.textDisabled },
   content: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+
+  // Post-to targets (chip styles mirror FeedScreen's group selector)
+  targetsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  targetsLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  targetChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
+  targetChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  targetChipText: { fontSize: 13, color: colors.text, maxWidth: 160 },
+  targetChipTextActive: { color: '#fff', fontWeight: '600' },
   body: { minHeight: 120, fontSize: 16, color: colors.text, textAlignVertical: 'top' },
   counter: { fontSize: 12, color: colors.textSecondary, textAlign: 'right' },
   options: { gap: spacing.sm, marginTop: spacing.md },
