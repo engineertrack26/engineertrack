@@ -39,6 +39,9 @@ BEGIN
       RAISE EXCEPTION 'FAIL: %() is missing', t;
     END IF;
   END LOOP;
+  IF has_function_privilege('authenticated', 'can_message(uuid,uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: can_message is callable by authenticated -- it must stay internal';
+  END IF;
   FOREACH t IN ARRAY ARRAY['trg_dm_membership_closed','trg_dm_group_archived','trg_dm_mentor_changed'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = t AND NOT tgisinternal) THEN
       RAISE EXCEPTION 'FAIL: trigger % is missing', t;

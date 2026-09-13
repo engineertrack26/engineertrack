@@ -77,7 +77,11 @@ RETURNS TEXT AS $$
     ELSE NULL
   END;
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
-GRANT EXECUTE ON FUNCTION can_message(UUID, UUID, UUID) TO authenticated;
+-- Not callable from PostgREST: it is a relationship oracle. Only
+-- can_access_conversation and the SECURITY DEFINER RPCs call it, and they
+-- run as the owner. (Postgres grants EXECUTE to PUBLIC on creation, so the
+-- REVOKE is what actually closes it.)
+REVOKE EXECUTE ON FUNCTION can_message(UUID, UUID, UUID) FROM PUBLIC, authenticated;
 
 -- True iff the caller is one of the two participants AND the relationship
 -- still holds. This is the only predicate the four policies use.
