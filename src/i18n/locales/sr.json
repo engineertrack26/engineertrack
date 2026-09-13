@@ -331,6 +331,7 @@
     "studentFilter": "Prikazuju se radovi na čekanju za {{name}}."
   },
   "tabs": {
+    "messages": "Poruke",
     "feed": "Tok",
     "polls": "Ankete",
     "students": "Učenici",

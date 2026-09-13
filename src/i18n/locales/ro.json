@@ -331,6 +331,7 @@
     "studentFilter": "Lucrări în așteptare pentru {{name}}."
   },
   "tabs": {
+    "messages": "Mesaje",
     "feed": "Flux",
     "polls": "Sondaje",
     "students": "Elevi",

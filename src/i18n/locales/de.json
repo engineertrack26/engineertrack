@@ -331,6 +331,7 @@
     "studentFilter": "Offene Einreichungen von {{name}} werden angezeigt."
   },
   "tabs": {
+    "messages": "Nachrichten",
     "feed": "Stream",
     "polls": "Umfragen",
     "students": "Lernende",

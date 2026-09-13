@@ -881,6 +881,7 @@
     "attachmentLimit": "An announcement can carry one photo, one document and one link."
   },
   "tabs": {
+    "messages": "Messages",
     "dashboard": "Dashboard",
     "tasks": "Tasks",
     "badges": "Badges",

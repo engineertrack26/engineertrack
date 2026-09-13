@@ -331,6 +331,7 @@
     "studentFilter": "Consegne in attesa di {{name}}."
   },
   "tabs": {
+    "messages": "Messaggi",
     "feed": "Flusso",
     "polls": "Sondaggi",
     "students": "Studenti",
