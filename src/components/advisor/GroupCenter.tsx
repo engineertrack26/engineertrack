@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGroupStore } from '@/store/groupStore';
 import { advisorGroupViewService } from '@/services/advisorGroupView';
 import { groupService } from '@/services/group';
+import { messageService } from '@/services/messages';
 import { BackButton, LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
@@ -117,10 +118,13 @@ function GroupInfo({ group, onClose, onArchived }: {
     } catch { Alert.alert(t('common.error'), t('advisorGroups.archiveFailed')); }
     finally { lock.current = false; setBusy(false); }
   };
-  const confirmArchive = () => {
+  const confirmArchive = async () => {
     if (lock.current) return;
     if (group.isArchived) { void archive(); return; }
-    Alert.alert(t('advisorGroups.archive'), t('advisorGroups.archiveConfirm', { name: group.name }), [
+    const n = await messageService.countDeletable(group.id).catch(() => 0);
+    const body = t('advisorGroups.archiveConfirm', { name: group.name })
+      + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
+    Alert.alert(t('advisorGroups.archive'), body, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('advisorGroups.archive'), style: 'destructive', onPress: () => void archive() },
     ]);

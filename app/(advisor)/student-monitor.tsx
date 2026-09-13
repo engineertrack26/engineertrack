@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
+import { messageService } from '@/services/messages';
 import { groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { mapMonitorStudent, filterMonitorStudents, type StudentMonitorItem } from '@/utils/advisorStudentMonitor';
 import { mapRpcError } from '@/utils/rpcErrors';
@@ -79,10 +80,13 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
     return () => { mounted.current = false; sequence.current += 1; };
   }, [load]));
 
-  function confirmRemove(member: GroupMember) {
+  async function confirmRemove(member: GroupMember) {
     if (locks.current.has(member.membershipId) || failed) return;
     const name = [member.firstName, member.lastName].filter(Boolean).join(' ');
-    Alert.alert(t('advisor.removeStudent'), t('advisor.removeStudentConfirm', { name }), [
+    const n = groupId ? await messageService.countDeletable(groupId, member.id).catch(() => 0) : 0;
+    const body = t('advisor.removeStudentConfirm', { name })
+      + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
+    Alert.alert(t('advisor.removeStudent'), body, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('advisor.removeStudent'), style: 'destructive', onPress: () => { void remove(member); } },
     ]);
