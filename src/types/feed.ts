@@ -60,6 +60,9 @@ export interface FeedPost {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  /** Unpublished (published_at IS NULL): visible only to the advisor via
+   *  list_feed_pending; no likes/comments/votes exist for it yet. */
+  draft: boolean;
   task?: FeedTask;
   poll?: FeedPoll;
   assignment?: FeedAssignment;

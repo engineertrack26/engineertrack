@@ -22,6 +22,7 @@ function toPost(raw: Record<string, unknown>): FeedPost {
     likeCount: Number(raw.likeCount) || 0,
     commentCount: Number(raw.commentCount) || 0,
     likedByMe: !!raw.likedByMe,
+    draft: !!raw.draft,
     task: task
       ? {
           submissionId: task.submissionId as string,
@@ -74,6 +75,35 @@ function safeFileName(fileName: string): string {
   return fileName.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
+/** Exchange stored evidence/attachment paths for signed URLs. Shared by
+ *  listPosts and listPending so a draft's files open exactly as they will
+ *  once published. */
+async function signPost(raw: Record<string, unknown>): Promise<FeedPost> {
+  const post = toPost(raw);
+  const task = raw.task as Record<string, unknown> | null;
+  if (post.task && task) {
+    const signed = await signEvidence(
+      (task.photos as PhotoEvidence[] | undefined) || [],
+      (task.documents as DocumentEvidence[] | undefined) || [],
+    );
+    post.task.photos = signed.photos;
+    post.task.documents = signed.documents;
+  }
+  if (post.attachments.length > 0) {
+    // Sign photo/document targets; links pass through untouched. An
+    // attachment whose signing failed is DROPPED rather than kept with
+    // its bare path: a chip that opens nothing is worse than no chip,
+    // and the row still stands for the next read.
+    const signed = await Promise.all(post.attachments.map(async (a): Promise<FeedAttachment | undefined> => {
+      if (a.kind === 'link') return a;
+      const url = await signFeedAttachment(a.target);
+      return url ? { ...a, target: url } : undefined;
+    }));
+    post.attachments = signed.filter((a): a is FeedAttachment => a !== undefined);
+  }
+  return post;
+}
+
 export const feedService = {
   /** One page, newest first. `before` is the oldest createdAt already on
    *  screen. Evidence URIs come back signed. */
@@ -85,31 +115,16 @@ export const feedService = {
     });
     if (error) throw new RpcError(error.message);
     const rows = (data || []) as Array<Record<string, unknown>>;
-    return Promise.all(rows.map(async (raw) => {
-      const post = toPost(raw);
-      const task = raw.task as Record<string, unknown> | null;
-      if (post.task && task) {
-        const signed = await signEvidence(
-          (task.photos as PhotoEvidence[] | undefined) || [],
-          (task.documents as DocumentEvidence[] | undefined) || [],
-        );
-        post.task.photos = signed.photos;
-        post.task.documents = signed.documents;
-      }
-      if (post.attachments.length > 0) {
-        // Sign photo/document targets; links pass through untouched. An
-        // attachment whose signing failed is DROPPED rather than kept with
-        // its bare path: a chip that opens nothing is worse than no chip,
-        // and the row still stands for the next read.
-        const signed = await Promise.all(post.attachments.map(async (a): Promise<FeedAttachment | undefined> => {
-          if (a.kind === 'link') return a;
-          const url = await signFeedAttachment(a.target);
-          return url ? { ...a, target: url } : undefined;
-        }));
-        post.attachments = signed.filter((a): a is FeedAttachment => a !== undefined);
-      }
-      return post;
-    }));
+    return Promise.all(rows.map(signPost));
+  },
+
+  /** The advisor's unpublished posts for a group, newest first (owner-only
+   *  RPC). Same shape as listPosts with `draft: true` and zero counts. */
+  async listPending(groupId: string): Promise<FeedPost[]> {
+    const { data, error } = await supabase.rpc('list_feed_pending', { p_group_id: groupId });
+    if (error) throw new RpcError(error.message);
+    const rows = (data || []) as Array<Record<string, unknown>>;
+    return Promise.all(rows.map(signPost));
   },
 
   async createPost(
@@ -118,6 +133,7 @@ export const feedService = {
     body: string,
     options?: string[],
     attachments?: Array<{ kind: FeedAttachmentKind; target: string; name?: string; mime?: string; size?: number }>,
+    draft = false,
   ): Promise<string> {
     const { data, error } = await supabase.rpc('create_feed_post', {
       p_group_id: groupId,
@@ -125,6 +141,7 @@ export const feedService = {
       p_body: body,
       p_options: options ?? null,
       p_attachments: attachments ?? [],
+      p_draft: draft,
     });
     if (error) throw new RpcError(error.message);
     return data as string;
@@ -137,6 +154,13 @@ export const feedService = {
     const path = `${groupId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}/${safeFileName(fileName)}`;
     await uploadToBucket(FEED_ATTACHMENT_BUCKET, path, uri, fileName, mime);
     return path;
+  },
+
+  /** Draft -> live. Owner-checked server-side; sets published_at and sends
+   *  the member notifications create_feed_post would have sent. */
+  async publishPost(postId: string): Promise<void> {
+    const { error } = await supabase.rpc('publish_feed_post', { p_post_id: postId });
+    if (error) throw new RpcError(error.message);
   },
 
   async vote(postId: string, optionId: string): Promise<void> {

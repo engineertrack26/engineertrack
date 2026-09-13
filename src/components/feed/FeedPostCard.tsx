@@ -52,7 +52,9 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
   }
 
   async function vote(optionId: string) {
-    if (!post.poll) return;
+    // A draft poll is a preview: no vote exists for it yet, not even the
+    // advisor's own.
+    if (!post.poll || post.draft) return;
     const prev = post;
     const options = post.poll.options.map((o) => ({
       ...o,
@@ -132,14 +134,19 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
             {post.authorName}
             {post.kind === 'task' && <Text style={styles.subtle}>  {t('feed.sharedTask')}</Text>}
           </Text>
-          <Text style={styles.subtle}>
-            {post.kind === 'announcement' ? t('feed.announcement')
-              : post.kind === 'poll' ? t('feed.poll')
-              : post.kind === 'assignment' ? t('notifications.taskAssignedTitle')
-              : ''}
-            {post.kind !== 'task' ? ' · ' : ''}
-            {new Date(post.createdAt).toLocaleDateString(i18n.language)}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.subtle}>
+              {post.kind === 'announcement' ? t('feed.announcement')
+                : post.kind === 'poll' ? t('feed.poll')
+                : post.kind === 'assignment' ? t('notifications.taskAssignedTitle')
+                : ''}
+              {post.kind !== 'task' ? ' · ' : ''}
+              {new Date(post.createdAt).toLocaleDateString(i18n.language)}
+            </Text>
+            {/* Only the advisor ever sees a draft (list_feed_pending is
+                owner-only); the badge says this card is not live yet. */}
+            {post.draft && <Text style={styles.draftBadge}>{t('feed.draft', 'Draft')}</Text>}
+          </View>
         </View>
         {post.kind === 'task' && isMine && (
           <TouchableOpacity onPress={removeTask} hitSlop={8}>
@@ -258,19 +265,23 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
         </View>
       )}
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerBtn} onPress={toggleLike} hitSlop={8}>
-          <Ionicons name={post.likedByMe ? 'heart' : 'heart-outline'} size={20} color={post.likedByMe ? colors.error : colors.textSecondary} />
-          <Text style={styles.footerText}>{t('feed.likeCount', { count: post.likeCount })}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerBtn} onPress={() => setShowComments((v) => !v)} hitSlop={8}>
-          <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-          <Text style={styles.footerText}>{t('feed.commentCount', { count: post.commentCount })}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Footer. A draft has no likes or comments to count (nobody but the
+          advisor can see it), so the row is hidden rather than shown at 0;
+          the trash in the header is how a draft is deleted (remove_feed_post). */}
+      {!post.draft && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.footerBtn} onPress={toggleLike} hitSlop={8}>
+            <Ionicons name={post.likedByMe ? 'heart' : 'heart-outline'} size={20} color={post.likedByMe ? colors.error : colors.textSecondary} />
+            <Text style={styles.footerText}>{t('feed.likeCount', { count: post.likeCount })}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.footerBtn} onPress={() => setShowComments((v) => !v)} hitSlop={8}>
+            <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.footerText}>{t('feed.commentCount', { count: post.commentCount })}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {showComments && (
+      {showComments && !post.draft && (
         <FeedComments
           postId={post.id}
           userId={userId}
@@ -290,6 +301,8 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   author: { fontSize: 14, fontWeight: '600', color: colors.text },
   subtle: { fontSize: 12, color: colors.textSecondary },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  draftBadge: { fontSize: 10, fontWeight: '700', color: colors.warning, textTransform: 'uppercase', letterSpacing: 0.5, borderWidth: 1, borderColor: colors.warning, borderRadius: borderRadius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   section: { gap: spacing.xs },
   competency: { fontSize: 12, fontWeight: '600', color: colors.primary },
   title: { fontSize: 15, fontWeight: '600', color: colors.text },

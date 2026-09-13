@@ -119,7 +119,12 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
     return next;
   }
 
-  async function post() {
+  /** Post now (asDraft = false) or save a draft (asDraft = true) to EVERY
+   *  target group; a draft goes through the same loop because each group
+   *  gets its own row either way, and the same canPost gate because a
+   *  draft still needs a body, valid options and finished attachments.
+   *  (`draft` the state is the attachment draft; hence `asDraft`.) */
+  async function post(asDraft = false) {
     if (!canPost || posting) return;
     setPosting(true);
     try {
@@ -145,6 +150,7 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
             body.trim(),
             kind === 'poll' ? filled : undefined,
             payload,
+            asDraft,
           );
           outcomes.push({ groupId: g.id, name: g.name, ok: true });
         } catch (err) {
@@ -157,8 +163,15 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
       const s = summarisePost(outcomes);
       if (s.failed.length === 0) {
         // A single-group post succeeds silently, as it always has; only a
-        // multi-group post confirms how many groups received it.
-        if (outcomes.length > 1) {
+        // multi-group post confirms how many groups received it. The one
+        // exception is a single-group DRAFT: nothing appears in the stream,
+        // so the user needs to be told where it went.
+        if (outcomes.length === 1 && asDraft) {
+          Alert.alert(
+            t('common.done', 'Done'),
+            t('feed.draftSaved', 'Saved as a draft. Publish it from the top of the stream when you are ready.'),
+          );
+        } else if (outcomes.length > 1) {
           Alert.alert(
             t('common.done', 'Done'),
             t('feed.postedToAll', {
@@ -371,11 +384,20 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>{kind === 'poll' ? t('feed.createPoll') : t('feed.writeAnnouncement')}</Text>
-          <TouchableOpacity onPress={post} disabled={!canPost || posting} hitSlop={8}>
-            {posting
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <Text style={[styles.postBtn, !canPost && styles.postBtnDisabled]}>{t('feed.post')}</Text>}
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            {posting ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <TouchableOpacity onPress={() => post(true)} disabled={!canPost} hitSlop={8}>
+                  <Text style={[styles.draftBtn, !canPost && styles.postBtnDisabled]}>{t('feed.saveDraft', 'Save draft')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => post(false)} disabled={!canPost} hitSlop={8}>
+                  <Text style={[styles.postBtn, !canPost && styles.postBtnDisabled]}>{t('feed.post')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {postable.length > 1 && (
@@ -512,7 +534,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   title: { fontSize: 16, fontWeight: '600', color: colors.text },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   postBtn: { fontSize: 16, fontWeight: '600', color: colors.primary },
+  draftBtn: { fontSize: 15, fontWeight: '500', color: colors.textSecondary },
   postBtnDisabled: { color: colors.textDisabled },
   content: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Modal, Image, Pressable, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { LoadFailedBanner } from '@/components/common';
 import { FeedPostCard, FeedComposer, UpcomingTasksBox } from '@/components/feed';
 import { isActionable } from '@/utils/studentTasks';
+import { mapRpcError } from '@/utils/rpcErrors';
 import { upcomingTasks } from '@/utils/feedUpcoming';
 import { selectAdvisorGroup, groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { AdvisorBell } from '@/components/advisor/GroupUI';
@@ -40,6 +41,10 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingCandidate[]>([]);
+  // The advisor's unpublished announcements/polls for the selected group;
+  // always [] for a student (list_feed_pending is owner-only, never called).
+  const [pending, setPending] = useState<FeedPost[]>([]);
+  const [publishing, setPublishing] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -51,6 +56,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
   const consumedParam = useRef<string | null>(null);
   const request = useRef(0);
   const upcomingRequest = useRef(0);
+  const pendingRequest = useRef(0);
   const listRef = useRef<FlatList<FeedPost>>(null);
   const groupIdRef = useRef<string | null>(null);
   const scrollRetries = useRef(0);
@@ -125,6 +131,27 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
     }
   }, [role, user]);
 
+  // Drafts block, advisor only. Its own counter for the same reason as the
+  // upcoming box: it is auxiliary to the stream and must neither invalidate
+  // nor be invalidated by a posts refetch landing around the same time.
+  const loadPending = useCallback(async (gid: string | null) => {
+    const req = ++pendingRequest.current;
+    if (!gid || role !== 'advisor') { setPending([]); return; }
+    try {
+      const list = await feedService.listPending(gid);
+      if (req !== pendingRequest.current) return;
+      setPending(list);
+    } catch (err) {
+      if (req !== pendingRequest.current) return;
+      // Auxiliary block: the stream's LoadFailedBanner is the user-facing
+      // failure signal (a drafts fetch fails for the same reasons the
+      // stream does), and an empty block claims nothing -- the drafts still
+      // stand server-side for the next load.
+      console.warn('Feed drafts load failed:', err);
+      setPending([]);
+    }
+  }, [role]);
+
   const loadMore = useCallback(async () => {
     if (!groupId || !hasMore || loadingMore || loading || posts.length === 0) return;
     setLoadingMore(true);
@@ -151,15 +178,22 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
     loadGroups();
     loadPosts(groupIdRef.current);
     loadUpcoming(groupIdRef.current);
-  }, [loadGroups, loadPosts, loadUpcoming]));
-  useEffect(() => { loadPosts(groupId); loadUpcoming(groupId); }, [groupId, loadPosts, loadUpcoming]);
+    loadPending(groupIdRef.current);
+  }, [loadGroups, loadPosts, loadUpcoming, loadPending]));
+  useEffect(() => { loadPosts(groupId); loadUpcoming(groupId); loadPending(groupId); }, [groupId, loadPosts, loadUpcoming, loadPending]);
 
   // A new post in the selected group: refetch the top page rather than
   // trusting the bare row -- the realtime payload has no author name,
   // counts or signed evidence, and list_feed_posts is where those live.
+  // Event '*', not 'INSERT': create_feed_post now inserts every
+  // announcement/poll with published_at = NULL and publishing is an UPDATE.
+  // Realtime filters each event by RLS against that event's row, so a
+  // member never receives the INSERT (a draft at that instant) -- only the
+  // UPDATE that publishes it. Task and assignment posts still arrive as
+  // INSERTs (the column default publishes them); '*' covers both.
   useRealtimeSubscription({
     table: 'feed_posts',
-    event: 'INSERT',
+    event: '*',
     filter: groupId ? `group_id=eq.${groupId}` : undefined,
     enabled: !!groupId,
     onPayload: () => { loadPosts(groupId); },
@@ -192,14 +226,43 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
     await loadGroups();
     await loadPosts(groupId);
     await loadUpcoming(groupId);
+    await loadPending(groupId);
     setRefreshing(false);
-  }, [loadGroups, loadPosts, loadUpcoming, groupId]);
+  }, [loadGroups, loadPosts, loadUpcoming, loadPending, groupId]);
 
   function updatePost(next: FeedPost) {
     setPosts((prev) => prev.map((p) => (p.id === next.id ? next : p)));
   }
   function removePost(id: string) {
     setPosts((prev) => prev.filter((p) => p.id !== id));
+  }
+  function removePending(id: string) {
+    setPending((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function publishDraft(draft: FeedPost) {
+    Alert.alert(t('feed.publish', 'Publish'), t('feed.publishConfirm', 'Publish this to the group now? Students will be notified.'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('feed.publish', 'Publish'),
+        onPress: async () => {
+          setPublishing(draft.id);
+          try {
+            await feedService.publishPost(draft.id);
+            // The row moved from pending to the stream; refetch both rather
+            // than moving it locally, because its createdAt is now the
+            // publish moment and its counts come from list_feed_posts.
+            await Promise.all([loadPending(groupId), loadPosts(groupId)]);
+          } catch (err) {
+            console.warn('Feed draft publish failed:', err instanceof Error ? err.message : err);
+            const { key } = mapRpcError(err instanceof Error ? err.message : '');
+            Alert.alert(t('common.error'), t(key));
+          } finally {
+            setPublishing(null);
+          }
+        },
+      },
+    ]);
   }
 
   if (!user) return null;
@@ -250,6 +313,40 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
             <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
             <Text style={styles.composeText}>{t('feed.createPoll')}</Text>
           </TouchableOpacity>
+        </View>
+      )}
+      {/* Drafts: rendered with the same card so a draft looks exactly as it
+          will once published. Publish confirms then refetches; the card's
+          own trash deletes it (remove_feed_post). */}
+      {role === 'advisor' && pending.length > 0 && (
+        <View style={styles.drafts}>
+          <Text style={styles.draftsTitle}>{t('feed.drafts', 'Drafts')}</Text>
+          {pending.map((d) => (
+            <View key={d.id}>
+              <FeedPostCard
+                post={d}
+                userId={user.id}
+                role={role}
+                canModerate={canModerate}
+                onChange={() => {}}
+                onRemoved={removePending}
+                onOpenPhoto={setLightboxUri}
+              />
+              <View style={styles.draftActions}>
+                <TouchableOpacity
+                  style={[styles.publishBtn, publishing === d.id && { opacity: 0.6 }]}
+                  onPress={() => publishDraft(d)}
+                  disabled={publishing !== null}
+                  activeOpacity={0.7}
+                >
+                  {publishing === d.id
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Ionicons name="send-outline" size={16} color="#fff" />}
+                  <Text style={styles.publishText}>{t('feed.publish', 'Publish')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </View>
       )}
     </View>
@@ -309,7 +406,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
           groupId={groupId}
           groups={groups}
           onClose={() => setComposer(null)}
-          onPosted={() => { setComposer(null); loadPosts(groupId); }}
+          onPosted={() => { setComposer(null); loadPosts(groupId); loadPending(groupId); }}
         />
       )}
 
@@ -336,6 +433,11 @@ const styles = StyleSheet.create({
   composeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   composeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary + '40' },
   composeText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  drafts: { marginBottom: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
+  draftsTitle: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
+  draftActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -spacing.xs, marginBottom: spacing.md },
+  publishBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, backgroundColor: colors.primary },
+  publishText: { fontSize: 13, fontWeight: '600', color: '#fff' },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: 60, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
   lightbox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
