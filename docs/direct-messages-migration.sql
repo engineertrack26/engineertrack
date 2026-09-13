@@ -173,6 +173,21 @@ CREATE TRIGGER trg_dm_mentor_changed
   WHEN (OLD.mentor_id IS DISTINCT FROM NEW.mentor_id)
   EXECUTE FUNCTION trg_dm_mentor_changed_fn();
 
+-- A conversation's notifications carry an 80-character preview; they go
+-- with it. (Spec §7 omitted this; decision 5 requires it.)
+CREATE OR REPLACE FUNCTION trg_dm_conversation_deleted_fn()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  DELETE FROM notifications
+  WHERE type = 'direct_message' AND data->>'conversationId' = OLD.id::text;
+  RETURN OLD;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_dm_conversation_deleted ON conversations;
+CREATE TRIGGER trg_dm_conversation_deleted
+  AFTER DELETE ON conversations
+  FOR EACH ROW EXECUTE FUNCTION trg_dm_conversation_deleted_fn();
+
 -- ---- Realtime: the conversation screen listens for new messages ----
 -- Never set REPLICA IDENTITY FULL on messages: Realtime does not apply RLS
 -- to DELETE events and would broadcast deleted bodies.

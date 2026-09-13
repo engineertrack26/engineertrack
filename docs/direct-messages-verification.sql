@@ -42,7 +42,7 @@ BEGIN
   IF has_function_privilege('authenticated', 'can_message(uuid,uuid,uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: can_message is callable by authenticated -- it must stay internal';
   END IF;
-  FOREACH t IN ARRAY ARRAY['trg_dm_membership_closed','trg_dm_group_archived','trg_dm_mentor_changed'] LOOP
+  FOREACH t IN ARRAY ARRAY['trg_dm_membership_closed','trg_dm_group_archived','trg_dm_mentor_changed','trg_dm_conversation_deleted'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = t AND NOT tgisinternal) THEN
       RAISE EXCEPTION 'FAIL: trigger % is missing', t;
     END IF;
@@ -68,9 +68,10 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B8  unread: 1 for the recipient, 0 after mark_conversation_read
 --   B9  membership closed -> that student's conversations gone, the others remain
 --   B10 mentor changed -> mentor conversation gone, member conversations remain
+--   B13 re-joining own group keeps conversations
 --   B12 mentor contacts list the linked student with the group
 --   B11 archive -> zero conversations for the group
--- Expected: twelve rows, none beginning FAIL / ABORTED.
+-- Expected: thirteen rows, none beginning FAIL / ABORTED.
 -- ============================================================
 BEGIN;
 
@@ -78,7 +79,7 @@ DO $$
 DECLARE
   adv UUID; stu UUID; stu2 UUID; mentor UUID; grp UUID;
   c_ss UUID; c_sa UUID; c_sm UUID; msg UUID; n INT; m INT; log TEXT := '';
-  v_bc UUID; v_blocker UUID;
+  v_bc UUID; v_blocker UUID; v_code TEXT;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
@@ -227,6 +228,16 @@ BEGIN
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B10 mentor change deletes the mentor conversation' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
+  -- B13 (re-joining the code of your own group is a no-op for conversations)
+  BEGIN
+    SELECT join_code INTO v_code FROM internship_groups WHERE id = grp;
+    SELECT count(*) INTO n FROM conversations WHERE group_id = grp AND (a_id = stu OR b_id = stu);
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+    PERFORM join_group_by_code(v_code);
+    SELECT count(*) INTO m FROM conversations WHERE group_id = grp AND (a_id = stu OR b_id = stu);
+    log := log || 'B13 re-joining own group keeps conversations' || E'\t' || CASE WHEN n = m AND n > 0 THEN 'kept ' || n ELSE 'FAIL: ' || n || ' -> ' || m END || E'\n';
+  EXCEPTION WHEN OTHERS THEN log := log || 'B13 re-joining own group keeps conversations' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
   -- B12 (mentor contacts list the linked student with the group) -- must run
   -- before B11 archives the group. B10 already cleared mentor_id, so it is
   -- restored here first, as owner (no impersonation needed for a direct
@@ -247,7 +258,8 @@ BEGIN
   BEGIN
     UPDATE internship_groups SET is_archived = true WHERE id = grp;
     SELECT count(*) INTO n FROM conversations WHERE group_id = grp;
-    log := log || 'B11 archive deletes every conversation' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: ' || n END || E'\n';
+    SELECT count(*) INTO m FROM notifications WHERE type = 'direct_message' AND (data->>'conversationId')::uuid IN (c_sa, c_sm);
+    log := log || 'B11 archive deletes every conversation' || E'\t' || CASE WHEN n = 0 AND m = 0 THEN '0 rows, 0 notifications' ELSE 'FAIL: ' || n || ' rows, ' || m || ' notifications' END || E'\n';
   EXCEPTION WHEN OTHERS THEN log := log || 'B11 archive deletes every conversation' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
   PERFORM set_config('probe.results', log, true);

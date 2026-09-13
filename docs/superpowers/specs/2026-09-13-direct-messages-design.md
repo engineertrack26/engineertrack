@@ -94,6 +94,7 @@ Names come from `profiles_public` inside the SECURITY DEFINER functions (the sam
 - `group_memberships`: AFTER UPDATE OF `left_at` WHEN old NULL → new set: `DELETE FROM conversations WHERE group_id = NEW.group_id AND (a_id = NEW.student_id OR b_id = NEW.student_id)`.
 - `internship_groups`: AFTER UPDATE OF `is_archived` WHEN false → true: `DELETE FROM conversations WHERE group_id = NEW.id`.
 - `student_profiles`: AFTER UPDATE OF `mentor_id` WHEN changed: delete `kind = 'mentor'` conversations of that student whose other participant is the OLD mentor.
+- `conversations`: AFTER DELETE: delete the `direct_message` notifications that point at the row (their body carries a preview).
 - Messages, reads and blocks cascade. Un-archiving does not restore anything; there is nothing to restore.
 
 `count_deletable_conversations(p_group_id, p_student_id DEFAULT NULL) RETURNS INT` (owner- or self-checked) backs the confirmation dialogs in decision 8.

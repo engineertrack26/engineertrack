@@ -21,6 +21,7 @@ import { useLogStore } from '@/store/logStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useGroupStore } from '@/store/groupStore';
+import { useMessageStore } from '@/store/messageStore';
 import { authService } from '@/services/auth';
 import { getNotifications } from '@/services/expoNotifications';
 import {
@@ -99,6 +100,7 @@ export default function RootLayout() {
   const resetGamificationStore = useGamificationStore((s) => s.reset);
   const resetNotificationStore = useNotificationStore((s) => s.reset);
   const resetGroupStore = useGroupStore((s) => s.reset);
+  const resetMessageStore = useMessageStore((s) => s.reset);
   const segments = useSegments();
   const isRecoveryRoute = segments[0] === '(auth)' && (segments as string[])[1] === 'reset-password';
   const router = useRouter();
@@ -156,6 +158,7 @@ export default function RootLayout() {
       resetGamificationStore();
       resetNotificationStore();
       resetGroupStore();
+      resetMessageStore();
     }
     function ready(request: number) {
       if (!current(request)) return;

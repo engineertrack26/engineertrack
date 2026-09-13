@@ -30,6 +30,7 @@ export function MessagesScreen({ role }: Props) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [picker, setPicker] = useState(false);
   const [contacts, setContacts] = useState<MessageContact[] | null>(null);
+  const [contactsFailed, setContactsFailed] = useState(false);
   const request = useRef(0);
 
   // Which group a NEW conversation is opened in. Student: their active
@@ -81,6 +82,7 @@ export function MessagesScreen({ role }: Props) {
   async function openPicker() {
     setPicker(true);
     setContacts(null);
+    setContactsFailed(false);
     try {
       if (role === 'mentor') {
         // A mentor's contacts are their linked students, each in their own
@@ -97,6 +99,7 @@ export function MessagesScreen({ role }: Props) {
     } catch (err) {
       console.warn('Contacts load failed:', err instanceof Error ? err.message : err);
       setContacts([]);
+      setContactsFailed(true);
     }
   }
 
@@ -142,7 +145,7 @@ export function MessagesScreen({ role }: Props) {
             )}
           </View>
         }
-        ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} /> : (
+        ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} /> : loadFailed ? null : (
           <View style={conversationListStyles.empty}>
             <Ionicons name="chatbubbles-outline" size={48} color={colors.textDisabled} />
             <Text style={conversationListStyles.emptyText}>{t('messages.empty', 'No messages yet.')}</Text>
@@ -151,7 +154,7 @@ export function MessagesScreen({ role }: Props) {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
       />
-      <ContactPicker visible={picker} contacts={contacts} onPick={openWith} onClose={() => setPicker(false)} />
+      <ContactPicker visible={picker} contacts={contacts} failed={contactsFailed} onPick={openWith} onClose={() => setPicker(false)} onRetry={openPicker} />
     </SafeAreaView>
   );
 }

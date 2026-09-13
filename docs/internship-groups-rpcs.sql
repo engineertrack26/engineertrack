@@ -66,6 +66,20 @@ BEGIN
     RAISE EXCEPTION 'GROUP_ARCHIVED';
   END IF;
 
+  -- Re-entering the code of the group the student is already in is a no-op.
+  -- Closing and reopening the membership would fire the direct-message
+  -- deletion trigger and wipe the student's conversations for nothing.
+  IF EXISTS (SELECT 1 FROM group_memberships m
+             WHERE m.student_id = auth.uid() AND m.group_id = target_group AND m.left_at IS NULL) THEN
+    RETURN QUERY
+      SELECT g.id, g.name, g.term,
+             trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
+      FROM internship_groups g
+      JOIN profiles p ON p.id = g.advisor_id
+      WHERE g.id = target_group;
+    RETURN;
+  END IF;
+
   -- Close any current membership first. The partial unique index would
   -- reject the insert below otherwise, and closing rather than deleting is
   -- what preserves the previous term's logs and reviews.

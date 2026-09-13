@@ -46,7 +46,7 @@ export function ConversationScreen({ role }: Props) {
       if (!mine) {
         // Deleted under us (membership closed, group archived) or never ours.
         Alert.alert(t('common.error'), t('messages.gone', 'This conversation is no longer available.'));
-        router.back();
+        if (router.canGoBack()) router.back(); else router.replace(`/(${role})/messages` as never);
         return;
       }
       setSummary(mine);
@@ -59,7 +59,7 @@ export function ConversationScreen({ role }: Props) {
       const { code } = mapRpcError(err instanceof Error ? err.message : '');
       if (code === 'CONVERSATION_NOT_FOUND') {
         Alert.alert(t('common.error'), t('messages.gone', 'This conversation is no longer available.'));
-        router.back();
+        if (router.canGoBack()) router.back(); else router.replace(`/(${role})/messages` as never);
         return;
       }
       console.error('Conversation load error:', err);
@@ -67,7 +67,7 @@ export function ConversationScreen({ role }: Props) {
     } finally {
       if (req === request.current) setLoading(false);
     }
-  }, [id, router, t, refreshUnread]);
+  }, [id, router, t, refreshUnread, role]);
 
   useFocusEffect(useCallback(() => { focused.current = true; load(); return () => { focused.current = false; }; }, [load]));
 
@@ -107,12 +107,14 @@ export function ConversationScreen({ role }: Props) {
 
   async function send() {
     const body = text.trim();
-    if (!id || !body || sending) return;
+    if (!id || !body || sending || !user) return;
     setSending(true);
     try {
-      await messageService.sendMessage(id, body);
+      const newId = await messageService.sendMessage(id, body);
+      // Shown immediately rather than waiting for the realtime echo, which is
+      // absorbed by the same id-dedupe the realtime handler uses.
+      setMessages((prev) => (prev.some((m) => m.id === newId) ? prev : [...prev, { id: newId, senderId: user.id, body, createdAt: new Date().toISOString() }]));
       setText('');
-      // The realtime INSERT appends it; if realtime is late, the next load will.
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
       Alert.alert(t('common.error'), t(key));

@@ -2,12 +2,13 @@ import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndi
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LoadFailedBanner } from '@/components/common';
 import { colors, spacing } from '@/theme';
 import type { MessageContact } from '@/types/messages';
 
-interface Props { visible: boolean; contacts: MessageContact[] | null; onPick: (c: MessageContact) => void; onClose: () => void }
+interface Props { visible: boolean; contacts: MessageContact[] | null; failed: boolean; onPick: (c: MessageContact) => void; onClose: () => void; onRetry: () => void }
 
-export function ContactPicker({ visible, contacts, onPick, onClose }: Props) {
+export function ContactPicker({ visible, contacts, failed, onPick, onClose, onRetry }: Props) {
   const { t } = useTranslation();
   const label = (role: string) => role === 'advisor' ? t('messages.roleAdvisor', 'Advisor') : role === 'mentor' ? t('messages.roleMentor', 'Mentor') : t('messages.roleStudent', 'Student');
   return (
@@ -23,7 +24,7 @@ export function ContactPicker({ visible, contacts, onPick, onClose }: Props) {
             data={contacts}
             keyExtractor={(c) => c.id}
             contentContainerStyle={styles.list}
-            ListEmptyComponent={<Text style={styles.empty}>{t('messages.noContacts', 'Nobody to message in this group yet.')}</Text>}
+            ListEmptyComponent={failed ? <LoadFailedBanner onRetry={onRetry} /> : <Text style={styles.empty}>{t('messages.noContacts', 'Nobody to message in this group yet.')}</Text>}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.row} onPress={() => onPick(item)} activeOpacity={0.7}>
                 <Text style={styles.name}>{item.name}</Text>

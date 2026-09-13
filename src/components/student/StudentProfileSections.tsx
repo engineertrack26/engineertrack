@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { ProfileSheet } from '@/components/mentor/ProfileSheet';
 import { studentProfileViewService } from '@/services/studentProfileView';
 import { studentCodeService } from '@/services/studentCode';
 import { groupService } from '@/services/group';
+import { messageService } from '@/services/messages';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { normalizeCode } from '@/utils/codes';
@@ -40,6 +41,7 @@ export function StudentProfileSections({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [feedbackKind, setFeedbackKind] = useState<'join' | 'generate' | 'copy' | null>(null);
   const [success, setSuccess] = useState<{ key: string; name?: string } | null>(null);
+  const [deletable, setDeletable] = useState<number | null>(null);
   const generation = useRef(0);
   const active = useRef(true);
   const lock = useRef(false);
@@ -66,6 +68,12 @@ export function StudentProfileSections({ userId }: { userId: string }) {
   const code = snapshot?.code.status === 'fulfilled' ? snapshot.code.value : null;
   const linked = snapshot?.linked.status === 'fulfilled' ? snapshot.linked.value : null;
   const failed = (key: keyof Snapshot) => loadFailed || snapshot?.[key].status === 'rejected';
+  useEffect(() => {
+    if (!joining || !group) { setDeletable(null); return; }
+    let cancelled = false;
+    void messageService.countDeletable(group.id, userId).catch(() => null).then((n) => { if (!cancelled) setDeletable(n); });
+    return () => { cancelled = true; };
+  }, [joining, group?.id, userId]);
   const mutate = async (kind: 'join' | 'generate' | 'copy', work: () => Promise<{ key: string; name?: string }>) => {
     if (lock.current || !current()) return;
     lock.current = true; setBusy(kind); setFeedbackKind(kind); setError(null); setSuccess(null);
@@ -152,6 +160,7 @@ export function StudentProfileSections({ userId }: { userId: string }) {
 
     {joining && <ProfileSheet title={t('student.joinGroup')} busy={!!busy} onClose={() => { if (!lock.current) { setJoining(false); setCodeInput(''); setError(null); } }}>
       <Text style={ui.body}>{t('student.joinGroupHint')}</Text>
+      {deletable !== null && deletable > 0 && <Text style={[ui.body, { color: colors.error }]}>{t('messages.leaveWarning', { count: deletable, defaultValue_one: 'Joining another group deletes your {{count}} conversation in the current group permanently. Re-entering your current group\'s code changes nothing.', defaultValue_other: 'Joining another group deletes your {{count}} conversations in the current group permanently. Re-entering your current group\'s code changes nothing.' })}</Text>}
       <Text style={ui.label}>{t('studentProfileView.groupCode')}</Text>
       <TextInput autoFocus autoCapitalize="characters" autoCorrect={false} value={codeInput} editable={!busy}
         onChangeText={value => { setCodeInput(normalizeCode(value).slice(0, 6)); setError(null); }} accessibilityLabel={t('studentProfileView.groupCode')}
