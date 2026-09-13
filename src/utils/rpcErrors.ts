@@ -35,6 +35,11 @@ const ERROR_KEYS: Record<string, string> = {
   OPTION_MISMATCH: 'errors.optionMismatch',
   POST_NOT_FOUND: 'errors.postNotFound',
   ATTACHMENT_LIMIT: 'errors.attachmentLimit',
+  CANNOT_MESSAGE: 'errors.cannotMessage',
+  CONVERSATION_NOT_FOUND: 'errors.conversationNotFound',
+  BLOCKED: 'errors.blocked',
+  MESSAGE_EMPTY: 'errors.messageEmpty',
+  CANNOT_BLOCK: 'errors.cannotBlock',
 };
 
 /**

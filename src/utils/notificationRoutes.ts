@@ -45,6 +45,10 @@ export function routeForNotification(
           const postId = str(data?.postId);
           return { pathname: '/(student)/feed', params: postId ? { post: postId } : undefined };
         }
+        case 'direct_message': {
+          const id = str(data?.conversationId);
+          return id ? { pathname: '/(student)/conversation', params: { id } } : { pathname: '/(student)/messages' };
+        }
         default:
           return null;
       }
@@ -55,6 +59,10 @@ export function routeForNotification(
           // payloads filter the queue rather than choosing an arbitrary student.
           if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)!, studentId: '', assignmentId: '' } };
           return { pathname: '/(mentor)/pending-reviews', params: { assignmentId: assignmentId || '', studentId: '' } };
+        case 'direct_message': {
+          const id = str(data?.conversationId);
+          return id ? { pathname: '/(mentor)/conversation', params: { id } } : { pathname: '/(mentor)/messages' };
+        }
         default:
           return null;
       }
@@ -66,6 +74,10 @@ export function routeForNotification(
         case 'feed_task_post': {
           const postId = str(data?.postId);
           return { pathname: '/(advisor)/feed', params: postId ? { post: postId } : undefined };
+        }
+        case 'direct_message': {
+          const id = str(data?.conversationId);
+          return id ? { pathname: '/(advisor)/conversation', params: { id } } : { pathname: '/(advisor)/messages' };
         }
         default:
           return null;

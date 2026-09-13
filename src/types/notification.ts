@@ -14,7 +14,8 @@ export type NotificationType =
   | 'feed_announcement'
   | 'feed_poll'
   | 'feed_comment'
-  | 'feed_task_post';
+  | 'feed_task_post'
+  | 'direct_message';
 
 export interface AppNotification {
   id: string;

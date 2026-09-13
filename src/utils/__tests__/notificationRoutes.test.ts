@@ -66,4 +66,13 @@ describe('routeForNotification', () => {
   it('never sends a mentor to a feed', () => {
     expect(routeForNotification('feed_announcement', { postId: 'p1' }, 'mentor')).toBeNull();
   });
+
+  it('sends a direct message to the conversation for every role', () => {
+    for (const role of ['student', 'mentor', 'advisor'] as const) {
+      expect(routeForNotification('direct_message', { conversationId: 'c1' }, role)).toEqual({
+        pathname: `/(${role})/conversation`, params: { id: 'c1' },
+      });
+      expect(routeForNotification('direct_message', {}, role)?.pathname).toBe(`/(${role})/messages`);
+    }
+  });
 });

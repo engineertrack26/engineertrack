@@ -39,6 +39,7 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   feed_poll: { name: 'bar-chart', color: colors.primary },
   feed_comment: { name: 'chatbubble-ellipses', color: colors.info },
   feed_task_post: { name: 'clipboard-outline', color: colors.info },
+  direct_message: { name: 'chatbubble-ellipses-outline', color: colors.primary },
 };
 
 interface NotificationsScreenProps {
