@@ -1,15 +1,17 @@
 import { postableGroups, summarisePost, type TargetGroup } from '@/utils/feedTargets';
 
+// Deliberately not alphabetical: the helper must keep input order, and a
+// sort-by-id implementation would fail the expectations below.
 const groups: TargetGroup[] = [
-  { id: 'a', name: 'Alpha' },
-  { id: 'b', name: 'Beta', isArchived: true },
-  { id: 'c', name: 'Gamma' },
   { id: 'd', name: 'Delta' },
+  { id: 'b', name: 'Beta', isArchived: true },
+  { id: 'a', name: 'Alpha' },
+  { id: 'c', name: 'Gamma' },
 ];
 
 describe('postableGroups', () => {
   it('puts the current group first', () => {
-    expect(postableGroups(groups, 'c').map((g) => g.id)).toEqual(['c', 'a', 'd']);
+    expect(postableGroups(groups, 'c').map((g) => g.id)).toEqual(['c', 'd', 'a']);
   });
 
   it('drops archived groups that are not the current one', () => {
@@ -17,15 +19,15 @@ describe('postableGroups', () => {
   });
 
   it('keeps the current group even when it is archived', () => {
-    expect(postableGroups(groups, 'b').map((g) => g.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(postableGroups(groups, 'b').map((g) => g.id)).toEqual(['b', 'd', 'a', 'c']);
   });
 
   it('keeps the input order for the rest', () => {
-    expect(postableGroups(groups, 'd').map((g) => g.id)).toEqual(['d', 'a', 'c']);
+    expect(postableGroups(groups, 'a').map((g) => g.id)).toEqual(['a', 'd', 'c']);
   });
 
   it('returns just the non-archived rest when the current id is unknown', () => {
-    expect(postableGroups(groups, 'zzz').map((g) => g.id)).toEqual(['a', 'c', 'd']);
+    expect(postableGroups(groups, 'zzz').map((g) => g.id)).toEqual(['d', 'a', 'c']);
   });
 
   it('returns an empty list for no groups', () => {

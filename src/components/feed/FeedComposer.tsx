@@ -156,14 +156,18 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
 
       const s = summarisePost(outcomes);
       if (s.failed.length === 0) {
-        Alert.alert(
-          t('common.done', 'Done'),
-          t('feed.postedToAll', {
-            count: s.ok,
-            defaultValue_one: 'Posted to {{count}} group.',
-            defaultValue_other: 'Posted to {{count}} groups.',
-          }),
-        );
+        // A single-group post succeeds silently, as it always has; only a
+        // multi-group post confirms how many groups received it.
+        if (outcomes.length > 1) {
+          Alert.alert(
+            t('common.done', 'Done'),
+            t('feed.postedToAll', {
+              count: s.ok,
+              defaultValue_one: 'Posted to {{count}} group.',
+              defaultValue_other: 'Posted to {{count}} groups.',
+            }),
+          );
+        }
         reset();
         onPosted();
       } else if (s.ok > 0) {
