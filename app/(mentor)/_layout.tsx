@@ -6,6 +6,8 @@ import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
+import { useMessageStore } from '@/store/messageStore';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
 export default function MentorLayout() {
   const router = useRouter();
@@ -28,6 +30,11 @@ export default function MentorLayout() {
     }
     return () => unsubscribe();
   }, [user, fetchUnreadCount, subscribeToNotifications, unsubscribe]);
+
+  const unreadMessages = useMessageStore((s) => s.unreadCount);
+  const refreshUnread = useMessageStore((s) => s.refreshUnread);
+  useEffect(() => { if (user) refreshUnread(); }, [user, refreshUnread]);
+  useRealtimeSubscription({ table: 'messages', event: 'INSERT', enabled: !!user, onPayload: () => refreshUnread() });
 
   return (
     <Tabs
@@ -76,6 +83,21 @@ export default function MentorLayout() {
       />
       <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: t('tabs.messages', 'Messages'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          ),
+          tabBarBadge: unreadMessages > 0 ? (unreadMessages > 99 ? '99+' : unreadMessages) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primaryDark },
+        }}
+      />
+      <Tabs.Screen
+        name="conversation"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
+      />
       <Tabs.Screen
         name="profile"
         options={{

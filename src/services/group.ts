@@ -172,4 +172,47 @@ export const groupService = {
       advisorName,
     };
   },
+
+  /** For a mentor: each linked student who is an active member of a group,
+   *  with that group's id -- a mentor's students may sit in different groups,
+   *  and a conversation is opened in the student's group.
+   *
+   *  Three queries rather than one embedded select: student_profiles.id and
+   *  profiles_public.id both reference profiles(id), but there is no direct
+   *  FK from student_profiles to profiles_public for PostgREST to walk, so
+   *  it cannot resolve `student_profiles!inner(profiles_public(...))` in one
+   *  hop. Resolving the ids in application code needs no FK PostgREST can't
+   *  see. */
+  async listMentorStudentGroups(mentorId: string): Promise<Array<{ id: string; name: string; role: string; groupId: string }>> {
+    const { data: students, error: studentsError } = await supabase
+      .from('student_profiles')
+      .select('id')
+      .eq('mentor_id', mentorId);
+    if (studentsError) throw studentsError;
+
+    const ids = (students || []).map((r) => (r as Record<string, unknown>).id as string);
+    if (ids.length === 0) return [];
+
+    const [{ data: memberships, error: membershipsError }, { data: profiles, error: profilesError }] = await Promise.all([
+      supabase.from('group_memberships').select('student_id, group_id').in('student_id', ids).is('left_at', null),
+      supabase.from('profiles_public').select('id, first_name, last_name').in('id', ids),
+    ]);
+    if (membershipsError) throw membershipsError;
+    if (profilesError) throw profilesError;
+
+    const groupByStudent = new Map<string, string>();
+    for (const row of memberships || []) {
+      const r = row as Record<string, unknown>;
+      groupByStudent.set(r.student_id as string, r.group_id as string);
+    }
+    const nameByStudent = new Map<string, string>();
+    for (const row of profiles || []) {
+      const r = row as Record<string, unknown>;
+      nameByStudent.set(r.id as string, `${(r.first_name as string) || ''} ${(r.last_name as string) || ''}`.trim());
+    }
+
+    return ids
+      .filter((id) => groupByStudent.has(id))
+      .map((id) => ({ id, name: nameByStudent.get(id) || '', role: 'student', groupId: groupByStudent.get(id) as string }));
+  },
 };
