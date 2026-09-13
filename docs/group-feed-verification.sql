@@ -4,7 +4,8 @@
 -- Run in the Supabase SQL editor. Anonymous dollar-quoting only.
 -- Apply order: docs/group-feed-migration.sql, docs/group-feed-rpcs.sql,
 -- docs/group-feed-assignment-cards.sql, docs/group-feed-attachments.sql,
--- docs/group-feed-read.sql, then this file, ONE PART PER SUBMISSION.
+-- docs/group-feed-drafts.sql, docs/group-feed-read.sql, then this file,
+-- ONE PART PER SUBMISSION.
 --
 -- PART A is STRUCTURAL: the editor runs as the table owner and bypasses
 -- RLS, so these prove a table, column, constraint, trigger or policy
@@ -24,6 +25,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_name = 'feed_posts' AND column_name = 'assignment_id') THEN
     RAISE EXCEPTION 'FAIL: feed_posts.assignment_id is missing';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'feed_posts' AND column_name = 'published_at') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts.published_at is missing -- apply docs/group-feed-drafts.sql';
   END IF;
 
   FOREACH t IN ARRAY ARRAY['feed_posts','feed_poll_options','feed_poll_votes','feed_likes','feed_comments','feed_attachments'] LOOP
@@ -53,6 +58,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_attachments_link_is_http') THEN
     RAISE EXCEPTION 'FAIL: feed_attachments_link_is_http CHECK is missing -- re-apply docs/group-feed-attachments.sql';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_auto_kinds_published') THEN
+    RAISE EXCEPTION 'FAIL: feed_posts_auto_kinds_published CHECK is missing -- apply docs/group-feed-drafts.sql';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_see_post') THEN
     RAISE EXCEPTION 'FAIL: can_see_post() is missing';
@@ -63,14 +71,29 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'feed_shares_evidence') THEN
     RAISE EXCEPTION 'FAIL: feed_shares_evidence() is missing -- apply docs/group-feed-attachments.sql';
   END IF;
-  -- create_feed_post carries p_attachments as its fifth parameter, and the
-  -- old four-parameter overload must be gone: side by side, every call
-  -- with four arguments is ambiguous (42725).
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs = 5) THEN
-    RAISE EXCEPTION 'FAIL: create_feed_post does not take 5 arguments -- apply docs/group-feed-attachments.sql';
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'feed_publish_post') THEN
+    RAISE EXCEPTION 'FAIL: feed_publish_post() is missing -- apply docs/group-feed-drafts.sql';
   END IF;
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs <> 5) THEN
-    RAISE EXCEPTION 'FAIL: a stale create_feed_post overload is still present -- re-apply docs/group-feed-attachments.sql';
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'publish_feed_post') THEN
+    RAISE EXCEPTION 'FAIL: publish_feed_post() is missing -- apply docs/group-feed-drafts.sql';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'list_feed_pending') THEN
+    RAISE EXCEPTION 'FAIL: list_feed_pending() is missing -- apply docs/group-feed-drafts.sql';
+  END IF;
+  -- create_feed_post carries p_draft as its sixth parameter, and the old
+  -- four- and five-parameter overloads must be gone: side by side, every
+  -- call with fewer arguments is ambiguous (42725).
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs = 6) THEN
+    RAISE EXCEPTION 'FAIL: create_feed_post does not take 6 arguments -- apply docs/group-feed-drafts.sql';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_feed_post' AND pronargs <> 6) THEN
+    RAISE EXCEPTION 'FAIL: a stale create_feed_post overload is still present -- re-apply docs/group-feed-drafts.sql';
+  END IF;
+  -- The visibility rule must be the drafts-aware one: a stale re-apply of
+  -- docs/group-feed-migration.sql would silently show every draft to every
+  -- member, through every child table.
+  IF pg_get_functiondef('can_see_post(uuid)'::regprocedure) NOT LIKE '%published_at%' THEN
+    RAISE EXCEPTION 'FAIL: can_see_post does not check published_at -- re-apply docs/group-feed-drafts.sql';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'feed-attachments' AND public = false) THEN
     RAISE EXCEPTION 'FAIL: feed-attachments bucket is missing or public';
@@ -83,6 +106,9 @@ BEGIN
   END IF;
   IF pg_get_functiondef('list_feed_posts(uuid,timestamptz,int)'::regprocedure) NOT LIKE '%''attachments''%' THEN
     RAISE EXCEPTION 'FAIL: list_feed_posts does not project attachments -- re-apply docs/group-feed-read.sql';
+  END IF;
+  IF pg_get_functiondef('list_feed_posts(uuid,timestamptz,int)'::regprocedure) NOT LIKE '%published_at%' THEN
+    RAISE EXCEPTION 'FAIL: list_feed_posts does not filter on published_at -- re-apply docs/group-feed-read.sql';
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_feed_task_post' AND NOT tgisinternal) THEN
@@ -145,14 +171,17 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B11 announcement with one of each attachment  -> 3 feed_attachments rows
 --   B12 second photo -> ATTACHMENT_LIMIT; poll with an attachment -> KIND_NOT_ALLOWED;
 --       javascript: link -> 23514 (the feed_attachments_link_is_http CHECK)
--- Expected: twelve rows, none beginning FAIL / SKIP / ABORTED.
+--   B13 draft is created unpublished and notifies nobody
+--   B14 publishing the draft notifies once, and again is a no-op
+--   B15 list_feed_pending shows the advisor's drafts only; the stream hides them
+-- Expected: fifteen rows, none beginning FAIL / SKIP / ABORTED.
 -- ============================================================
 BEGIN;
 
 DO $$
 DECLARE
   adv UUID; stu UUID; stu2 UUID; grp UUID; kpi UUID; asg UUID; asg2 UUID; asg3 UUID; sub UUID; sub2 UUID;
-  post UUID; opt1 UUID; opt2 UUID; n INT; m INT; log TEXT := '';
+  post UUID; opt1 UUID; opt2 UUID; draft2 UUID; n INT; m INT; log TEXT := '';
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
@@ -160,7 +189,7 @@ BEGIN
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
 
   IF adv IS NULL OR stu IS NULL OR kpi IS NULL THEN
-    PERFORM set_config('probe.results', 'B1-B12' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
+    PERFORM set_config('probe.results', 'B1-B15' || E'\t' || 'SKIP: needs an advisor, a student and a KPI' || E'\n', true);
     RETURN;
   END IF;
 
@@ -401,6 +430,49 @@ BEGIN
                 ELSE 'FAIL: ' || r1 || ', ' || r2 || ', ' || r3 END || E'\n';
   END;
 
+  -- B13: the sixth parameter. A draft is a row with published_at NULL and
+  -- no notification -- the notification moved from creation to publish.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+  BEGIN
+    post := create_feed_post(grp, 'announcement', 'Draft body', NULL, '[]'::jsonb, true);
+    SELECT count(*) INTO n FROM feed_posts WHERE id = post AND published_at IS NULL;
+    SELECT count(*) INTO m FROM notifications WHERE data->>'postId' = post::text;
+    log := log || 'B13 draft is created unpublished and notifies nobody' || E'\t'
+        || CASE WHEN n = 1 AND m = 0 THEN 'unpublished, 0 notifications'
+                ELSE 'FAIL: ' || CASE WHEN n = 1 THEN 'unpublished' ELSE 'published' END || ', ' || m || ' notifications' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B13 draft is created unpublished and notifies nobody' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B14: publish twice. Exactly one notification, for stu (stu2 left in
+  -- B7); the second call must be a no-op, not a second notification.
+  BEGIN
+    PERFORM publish_feed_post(post);
+    PERFORM publish_feed_post(post);
+    SELECT count(*) INTO n FROM feed_posts WHERE id = post AND published_at IS NOT NULL;
+    SELECT count(*) INTO m FROM notifications WHERE data->>'postId' = post::text;
+    log := log || 'B14 publishing the draft notifies once, and again is a no-op' || E'\t'
+        || CASE WHEN n = 1 AND m = 1
+                     AND (SELECT count(*) FROM notifications WHERE data->>'postId' = post::text AND user_id = stu) = 1
+                THEN 'published, 1 notification'
+                ELSE 'FAIL: ' || CASE WHEN n = 1 THEN 'published' ELSE 'still unpublished' END || ', ' || m || ' notifications' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B14 publishing the draft notifies once, and again is a no-op' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B15: a second draft. list_feed_pending returns exactly it (the first
+  -- was published in B14); list_feed_posts must not return it at all.
+  BEGIN
+    draft2 := create_feed_post(grp, 'poll', 'Still thinking?', ARRAY['Yes', 'No'], '[]'::jsonb, true);
+    SELECT count(*) INTO n FROM list_feed_pending(grp);
+    SELECT count(*) INTO m FROM list_feed_posts(grp) AS r WHERE r->>'id' = draft2::text;
+    log := log || 'B15 list_feed_pending shows the advisor''s drafts only' || E'\t'
+        || CASE WHEN n = 1 AND m = 0 THEN '1 pending, hidden from the stream'
+                ELSE 'FAIL: ' || n || ' pending, ' || CASE WHEN m = 0 THEN 'hidden from' ELSE 'leaked into' END || ' the stream' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B15 list_feed_pending shows the advisor''s drafts only' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
   PERFORM set_config('probe.results', log, true);
 END $$;
 
@@ -422,7 +494,9 @@ ROLLBACK;
 --   C8 student whose membership closed lists A       NOT_IN_GROUP; post still exists
 --   C9 classmate reads a SHARED task's photo object  1 row   (log_photos_read, 4th disjunct)
 --   C10 classmate reads an UNSHARED task's photo     0 rows
--- Ten cases. C9/C10 need a second student profile and SKIP without one.
+--   C11 member cannot see a draft, comment on it, or list it
+--                                                    0 rows, refused 42501, not listed
+-- Eleven cases. C9/C10 need a second student profile and SKIP without one.
 -- If SET LOCAL ROLE raises 42501 in your editor, STOP and report Part C as
 -- unrunnable -- do not replace these with pg_policies lookups.
 -- ============================================================
@@ -668,6 +742,56 @@ BEGIN
     log := log || 'C10 classmate cannot read an UNSHARED task''s photo object' || E'\t'
         || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: leaked' END || E'\n';
   EXCEPTION WHEN OTHERS THEN log := log || 'C10 classmate cannot read an UNSHARED task''s photo object' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
+  PERFORM set_config('probe.results', log, true);
+END $$;
+RESET ROLE;
+
+-- C11 fixture, as owner. One DRAFT announcement in grpA (published_at NULL,
+-- written directly -- the editor runs as owner, so the INSERT policy is not
+-- in the way). stu re-joins grpA as an active member: C8 closed the earlier
+-- membership, and C11 is about a CURRENT member, not a former one.
+DO $$
+DECLARE adv UUID; stu UUID; grpA UUID; draft UUID;
+BEGIN
+  PERFORM set_config('probe.draft', '', true);
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
+  adv := current_setting('probe.adv')::uuid; stu := current_setting('probe.stu')::uuid;
+  grpA := current_setting('probe.grpA')::uuid;
+  UPDATE group_memberships SET left_at = now() WHERE student_id = stu AND left_at IS NULL;
+  INSERT INTO group_memberships (group_id, student_id) VALUES (grpA, stu);
+  INSERT INTO feed_posts (group_id, author_id, kind, body, published_at)
+  VALUES (grpA, adv, 'announcement', 'not yet', NULL) RETURNING id INTO draft;
+  PERFORM set_config('probe.draft', draft::text, true);
+END $$;
+
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE stu UUID; grpA UUID; draft UUID; n INT; m INT; ins TEXT; log TEXT;
+BEGIN
+  IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
+  log := current_setting('probe.results', true);
+  stu := current_setting('probe.stu')::uuid; grpA := current_setting('probe.grpA')::uuid;
+  draft := current_setting('probe.draft')::uuid;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+
+  -- Three doors, one rule: the row (feed_posts_select), a child write that
+  -- routes through can_see_post (feed_comments_insert), and the RPC.
+  BEGIN
+    SELECT count(*) INTO n FROM feed_posts WHERE id = draft;
+    BEGIN
+      INSERT INTO feed_comments (post_id, author_id, body) VALUES (draft, stu, 'x');
+      ins := 'FAIL: comment accepted';
+    EXCEPTION WHEN OTHERS THEN
+      ins := CASE WHEN SQLSTATE = '42501' THEN 'refused 42501' ELSE 'FAIL: ' || SQLSTATE || ' ' || SQLERRM END;
+    END;
+    SELECT count(*) INTO m FROM list_feed_posts(grpA) AS r WHERE r->>'id' = draft::text;
+    log := log || 'C11 member cannot see a draft, comment on it, or list it' || E'\t'
+        || CASE WHEN n = 0 AND ins = 'refused 42501' AND m = 0 THEN '0 rows, refused 42501, not listed'
+                ELSE 'FAIL: ' || n || ' rows, ' || ins || ', ' || CASE WHEN m = 0 THEN 'not listed' ELSE 'listed' END END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'C11 member cannot see a draft, comment on it, or list it' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
 
   PERFORM set_config('probe.results', log, true);
 END $$;

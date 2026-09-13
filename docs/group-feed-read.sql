@@ -2,20 +2,23 @@
 -- Group feed: THE read. The single home of list_feed_posts.
 --
 -- Apply LAST -- after docs/group-feed-migration.sql, docs/group-feed-rpcs.sql,
--- docs/group-feed-assignment-cards.sql and docs/group-feed-attachments.sql
--- (it reads feed_attachments). Idempotent and safe to re-apply. Anonymous
+-- docs/group-feed-assignment-cards.sql, docs/group-feed-attachments.sql
+-- (it reads feed_attachments) and docs/group-feed-drafts.sql (it reads
+-- feed_posts.published_at). Idempotent and safe to re-apply. Anonymous
 -- dollar-quoting only in the Supabase SQL editor.
 --
 -- Neither docs/group-feed-rpcs.sql nor docs/group-feed-assignment-cards.sql
 -- defines list_feed_posts any more, so the CREATE OR REPLACE below is the one
--- that stands: the committed body plus the 'assignment' key and the
--- 'attachments' key, nothing else. Part A of the verification fails loudly
--- if a stale copy is applied over it.
+-- that stands: the committed body plus the 'assignment' key, the
+-- 'attachments' key and the published-only filter, nothing else. Part A of
+-- the verification fails loudly if a stale copy is applied over it.
 -- ============================================
 
 -- ---- list_feed_posts ----
 -- The only definition. The pre-assignment body from docs/group-feed-rpcs.sql
 -- plus the one 'assignment' entry after 'poll'. Same signature, same GRANT.
+-- Published posts only (docs/group-feed-drafts.sql): a draft never enters
+-- the stream, and the stream is ordered and paged by published_at.
 -- THE read. SECURITY DEFINER because a student cannot select a classmate's
 -- assignment_submissions / log_photos / log_documents rows, and widening
 -- those policies would expose the reflection and the mentor's note. This
@@ -46,7 +49,10 @@ BEGIN
     'authorId',     p.author_id,
     'authorName',   trim(coalesce(pr.first_name, '') || ' ' || coalesce(pr.last_name, '')),
     'body',         p.body,
-    'createdAt',    p.created_at,
+    -- The moment the post appeared in the stream, which is what the
+    -- client's cursor and the card's date mean -- not the draft's creation.
+    'createdAt',    p.published_at,
+    'draft',        false,
     'likeCount',    (SELECT count(*) FROM feed_likes l WHERE l.post_id = p.id),
     'commentCount', (SELECT count(*) FROM feed_comments c WHERE c.post_id = p.id),
     'likedByMe',    EXISTS (SELECT 1 FROM feed_likes l WHERE l.post_id = p.id AND l.user_id = auth.uid()),
@@ -108,8 +114,9 @@ BEGIN
   FROM feed_posts p
   JOIN profiles pr ON pr.id = p.author_id
   WHERE p.group_id = p_group_id
-    AND (p_before IS NULL OR p.created_at < p_before)
-  ORDER BY p.created_at DESC
+    AND p.published_at IS NOT NULL
+    AND (p_before IS NULL OR p.published_at < p_before)
+  ORDER BY p.published_at DESC
   LIMIT GREATEST(1, LEAST(p_limit, 50));
 END;
 $$;
