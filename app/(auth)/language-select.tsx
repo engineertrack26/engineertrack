@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
-import { Button } from '@/components/common/Button';
+import { AuthButton as Button } from '@/components/common/AuthForm';
 import { SUPPORTED_LANGUAGES } from '@/utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
@@ -14,27 +15,32 @@ export default function LanguageSelectScreen() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
   const currentLang = i18n.language;
+  const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
 
   async function selectLanguage(code: SupportedLanguage) {
-    await i18n.changeLanguage(code);
-    if (user?.id) {
-      try {
+    if (pending.current || code === currentLang) return;
+    pending.current = true; setSaving(true);
+    try {
+      if (user?.id) {
         await authService.updateLanguage(user.id, code);
-      } catch {
-        // Language saved locally even if remote update fails
+        const current = useAuthStore.getState().user;
+        if (current?.id !== user.id) return;
+        useAuthStore.getState().setUser({ ...current, language: code });
       }
-    }
+      await i18n.changeLanguage(code);
+    } catch { Alert.alert(t('common.error'), t('common.error')); }
+    finally { pending.current = false; setSaving(false); }
   }
 
   return (
     <ScreenWrapper scroll={false}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Ionicons name="globe-outline" size={48} color={colors.primary} />
-          <Text style={styles.title}>{t('auth.selectLanguage')}</Text>
-        </View>
-
         <FlatList
+          ListHeaderComponent={<View style={styles.header}>
+            <Ionicons name="globe-outline" size={40} color={colors.primaryDark} />
+            <Text style={styles.title} accessibilityRole="header">{t('auth.selectLanguage')}</Text>
+          </View>}
           data={SUPPORTED_LANGUAGES}
           keyExtractor={(item) => item.code}
           contentContainerStyle={styles.list}
@@ -45,13 +51,14 @@ export default function LanguageSelectScreen() {
                 style={[styles.langCard, isActive && styles.langCardActive]}
                 onPress={() => selectLanguage(item.code)}
                 activeOpacity={0.7}
+                disabled={saving}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isActive, disabled: saving }}
               >
                 <Text style={[styles.langLabel, isActive && styles.langLabelActive]}>
                   {item.label}
                 </Text>
-                {isActive && (
-                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                )}
+                <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={24} color={colors.primaryDark} />
               </TouchableOpacity>
             );
           }}
@@ -59,7 +66,8 @@ export default function LanguageSelectScreen() {
 
         <Button
           title={t('common.done')}
-          onPress={() => router.back()}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/')}
+          loading={saving}
           style={styles.doneButton}
         />
       </View>
@@ -71,6 +79,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 24,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
   },
   header: {
     alignItems: 'center',
@@ -86,6 +97,8 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   langCard: {
+    minHeight: 56,
+    gap: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -102,6 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f0fe',
   },
   langLabel: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '500',
     color: colors.text,

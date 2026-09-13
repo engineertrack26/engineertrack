@@ -9,9 +9,9 @@ import { colors } from '@/theme';
 function Section({ title, body }: { title: string; body: string }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
       {body.split('\n').map((line, index) => (
-        <Text key={index} style={styles.sectionBody}>
+        <Text key={index} style={styles.sectionBody} selectable>
           {line}
         </Text>
       ))}
@@ -27,11 +27,13 @@ export default function PrivacyPolicyScreen() {
   // legal notice means the user cannot reach the end of the text.
   return (
     <ScreenWrapper scroll={false}>
+      <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.backButton}
+          accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('legal.privacy.title')}</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">{t('legal.privacy.title')}</Text>
       </View>
 
       <ScrollView style={styles.scrollBody} contentContainerStyle={styles.content}>
@@ -69,11 +71,13 @@ export default function PrivacyPolicyScreen() {
           body={t('legal.privacy.contact')}
         />
       </ScrollView>
+      </View>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center', paddingTop: 12 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -81,7 +85,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   backButton: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
@@ -101,24 +108,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   intro: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 25,
     color: colors.text,
     marginBottom: 8,
   },
   section: {
-    marginTop: 20,
+    marginTop: 28,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
   },
   sectionBody: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.textSecondary,
+    fontSize: 16,
+    lineHeight: 25,
+    color: colors.text,
     marginBottom: 6,
   },
 });

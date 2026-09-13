@@ -90,7 +90,7 @@ const ROLE_GROUPS = ['(student)', '(mentor)', '(advisor)'];
 // the consent gate that app/index.tsx sends them to, and the privacy policy,
 // which every role's profile links to. Without this exemption the bounce-back
 // below fights the consent gate in an infinite redirect loop.
-const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy', 'reset-password', 'forgot-password'];
+const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy', 'reset-password', 'forgot-password', 'language-select'];
 
 export default function RootLayout() {
   const { t } = useTranslation();
