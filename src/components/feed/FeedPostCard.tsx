@@ -7,6 +7,7 @@ import { feedService } from '@/services/feed';
 import { pollPercentages, withLike } from '@/utils/feedMetrics';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { taskDueDate } from '@/utils/studentTasks';
+import { isValidLink } from '@/utils/feedAttachments';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { FeedPost } from '@/types/feed';
 import { FeedComments } from './FeedComments';
@@ -23,6 +24,10 @@ interface Props {
   onChange: (next: FeedPost) => void;
   onRemoved: (postId: string) => void;
   onOpenPhoto: (uri: string) => void;
+}
+
+function openAttachment(target: string) {
+  Linking.openURL(target).catch((err) => console.warn('Open attachment failed:', err instanceof Error ? err.message : err));
 }
 
 function initials(name: string): string {
@@ -168,7 +173,7 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
             </View>
           )}
           {post.task.documents.map((d, i) => (
-            <TouchableOpacity key={`${d.uri}-${i}`} style={styles.docRow} onPress={() => Linking.openURL(d.uri)} activeOpacity={0.7}>
+            <TouchableOpacity key={`${d.uri}-${i}`} style={styles.docRow} onPress={() => openAttachment(d.uri)} activeOpacity={0.7}>
               <Ionicons name="document-outline" size={18} color={colors.primary} />
               <Text style={styles.docName} numberOfLines={1}>{d.fileName || t('feed.document')}</Text>
             </TouchableOpacity>
@@ -181,7 +186,9 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
           <Text style={styles.body}>{post.body}</Text>
           {/* Already in photo -> document -> link order and already signed
               by feedService; a photo/document whose signing failed was
-              dropped there, so every target here is openable. */}
+              dropped there, so every file target here is openable. A link
+              is opened only when it is http(s) with a host -- the row CHECK
+              refuses anything else, but the card does not trust the row. */}
           {post.attachments.map((a) => {
             if (a.kind === 'photo') {
               return (
@@ -193,12 +200,20 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
               );
             }
             const isLink = a.kind === 'link';
+            const openable = !isLink || isValidLink(a.target);
+            const label = isLink ? (a.name || a.target) : (a.name || t('feed.document'));
+            if (!openable) {
+              return (
+                <View key={a.id} style={styles.docRow}>
+                  <Ionicons name="link-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.docName, styles.docNameInert]} numberOfLines={1}>{label}</Text>
+                </View>
+              );
+            }
             return (
-              <TouchableOpacity key={a.id} style={styles.docRow} onPress={() => Linking.openURL(a.target)} activeOpacity={0.7}>
+              <TouchableOpacity key={a.id} style={styles.docRow} onPress={() => openAttachment(a.target)} activeOpacity={0.7}>
                 <Ionicons name={isLink ? 'link-outline' : 'document-outline'} size={18} color={colors.primary} />
-                <Text style={styles.docName} numberOfLines={1}>
-                  {isLink ? (a.name || a.target) : (a.name || t('feed.document'))}
-                </Text>
+                <Text style={styles.docName} numberOfLines={1}>{label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -283,6 +298,7 @@ const styles = StyleSheet.create({
   photo: { width: 96, height: 96, borderRadius: borderRadius.sm },
   docRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   docName: { flex: 1, fontSize: 13, color: colors.primary, fontWeight: '500' },
+  docNameInert: { color: colors.textSecondary },
   option: { position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   optionMine: { borderColor: colors.primary },
   optionFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.primary + '18' },

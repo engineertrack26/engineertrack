@@ -50,6 +50,9 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_posts_assignment_has_assignment') THEN
     RAISE EXCEPTION 'FAIL: feed_posts_assignment_has_assignment CHECK is missing';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'feed_attachments_link_is_http') THEN
+    RAISE EXCEPTION 'FAIL: feed_attachments_link_is_http CHECK is missing -- re-apply docs/group-feed-attachments.sql';
+  END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_see_post') THEN
     RAISE EXCEPTION 'FAIL: can_see_post() is missing';
@@ -140,7 +143,8 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B9 advisor remove_feed_post on the task post    -> post gone AND share_to_feed = false
 --   B10 publishing a task posts one card, once; deleting the task removes it
 --   B11 announcement with one of each attachment  -> 3 feed_attachments rows
---   B12 second photo -> ATTACHMENT_LIMIT; poll with an attachment -> KIND_NOT_ALLOWED
+--   B12 second photo -> ATTACHMENT_LIMIT; poll with an attachment -> KIND_NOT_ALLOWED;
+--       javascript: link -> 23514 (the feed_attachments_link_is_http CHECK)
 -- Expected: twelve rows, none beginning FAIL / SKIP / ABORTED.
 -- ============================================================
 BEGIN;
@@ -363,9 +367,11 @@ BEGIN
   END;
 
   -- B12: the named refusals. A second photo is ATTACHMENT_LIMIT before any
-  -- row is written; an attachment on a poll is KIND_NOT_ALLOWED.
+  -- row is written; an attachment on a poll is KIND_NOT_ALLOWED; a link
+  -- that is not http(s) fails the row CHECK (SQLSTATE 23514), so a bypassed
+  -- composer still cannot store a javascript: target.
   DECLARE
-    r1 TEXT; r2 TEXT;
+    r1 TEXT; r2 TEXT; r3 TEXT;
   BEGIN
     BEGIN
       PERFORM create_feed_post(grp, 'announcement', 'Two photos', NULL,
@@ -382,9 +388,17 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
       r2 := CASE WHEN SQLERRM LIKE 'KIND_NOT_ALLOWED%' THEN 'KIND_NOT_ALLOWED' ELSE 'FAIL: ' || SQLERRM END;
     END;
-    log := log || 'B12 second photo and poll attachment refused' || E'\t'
-        || CASE WHEN r1 = 'ATTACHMENT_LIMIT' AND r2 = 'KIND_NOT_ALLOWED' THEN 'ATTACHMENT_LIMIT, KIND_NOT_ALLOWED'
-                ELSE 'FAIL: ' || r1 || ', ' || r2 END || E'\n';
+    BEGIN
+      PERFORM create_feed_post(grp, 'announcement', 'Bad link', NULL,
+        '[{"kind":"link","target":"javascript:alert(1)"}]'::jsonb);
+      r3 := 'FAIL: javascript: link accepted';
+    EXCEPTION WHEN OTHERS THEN
+      r3 := CASE WHEN SQLSTATE = '23514' THEN '23514' ELSE 'FAIL: ' || SQLSTATE || ' ' || SQLERRM END;
+    END;
+    log := log || 'B12 second photo, poll attachment and javascript: link refused' || E'\t'
+        || CASE WHEN r1 = 'ATTACHMENT_LIMIT' AND r2 = 'KIND_NOT_ALLOWED' AND r3 = '23514'
+                THEN 'ATTACHMENT_LIMIT, KIND_NOT_ALLOWED, 23514'
+                ELSE 'FAIL: ' || r1 || ', ' || r2 || ', ' || r3 END || E'\n';
   END;
 
   PERFORM set_config('probe.results', log, true);

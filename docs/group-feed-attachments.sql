@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS feed_attachments (
   -- one of each kind per post -- the whole limit, stated structurally
   UNIQUE (post_id, kind)
 );
+-- A link is an http(s) URL with a host, or it is not a link: the card opens
+-- whatever this column holds, so javascript:/file:/bare words are refused
+-- at the row, not only by the composer.
+ALTER TABLE feed_attachments DROP CONSTRAINT IF EXISTS feed_attachments_link_is_http;
+ALTER TABLE feed_attachments ADD CONSTRAINT feed_attachments_link_is_http
+  CHECK (kind <> 'link' OR target ~* '^https?://[^/[:space:]]+');
 ALTER TABLE feed_attachments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS feed_attachments_select ON feed_attachments;
 CREATE POLICY feed_attachments_select ON feed_attachments FOR SELECT TO authenticated
@@ -88,7 +94,9 @@ GRANT EXECUTE ON FUNCTION feed_shares_evidence(UUID, UUID) TO authenticated;
 -- (owner, their mentor, their advisor) plus the classmate branch. The regex
 -- guards matter: the daily-log era stored <userId>/<logId>/... and some
 -- paths may have a non-uuid second segment; a bare ::uuid cast on those
--- would raise 22P02 inside the policy and break every read.
+-- would raise 22P02 inside the policy and break every read. The strict
+-- 8-4-4-4-12 shape is what guarantees the cast cannot raise: a loose
+-- '[0-9a-f-]{36}' admits 'aa-aaaa...' which ::uuid still rejects.
 DROP POLICY IF EXISTS "log_photos_read" ON storage.objects;
 CREATE POLICY "log_photos_read" ON storage.objects
   FOR SELECT USING (
@@ -100,8 +108,8 @@ CREATE POLICY "log_photos_read" ON storage.objects
       OR is_advisor_of((storage.foldername(name))[1]::uuid)
       OR (
         array_length(storage.foldername(name), 1) >= 2
-        AND (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
-        AND (storage.foldername(name))[2] ~ '^[0-9a-f-]{36}$'
+        AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        AND (storage.foldername(name))[2] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
         AND feed_shares_evidence((storage.foldername(name))[1]::uuid, (storage.foldername(name))[2]::uuid)
       )
     )
@@ -118,8 +126,8 @@ CREATE POLICY "log_documents_read" ON storage.objects
       OR is_advisor_of((storage.foldername(name))[1]::uuid)
       OR (
         array_length(storage.foldername(name), 1) >= 2
-        AND (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
-        AND (storage.foldername(name))[2] ~ '^[0-9a-f-]{36}$'
+        AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        AND (storage.foldername(name))[2] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
         AND feed_shares_evidence((storage.foldername(name))[1]::uuid, (storage.foldername(name))[2]::uuid)
       )
     )

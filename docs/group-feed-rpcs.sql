@@ -108,5 +108,5 @@ $$;
 GRANT EXECUTE ON FUNCTION remove_feed_post(UUID) TO authenticated;
 
 -- ---- list_feed_posts ----
--- lives in docs/group-feed-assignment-cards.sql since the 'assignment' kind
--- was added; apply that file after this one. One copy, one file that stands.
+-- lives in docs/group-feed-read.sql (it reads feed_attachments, so it comes
+-- last); apply that file after this one. One copy, one file that stands.

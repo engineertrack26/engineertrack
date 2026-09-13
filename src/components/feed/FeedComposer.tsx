@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +51,12 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
   const [uploading, setUploading] = useState<Partial<Record<FileSlot, boolean>>>({});
   const [failed, setFailed] = useState<Partial<Record<FileSlot, string>>>({});
   const [linkOpen, setLinkOpen] = useState(false);
+  // One counter per slot: a pick bumps it and captures the value, a clear
+  // bumps it again, and a completion that no longer holds the current value
+  // was cleared (or re-picked) mid-flight and must not touch state -- else
+  // a late success re-fills the slot and a late failure sets a flag with no
+  // chip left to clear it.
+  const uploadToken = useRef<{ photo: number; document: number }>({ photo: 0, document: 0 });
 
   const filled = options.map((o) => o.trim()).filter(Boolean);
   const linkUrl = draft.link?.url ?? '';
@@ -65,6 +71,8 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
     && linkOk;
 
   function reset() {
+    uploadToken.current.photo += 1;
+    uploadToken.current.document += 1;
     setBody('');
     setOptions(['', '']);
     setDraft({});
@@ -98,11 +106,13 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
   }
 
   async function upload(slot: FileSlot, file: PickedFile) {
+    const token = ++uploadToken.current[slot];
     setPending((prev) => ({ ...prev, [slot]: file }));
     setUploading((prev) => ({ ...prev, [slot]: true }));
     setFailed((prev) => ({ ...prev, [slot]: undefined }));
     try {
       const path = await feedService.uploadFeedAttachment(groupId, file.uri, file.name, file.mime);
+      if (token !== uploadToken.current[slot]) return;
       setDraft((prev) => ({
         ...prev,
         [slot]: slot === 'photo'
@@ -114,9 +124,12 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
       // offers a retry, but without the reason nobody can tell a bucket
       // policy problem from a dead network.
       console.warn(`Feed ${slot} upload failed:`, err instanceof Error ? err.message : err);
+      if (token !== uploadToken.current[slot]) return;
       setFailed((prev) => ({ ...prev, [slot]: file.uri }));
     } finally {
-      setUploading((prev) => ({ ...prev, [slot]: false }));
+      if (token === uploadToken.current[slot]) {
+        setUploading((prev) => ({ ...prev, [slot]: false }));
+      }
     }
   }
 
@@ -132,6 +145,8 @@ export function FeedComposer({ visible, kind, groupId, onClose, onPosted }: Prop
       setLinkOpen(false);
       return;
     }
+    // Invalidate any upload still in flight for this slot before clearing.
+    uploadToken.current[slot] += 1;
     setPending((prev) => ({ ...prev, [slot]: undefined }));
     setUploading((prev) => ({ ...prev, [slot]: false }));
     setFailed((prev) => ({ ...prev, [slot]: undefined }));
