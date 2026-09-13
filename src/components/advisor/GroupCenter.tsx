@@ -105,6 +105,7 @@ function GroupInfo({ group, onClose, onArchived }: {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const lock = useRef(false);
+  const confirming = useRef(false);
   const copy = async () => {
     try { await Clipboard.setStringAsync(group.joinCode); setCopied(true); }
     catch { Alert.alert(t('common.error'), t('advisorGroups.copyFailed')); }
@@ -121,13 +122,19 @@ function GroupInfo({ group, onClose, onArchived }: {
   const confirmArchive = async () => {
     if (lock.current) return;
     if (group.isArchived) { void archive(); return; }
-    const n = await messageService.countDeletable(group.id).catch(() => 0);
-    const body = t('advisorGroups.archiveConfirm', { name: group.name })
-      + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
-    Alert.alert(t('advisorGroups.archive'), body, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('advisorGroups.archive'), style: 'destructive', onPress: () => void archive() },
-    ]);
+    if (confirming.current) return;
+    confirming.current = true;
+    try {
+      const n = await messageService.countDeletable(group.id).catch(() => 0);
+      const body = t('advisorGroups.archiveConfirm', { name: group.name })
+        + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
+      Alert.alert(t('advisorGroups.archive'), body, [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('advisorGroups.archive'), style: 'destructive', onPress: () => void archive() },
+      ]);
+    } finally {
+      confirming.current = false;
+    }
   };
   return <GroupModal title={t('advisorGroups.groupInfo')} onClose={onClose} busy={busy}>
     <Text style={ui.title}>{group.name}</Text>

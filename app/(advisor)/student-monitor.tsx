@@ -40,6 +40,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
   const [loaded, setLoaded] = useState(false);
   const [removing, setRemoving] = useState<Set<string>>(new Set());
   const locks = useRef(new Set<string>());
+  const confirming = useRef(false);
   const sequence = useRef(0);
   const mounted = useRef(false);
 
@@ -82,14 +83,20 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
 
   async function confirmRemove(member: GroupMember) {
     if (locks.current.has(member.membershipId) || failed) return;
-    const name = [member.firstName, member.lastName].filter(Boolean).join(' ');
-    const n = groupId ? await messageService.countDeletable(groupId, member.id).catch(() => 0) : 0;
-    const body = t('advisor.removeStudentConfirm', { name })
-      + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
-    Alert.alert(t('advisor.removeStudent'), body, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('advisor.removeStudent'), style: 'destructive', onPress: () => { void remove(member); } },
-    ]);
+    if (confirming.current) return;
+    confirming.current = true;
+    try {
+      const name = [member.firstName, member.lastName].filter(Boolean).join(' ');
+      const n = groupId ? await messageService.countDeletable(groupId, member.id).catch(() => 0) : 0;
+      const body = t('advisor.removeStudentConfirm', { name })
+        + (n > 0 ? '\n\n' + t('messages.deleteWarning', { count: n, defaultValue_one: '{{count}} conversation and its messages will be permanently deleted.', defaultValue_other: '{{count}} conversations and their messages will be permanently deleted.' }) : '');
+      Alert.alert(t('advisor.removeStudent'), body, [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('advisor.removeStudent'), style: 'destructive', onPress: () => { void remove(member); } },
+      ]);
+    } finally {
+      confirming.current = false;
+    }
   }
   async function remove(member: GroupMember) {
     if (!groupId || locks.current.has(member.membershipId) || !mounted.current ||
