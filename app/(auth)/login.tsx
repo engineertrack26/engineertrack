@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-na
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
-import { Input } from '@/components/common/Input';
-import { Button } from '@/components/common/Button';
+import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
@@ -22,8 +21,8 @@ export default function LoginScreen() {
     const newErrors: typeof errors = {};
     if (!email.trim()) {
       newErrors.email = t('auth.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = t('auth.emailRequired');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = t('authUi.invalidEmail');
     }
     if (!password) {
       newErrors.password = t('auth.passwordRequired');
@@ -33,6 +32,7 @@ export default function LoginScreen() {
   }
 
   async function handleLogin() {
+    if (isSubmitting) return;
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -53,7 +53,7 @@ export default function LoginScreen() {
 
   return (
     <ScreenWrapper>
-      <View style={styles.container}>
+      <View style={[styles.container, authStyles.container]}>
         <View style={styles.header}>
           <Image
             source={require('../../assets/icon.png')}
@@ -75,6 +75,8 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            editable={!isSubmitting}
           />
 
           <Input
@@ -85,11 +87,17 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             error={errors.password}
             isPassword
+            autoComplete="current-password"
+            editable={!isSubmitting}
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
           />
 
           <TouchableOpacity
             onPress={() => router.push('/(auth)/forgot-password')}
             style={styles.forgotLink}
+            accessibilityRole="button"
+            disabled={isSubmitting}
           >
             <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
@@ -103,10 +111,10 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Don't have an account?{' '}
+            {t('authUi.noAccount')}
           </Text>
           <Link href="/(auth)/register" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity style={authStyles.button} accessibilityRole="button" disabled={isSubmitting}>
               <Text style={styles.footerLink}>{t('auth.register')}</Text>
             </TouchableOpacity>
           </Link>
@@ -115,6 +123,8 @@ export default function LoginScreen() {
         <TouchableOpacity
           onPress={() => router.push('/(auth)/language-select')}
           style={styles.langButton}
+          accessibilityRole="button"
+          disabled={isSubmitting}
         >
           <Text style={styles.langText}>{t('common.language')}</Text>
         </TouchableOpacity>
@@ -130,7 +140,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logo: {
     fontSize: 32,
@@ -152,16 +162,18 @@ const styles = StyleSheet.create({
   },
   forgotLink: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
-    marginTop: -8,
+    marginBottom: 16,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   forgotText: {
-    fontSize: 14,
-    color: colors.primary,
+    fontSize: 16,
+    color: colors.primaryDark,
     fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -177,7 +189,8 @@ const styles = StyleSheet.create({
   langButton: {
     alignSelf: 'center',
     marginTop: 24,
-    paddingVertical: 8,
+    paddingVertical: 14,
+    minHeight: 48,
     paddingHorizontal: 16,
   },
   langText: {

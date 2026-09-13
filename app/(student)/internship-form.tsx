@@ -1,425 +1,204 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, Platform } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, Platform, TextInput, ScrollView, KeyboardAvoidingView, ActivityIndicator, BackHandler, Keyboard } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScreenWrapper } from '@/components/common/ScreenWrapper';
-import { Input } from '@/components/common/Input';
-import { Button } from '@/components/common/Button';
-import { BackButton } from '@/components/common';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LoadFailedBanner } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
-import { colors, spacing, borderRadius } from '@/theme';
+import { ui } from '@/components/common/workflowStyles';
+import { colors } from '@/theme';
+import { internshipFields, requiredInternshipFields, readInternshipForm, parseInternshipDate,
+  internshipDateString, validateInternshipForm, internshipPayload, sameInternshipForm, internshipReturnPath,
+  type InternshipField, type InternshipForm } from '@/utils/internshipForm';
 
-type FormErrors = Record<string, string>;
-
-// The database column is DATE and the rest of the app passes these around as
-// 'YYYY-MM-DD' strings, so that stays the stored shape. Only the display
-// changes.
-//
-// Both helpers work in LOCAL time on purpose. toISOString() converts local
-// midnight to UTC, which in any positive offset lands on the previous day, and
-// new Date('2026-09-01') is parsed as UTC and then rendered locally, which does
-// the same thing in reverse. Either one silently shifts a student's start date
-// by a day.
-function toIsoDate(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-function fromIsoDate(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+const labels: Record<InternshipField, string> = {
+  university: 'student.universityName', faculty: 'student.facultyName', department: 'student.departmentName',
+  department_branch: 'student.departmentBranch', student_id: 'student.studentId', company_name: 'student.companyName',
+  company_address: 'student.companyAddress', company_sector: 'student.companySector',
+  internship_start_date: 'student.internshipStartDate', internship_end_date: 'student.internshipEndDate',
+};
+const sections: Array<{ title: string; hint: string; fields: InternshipField[] }> = [
+  { title: 'student.schoolInfo', hint: 'internshipUi.schoolHint', fields: ['university', 'faculty', 'department', 'department_branch', 'student_id'] },
+  { title: 'student.internshipWorkplace', hint: 'internshipUi.workHint', fields: ['company_name', 'company_address', 'company_sector'] },
+  { title: 'internshipUi.dates', hint: 'internshipUi.dateHint', fields: ['internship_start_date', 'internship_end_date'] },
+];
 
 export default function InternshipFormScreen() {
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
   const params = useLocalSearchParams<{ return?: string }>();
-  const user = useAuthStore((s) => s.user);
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [pickerFor, setPickerFor] = useState<'start' | 'end' | null>(null);
-
-  const [university, setUniversity] = useState('');
-  const [faculty, setFaculty] = useState('');
-  const [department, setDepartment] = useState('');
-  const [departmentBranch, setDepartmentBranch] = useState('');
-  const [studentId, setStudentId] = useState('');
-
-  const [companyName, setCompanyName] = useState('');
-  const [companyAddress, setCompanyAddress] = useState('');
-  const [companySector, setCompanySector] = useState('');
-  const [internshipStartDate, setInternshipStartDate] = useState('');
-  const [internshipEndDate, setInternshipEndDate] = useState('');
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadProfile() {
-      if (!user) return;
-      try {
-        const data = await authService.getStudentProfile(user.id);
-        if (!isMounted) return;
-        if (data) {
-          setUniversity((data.university as string) || '');
-          setFaculty((data.faculty as string) || '');
-          setDepartment((data.department as string) || '');
-          setDepartmentBranch((data.department_branch as string) || '');
-          setStudentId((data.student_id as string) || '');
-          setCompanyName((data.company_name as string) || '');
-          setCompanyAddress((data.company_address as string) || '');
-          setCompanySector((data.company_sector as string) || '');
-          setInternshipStartDate((data.internship_start_date as string) || '');
-          setInternshipEndDate((data.internship_end_date as string) || '');
-        }
-      } catch (err) {
-        console.warn('Failed to load student profile:', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    loadProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  const validate = () => {
-    const newErrors: FormErrors = {};
-    const requiredMessage = t('common.required', 'Required');
-
-    if (!university.trim()) newErrors.university = requiredMessage;
-    if (!department.trim()) newErrors.department = requiredMessage;
-    if (!studentId.trim()) newErrors.studentId = requiredMessage;
-    if (!companyName.trim()) newErrors.companyName = requiredMessage;
-    if (!internshipStartDate.trim()) newErrors.internshipStartDate = requiredMessage;
-    if (!internshipEndDate.trim()) newErrors.internshipEndDate = requiredMessage;
-
-    // An internship that ends before it starts is not a database error — both
-    // columns accept it happily — so nothing downstream would ever notice.
-    const start = fromIsoDate(internshipStartDate);
-    const end = fromIsoDate(internshipEndDate);
-    if (start && end && end < start) {
-      newErrors.internshipEndDate = t(
-        'student.endDateBeforeStart',
-        'End date cannot be before the start date.',
-      );
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!user) return;
-    if (!validate()) return;
-
-    setSaving(true);
-    try {
-      await authService.upsertStudentProfile(user.id, {
-        university: university.trim(),
-        faculty: faculty.trim() || null,
-        department: department.trim(),
-        department_branch: departmentBranch.trim() || null,
-        student_id: studentId.trim(),
-        company_name: companyName.trim(),
-        company_address: companyAddress.trim() || null,
-        company_sector: companySector.trim() || null,
-        internship_start_date: internshipStartDate.trim(),
-        internship_end_date: internshipEndDate.trim(),
-      });
-
-      Alert.alert(
-        t('common.save', 'Save'),
-        t('student.internshipInfoSaved', 'Internship information saved.'),
-      );
-
-      const returnTo = params.return || 'profile';
-      router.replace(`/(student)/${returnTo}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('common.error', 'Error');
-      Alert.alert(t('common.error', 'Error'), message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Stored as YYYY-MM-DD, shown in whatever the user's language writes dates
-  // in — 01.09.2026 in tr and de, 01/09/2026 in it and el. Nobody types a
-  // format, so there is no format to get wrong, and 03/04 is never ambiguous
-  // because it was never typed.
-  const renderDateField = (
-    which: 'start' | 'end',
-    label: string,
-    value: string,
-    error?: string,
-  ) => {
-    const parsed = fromIsoDate(value);
-    return (
-      <View>
-        <Text style={styles.dateLabel}>{label}</Text>
-        <TouchableOpacity
-          style={[styles.dateField, error ? styles.dateFieldError : null]}
-          onPress={() => setPickerFor(which)}
-          activeOpacity={0.7}
-        >
-          <Text style={parsed ? styles.dateValue : styles.datePlaceholder}>
-            {parsed
-              ? parsed.toLocaleDateString(i18n.language)
-              : t('student.selectDate', 'Select a date')}
-          </Text>
-          <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
-        {error ? <Text style={styles.dateError}>{error}</Text> : null}
-      </View>
-    );
-  };
-
-  if (loading) {
-    return (
-      <ScreenWrapper>
-        <BackButton href="/(student)/profile" />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('common.loading', 'Loading...')}</Text>
-        </View>
-      </ScreenWrapper>
-    );
-  }
-
-  return (
-    <ScreenWrapper>
-      <BackButton href="/(student)/profile" disabled={saving} />
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {t('student.internshipFormTitle', 'Internship Information')}
-        </Text>
-        <Text style={styles.subtitle}>
-          {t('student.internshipFormSubtitle', 'Complete your school and workplace details to continue.')}
-        </Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('student.schoolInfo', 'School Information')}</Text>
-
-        <Input
-          label={t('student.universityName', 'University Name')}
-          placeholder={t('student.universityName', 'University Name')}
-          value={university}
-          onChangeText={setUniversity}
-          error={errors.university}
-        />
-        <Input
-          label={t('student.facultyName', 'Faculty')}
-          placeholder={t('student.facultyName', 'Faculty')}
-          value={faculty}
-          onChangeText={setFaculty}
-        />
-        <Input
-          label={t('student.departmentName', 'Department')}
-          placeholder={t('student.departmentName', 'Department')}
-          value={department}
-          onChangeText={setDepartment}
-          error={errors.department}
-        />
-        <Input
-          label={t('student.departmentBranch', 'Department Branch (Optional)')}
-          placeholder={t('student.departmentBranch', 'Department Branch')}
-          value={departmentBranch}
-          onChangeText={setDepartmentBranch}
-        />
-        <Input
-          label={t('student.studentId', 'Student ID')}
-          placeholder={t('student.studentId', 'Student ID')}
-          value={studentId}
-          onChangeText={setStudentId}
-          error={errors.studentId}
-        />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {t('student.internshipWorkplace', 'Internship Workplace')}
-        </Text>
-
-        <Input
-          label={t('student.companyName', 'Company Name')}
-          placeholder={t('student.companyName', 'Company Name')}
-          value={companyName}
-          onChangeText={setCompanyName}
-          error={errors.companyName}
-        />
-        <Input
-          label={t('student.companyAddress', 'Company Address')}
-          placeholder={t('student.companyAddress', 'Company Address')}
-          value={companyAddress}
-          onChangeText={setCompanyAddress}
-        />
-        <Input
-          label={t('student.companySector', 'Company Field / Sector')}
-          placeholder={t('student.companySector', 'Company Field / Sector')}
-          value={companySector}
-          onChangeText={setCompanySector}
-        />
-
-        <View style={styles.row}>
-          <View style={styles.col}>
-            {renderDateField(
-              'start',
-              t('student.internshipStartDate', 'Start Date'),
-              internshipStartDate,
-              errors.internshipStartDate,
-            )}
-          </View>
-          <View style={styles.col}>
-            {renderDateField(
-              'end',
-              t('student.internshipEndDate', 'End Date'),
-              internshipEndDate,
-              errors.internshipEndDate,
-            )}
-          </View>
-        </View>
-      </View>
-
-      {pickerFor && (
-        <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
-          <DateTimePicker
-            value={
-              fromIsoDate(pickerFor === 'start' ? internshipStartDate : internshipEndDate) ||
-              new Date()
-            }
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selected) => {
-              // Android shows a dialog and reports its own dismissal; iOS keeps
-              // the spinner on screen until the Done button below closes it.
-              if (Platform.OS === 'android') setPickerFor(null);
-              if (event.type === 'dismissed' || !selected) return;
-              const iso = toIsoDate(selected);
-              if (pickerFor === 'start') setInternshipStartDate(iso);
-              else setInternshipEndDate(iso);
-            }}
-          />
-          {Platform.OS === 'ios' && (
-            <Button
-              title={t('common.done', 'Done')}
-              onPress={() => setPickerFor(null)}
-              style={styles.iosPickerDone}
-            />
-          )}
-        </View>
-      )}
-
-      <Button
-        title={t('student.saveInternshipInfo', 'Save Internship Info')}
-        onPress={handleSave}
-        loading={saving}
-        style={styles.saveButton}
-      />
-      <View style={{ height: spacing.xl }} />
-    </ScreenWrapper>
-  );
+  const userId = useAuthStore((s) => s.user?.id);
+  return userId ? <InternshipContent key={userId} userId={userId} returnTo={params.return} /> : null;
 }
+function InternshipContent({ userId, returnTo }: { userId: string; returnTo?: string }) {
+  const { t, i18n } = useTranslation();
+  const navigation = useNavigation();
+  const [form, setForm] = useState<InternshipForm>(() => readInternshipForm(null));
+  const [baseline, setBaseline] = useState<InternshipForm>(() => readInternshipForm(null));
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<ReturnType<typeof validateInternshipForm>>({});
+  const [pickerFor, setPickerFor] = useState<InternshipField | null>(null);
+  const scroll = useRef<ScrollView>(null);
+  const inputs = useRef<Partial<Record<InternshipField, TextInput | null>>>({});
+  const offsets = useRef<Record<number, number>>({});
+  const lock = useRef(false);
+  const allowExit = useRef(false);
+  const dirtyRef = useRef(false);
+  const sequence = useRef(0);
+  const dirty = !sameInternshipForm(form, baseline);
+  dirtyRef.current = dirty;
+  const destination = internshipReturnPath(returnTo);
 
+  const load = useCallback(async () => {
+    const request = ++sequence.current;
+    setLoading(true);
+    try {
+      const row = await authService.getStudentProfile(userId);
+      if (request !== sequence.current || useAuthStore.getState().user?.id !== userId) return;
+      const values = readInternshipForm(row);
+      setForm(values); setBaseline(values); setErrors({}); setFailed(false);
+    } catch {
+      if (request === sequence.current) setFailed(true);
+    } finally { if (request === sequence.current) setLoading(false); }
+  }, [userId]);
+  useEffect(() => { void load(); return () => { sequence.current += 1; }; }, [load]);
+
+  function requestLeave(action = () => router.replace(destination)) {
+    if (lock.current) return;
+    const leave = () => { allowExit.current = true; action(); };
+    if (!dirtyRef.current) { leave(); return; }
+    Alert.alert(t('internshipUi.unsaved'), t('internshipUi.leave'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('internshipUi.discard'), style: 'destructive', onPress: leave },
+    ]);
+  }
+  useEffect(() => navigation.addListener('beforeRemove', (event) => {
+    if (allowExit.current) return;
+    if (lock.current || dirtyRef.current) {
+      event.preventDefault();
+      if (!lock.current) requestLeave(() => navigation.dispatch(event.data.action));
+    }
+  }), [navigation, destination, t]);
+  useFocusEffect(useCallback(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { requestLeave(); return true; });
+    return () => subscription.remove();
+  }, [destination, t]));
+
+  function change(field: InternshipField, value: string) {
+    if (lock.current) return;
+    setForm((old) => ({ ...old, [field]: value }));
+    setErrors((old) => {
+      const next = { ...old }; delete next[field];
+      if (field === 'internship_start_date') delete next.internship_end_date;
+      return next;
+    });
+  }
+  const message = (reason: 'required' | 'date' | 'order') => t(reason === 'required' ? 'common.required' :
+    reason === 'order' ? 'student.endDateBeforeStart' : 'internshipUi.invalidDate');
+  async function save() {
+    if (lock.current || loading || failed || useAuthStore.getState().user?.id !== userId) return;
+    const issues = validateInternshipForm(form);
+    setErrors(issues);
+    const first = internshipFields.find((field) => issues[field]);
+    if (first) {
+      const section = sections.findIndex((s) => s.fields.includes(first));
+      scroll.current?.scrollTo({ y: Math.max(0, (offsets.current[section] || 0) - 12), animated: true });
+      inputs.current[first]?.focus();
+      return;
+    }
+    Keyboard.dismiss(); setPickerFor(null);
+    lock.current = true; setSaving(true);
+    try {
+      await authService.upsertStudentProfile(userId, internshipPayload(form));
+      if (useAuthStore.getState().user?.id !== userId) return;
+      allowExit.current = true; dirtyRef.current = false;
+      Alert.alert(t('common.done'), t('student.internshipInfoSaved'));
+      router.replace(destination);
+    } catch {
+      if (useAuthStore.getState().user?.id === userId)
+        Alert.alert(t('common.error'), t('internshipUi.saveFailed'));
+    } finally { lock.current = false; setSaving(false); }
+  }
+  const completed = requiredInternshipFields.filter((field) => form[field].trim() && !validateInternshipForm(form)[field]).length;
+  const errorFields = internshipFields.filter((field) => errors[field]);
+  return <SafeAreaView style={ui.safe}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView ref={scroll} contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <TouchableOpacity accessibilityRole="button" style={styles.back} disabled={saving} onPress={() => requestLeave()}>
+          <Ionicons name="arrow-back" size={24} color={colors.primaryDark} /><Text style={ui.link}>{t('common.back')}</Text>
+        </TouchableOpacity>
+        <Text style={ui.title} accessibilityRole="header">{t('student.internshipFormTitle')}</Text>
+        <Text style={ui.secondary}>{t('student.internshipFormSubtitle')}</Text>
+        {loading ? <ActivityIndicator size="large" color={colors.primaryDark} /> : failed ?
+          <LoadFailedBanner onRetry={() => void load()} /> : <>
+          <View style={ui.note}><Text style={ui.secondary}>{t('internshipUi.requiredHint')}</Text></View>
+          {!!errorFields.length && <View style={ui.note} accessibilityRole="alert">
+            <Text style={ui.label}>{t('internshipUi.checkFields')}</Text>
+            {errorFields.map((field) => <Text key={field} style={ui.body}>{t(labels[field])}: {message(errors[field]!)}</Text>)}
+          </View>}
+          {sections.map((section, index) => <View key={section.title} style={ui.card}
+            onLayout={(event) => { offsets.current[index] = event.nativeEvent.layout.y; }}>
+            <Text style={ui.section} accessibilityRole="header">{index + 1}. {t(section.title)}</Text>
+            <Text style={ui.secondary}>{t(section.hint)}</Text>
+            {section.fields.map((field) => {
+              const dateField = field === 'internship_start_date' || field === 'internship_end_date';
+              const required = requiredInternshipFields.includes(field);
+              const label = t(labels[field]);
+              return <View key={field} style={{ gap: 8 }}>
+                <Text style={ui.label}>{label}{required ? ' *' : ''}</Text>
+                {dateField ? <TouchableOpacity style={[ui.input, styles.date, errors[field] && styles.error]}
+                  disabled={saving} accessibilityRole="button" accessibilityLabel={label}
+                  onPress={() => { Keyboard.dismiss(); setPickerFor(field); }}>
+                  <Text style={[ui.body, { flex: 1 }]}>{parseInternshipDate(form[field])?.toLocaleDateString(i18n.language) || t('student.selectDate')}</Text>
+                  <Ionicons name="calendar-outline" size={22} color={colors.primaryDark} />
+                </TouchableOpacity> : <TextInput ref={(ref) => { inputs.current[field] = ref; }}
+                  style={[ui.input, errors[field] && styles.error, field === 'company_address' && { minHeight: 88, textAlignVertical: 'top' }]}
+                  accessibilityLabel={label + (required ? ', ' + t('common.required') : '')}
+                  editable={!saving} value={form[field]} onChangeText={(value) => change(field, value)}
+                  autoCorrect={field !== 'student_id'} autoCapitalize={field === 'student_id' ? 'none' : 'words'}
+                  multiline={field === 'company_address'} returnKeyType={field === 'company_address' ? 'default' : 'next'}
+                  onSubmitEditing={() => {
+                    if (field === 'company_address') return;
+                    const next = internshipFields[internshipFields.indexOf(field) + 1];
+                    if (next === 'internship_start_date') { Keyboard.dismiss(); setPickerFor(next); }
+                    else inputs.current[next]?.focus();
+                  }} />}
+                {!!errors[field] && <Text style={styles.errorText} accessibilityRole="alert">{message(errors[field]!)}</Text>}
+                {pickerFor === field && <View>
+                  <DateTimePicker value={parseInternshipDate(form[field]) ||
+                    (field === 'internship_end_date' ? parseInternshipDate(form.internship_start_date) : null) || new Date()}
+                    mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, value) => {
+                      if (Platform.OS !== 'ios') setPickerFor(null);
+                      if (event.type !== 'dismissed' && value) change(field, internshipDateString(value));
+                    }} />
+                  {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => setPickerFor(null)}>
+                    <Text style={ui.link}>{t('common.done')}</Text>
+                  </TouchableOpacity>}
+                </View>}
+              </View>;
+            })}
+          </View>)}
+        </>}
+      </ScrollView>
+      {!loading && !failed && <View style={styles.footer}>
+        <Text style={ui.secondary} accessibilityLiveRegion="polite">{t('internshipUi.progress', { completed, total: requiredInternshipFields.length })}
+          {dirty ? ' · ' + t('internshipUi.unsaved') : ''}</Text>
+        <TouchableOpacity accessibilityRole="button" style={ui.primary} disabled={saving}
+          accessibilityState={{ disabled: saving, busy: saving }} onPress={() => void save()}>
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={ui.primaryText}>{t('student.saveInternshipInfo')}</Text>}
+        </TouchableOpacity>
+      </View>}
+    </KeyboardAvoidingView>
+  </SafeAreaView>;
+}
 const styles = StyleSheet.create({
-  header: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  col: {
-    flex: 1,
-  },
-  dateLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  dateField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
-  },
-  dateFieldError: {
-    borderColor: colors.error,
-  },
-  dateValue: {
-    fontSize: 15,
-    color: colors.text,
-  },
-  datePlaceholder: {
-    fontSize: 15,
-    color: colors.textSecondary,
-  },
-  dateError: {
-    fontSize: 12,
-    color: colors.error,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-  },
-  iosPickerBox: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-  },
-  iosPickerDone: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  saveButton: {
-    marginTop: spacing.sm,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
+  back: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  date: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  error: { borderColor: '#a52929', borderWidth: 2 },
+  errorText: { color: '#a52929', fontSize: 14, lineHeight: 21 },
+  footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
-  TouchableOpacity, ActivityIndicator, Alert, Platform,
+  TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -15,13 +15,16 @@ import { notificationService } from '@/services/notifications';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
+import { reviewedAssignmentsMatch } from '@/utils/assignmentPreparation';
 import { colors, spacing, borderRadius } from '@/theme';
 import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
 import { groupCenterRoute } from '@/utils/advisorGroups';
-import { GroupContextLabel } from '@/components/advisor/GroupUI';
+import { AssignmentReview } from '@/components/advisor/AssignmentReview';
+import { ui } from '@/components/common/workflowStyles';
+import { GroupContextLabel, GroupModal } from '@/components/advisor/GroupUI';
 import { BackButton, LoadFailedBanner } from '@/components/common';
 
 const ADVISOR_COLOR = colors.info;
@@ -56,11 +59,25 @@ type SubmissionCounts = Record<
 const ZERO_COUNTS = { submitted: 0, approved: 0, needsRevision: 0 };
 
 export default function GroupAssignmentsScreen() {
+  const { groupId } = useLocalSearchParams<{ groupId?: string }>();
+  const userId = useAuthStore((s) => s.user?.id);
+  return <GroupAssignmentsContent key={`${userId}:${groupId}`} />;
+}
+
+function GroupAssignmentsContent() {
   const { t, i18n } = useTranslation();
   const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
   const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
   const user = useAuthStore((s) => s.user);
 
+  const [adding, setAdding] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewingDrafts, setReviewingDrafts] = useState(false);
+  const [tab, setTab] = useState<'published' | 'drafts'>('published');
+  const [search, setSearch] = useState('');
+  const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
+  const publishLock = useRef(false);
+  const loadRequest = useRef(0);
   const [assignments, setAssignments] = useState<GroupAssignment[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [kpis, setKpis] = useState<CompetencyKpi[]>([]);
@@ -81,25 +98,13 @@ export default function GroupAssignmentsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  // "Send to students" publishes the whole tray in one RPC call, so one flag
-  // covers it -- unlike withdraw, there is no per-row identity to track here.
+  // A publish operation contains only the explicitly reviewed batch.
   const [sending, setSending] = useState(false);
 
   const [pickedCompetency, setPickedCompetency] = useState<string | null>(null);
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
-  // Multi-select: the advisor builds a batch across the whole framework, not
-  // within one screenful. Title, objective and criterion are not editable at
-  // creation time -- each assignment takes them from its own triplet, which is
-  // what "the triplet text is fixed and adaptation happens by selection"
-  // actually means. Per-assignment wording stays reachable afterwards through
-  // the edit panel on each card below.
-  //
-  // Holds the TRIPLETS, not just their ids, and that is load-bearing:
-  // `triplets` below only ever contains the level currently on screen, so an
-  // id-only set could not be resolved back to a task once the advisor moved to
-  // another competency. handleAddToDraft would have created just the visible
-  // ones and reported success for all of them.
+  // Keep full triplets across competency/level changes. The review screen
+  // edits local copies; selection itself never writes to the database.
   const [picked, setPicked] = useState<Map<string, KpiTriplet>>(new Map());
   const [triplets, setTriplets] = useState<KpiTriplet[]>([]);
   // Discards a level fetch that a later tap has superseded -- readable
@@ -119,7 +124,8 @@ export default function GroupAssignmentsScreen() {
 
   const [loadFailed, setLoadFailed] = useState(false);
   const loadData = useCallback(async () => {
-    if (!groupId) return;
+    const request = ++loadRequest.current;
+    if (!groupId || !user) { setLoadFailed(true); setLoading(false); return; }
     setLoadFailed(false);
     try {
       // The counts come from group_assignment_counts, not from a select on
@@ -152,6 +158,7 @@ export default function GroupAssignmentsScreen() {
         // restrictive than the real one, not less.
         assignmentService.getAssignmentCounts(groupId).catch(() => null),
       ]);
+      if (request !== loadRequest.current) return;
       setAssignments(existing);
       const scoped = new Set(targets.map((tg) => tg.competencyId));
       setInScope(scoped);
@@ -172,14 +179,15 @@ export default function GroupAssignmentsScreen() {
 
 
     } catch (err) {
-      console.error('Load assignments error:', err);
+      if (request !== loadRequest.current) return;
+      console.warn('Load assignments error:', err);
       setLoadFailed(true);
     } finally {
-      setLoading(false);
+      if (request === loadRequest.current) setLoading(false);
     }
-  }, [groupId]);
+  }, [groupId, user?.id]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => { loadData(); return () => { loadRequest.current += 1; }; }, [loadData]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -253,93 +261,23 @@ export default function GroupAssignmentsScreen() {
     setPicked(new Map());
     setTriplets([]);
     setDueDate('');
+    setShowDatePicker(false);
   }
 
-  // Writes the batch as drafts, not sent assignments -- createAssignment
-  // (singular, called once per triplet here) now leaves published_at unset,
-  // so the rows land in the tray rather than reaching students. Rows are
-  // written here, on this one tap, rather than on every tick: a
-  // tick-and-untick would otherwise be a write and a delete, and the
-  // multi-select would stop behaving like a selection.
-  async function handleAddToDraft() {
-    if (!groupId || !user || picked.size === 0) return;
-
-    // From the selection itself, not from `triplets` -- that array holds only
-    // the level on screen, so filtering it would silently drop everything the
-    // advisor ticked under another competency and still report success.
-    const chosen = Array.from(picked.values());
-    if (chosen.length === 0) return;
-
-    setSaving(true);
-    try {
-      // allSettled, not all: one refused row must not discard the rows that
-      // were written. A partial result is reported as a partial result below
-      // rather than as a blanket success or a blanket failure.
-      const results = await assignmentService.createDrafts(
-        chosen.map((tr) => ({
-          groupId,
-          tripletId: tr.id,
-          title: tr.task,
-          objective: tr.objective,
-          criterion: tr.criterion,
-          dueDate: dueDate || undefined,
-          createdBy: user.id,
-        })),
-      );
-
-      const created = results.filter((r) => r.status === 'fulfilled').length;
-      const firstRejection = results.find((r) => r.status === 'rejected');
-
-      if (created === chosen.length) {
-        Alert.alert(t('common.done'), t('advisor.draftsCreated', { count: created }));
-        resetForm();
-      } else if (created > 0) {
-        // Drop the ones that landed from the selection, so the summary counts
-        // what is still outstanding rather than what was originally ticked --
-        // and so a retry cannot re-send a row that already exists.
-        setPicked(
-          new Map(
-            chosen
-              .filter((_, i) => results[i].status === 'rejected')
-              .map((tr) => [tr.id, tr]),
-          ),
-        );
-
-        // Say which of the two numbers is which. "Some failed" leaves the
-        // advisor unable to tell whether to retry the whole batch.
-        Alert.alert(
-          t('common.error'),
-          t('advisor.draftsPartial', { created, total: chosen.length }),
-        );
-      } else if (firstRejection && firstRejection.status === 'rejected') {
-        const reason = firstRejection.reason;
-        const { key } = mapRpcError(reason instanceof Error ? reason.message : '');
-        Alert.alert(t('common.error'), t(key));
-      }
-
-      // The new cards appear in the tray -- no notification here. Nothing
-      // has reached a student yet; that is what "Send to students" is for.
-      await loadData();
-    } catch (err) {
-      const { key } = mapRpcError(err instanceof Error ? err.message : '');
-      Alert.alert(t('common.error'), t(key));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Publishes every draft currently in the tray. publish_assignments
-  // re-checks competency scope -- a group's targets can move between
-  // drafting and sending -- and refuses the WHOLE batch, naming the
-  // offending task, rather than sending some and stopping partway. So unlike
-  // handleAddToDraft there is no partial-result branch here: either every
-  // draft is published, or none are and the tray is untouched, which is
-  // exactly what leaves the advisor able to fix the named task and retry.
-  async function handleSendToStudents() {
-    if (drafts.length === 0) return;
+  async function handleSendToStudents(batch: GroupAssignment[]): Promise<boolean> {
+    if (!batch.length || publishLock.current || !user ||
+        useAuthStore.getState().user?.id !== user.id) return false;
+    publishLock.current = true;
     setSending(true);
     try {
-      const count = await assignmentService.publishAssignments(drafts.map((d) => d.id));
+      const current = await assignmentService.listGroupAssignments(groupId!);
+      if (!reviewedAssignmentsMatch(batch, current)) {
+        setAssignments(current);
+        Alert.alert(t('common.error'), t('taskFlow.changed'));
+        return false;
+      }
+      if (useAuthStore.getState().user?.id !== user.id) return false;
+      const count = await assignmentService.publishAssignments(batch.map((d) => d.id));
 
       // count is 0 when every id in the tray was already published --
       // another session (or another tab) sent the same batch first. Nothing
@@ -353,7 +291,7 @@ export default function GroupAssignmentsScreen() {
         // (handleAssign) used: one notification per student for the whole
         // batch, best-effort so a delivery failure cannot make assignments
         // that were actually sent look like they failed.
-        const single = drafts.length === 1 ? drafts[0] : null;
+        const single = batch.length === 1 ? batch[0] : null;
         await Promise.all(
           members.map((m) =>
             notificationService.create(
@@ -361,7 +299,7 @@ export default function GroupAssignmentsScreen() {
               t('notifications.taskAssignedTitle'),
               single
                 ? t('notifications.taskAssignedBody', { title: single.title })
-                : t('notifications.tasksAssignedBody', { count: drafts.length }),
+                : t('notifications.tasksAssignedBody', { count }),
               'task_assigned',
               {},
             ).catch((e) => console.warn('notify failed:', e)),
@@ -373,6 +311,9 @@ export default function GroupAssignmentsScreen() {
         Alert.alert(t('common.done'), t('advisor.assignmentsNoneSent'));
       }
       await loadData();
+      setSelectedDraftIds([]);
+      setReviewingDrafts(false);
+      return true;
     } catch (err) {
       const { code, key, detail } = mapRpcError(err instanceof Error ? err.message : '');
       // NOT_IN_SCOPE carries the offending task's title as `detail` -- an
@@ -385,7 +326,9 @@ export default function GroupAssignmentsScreen() {
       } else {
         Alert.alert(t('common.error'), t(key));
       }
+      return false;
     } finally {
+      publishLock.current = false;
       setSending(false);
     }
   }
@@ -394,6 +337,23 @@ export default function GroupAssignmentsScreen() {
   // a second fetch is a second thing that can disagree with the first.
   const drafts = assignments.filter((a) => !a.publishedAt);
   const sentAssignments = assignments.filter((a) => !!a.publishedAt);
+  const selectedDrafts = drafts.filter((a) => selectedDraftIds.includes(a.id));
+  const visibleAssignments = (tab === 'drafts' ? drafts : sentAssignments).filter((a) =>
+    [a.title, a.description, a.competencyName].some((value) =>
+      value?.toLocaleLowerCase(i18n.language).includes(search.trim().toLocaleLowerCase(i18n.language))));
+  function closeSelection() {
+    if (!picked.size) { setAdding(false); return; }
+    Alert.alert(t('taskFlow.add'), t('taskFlow.leaveSelection'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('advisorGroups.close'), onPress: () => { resetForm(); setAdding(false); } },
+    ]);
+  }
+  function finishReview() {
+    setReviewing(false);
+    setAdding(false);
+    resetForm();
+    loadData();
+  }
 
   // A level has two KPIs and each holds ten triplets, so the picker shows
   // twenty. Grouping under the KPI's statement reads "for this behaviour,
@@ -430,72 +390,60 @@ export default function GroupAssignmentsScreen() {
         }
       >
         {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        <BackButton href={groupBack} disabled={saving || sending} />
+        <BackButton href={groupBack} disabled={reviewing || sending} />
         <GroupContextLabel groupId={groupId} />
         <Text style={styles.screenTitle}>{t('advisor.assignments')}</Text>
 
-        {assignments.length === 0 && (
-          <Text style={styles.hint}>{t('advisor.noAssignments')}</Text>
-        )}
+        <TouchableOpacity style={ui.primary} accessibilityRole="button" disabled={loadFailed}
+          onPress={() => setAdding(true)}>
+          <Text style={ui.primaryText}>{t('taskFlow.add')}</Text>
+        </TouchableOpacity>
+        <View style={[styles.chipRow, { marginTop: 16 }]} accessibilityRole="tablist">
+          {(['published', 'drafts'] as const).map((value) => <TouchableOpacity key={value}
+            accessibilityRole="tab" accessibilityState={{ selected: tab === value }}
+            style={[styles.chip, tab === value && styles.chipActive]} onPress={() => setTab(value)}>
+            <Text style={[styles.chipText, tab === value && styles.chipTextActive]}>
+              {t(value === 'published' ? 'advisor.sentHeading' : 'advisor.draftsHeading')}
+              {' '}({value === 'published' ? sentAssignments.length : drafts.length})
+            </Text>
+          </TouchableOpacity>)}
+        </View>
+        <TextInput style={[ui.input, { marginBottom: 16 }]} value={search} onChangeText={setSearch}
+          placeholder={t('taskFlow.search')} accessibilityLabel={t('taskFlow.search')} />
+        {!visibleAssignments.length && !loadFailed && <Text style={styles.hint}>{t('taskFlow.empty')}</Text>}
+        {tab === 'drafts' && selectedDrafts.length > 0 && <TouchableOpacity accessibilityRole="button"
+          style={[ui.primary, { marginBottom: 16 }]} disabled={sending || loadFailed}
+          onPress={() => setReviewingDrafts(true)}>
+          <Text style={ui.primaryText}>{t('taskFlow.review')} ({selectedDrafts.length})</Text>
+        </TouchableOpacity>}
+        {visibleAssignments.map((a) => <View key={a.id}>
+          {tab === 'drafts' && <TouchableOpacity accessibilityRole="checkbox"
+            accessibilityState={{ checked: selectedDraftIds.includes(a.id) }}
+            style={styles.draftSelect} onPress={() => setSelectedDraftIds((ids) =>
+              ids.includes(a.id) ? ids.filter((id) => id !== a.id) : [...ids, a.id])}>
+            <Ionicons name={selectedDraftIds.includes(a.id) ? 'checkbox' : 'square-outline'}
+              size={24} color={ADVISOR_COLOR} />
+            <Text style={styles.chipText}>{t('taskFlow.selectSend')}</Text>
+          </TouchableOpacity>}
+          <AssignmentCard assignment={a} isDraft={!a.publishedAt}
+            counts={submissionCounts[a.id] || ZERO_COUNTS} countsUnavailable={countsUnavailable}
+            memberCount={members.length} outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
+            onChanged={loadData} />
+        </View>)}
 
-        {/* One list, two views of it -- drafts and sent are both read from
-            `assignments`, never from a second query, so the two can no
-            longer disagree about a row's state. */}
-        {drafts.length > 0 && (
-          <>
-            <Text style={styles.sectionHeading}>{t('advisor.draftsHeading')}</Text>
-            {drafts.map((a) => (
-              <AssignmentCard
-                key={a.id}
-                assignment={a}
-                isDraft
-                counts={submissionCounts[a.id] || ZERO_COUNTS}
-                countsUnavailable={countsUnavailable}
-                memberCount={members.length}
-                outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
-                onChanged={loadData}
-              />
-            ))}
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={handleSendToStudents}
-              disabled={sending}
-              activeOpacity={0.7}
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.primaryBtnText}>{t('advisor.sendToStudents')}</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-
-        {sentAssignments.length > 0 && (
-          <>
-            <Text style={styles.sectionHeading}>{t('advisor.sentHeading')}</Text>
-            {sentAssignments.map((a) => (
-              <AssignmentCard
-                key={a.id}
-                assignment={a}
-                isDraft={false}
-                counts={submissionCounts[a.id] || ZERO_COUNTS}
-                countsUnavailable={countsUnavailable}
-                memberCount={members.length}
-                // trg_assignment_within_scope is BEFORE INSERT only,
-                // deliberately, so an advisor may switch a competency off
-                // after assigning from it. Nothing else surfaces that: the
-                // assignment stays in the student's list, submit_assignment
-                // has no scope check, and the NOT_IN_SCOPE refusal finally
-                // lands on the MENTOR at review time, who cannot fix it. The
-                // advisor can, and this screen is where.
-                outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
-                onChanged={loadData}
-              />
-            ))}
-          </>
-        )}
-
+        <View style={{ height: spacing.xl }} />
+      </ScrollView>
+      {adding && !reviewing && <GroupModal title={t('taskFlow.add')} onClose={closeSelection} footer={<>
+        <Text style={ui.label}>{t('advisor.tripletsSelected', { count: picked.size })}</Text>
+        <TouchableOpacity style={[ui.primary, picked.size === 0 && { opacity: 0.5 }]}
+          accessibilityRole="button" disabled={picked.size === 0}
+          accessibilityState={{ disabled: picked.size === 0 }}
+          onPress={() => { setShowDatePicker(false); setReviewing(true); }}>
+          <Text style={ui.primaryText}>{t('taskFlow.review')}</Text>
+        </TouchableOpacity>
+      </>}>
+        <GroupContextLabel groupId={groupId} />
+        <Text style={ui.secondary}>{t('taskFlow.selectionHint')}</Text>
         <Text style={styles.label}>{t('advisor.pickCompetency')}</Text>
         {competencies.length === 0 && (
           <Text style={styles.hint}>{t('advisor.noCompetencies')}</Text>
@@ -612,13 +560,12 @@ export default function GroupAssignmentsScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => setPicked(new Map())}
-                disabled={saving}
                 activeOpacity={0.7}
               >
                 <Text style={styles.clearLink}>{t('advisor.clearSelection')}</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.selectedHint}>{t('advisor.batchAssignHint')}</Text>
+            <Text style={styles.selectedHint}>{t('taskFlow.selectionHint')}</Text>
 
             <Text style={styles.label}>{t('advisor.assignmentDueDate')}</Text>
             <TouchableOpacity
@@ -634,6 +581,9 @@ export default function GroupAssignmentsScreen() {
               <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
 
+            {!!dueDate && <TouchableOpacity accessibilityRole="button" onPress={() => setDueDate('')}>
+              <Text style={ui.link}>{t('taskFlow.clearDate')}</Text>
+            </TouchableOpacity>}
             {showDatePicker && (
               <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
                 <DateTimePicker
@@ -658,28 +608,41 @@ export default function GroupAssignmentsScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={handleAddToDraft}
-              disabled={saving}
-              activeOpacity={0.7}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.primaryBtnText}>{t('advisor.addToDraft')}</Text>
-              )}
-            </TouchableOpacity>
+
           </View>
         )}
 
-        <View style={{ height: spacing.xl }} />
-      </ScrollView>
+
+      </GroupModal>}
+      {reviewing && groupId && user && <AssignmentReview groupId={groupId} createdBy={user.id}
+        triplets={Array.from(picked.values())} dueDate={dueDate} memberCount={members.length}
+        onClose={() => setReviewing(false)} onDone={finishReview} onPublish={handleSendToStudents} />}
+      {reviewingDrafts && <GroupModal title={t('taskFlow.review')} onClose={() => setReviewingDrafts(false)} busy={sending}>
+        <GroupContextLabel groupId={groupId} />
+        <Text style={ui.body}>{t('taskFlow.summary', { tasks: selectedDrafts.length, students: members.length })}</Text>
+        {selectedDrafts.map((a) => <View key={a.id} style={ui.card}>
+          <Text style={ui.cardTitle}>{a.title}</Text>
+          <Text style={ui.label}>{t('advisor.assignmentObjective')}</Text><Text style={ui.body}>{a.objective}</Text>
+          <Text style={ui.label}>{t('advisor.assignmentCriterion')}</Text><Text style={ui.body}>{a.criterion}</Text>
+          {!!a.description && <Text style={ui.body}>{a.description}</Text>}
+          {!!a.documentName && <Text style={ui.secondary}>{a.documentName}</Text>}
+          <Text style={ui.secondary}>{t('advisor.assignmentDueDate')}: {a.dueDate
+            ? fromIsoDate(a.dueDate)?.toLocaleDateString(i18n.language) : t('taskFlow.noDate')}</Text>
+        </View>)}
+        {members.length === 0 && <Text style={ui.secondary}>{t('taskFlow.noMembers')}</Text>}
+        <TouchableOpacity style={ui.primary} accessibilityRole="button"
+          disabled={sending || !selectedDrafts.length || !members.length}
+          onPress={() => handleSendToStudents(selectedDrafts)}>
+          {sending ? <ActivityIndicator color="#fff" /> :
+            <Text style={ui.primaryText}>{t('taskFlow.send', { count: selectedDrafts.length })}</Text>}
+        </TouchableOpacity>
+      </GroupModal>}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  draftSelect: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12 },
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -692,6 +655,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    width: '100%', maxWidth: 720, alignSelf: 'center',
   },
   screenTitle: {
     fontSize: 24,
@@ -743,6 +707,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   chip: {
+    minHeight: 48, justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.full,
@@ -770,6 +735,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   levelChip: {
+    minHeight: 48, justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.full,
@@ -801,6 +767,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   tripletRow: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -859,6 +826,7 @@ const styles = StyleSheet.create({
 
   // Due date
   dateField: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -899,6 +867,7 @@ const styles = StyleSheet.create({
 
   // Save button
   primaryBtn: {
+    minHeight: 52,
     backgroundColor: ADVISOR_COLOR,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.sm,

@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import * as Linking from 'expo-linking';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
-import { Input } from '@/components/common/Input';
-import { Button } from '@/components/common/Button';
+import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { colors } from '@/theme';
 
@@ -16,14 +16,15 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const redirectTo = Linking.createURL('reset-password');
 
   function validate(): boolean {
     if (!email.trim()) {
       setError(t('auth.emailRequired'));
       return false;
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError(t('auth.emailRequired'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError(t('authUi.invalidEmail'));
       return false;
     }
     setError('');
@@ -31,11 +32,12 @@ export default function ForgotPasswordScreen() {
   }
 
   async function handleReset() {
+    if (isSubmitting) return;
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      await authService.resetPassword(email.trim());
+      await authService.resetPassword(email.trim(), redirectTo);
       setEmailSent(true);
     } catch (err: any) {
       Alert.alert(t('common.error'), err.message || t('common.error'));
@@ -47,18 +49,19 @@ export default function ForgotPasswordScreen() {
   if (emailSent) {
     return (
       <ScreenWrapper>
-        <View style={styles.container}>
+        <View style={[styles.container, authStyles.container]}>
           <View style={styles.successBox}>
             <Ionicons name="checkmark-circle" size={64} color={colors.success} />
-            <Text style={styles.successTitle}>{t('auth.resetEmailSent')}</Text>
+            <Text style={styles.successTitle} accessibilityLiveRegion="polite">{t('authUi.checkEmail')}</Text>
             <Text style={styles.successText}>
-              {email}
+              {t('authUi.resetSent', { email: email.trim() })}
             </Text>
           </View>
           <Button
             title={t('auth.login')}
             onPress={() => router.replace('/(auth)/login')}
           />
+          <Button title={t('authUi.changeEmail')} variant="ghost" onPress={() => setEmailSent(false)} />
         </View>
       </ScreenWrapper>
     );
@@ -66,16 +69,20 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ScreenWrapper>
-      <View style={styles.container}>
+      <View style={[styles.container, authStyles.container]}>
         <View style={styles.header}>
           <Ionicons name="key-outline" size={48} color={colors.primary} />
           <Text style={styles.title}>{t('auth.resetPassword')}</Text>
           <Text style={styles.description}>
-            Enter your email address and we'll send you a link to reset your password.
+            {t('authUi.resetHint')}
           </Text>
         </View>
 
         <View style={styles.form}>
+          {__DEV__ && <View style={{ gap: 8, marginBottom: 20 }}>
+            <Text style={styles.description}>{t('recoveryUi.redirect')}</Text>
+            <Text selectable style={styles.successText}>{redirectTo}</Text>
+          </View>}
           <Input
             label={t('auth.email')}
             icon="mail-outline"
@@ -86,6 +93,10 @@ export default function ForgotPasswordScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            editable={!isSubmitting}
+            returnKeyType="send"
+            onSubmitEditing={handleReset}
           />
 
           <Button
@@ -96,7 +107,8 @@ export default function ForgotPasswordScreen() {
 
           <Button
             title={t('common.back')}
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(auth)/login')}
+            disabled={isSubmitting}
             variant="ghost"
             style={styles.backButton}
           />
@@ -123,10 +135,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
     paddingHorizontal: 16,
   },
   form: {
@@ -147,7 +159,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   successText: {
-    fontSize: 14,
+    fontSize: 16,
+    lineHeight: 24,
     color: colors.textSecondary,
     textAlign: 'center',
   },

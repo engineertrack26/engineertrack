@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,8 +39,8 @@ export function GroupRow({ title, detail, icon, onPress }: {
   </TouchableOpacity>;
 }
 
-export function GroupModal({ title, onClose, busy = false, children }: PropsWithChildren<{
-  title: string; onClose: () => void; busy?: boolean;
+export function GroupModal({ title, onClose, busy = false, children, footer }: PropsWithChildren<{
+  title: string; onClose: () => void; busy?: boolean; footer?: ReactNode;
 }>) {
   const { t } = useTranslation();
   return <Modal visible animationType="slide" onRequestClose={() => { if (!busy) onClose(); }}>
@@ -56,6 +56,8 @@ export function GroupModal({ title, onClose, busy = false, children }: PropsWith
           </View>
           {children}
         </ScrollView>
+        {!!footer && <View style={{ padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: colors.divider,
+          width: '100%', maxWidth: 720, alignSelf: 'center' }}>{footer}</View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   </Modal>;

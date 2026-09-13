@@ -94,11 +94,13 @@ export const advisorService = {
       return {
         ...row,
         completionPercent: percentByStudent.get(row.id as string) || 0,
+        completionAvailable: percentByStudent.has(row.id as string),
       };
     });
 
     return {
       assignedCount: resolvable.length,
+      progressResolvedCount: percentByStudent.size,
       // Only students whose progress actually resolved are in the average. A
       // student whose RPC failed stays in the list and the headcount -- they
       // are a real assigned student, and hiding them from their advisor is
@@ -508,4 +510,3 @@ export const advisorService = {
     };
   },
 };
-

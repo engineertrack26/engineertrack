@@ -1,334 +1,89 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
-import { LeaderboardRow } from '@/components/gamification';
-import { colors, spacing, borderRadius } from '@/theme';
-import { BackButton, Button, LoadFailedBanner } from '@/components/common';
-import { router } from 'expo-router';
+import { colors } from '@/theme';
+import { BackButton, LoadFailedBanner } from '@/components/common';
+import { ui } from '@/components/common/workflowStyles';
+import { leaderboardName } from '@/utils/studentGrowth';
 
-interface LeaderboardEntry {
-  id: string;
-  total_xp: number;
-  current_level: number;
-  current_streak: number;
-  first_name: string;
-  /** Already reduced to a single character by get_my_group_leaderboard.
-   *  The full surname never leaves the database. */
-  last_initial: string;
-  avatar_url: string | null;
-}
-
-const PODIUM_COLORS = [
-  colors.gamification.gold,
-  colors.gamification.silver,
-  colors.gamification.bronze,
-];
+interface Entry { id: string; xp: number; level: number; first: string; initial: string }
 
 export default function LeaderboardScreen() {
-  const { t } = useTranslation();
-  const user = useAuthStore((s) => s.user);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const userId = useAuthStore((s) => s.user?.id);
+  return userId ? <RankingContent key={userId} studentId={userId} /> : null;
+}
+function RankingContent({ studentId }: { studentId: string }) {
+  const { t, i18n } = useTranslation();
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadData = useCallback(async () => {
-    setLoadFailed(false);
+  const [failed, setFailed] = useState(false);
+  const sequence = useRef(0);
+  const load = useCallback(async () => {
+    const request = ++sequence.current;
+    const current = () => request === sequence.current && useAuthStore.getState().user?.id === studentId;
     try {
       const data = await gamificationService.getGroupLeaderboard(50);
-      const mapped = (data || []).map((item: Record<string, unknown>) => {
-        return {
-          id: item.id as string,
-          total_xp: item.total_xp as number,
-          current_level: item.current_level as number,
-          current_streak: item.current_streak as number,
-          first_name: (item.first_name as string) || '',
-          last_initial: (item.last_initial as string) || '',
-          avatar_url: (item.avatar_url as string) || null,
-        };
-      });
-      setEntries(mapped);
-    } catch (err) {
-      console.error('Leaderboard load error:', err);
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  // get_my_group_leaderboard already returns only the initial, so this
-  // formats what it was given rather than doing the masking itself.
-  const maskName = (firstName: string, lastInitial: string) => {
-    const first = (firstName || '').trim();
-    const initial = (lastInitial || '').trim();
-    if (!first && !initial) return 'Student';
-    if (!initial) return first;
-    return `${first} ${initial.toUpperCase()}.`;
-  };
-
-  const topThree = entries.slice(0, 3);
-  const rest = entries.slice(3);
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <BackButton href="/(student)/dashboard" />
-        <Text style={styles.header}>{t('student.leaderboard')}</Text>
-
-        {entries.length === 0 && loadFailed ? (
-          <LoadFailedBanner onRetry={loadData} />
-        ) : entries.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="podium-outline" size={48} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>{t('flow.rankingEmpty')}</Text>
-            <Text style={styles.emptyText}>{t('flow.rankingHint')}</Text>
-            <Button title={t('student.myTasks')} onPress={() => router.push('/(student)/my-tasks')} style={{ marginTop: spacing.md }} />
+      if (!current()) return;
+      // Keep server order, including its tie-breaking; never re-rank locally.
+      setEntries(data.map((row: Record<string, unknown>) => ({ id: String(row.id), xp: Number(row.total_xp) || 0,
+        level: Number(row.current_level) || 1, first: String(row.first_name || ''), initial: String(row.last_initial || '') })));
+      setFailed(false);
+    } catch {
+      if (current()) { setEntries([]); setFailed(true); }
+    } finally { if (current()) { setLoading(false); setRefreshing(false); } }
+  }, [studentId]);
+  useFocusEffect(useCallback(() => { void load(); return () => { sequence.current += 1; }; }, [load]));
+  const myIndex = entries.findIndex((entry) => entry.id === studentId);
+  return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
+    <FlatList data={entries} keyExtractor={(entry) => entry.id} contentContainerStyle={ui.content}
+      refreshControl={<RefreshControl refreshing={refreshing} colors={[colors.primaryDark]}
+        onRefresh={() => { setRefreshing(true); void load(); }} />}
+      ListHeaderComponent={<View style={{ gap: 16 }}>
+        <BackButton href="/(student)/achievements" />
+        <Text style={ui.title} accessibilityRole="header">{t('student.leaderboard')}</Text>
+        <Text style={ui.secondary}>{t('growthUi.rankingHint')}</Text>
+        {failed && <LoadFailedBanner onRetry={() => void load()} />}
+        {!loading && !failed && entries.length > 0 && <View style={[ui.card, styles.mine]}>
+          <Text style={ui.label}>{t('growthUi.yourPlace')}</Text>
+          {myIndex >= 0 ? <>
+            <Text style={styles.rank}>#{myIndex + 1}</Text>
+            <Text style={ui.body}>{entries[myIndex].xp.toLocaleString(i18n.language)} XP · {t('gamification.level')} {entries[myIndex].level}</Text>
+          </> : <Text style={ui.secondary}>{t('growthUi.notListed')}</Text>}
+        </View>}
+      </View>}
+      ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primaryDark} /> :
+        !failed ? <View style={ui.card}>
+          <Ionicons name="podium-outline" size={32} color={colors.primaryDark} />
+          <Text style={ui.section}>{t('flow.rankingEmpty')}</Text>
+          <Text style={ui.secondary}>{t('flow.rankingHint')}</Text>
+          <TouchableOpacity style={ui.primary} accessibilityRole="button" onPress={() => router.push('/(student)/my-tasks')}>
+            <Text style={ui.primaryText}>{t('student.myTasks')}</Text>
+          </TouchableOpacity>
+        </View> : null}
+      renderItem={({ item, index }) => <View style={[ui.card, item.id === studentId && styles.mine]}>
+        <View style={ui.header}>
+          <View style={styles.position}><Text style={styles.positionText}>#{index + 1}</Text></View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={ui.cardTitle}>{leaderboardName(item.first, item.initial, t('growthUi.student'))}</Text>
+            {item.id === studentId && <Text style={styles.you}>{t('growthUi.you')}</Text>}
           </View>
-        ) : (
-          <FlatList
-            data={rest}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-            }
-            ListHeaderComponent={<>{loadFailed && <LoadFailedBanner onRetry={loadData} />}
-              <>
-                {/* Top 3 Podium */}
-                {topThree.length > 0 && (
-                  <View style={styles.podiumContainer}>
-                    <View style={styles.podiumRow}>
-                      {/* 2nd Place */}
-                      {topThree.length > 1 ? (
-                        <View style={styles.podiumItem}>
-                          <View style={[styles.podiumAvatar, { borderColor: PODIUM_COLORS[1] }]}>
-                            <Ionicons name="person" size={24} color={PODIUM_COLORS[1]} />
-                          </View>
-                          <Text style={styles.podiumName} numberOfLines={1}>
-                            {maskName(topThree[1].first_name, topThree[1].last_initial)}
-                          </Text>
-                          <Text style={styles.podiumXp}>{topThree[1].total_xp} XP</Text>
-                          <View style={[styles.podiumBlock, styles.podiumSecond, { backgroundColor: PODIUM_COLORS[1] }]}>
-                            <Text style={styles.podiumRank}>2</Text>
-                          </View>
-                        </View>
-                      ) : <View style={styles.podiumItem} />}
-
-                      {/* 1st Place */}
-                      <View style={styles.podiumItem}>
-                        <Ionicons name="trophy" size={24} color={PODIUM_COLORS[0]} style={styles.crownIcon} />
-                        <View style={[styles.podiumAvatar, styles.podiumAvatarFirst, { borderColor: PODIUM_COLORS[0] }]}>
-                          <Ionicons name="person" size={28} color={PODIUM_COLORS[0]} />
-                        </View>
-                        <Text style={[styles.podiumName, styles.podiumNameFirst]} numberOfLines={1}>
-                          {maskName(topThree[0].first_name, topThree[0].last_initial)}
-                        </Text>
-                        <Text style={styles.podiumXp}>{topThree[0].total_xp} XP</Text>
-                        <View style={[styles.podiumBlock, styles.podiumFirst, { backgroundColor: PODIUM_COLORS[0] }]}>
-                          <Text style={styles.podiumRank}>1</Text>
-                        </View>
-                      </View>
-
-                      {/* 3rd Place */}
-                      {topThree.length > 2 ? (
-                        <View style={styles.podiumItem}>
-                          <View style={[styles.podiumAvatar, { borderColor: PODIUM_COLORS[2] }]}>
-                            <Ionicons name="person" size={24} color={PODIUM_COLORS[2]} />
-                          </View>
-                          <Text style={styles.podiumName} numberOfLines={1}>
-                            {maskName(topThree[2].first_name, topThree[2].last_initial)}
-                          </Text>
-                          <Text style={styles.podiumXp}>{topThree[2].total_xp} XP</Text>
-                          <View style={[styles.podiumBlock, styles.podiumThird, { backgroundColor: PODIUM_COLORS[2] }]}>
-                            <Text style={styles.podiumRank}>3</Text>
-                          </View>
-                        </View>
-                      ) : <View style={styles.podiumItem} />}
-                    </View>
-                  </View>
-                )}
-
-                {rest.length > 0 && (
-                  <View style={styles.listHeader}>
-                    <Text style={styles.listHeaderText}>Rankings</Text>
-                  </View>
-                )}
-              </>
-            </>}
-            renderItem={({ item, index }) => (
-              <LeaderboardRow
-                rank={index + 4}
-                name={maskName(item.first_name, item.last_initial)}
-                xp={item.total_xp}
-                level={item.current_level}
-                isCurrentUser={item.id === user?.id}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-          />
-        )}
-      </View>
-    </SafeAreaView>
-  );
+          {index < 3 && <Ionicons name="trophy-outline" size={24} color="#805400" />}
+        </View>
+        <Text style={ui.label}>{item.xp.toLocaleString(i18n.language)} XP</Text>
+        <Text style={ui.secondary}>{t('gamification.level')} {item.level}</Text>
+      </View>} />
+  </SafeAreaView>;
 }
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  podiumContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.lg,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  podiumRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-  },
-  podiumItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  crownIcon: {
-    marginBottom: 4,
-  },
-  podiumAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    marginBottom: spacing.xs,
-  },
-  podiumAvatarFirst: {
-    width: 56,
-    height: 56,
-    borderWidth: 3,
-  },
-  podiumName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  podiumNameFirst: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  podiumXp: {
-    fontSize: 11,
-    color: colors.gamification.xp,
-    fontWeight: '600',
-    marginTop: 2,
-    marginBottom: spacing.sm,
-  },
-  podiumBlock: {
-    width: '80%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderTopLeftRadius: borderRadius.sm,
-    borderTopRightRadius: borderRadius.sm,
-  },
-  podiumFirst: {
-    height: 60,
-  },
-  podiumSecond: {
-    height: 44,
-  },
-  podiumThird: {
-    height: 32,
-  },
-  podiumRank: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  listHeader: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  listHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
+  mine: { backgroundColor: '#eaf1fb', borderColor: colors.primaryDark },
+  rank: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
+  position: { minWidth: 48, minHeight: 48, borderRadius: 12, padding: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f4f8' },
+  positionText: { fontSize: 18, fontWeight: '700', color: colors.text },
+  you: { fontSize: 14, color: colors.primaryDark, fontWeight: '700' },
 });

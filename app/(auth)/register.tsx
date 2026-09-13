@@ -4,8 +4,7 @@ import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
-import { Input } from '@/components/common/Input';
-import { Button } from '@/components/common/Button';
+import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
@@ -36,26 +35,20 @@ export default function RegisterScreen() {
     const newErrors: Record<string, string> = {};
 
     if (!firstName.trim()) {
-      newErrors.firstName = t('auth.emailRequired').replace(
-        t('auth.email'),
-        t('auth.firstName'),
-      );
+      newErrors.firstName = t('authUi.required', { field: t('auth.firstName') });
     }
     if (!lastName.trim()) {
-      newErrors.lastName = t('auth.emailRequired').replace(
-        t('auth.email'),
-        t('auth.lastName'),
-      );
+      newErrors.lastName = t('authUi.required', { field: t('auth.lastName') });
     }
     if (!email.trim()) {
       newErrors.email = t('auth.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = t('auth.emailRequired');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = t('authUi.invalidEmail');
     }
     if (!password) {
       newErrors.password = t('auth.passwordRequired');
     } else if (password.length < 6) {
-      newErrors.password = t('auth.passwordRequired');
+      newErrors.password = t('authUi.passwordHint');
     }
     if (password !== confirmPassword) {
       newErrors.confirmPassword = t('auth.passwordMismatch');
@@ -70,6 +63,7 @@ export default function RegisterScreen() {
   }
 
   async function handleRegister() {
+    if (isSubmitting) return;
     if (!validate()) {
       Alert.alert(
         t('common.error'),
@@ -112,7 +106,7 @@ export default function RegisterScreen() {
 
   return (
     <ScreenWrapper>
-      <View style={styles.container}>
+      <View style={[styles.container, authStyles.container]}>
         <View style={styles.header}>
           <Image
             source={require('../../assets/icon.png')}
@@ -134,6 +128,8 @@ export default function RegisterScreen() {
                 onChangeText={setFirstName}
                 error={errors.firstName}
                 autoCapitalize="words"
+                autoComplete="given-name"
+                editable={!isSubmitting}
               />
             </View>
             <View style={styles.nameField}>
@@ -145,6 +141,8 @@ export default function RegisterScreen() {
                 onChangeText={setLastName}
                 error={errors.lastName}
                 autoCapitalize="words"
+                autoComplete="family-name"
+                editable={!isSubmitting}
               />
             </View>
           </View>
@@ -159,6 +157,8 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            editable={!isSubmitting}
           />
 
           <Input
@@ -169,7 +169,10 @@ export default function RegisterScreen() {
             onChangeText={setPassword}
             error={errors.password}
             isPassword
+            autoComplete="new-password"
+            editable={!isSubmitting}
           />
+          <Text style={styles.passwordHint}>{t('authUi.passwordHint')}</Text>
 
           <Input
             label={t('auth.confirmPassword')}
@@ -179,6 +182,9 @@ export default function RegisterScreen() {
             onChangeText={setConfirmPassword}
             error={errors.confirmPassword}
             isPassword
+            autoComplete="new-password"
+            editable={!isSubmitting}
+            returnKeyType="done"
           />
 
           {/* Role Selection */}
@@ -196,6 +202,9 @@ export default function RegisterScreen() {
                   ]}
                   onPress={() => setRole(item.key)}
                   activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: isActive, disabled: isSubmitting }}
+                  disabled={isSubmitting}
                 >
                   <Text style={styles.roleIcon}>{item.icon}</Text>
                   <Text
@@ -206,6 +215,7 @@ export default function RegisterScreen() {
                   >
                     {t(`auth.${item.key}`)}
                   </Text>
+                  <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={24} color={isActive ? colors.primaryDark : colors.textSecondary} />
                 </TouchableOpacity>
               );
             })}
@@ -216,6 +226,8 @@ export default function RegisterScreen() {
               onPress={() => setConsentAccepted((value) => !value)}
               style={styles.checkbox}
               accessibilityRole="checkbox"
+              accessibilityLabel={t('legal.privacy.consentCheckbox')}
+              disabled={isSubmitting}
               accessibilityState={{ checked: consentAccepted }}
             >
               <Ionicons
@@ -224,15 +236,17 @@ export default function RegisterScreen() {
                 color={consentAccepted ? colors.primary : colors.textSecondary}
               />
             </TouchableOpacity>
-            <TouchableOpacity
+            <View
               style={styles.consentTextWrap}
-              onPress={() => router.push('/(auth)/privacy-policy')}
             >
               <Text style={styles.consentText}>
                 {t('legal.privacy.consentCheckbox')}
               </Text>
-              <Text style={styles.consentLink}>{t('legal.privacy.readPolicy')}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" disabled={isSubmitting} style={styles.policyLink}
+                onPress={() => router.push('/(auth)/privacy-policy')}>
+                <Text style={styles.consentLink}>{t('legal.privacy.readPolicy')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           {errors.consent && <Text style={styles.errorText}>{errors.consent}</Text>}
 
@@ -247,10 +261,10 @@ export default function RegisterScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Already have an account?{' '}
+            {t('authUi.hasAccount')}
           </Text>
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity style={authStyles.button} accessibilityRole="button" disabled={isSubmitting}>
               <Text style={styles.footerLink}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </Link>
@@ -288,11 +302,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   nameRow: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: 'column',
   },
   nameField: {
-    flex: 1,
+    width: '100%',
   },
   label: {
     fontSize: 14,
@@ -301,12 +314,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   roleRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     marginBottom: 24,
   },
   roleCard: {
-    flex: 1,
+    flexDirection: 'row',
+    minHeight: 56,
+    gap: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 12,
@@ -323,7 +339,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   roleText: {
-    fontSize: 13,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '500',
     color: colors.textSecondary,
   },
@@ -341,18 +358,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   checkbox: {
-    paddingTop: 1,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   consentTextWrap: {
     flex: 1,
   },
   consentText: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 23,
     color: colors.textSecondary,
   },
   consentLink: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.primary,
     marginTop: 2,
@@ -365,6 +385,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -377,4 +398,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
   },
+  passwordHint: { fontSize: 14, lineHeight: 21, color: colors.textSecondary, marginTop: -8, marginBottom: 18 },
+  policyLink: { minHeight: 48, justifyContent: 'center' },
 });

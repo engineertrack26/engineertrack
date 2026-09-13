@@ -1,521 +1,202 @@
-import { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
-import { advisorService } from '@/services/advisor';
+import { advisorDashboardViewService } from '@/services/advisorDashboardView';
 import { notificationService } from '@/services/notifications';
-import { StatCard, LoadFailedBanner } from '@/components/common';
-import { AdvisorBell } from '@/components/advisor/GroupUI';
+import { LoadFailedBanner } from '@/components/common';
+import { AdvisorBell, GroupRow, groupStyles } from '@/components/advisor/GroupUI';
+import { ui } from '@/components/common/workflowStyles';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
-import { colors, spacing, borderRadius } from '@/theme';
+import { groupCenterRoute } from '@/utils/advisorGroups';
+import { colors } from '@/theme';
 
-interface StudentItem {
-  id: string;
-  firstName: string;
-  lastName: string;
-  totalXp: number;
-  currentLevel: number;
-  currentStreak: number;
-  companyName?: string;
-  completionPct: number;
-}
-
-function mapStudent(row: Record<string, unknown>): StudentItem {
-  const profile = row.profiles as Record<string, unknown> | null;
-  // Competency attainment, computed once in the service so this screen and
-  // the reports screen quote the same number for the same student.
-  const completionPct = (row.completionPercent as number) || 0;
-  return {
-    id: row.id as string,
-    firstName: (profile?.first_name as string) || '',
-    lastName: (profile?.last_name as string) || '',
-    totalXp: (row.total_xp as number) || 0,
-    currentLevel: (row.current_level as number) || 1,
-    currentStreak: (row.current_streak as number) || 0,
-    companyName: (row.company_name as string) || undefined,
-    completionPct,
-  };
-}
+type DashboardData = Awaited<ReturnType<typeof advisorDashboardViewService.load>>;
 
 export default function AdvisorDashboard() {
-  const router = useRouter();
+  const userId = useAuthStore((s) => s.user?.id);
+  return userId ? <DashboardContent key={userId} advisorId={userId} /> : null;
+}
+
+function DashboardContent({ advisorId }: { advisorId: string }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-
+  const { width, fontScale } = useWindowDimensions();
+  const stacked = width < 370 || fontScale > 1.25;
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    assignedCount: 0,
-    avgCompletion: 0,
-  });
-  const [students, setStudents] = useState<StudentItem[]>([]);
-  const [inactiveStudents, setInactiveStudents] = useState<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    daysSinceLastSubmission: number | null;
-  }[]>([]);
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    setLoadFailed(false);
+  const [focused, setFocused] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [sending, setSending] = useState<Set<string>>(new Set());
+  const [sent, setSent] = useState<Set<string>>(new Set());
+  const locks = useRef(new Set<string>());
+  const delivered = useRef(new Set<string>());
+  const sequence = useRef(0);
+  const active = useRef(false);
+  const load = useCallback(async () => {
+    const request = ++sequence.current;
     try {
-      const result = await advisorService.getDashboardStats(user.id);
-      setStats({
-        assignedCount: result.assignedCount,
-        avgCompletion: result.avgCompletion,
-      });
-      setStudents(
-        (result.students || []).slice(0, 5).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
-      );
-
-      // Load inactive students
-      try {
-        const inactive = await advisorService.getInactiveStudents(user.id);
-        setInactiveStudents(inactive);
-      } catch {
-        setInactiveStudents([]);
-      }
-    } catch (err) {
-      console.error('Advisor dashboard load error:', err);
-      setLoadFailed(true);
+      const result = await advisorDashboardViewService.load(advisorId);
+      if (request === sequence.current && useAuthStore.getState().user?.id === advisorId) setData(result);
     } finally {
-      setLoading(false);
+      if (request === sequence.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
-
-  // Realtime: auto-refresh when students submit work. This used to listen on
-  // daily_logs -- a table nothing writes to any more, so the screen refreshed
-  // on nothing and stayed stale when real work arrived.
+  }, [advisorId]);
+  useFocusEffect(useCallback(() => {
+    active.current = true; setFocused(true); void load();
+    return () => { active.current = false; sequence.current += 1; setFocused(false); };
+  }, [load]));
   useRealtimeSubscription({
-    table: 'assignment_submissions',
-    event: '*',
-    enabled: !!user,
-    onPayload: () => {
-      loadData();
-    },
+    table: 'assignment_submissions', event: '*', enabled: focused,
+    onPayload: () => { if (active.current) void load(); },
   });
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
+  const stats = data?.stats.status === 'fulfilled' ? data.stats.value : null;
+  const groups = data?.groups.status === 'fulfilled' ? data.groups.value.filter((g) => !g.isArchived) : null;
+  const counts = data?.counts.status === 'fulfilled' ? data.counts.value : null;
+  const followUp = data?.followUp.status === 'fulfilled' ? data.followUp.value : null;
+  const partial = !!data && Object.values(data).some((result) => result.status === 'rejected');
+  const progressPartial = !!stats && stats.progressResolvedCount < stats.assignedCount;
+  const progressKnown = !!stats && stats.assignedCount > 0 && stats.progressResolvedCount > 0;
+  const openGroups = () => router.push({ pathname: '/(advisor)/groups', params: { groupId: '' } });
+  const visibleFollowUp = expanded ? followUp : followUp?.slice(0, 3);
 
-  const handleSendReminder = async (studentId: string, studentName: string) => {
-    if (!user) return;
-    const advisorName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Your advisor';
+  function confirmReminder(studentId: string, name: string) {
+    if (locks.current.has(studentId) || delivered.current.has(studentId)) return;
+    Alert.alert(t('advisorHome.remind'), t('advisorHome.confirmReminder', { name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('advisorHome.remind'), onPress: () => { void sendReminder(studentId, name); } },
+    ]);
+  }
+  async function sendReminder(studentId: string, name: string) {
+    if (locks.current.has(studentId) || delivered.current.has(studentId) ||
+        useAuthStore.getState().user?.id !== advisorId || !active.current) return;
+    locks.current.add(studentId); setSending(new Set(locks.current));
     try {
-      await notificationService.create(
-        studentId,
-        t('advisor.reminderTitle'),
-        t('advisor.reminderBody', { advisor: advisorName }),
-        'general',
-        {},
-      );
-      Alert.alert('Sent', `Reminder sent to ${studentName}.`);
-    } catch (err) {
-      console.warn('Reminder notification failed:', err);
-      Alert.alert('Error', 'Failed to send reminder.');
-    }
-  };
-
-  const getInitials = (first: string, last: string) =>
-    `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
+      const advisor = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
+      await notificationService.create(studentId, t('advisor.reminderTitle'),
+        t('advisor.reminderBody', { advisor }), 'general', {});
+      delivered.current.add(studentId);
+      if (useAuthStore.getState().user?.id !== advisorId) return;
+      setSent(new Set(delivered.current));
+      Alert.alert(t('common.done'), t('advisorHome.reminderSent', { name }));
+    } catch {
+      if (useAuthStore.getState().user?.id === advisorId)
+        Alert.alert(t('common.error'), t('advisorHome.reminderFailed'));
+    } finally { locks.current.delete(studentId); setSending(new Set(locks.current)); }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-        }
-      >
-        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.greeting} numberOfLines={1}>
-              Hello, {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Advisor'}
-            </Text>
-            <Text style={styles.subtitle}>Advisor Dashboard</Text>
+  return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
+    <ScrollView contentContainerStyle={ui.content}
+      refreshControl={<RefreshControl refreshing={refreshing} colors={[colors.primaryDark]}
+        onRefresh={() => { setRefreshing(true); void load(); }} />}>
+      <View style={ui.header}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={ui.secondary}>{t('advisorHome.greeting', { name: user?.firstName || '' })}</Text>
+          <Text style={ui.title} accessibilityRole="header">{t('advisorHome.title')}</Text>
+        </View>
+        <AdvisorBell />
+      </View>
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}><Ionicons name="school-outline" size={28} color={colors.primaryDark} /></View>
+        <Text style={ui.cardTitle}>{t('advisorHome.heroTitle')}</Text>
+        <Text style={ui.body}>{t('advisorHome.heroBody')}</Text>
+        <TouchableOpacity accessibilityRole="button" style={ui.primary} onPress={openGroups}>
+          <Text style={ui.primaryText}>{t('advisorHome.openGroups')}</Text>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+      {loading && !data ? <ActivityIndicator size="large" color={colors.primaryDark} /> : <>
+        {partial && <LoadFailedBanner onRetry={() => void load()} />}
+        <View style={[styles.metrics, stacked && { flexDirection: 'column' }]}>
+          <Metric label={t('advisorHome.activeGroups')} value={groups?.length} />
+          <Metric label={t('advisorHome.activeStudents')} value={stats?.assignedCount} />
+        </View>
+        <View style={ui.card}>
+          <View style={ui.header}>
+            <Ionicons name="trending-up-outline" size={24} color={colors.primaryDark} />
+            <Text style={[ui.label, { flex: 1 }]}>{t('advisorHome.progress')}</Text>
+            <Text style={styles.percent}>{progressKnown ? stats.avgCompletion + '%' : '—'}</Text>
           </View>
-          <AdvisorBell />
-          <TouchableOpacity
-            style={styles.avatarPlaceholder}
-            onPress={() => router.push('/(advisor)/profile')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="person" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <Text style={ui.secondary}>{t(progressPartial ? 'advisorHome.partialProgress' : 'advisorHome.progressHint')}</Text>
+          {progressKnown && <View style={styles.track} accessible accessibilityRole="progressbar"
+            accessibilityLabel={t('advisorHome.progress')} accessibilityValue={{ min: 0, max: 100, now: stats.avgCompletion }}>
+            <View style={[styles.fill, { width: `${Math.max(0, Math.min(100, stats.avgCompletion))}%` }]} />
+          </View>}
         </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statsRow}>
-            <StatCard
-              title="Active Students"
-              value={stats.assignedCount}
-              icon="people"
-              color={colors.primary}
-            />
-            <View style={{ width: spacing.sm }} />
-            <StatCard
-              title="Avg Completion"
-              value={`${stats.avgCompletion}%`}
-              icon="trending-up"
-              color={colors.info}
-            />
-          </View>
-        </View>
-
-        {/* Intervention Alerts */}
-        {inactiveStudents.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Intervention Alerts
-                <Text style={styles.alertCountBadge}> ({inactiveStudents.length})</Text>
-              </Text>
-            </View>
-            {inactiveStudents.map((student) => (
-              <View key={student.id} style={styles.alertCard}>
-                <View style={styles.alertIconWrap}>
-                  <Ionicons name="alert-circle" size={24} color={colors.error} />
-                </View>
-                <View style={styles.alertInfo}>
-                  <Text style={styles.alertName}>
-                    {student.firstName} {student.lastName}
-                  </Text>
-                  <Text style={styles.alertDesc}>
-                    {student.daysSinceLastSubmission === null
-                      ? t('advisor.noSubmissionsYet')
-                      : t('advisor.daysSinceLastSubmission', {
-                          count: student.daysSinceLastSubmission,
-                        })}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.reminderBtn}
-                  onPress={() =>
-                    handleSendReminder(student.id, `${student.firstName} ${student.lastName}`)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="notifications-outline" size={16} color="#fff" />
-                  <Text style={styles.reminderBtnText}>Remind</Text>
+        <View style={{ gap: 12 }}>
+          <Text style={ui.section} accessibilityRole="header">{t('advisorHome.followUp')}{followUp ? ' (' + followUp.length + ')' : ''}</Text>
+          <Text style={ui.secondary}>{t('advisorHome.followUpHint')}</Text>
+          {followUp === null ? <Text style={ui.body}>{t('advisorHome.unavailable')}</Text> :
+            followUp.length === 0 ? <View style={styles.calm}>
+              <Ionicons name="checkmark-circle-outline" size={24} color={colors.primaryDark} />
+              <Text style={[ui.body, { flex: 1 }]}>{t('advisorHome.allClear')}</Text>
+            </View> : visibleFollowUp?.map((student) => {
+              const name = [student.firstName, student.lastName].filter(Boolean).join(' ');
+              const busy = sending.has(student.id);
+              const done = sent.has(student.id);
+              return <View style={[ui.card, styles.followCard]} key={student.id}>
+                <Text style={ui.label}>{name}</Text>
+                <Text style={ui.secondary}>{student.daysSinceLastSubmission === null
+                  ? t('advisor.noSubmissionsYet') : t('advisor.daysSinceLastSubmission', { count: student.daysSinceLastSubmission })}</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('advisorHome.reminderFor', { name })}
+                  accessibilityState={{ disabled: busy || done, busy }} style={groupStyles.outline}
+                  disabled={busy || done} onPress={() => confirmReminder(student.id, name)}>
+                  {busy ? <ActivityIndicator color={colors.primaryDark} /> :
+                    <Text style={groupStyles.linkText}>{t(done ? 'advisorHome.sent' : 'advisorHome.remind')}</Text>}
                 </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Student Overview */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Student Overview</Text>
-            {students.length > 0 && (
-              <TouchableOpacity onPress={() => router.push('/(advisor)/student-monitor')}>
-                <Text style={styles.seeAll}>See all</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {students.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Ionicons name="people-outline" size={40} color={colors.textDisabled} />
-              <Text style={styles.emptyTitle}>No students yet</Text>
-              <Text style={styles.emptyText}>Students will appear here once assigned.</Text>
-            </View>
-          ) : (
-            students.map((student) => (
-              <TouchableOpacity
-                key={student.id}
-                style={styles.studentCard}
-                onPress={() => router.push('/(advisor)/student-monitor')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.studentAvatar}>
-                  <Text style={styles.studentInitials}>
-                    {getInitials(student.firstName, student.lastName)}
-                  </Text>
-                </View>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName} numberOfLines={1}>
-                    {student.firstName} {student.lastName}
-                  </Text>
-                  {student.companyName && (
-                    <Text style={styles.companyName} numberOfLines={1}>{student.companyName}</Text>
-                  )}
-                  <View style={styles.studentMeta}>
-                    <View style={styles.metaItem}>
-                      <Ionicons name="flash" size={13} color={colors.gamification.xp} />
-                      <Text style={styles.metaText}>{student.totalXp} XP</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <Ionicons name="arrow-up-circle" size={13} color={colors.gamification.levelUp} />
-                      <Text style={styles.metaText}>Lvl {student.currentLevel}</Text>
-                    </View>
-                    {student.currentStreak > 0 && (
-                      <View style={styles.metaItem}>
-                        <Ionicons name="flame" size={13} color={colors.gamification.streak} />
-                        <Text style={styles.metaText}>{student.currentStreak}w</Text>
-                      </View>
-                    )}
-                    <View style={styles.metaItem}>
-                      <Ionicons name="pie-chart" size={13} color={colors.info} />
-                      <Text style={styles.metaText}>{student.completionPct}%</Text>
-                    </View>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />
-              </TouchableOpacity>
-            ))
-          )}
+              </View>;
+            })}
+          {!!followUp && followUp.length > 3 && <TouchableOpacity accessibilityRole="button"
+            accessibilityState={{ expanded }} onPress={() => setExpanded((value) => !value)}>
+            <Text style={ui.link}>{t(expanded ? 'advisorHome.showLess' : 'advisorHome.showAll')}</Text>
+          </TouchableOpacity>}
         </View>
 
-        <View style={{ height: spacing.xl }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
+        <Text style={ui.section} accessibilityRole="header">{t('advisorHome.activeGroups')}</Text>
+        {groups === null ? <Text style={ui.body}>{t('advisorHome.unavailable')}</Text> :
+          groups.length === 0 ? <View style={ui.card}>
+            <Text style={ui.label}>{t('advisorGroups.noActive')}</Text>
+            <Text style={ui.secondary}>{t('advisorGroups.createHint')}</Text>
+          </View> : groups.slice(0, 3).map((group) =>
+            <GroupRow key={group.id} title={group.name} icon="people-outline"
+              detail={[group.term, counts ? t('advisorGroups.memberCount', { count: counts[group.id] ?? 0 })
+                : t('advisorGroups.countUnavailable')].filter(Boolean).join(' · ')}
+              onPress={() => router.push(groupCenterRoute(group.id))} />)}
+        <TouchableOpacity accessibilityRole="button" style={groupStyles.outline} onPress={openGroups}>
+          <Text style={groupStyles.linkText}>{t('advisorHome.openGroups')}</Text>
+        </TouchableOpacity>
+        <Text style={ui.section} accessibilityRole="header">{t('advisorHome.tools')}</Text>
+        <GroupRow title={t('advisorGroups.viewStudents')} detail={t('advisorGroups.membersHint')}
+          icon="person-outline" onPress={() => router.push('/(advisor)/student-monitor')} />
+        <GroupRow title={t('advisorGroups.reportsTitle')} detail={t('advisorHome.reportsHint')}
+          icon="bar-chart-outline" onPress={() => router.push('/(advisor)/reports')} />
+      </>}
+    </ScrollView>
+  </SafeAreaView>;
+}
+
+function Metric({ label, value }: { label: string; value?: number }) {
+  const { t } = useTranslation();
+  return <View style={[ui.card, { flex: 1 }]} accessible
+    accessibilityLabel={label + ': ' + (value ?? t('advisorHome.unavailable'))}>
+    <Text style={styles.metricValue}>{value ?? '—'}</Text><Text style={ui.secondary}>{label}</Text>
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  headerText: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Stats
-  statsGrid: {
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  statsRow: {
-    flexDirection: 'row',
-  },
-
-  // Sections
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  seeAll: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-
-  // Intervention Alerts
-  alertCountBadge: {
-    color: colors.error,
-    fontWeight: '700',
-  },
-  alertCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.error + '08',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.error,
-  },
-  alertIconWrap: {
-    marginRight: spacing.sm,
-  },
-  alertInfo: {
-    flex: 1,
-  },
-  alertName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  alertDesc: {
-    fontSize: 12,
-    color: colors.error,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  reminderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    marginLeft: spacing.sm,
-  },
-  reminderBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-  },
-
-  // Empty
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.xl,
-    alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-
-  // Student Cards
-  studentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-  },
-  studentAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  studentInitials: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  studentInfo: {
-    flex: 1,
-  },
-  studentName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  companyName: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 1,
-  },
-  studentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: 4,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  metaText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
+  hero: { backgroundColor: '#eaf1fb', borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: '#cadcf7' },
+  heroIcon: { backgroundColor: '#fff', width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  metrics: { flexDirection: 'row', gap: 12 },
+  metricValue: { fontSize: 30, fontWeight: '700', color: colors.text },
+  percent: { fontSize: 22, fontWeight: '700', color: colors.primaryDark },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden' },
+  fill: { height: 8, backgroundColor: colors.primaryDark, borderRadius: 4 },
+  calm: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#eaf1fb', borderRadius: 16, padding: 16 },
+  followCard: { borderLeftWidth: 4, borderLeftColor: '#9b6919' },
 });

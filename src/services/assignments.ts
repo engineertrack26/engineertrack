@@ -117,12 +117,14 @@ export const assignmentService = {
   },
 
   async createAssignment(input: {
+    id?: string;
     groupId: string; tripletId: string; title: string; description?: string;
     objective: string; criterion: string; dueDate?: string; createdBy: string;
   }): Promise<GroupAssignment> {
     const { data, error } = await supabase
       .from('group_assignments')
       .insert({
+        ...(input.id ? { id: input.id } : {}),
         group_id: input.groupId,
         triplet_id: input.tripletId,
         title: input.title,
@@ -142,6 +144,14 @@ export const assignmentService = {
     // a code we have a message for.
     if (error) throw new RpcError(error.message);
     return toAssignment(data as Record<string, unknown>);
+  },
+
+  /** Recover an interrupted composer insert by its stable client ID, never by title. */
+  async findPreparedAssignment(id: string, groupId: string, createdBy: string): Promise<GroupAssignment | null> {
+    const { data, error } = await supabase.from('group_assignments').select('*')
+      .eq('id', id).eq('group_id', groupId).eq('created_by', createdBy).maybeSingle();
+    if (error) throw error;
+    return data ? toAssignment(data as Record<string, unknown>) : null;
   },
 
   async listGroupAssignments(groupId: string): Promise<GroupAssignment[]> {

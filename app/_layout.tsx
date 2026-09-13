@@ -1,4 +1,6 @@
 import '../global.css';
+import * as Linking from 'expo-linking';
+import { captureRecoveryLink } from '@/utils/recoveryLinkInbox';
 import { useEffect, useRef, useState } from 'react';
 import { Slot, useRouter, useSegments, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -88,7 +90,7 @@ const ROLE_GROUPS = ['(student)', '(mentor)', '(advisor)'];
 // the consent gate that app/index.tsx sends them to, and the privacy policy,
 // which every role's profile links to. Without this exemption the bounce-back
 // below fights the consent gate in an infinite redirect loop.
-const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy'];
+const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy', 'reset-password', 'forgot-password'];
 
 export default function RootLayout() {
   const { t } = useTranslation();
@@ -98,12 +100,17 @@ export default function RootLayout() {
   const resetNotificationStore = useNotificationStore((s) => s.reset);
   const resetGroupStore = useGroupStore((s) => s.reset);
   const segments = useSegments();
+  const isRecoveryRoute = segments[0] === '(auth)' && (segments as string[])[1] === 'reset-password';
   const router = useRouter();
   const [appReady, setAppReady] = useState(false);
   const [startupFailed, setStartupFailed] = useState(false);
   const [startupAttempt, setStartupAttempt] = useState(0);
   const notificationListener = useRef<Notifications.EventSubscription>(null);
   const responseListener = useRef<Notifications.EventSubscription>(null);
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => captureRecoveryLink(url));
+    return () => subscription.remove();
+  }, []);
 
   // The user id the push token was last registered for. Registration must
   // run once per sign-in, not once per app launch: SIGNED_OUT clears the
@@ -321,7 +328,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="auto" />
         <Slot />
-        {!appReady && <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.background,
+        {!appReady && !isRecoveryRoute && <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.background,
           alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
           {startupFailed ? <>
             <Text accessibilityRole="alert" style={{ fontSize: 18, color: colors.text, textAlign: 'center' }}>

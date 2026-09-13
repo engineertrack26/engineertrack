@@ -1,391 +1,142 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
-import { gamificationService } from '@/services/gamification';
-import { competencyService } from '@/services/competency';
-import { supabase } from '@/services/supabase';
-import { ProgressBar, LoadFailedBanner } from '@/components/common';
-import { BadgeCard } from '@/components/gamification';
+import { studentGrowthViewService } from '@/services/studentGrowthView';
+import { LoadFailedBanner } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
-import { BADGES, LEVELS } from '@/types/gamification';
-import { colors, spacing, borderRadius } from '@/theme';
-import type { CompetencyProgress } from '@/types/competency';
+import { ui } from '@/components/common/workflowStyles';
+import { BADGES } from '@/types/gamification';
+import { growthLevel, growthReason } from '@/utils/studentGrowth';
+import { colors } from '@/theme';
 
-interface XpTransaction {
-  id: string;
-  amount: number;
-  reason: string;
-  created_at: string;
-}
+type GrowthData = Awaited<ReturnType<typeof studentGrowthViewService.load>>;
 
 export default function AchievementsScreen() {
-  const { t } = useTranslation();
-  const user = useAuthStore((s) => s.user);
-  const { totalXp, currentLevel, earnedBadges, setEarnedBadges, setXp, setLevel, setStreak } =
-    useGamificationStore();
-  const [xpHistory, setXpHistory] = useState<XpTransaction[]>([]);
-  const [progress, setProgress] = useState<CompetencyProgress[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const currentLevelData = LEVELS.find((l) => l.level === currentLevel) || LEVELS[0];
-  const nextLevelData = LEVELS.find((l) => l.level === currentLevel + 1);
-  const xpProgress = nextLevelData
-    ? (totalXp - currentLevelData.minXp) / (nextLevelData.minXp - currentLevelData.minXp)
-    : 1;
-  const xpToNextLevel = nextLevelData ? nextLevelData.minXp - totalXp : 0;
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    setLoadFailed(false);
-    try {
-      const [badges, history, profileRes, competencyProgress] = await Promise.all([
-        gamificationService.getEarnedBadges(user.id),
-        gamificationService.getXpHistory(user.id),
-        supabase
-          .from('student_profiles')
-          .select('total_xp, current_level, current_streak, longest_streak')
-          .eq('id', user.id)
-          .single(),
-        competencyService.getProgress(user.id).catch(() => []),
-      ]);
-
-      setEarnedBadges((badges || []).map((b: Record<string, unknown>) => b.badge_key as string));
-      setXpHistory((history || []).slice(0, 10) as XpTransaction[]);
-      setProgress(competencyProgress);
-
-      if (profileRes.data) {
-        setXp(profileRes.data.total_xp || 0);
-        setLevel(profileRes.data.current_level || 1);
-        setStreak(
-          profileRes.data.current_streak || 0,
-          profileRes.data.longest_streak || 0,
-        );
-      }
-    } catch (err) {
-      console.error('Achievements load error:', err);
-      setLoadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, setEarnedBadges, setXp, setLevel, setStreak]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  const formatReason = (reason: string): string => {
-    // Reasons like 'assignment_submitted:9f3c8a2e-…' and the pre-existing
-    // 'assignment_approved:<id>' carry a trailing id after the first colon;
-    // strip it before formatting so the UUID never reaches the screen.
-    return reason
-      .split(':')[0]
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-        }
-      >
-        {loadFailed && <LoadFailedBanner onRetry={loadData} />}
-        <StudentHeader title={t('studentFlow.growth')} />
-
-        {/* Level Section */}
-        <View style={styles.levelCard}>
-          <View style={styles.levelHeader}>
-            <View style={styles.levelIcon}>
-              <Ionicons name="shield-checkmark" size={28} color={colors.gamification.levelUp} />
-            </View>
-            <View style={styles.levelInfo}>
-              <Text style={styles.levelLabel}>{t('gamification.level')} {currentLevel}</Text>
-              <Text style={styles.levelName}>{t(currentLevelData.nameKey)}</Text>
-            </View>
-            <View style={styles.xpBadge}>
-              <Ionicons name="flash" size={14} color={colors.gamification.xp} />
-              <Text style={styles.xpBadgeText}>{totalXp} XP</Text>
-            </View>
-          </View>
-          <ProgressBar
-            progress={xpProgress}
-            color={colors.gamification.levelUp}
-            height={10}
-          />
-          {nextLevelData ? (
-            <Text style={styles.xpHint}>
-              {xpToNextLevel} XP to {t(nextLevelData.nameKey)} (Level {nextLevelData.level})
-            </Text>
-          ) : (
-            <Text style={styles.xpHint}>Maximum level reached!</Text>
-          )}
-        </View>
-
-        {/* Badges Grid */}
-        <Text style={styles.sectionTitle}>{t('gamification.badges')}</Text>
-        <View style={styles.badgesGrid}>
-          {BADGES.map((badge, index) => {
-            const isEarned = earnedBadges.includes(badge.key);
-            return (
-              <View
-                key={badge.id}
-                style={[
-                  styles.badgeWrapper,
-                  index % 2 === 0 ? styles.badgeLeft : styles.badgeRight,
-                ]}
-              >
-                <BadgeCard badge={badge} earned={isEarned} />
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Competency Progress */}
-        {progress.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>{t('student.myCompetencies')}</Text>
-            <View style={styles.historyCard}>
-              {progress.map((p) => (
-                <View key={p.competencyId} style={styles.competencyRow}>
-                  <Text style={styles.competencyName}>{p.name}</Text>
-                  <Text style={styles.competencyLevel}>
-                    {p.currentLevel === 0
-                      ? t('student.competencyNotStarted')
-                      : p.currentLevel >= p.targetLevel
-                        ? t('student.competencyComplete')
-                        : t('student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* XP History */}
-        {xpHistory.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Recent XP</Text>
-            <View style={styles.historyCard}>
-              {xpHistory.map((tx, i) => (
-                <View
-                  key={tx.id}
-                  style={[styles.historyRow, i < xpHistory.length - 1 && styles.historyBorder]}
-                >
-                  <View style={styles.historyLeft}>
-                    <Ionicons
-                      name={tx.amount > 0 ? 'arrow-up-circle' : 'arrow-down-circle'}
-                      size={20}
-                      color={tx.amount > 0 ? colors.success : colors.error}
-                    />
-                    <Text style={styles.historyReason}>{formatReason(tx.reason)}</Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.historyAmount,
-                      { color: tx.amount > 0 ? colors.success : colors.error },
-                    ]}
-                  >
-                    {tx.amount > 0 ? '+' : ''}{tx.amount} XP
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        <View style={{ height: spacing.xxl }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
+  const userId = useAuthStore((s) => s.user?.id);
+  return userId ? <GrowthContent key={userId} studentId={userId} /> : null;
 }
-
+function GrowthContent({ studentId }: { studentId: string }) {
+  const { t, i18n } = useTranslation();
+  const [data, setData] = useState<GrowthData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [tab, setTab] = useState<'badges' | 'competencies' | 'history'>('badges');
+  const [earnedOnly, setEarnedOnly] = useState(false);
+  const sequence = useRef(0);
+  const load = useCallback(async () => {
+    const request = ++sequence.current;
+    const result = await studentGrowthViewService.load(studentId);
+    if (sequence.current !== request || useAuthStore.getState().user?.id !== studentId) return;
+    setData(result);
+    // Keep the existing shared counters in sync, only after a successful read
+    // for the account that is still signed in. The screen never renders old store values.
+    const store = useGamificationStore.getState();
+    if (result.profile.status === 'fulfilled') {
+      const profile = result.profile.value;
+      store.setXp(profile.totalXp); store.setLevel(profile.currentLevel);
+      store.setStreak(profile.currentStreak, profile.longestStreak);
+    }
+    if (result.badges.status === 'fulfilled')
+      store.setEarnedBadges((result.badges.value || []).map((badge: Record<string, unknown>) => badge.badge_key as string));
+    setLoading(false); setRefreshing(false);
+  }, [studentId]);
+  useFocusEffect(useCallback(() => {
+    void load(); return () => { sequence.current += 1; };
+  }, [load]));
+  const profile = data?.profile.status === 'fulfilled' ? data.profile.value : null;
+  const level = profile ? growthLevel(profile.totalXp, profile.currentLevel) : null;
+  const badges = data?.badges.status === 'fulfilled'
+    ? new Set((data.badges.value || []).map((badge: Record<string, unknown>) => badge.badge_key as string)) : null;
+  const progress = data?.competencies.status === 'fulfilled' ? data.competencies.value : null;
+  const history = data?.history.status === 'fulfilled' ? (data.history.value || []).slice(0, 10) : null;
+  const failed = !!data && Object.values(data).some((section) => section.status === 'rejected');
+  const shownBadges = BADGES.filter((badge) => !earnedOnly || badges?.has(badge.key));
+  return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
+    <ScrollView contentContainerStyle={ui.content}
+      refreshControl={<RefreshControl refreshing={refreshing} colors={[colors.primaryDark]}
+        onRefresh={() => { setRefreshing(true); void load(); }} />}>
+      <StudentHeader title={t('studentFlow.growth')} />
+      <Text style={ui.secondary}>{t('growthUi.intro')}</Text>
+      {loading && !data ? <ActivityIndicator size="large" color={colors.primaryDark} /> : <>
+        {failed && <LoadFailedBanner onRetry={() => void load()} />}
+        {profile && level ? <View style={[ui.card, styles.featured]}>
+          <View style={ui.header}><Ionicons name="shield-checkmark-outline" size={32} color={colors.primaryDark} />
+            <View style={{ flex: 1, gap: 4 }}><Text style={ui.secondary}>{t('gamification.level')} {profile.currentLevel}</Text>
+              <Text style={ui.cardTitle}>{t(level.current.nameKey)}</Text></View></View>
+          <Text style={styles.xp}>{profile.totalXp.toLocaleString(i18n.language)} XP</Text>
+          <View style={styles.track} accessible accessibilityRole="progressbar" accessibilityLabel={t('growthUi.levelProgress')}
+            accessibilityValue={{ min: 0, max: 100, now: Math.round(level.progress * 100) }}>
+            <View style={[styles.fill, { width: `${level.progress * 100}%` }]} />
+          </View>
+          <Text style={ui.body}>{level.next ? t('growthUi.nextLevel', { xp: level.remaining, level: level.next.level, name: t(level.next.nameKey) }) : t('growthUi.maximum')}</Text>
+        </View> : <Text style={ui.secondary}>{t('growthUi.unavailable')}</Text>}
+        <TouchableOpacity accessibilityRole="button" style={styles.action} onPress={() => router.push('/(student)/leaderboard')}>
+          <Ionicons name="podium-outline" size={24} color={colors.primaryDark} />
+          <Text style={[styles.link, { flex: 1 }]}>{t('growthUi.openRanking')}</Text>
+          <Ionicons name="chevron-forward" size={22} color={colors.primaryDark} />
+        </TouchableOpacity>
+        <View style={styles.wrap} accessibilityRole="tablist">
+          {(['badges', 'competencies', 'history'] as const).map((value) => <TouchableOpacity key={value}
+            accessibilityRole="tab" accessibilityState={{ selected: tab === value }}
+            style={[styles.chip, tab === value && styles.featured]} onPress={() => setTab(value)}>
+            <Text style={styles.link}>{t(value === 'badges' ? 'gamification.badges' : value === 'competencies' ? 'student.myCompetencies' : 'growthUi.history')}</Text>
+          </TouchableOpacity>)}
+        </View>
+        {tab === 'badges' && (badges === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> : <>
+          <Text style={ui.secondary}>{t('growthUi.badgeCount', { count: BADGES.filter((badge) => badges.has(badge.key)).length, total: BADGES.length })}</Text>
+          <View style={styles.wrap}>{[false, true].map((value) => <TouchableOpacity key={String(value)}
+            accessibilityRole="button" accessibilityState={{ selected: earnedOnly === value }}
+            style={[styles.chip, value === earnedOnly && styles.featured]} onPress={() => setEarnedOnly(value)}>
+            <Text style={styles.link}>{t(value ? 'growthUi.earned' : 'growthUi.allBadges')}</Text>
+          </TouchableOpacity>)}</View>
+          {!shownBadges.length && <Text style={ui.body}>{t('growthUi.noBadges')}</Text>}
+          {shownBadges.map((badge) => {
+            const earned = badges.has(badge.key);
+            return <View key={badge.id} style={ui.card}>
+              <View style={ui.header}><Ionicons name={earned ? 'ribbon-outline' : 'lock-closed-outline'} size={28} color={colors.primaryDark} />
+                <Text style={[ui.cardTitle, { flex: 1 }]}>{t(badge.nameKey)}</Text></View>
+              <Text style={ui.body}>{t(badge.descriptionKey)}</Text>
+              <Text style={ui.secondary}>{t(earned ? 'growthUi.earned' : 'growthUi.notEarned')} · {t('growthUi.' + badge.tier)}</Text>
+            </View>;
+          })}
+        </>)}
+        {tab === 'competencies' && (progress === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> :
+          !progress.length ? <Text style={ui.body}>{t('growthUi.noCompetencies')}</Text> :
+            progress.map((p) => <View key={p.competencyId} style={ui.card}>
+              <Text style={ui.cardTitle}>{p.name}</Text>
+              <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
+                ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
+              <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>
+            </View>))}
+        {tab === 'history' && (history === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> : <>
+          <Text style={ui.secondary}>{t('growthUi.historyHint')}</Text>
+          {!history.length && <Text style={ui.body}>{t('growthUi.noHistory')}</Text>}
+          {history.map((tx: Record<string, unknown>) => {
+            const amount = Number(tx.amount) || 0;
+            const date = new Date(String(tx.created_at || ''));
+            return <View key={String(tx.id)} style={ui.card}>
+              <Text style={ui.label}>{t(growthReason(String(tx.reason || '')))}</Text>
+              <Text style={[styles.link, { color: amount < 0 ? '#a52929' : '#21613e' }]}>{amount > 0 ? '+' : ''}{amount} XP</Text>
+              {!Number.isNaN(date.getTime()) && <Text style={ui.secondary}>{date.toLocaleDateString(i18n.language)}</Text>}
+            </View>;
+          })}
+        </>)}
+      </>}
+    </ScrollView>
+  </SafeAreaView>;
+}
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  levelCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  levelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  levelIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gamification.levelUp + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  levelInfo: {
-    flex: 1,
-  },
-  levelLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  levelName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  xpBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gamification.xp + '15',
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    gap: 4,
-  },
-  xpBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.gamification.xp,
-  },
-  xpHint: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  badgesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: spacing.lg,
-  },
-  badgeWrapper: {
-    width: '50%',
-    marginBottom: spacing.sm,
-  },
-  badgeLeft: {
-    paddingRight: spacing.xs,
-  },
-  badgeRight: {
-    paddingLeft: spacing.xs,
-  },
-  historyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  historyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-  },
-  historyBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  historyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  historyReason: {
-    fontSize: 14,
-    color: colors.text,
-    flex: 1,
-  },
-  historyAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  competencyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  competencyName: {
-    fontSize: 14,
-    color: colors.text,
-    flex: 1,
-  },
-  competencyLevel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
+  featured: { backgroundColor: '#eaf1fb', borderColor: '#b8ccea' },
+  xp: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
+  track: { height: 10, borderRadius: 5, backgroundColor: colors.divider, overflow: 'hidden' },
+  fill: { height: 10, borderRadius: 5, backgroundColor: colors.primaryDark },
+  action: { minHeight: 52, flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderWidth: 1, borderColor: colors.primaryDark, borderRadius: 14 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { minHeight: 48, maxWidth: '100%', padding: 12, justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.divider },
+  link: { fontSize: 16, fontWeight: '600', color: colors.primaryDark },
 });

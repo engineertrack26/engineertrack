@@ -1,530 +1,200 @@
-import { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
-import { useGroupStore } from '@/store/groupStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
-import { groupCenterRoute } from '@/utils/advisorGroups';
-import { BackButton, ProgressBar, LoadFailedBanner } from '@/components/common';
-import { colors, spacing, borderRadius } from '@/theme';
-import type { GroupMember } from '@/types/group';
+import { groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
+import { mapMonitorStudent, filterMonitorStudents, type StudentMonitorItem } from '@/utils/advisorStudentMonitor';
+import { mapRpcError } from '@/utils/rpcErrors';
+import { BackButton, LoadFailedBanner } from '@/components/common';
+import { AdvisorBell, groupStyles } from '@/components/advisor/GroupUI';
+import { ui } from '@/components/common/workflowStyles';
+import { colors } from '@/theme';
+import type { GroupMember, InternshipGroup } from '@/types/group';
 
-interface StudentMonitorItem {
-  id: string;
-  firstName: string;
-  lastName: string;
-  totalXp: number;
-  currentLevel: number;
-  currentStreak: number;
-  companyName?: string;
-  internshipStartDate?: string;
-  internshipEndDate?: string;
-  completionPct: number;
-  /** Both `null` together when the internship span is unknown: a missing or
-   *  unusable date is not day zero, so the counter is not rendered at all. */
-  daysCurrent: number | null;
-  daysTotal: number | null;
-}
-
-/** A `YYYY-MM-DD` date at the device's local midnight. `Date.parse` on the bare
- *  string would give UTC midnight, which is a different calendar day for part
- *  of every day anywhere but UTC. NaN for anything that is not a plain date. */
-function localMidnight(ymd: string): number {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd);
-  if (!m) return Number.NaN;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
-}
-
-function mapStudent(row: Record<string, unknown>): StudentMonitorItem {
-  const profile = row.profiles as Record<string, unknown> | null;
-  // Competency attainment, straight off the service row -- the same number
-  // the advisor's dashboard and reports screen quote for this student. It was
-  // recomputed here from `submitted_days`, which getDashboardStats stopped
-  // returning when the daily log was retired; the Record<string, unknown>
-  // cast hid that from tsc, so this silently read 0 for everyone.
-  const completionPct = (row.completionPercent as number) || 0;
-  const start = row.internship_start_date as string | null;
-  const end = row.internship_end_date as string | null;
-  // Elapsed calendar days of the internship, which is what "Day 12 of 60"
-  // has always claimed to mean. It used to be driven by `submitted_days`, so
-  // it was really an attendance count wearing a calendar's label, and once
-  // that field went it read "Day 0" for everyone -- including a student two
-  // months in. Nothing here is submission-derived; both dates come off the
-  // row `getAssignedStudents` already selects.
-  const msPerDay = 1000 * 60 * 60 * 24;
-  let daysCurrent: number | null = null;
-  let daysTotal: number | null = null;
-  if (start && end) {
-    // Both columns are Postgres `date`s. `new Date('2026-09-11')` would anchor
-    // them at UTC midnight while `Date.now()` is the device's absolute instant,
-    // which puts the counter a day out for part of every local day on any
-    // device not on UTC. Work in local calendar days instead: each date at the
-    // device's local midnight, today at the device's local midnight, and the
-    // difference rounded (not floored) so a DST hour cannot shave a day off.
-    const startDate = localMidnight(start);
-    const endDate = localMidnight(end);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const span = Math.round((endDate - startDate) / msPerDay);
-    // An unparseable date gives NaN, and an end on or before the start gives
-    // a span of zero or less. Neither is a span we can honestly count within,
-    // so both leave the counter unrendered rather than showing "Day 0/0".
-    if (Number.isFinite(span) && span > 0) {
-      daysTotal = span;
-      // Day one is the start date itself, so +1. Clamped at both ends: an
-      // internship that has not started yet is day 0 rather than a negative
-      // number, and one that has run past its end date reads "Day 60/60"
-      // rather than "Day 71/60".
-      const elapsed = Math.round((today.getTime() - startDate) / msPerDay) + 1;
-      daysCurrent = Math.max(0, Math.min(span, elapsed));
-    }
-  }
-  return {
-    id: row.id as string,
-    firstName: (profile?.first_name as string) || '',
-    lastName: (profile?.last_name as string) || '',
-    totalXp: (row.total_xp as number) || 0,
-    currentLevel: (row.current_level as number) || 1,
-    currentStreak: (row.current_streak as number) || 0,
-    companyName: (row.company_name as string) || undefined,
-    internshipStartDate: start || undefined,
-    internshipEndDate: end || undefined,
-    completionPct,
-    daysCurrent,
-    daysTotal,
-  };
-}
+type MonitorRow = StudentMonitorItem & { member?: GroupMember; email?: string };
 
 export default function StudentMonitorScreen() {
-  const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
-  const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
-  const { t } = useTranslation();
-  const user = useAuthStore((s) => s.user);
-  const groups = useGroupStore((s) => s.groups);
-  const fetchGroups = useGroupStore((s) => s.fetchGroups);
+  const params = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
+  const userId = useAuthStore((s) => s.user?.id);
+  return userId ? <StudentMonitorContent key={userId + ':' + (params.groupId ?? '')}
+    advisorId={userId} groupId={params.groupId} fromGroup={params.fromGroup} /> : null;
+}
 
+function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: string; groupId?: string; fromGroup?: string }) {
+  const { t, i18n } = useTranslation();
+  const back = groupId ? fromGroup === '1' ? groupCenterRoute(groupId) :
+    { pathname: '/(advisor)/groups' as const, params: { groupId: '' } } : '/(advisor)/dashboard' as const;
+  const [group, setGroup] = useState<InternshipGroup | null>(null);
+  const [rows, setRows] = useState<MonitorRow[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [students, setStudents] = useState<StudentMonitorItem[]>([]);
-  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [removing, setRemoving] = useState<Set<string>>(new Set());
+  const locks = useRef(new Set<string>());
+  const sequence = useRef(0);
+  const mounted = useRef(false);
 
-  const activeGroup = groupId ? groups.find((g) => g.id === groupId) : undefined;
-
-  const [loadFailed, setLoadFailed] = useState(false);
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    setLoadFailed(false);
+  const load = useCallback(async () => {
+    const request = ++sequence.current;
+    const current = () => request === sequence.current && useAuthStore.getState().user?.id === advisorId;
     try {
       if (groupId) {
-        const [groupMembers] = await Promise.all([
-          groupService.listMembers(groupId),
-          groups.length === 0 ? fetchGroups(user.id) : Promise.resolve(),
-        ]);
-        setMembers(groupMembers);
+        const groups = await groupService.listMyGroups(advisorId);
+        if (!current()) return;
+        const owned = groups.find((g) => g.id === groupId);
+        if (!owned) {
+          setGroup(null); setRows([]); setUnavailable(true); setFailed(false); setLoaded(true);
+          return;
+        }
+        setGroup(owned); setUnavailable(false);
+        const members = await groupService.listMembers(groupId);
+        if (!current()) return;
+        setRows(members.map((member) => ({ ...mapMonitorStudent({
+          id: member.id, profiles: { first_name: member.firstName, last_name: member.lastName },
+          completionAvailable: false,
+        }), member, email: member.email })));
       } else {
-        const result = await advisorService.getDashboardStats(user.id);
-        setStudents(
-          (result.students || []).map((s) => mapStudent(s as unknown as Record<string, unknown>)),
-        );
+        const result = await advisorService.getDashboardStats(advisorId);
+        if (!current()) return;
+        setRows(result.students.map((row) => mapMonitorStudent(row)));
       }
-    } catch (err) {
-      console.error('Student monitor load error:', err);
-      setLoadFailed(true);
+      setLoaded(true); setFailed(false);
+    } catch {
+      if (current()) setFailed(true);
     } finally {
-      setLoading(false);
+      if (current()) { setLoading(false); setRefreshing(false); }
     }
-  }, [user, groupId, groups.length, fetchGroups]);
+  }, [advisorId, groupId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [loadData]);
-
-  const getInitials = (first: string, last: string) =>
-    `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase();
+  useFocusEffect(useCallback(() => {
+    mounted.current = true; void load();
+    return () => { mounted.current = false; sequence.current += 1; };
+  }, [load]));
 
   function confirmRemove(member: GroupMember) {
-    const name = `${member.firstName} ${member.lastName}`.trim();
-    Alert.alert(
-      t('advisor.removeStudent'),
-      t('advisor.removeStudentConfirm', { name }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('advisor.removeStudent'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await groupService.closeMembership(member.membershipId);
-              await loadData();
-              Alert.alert(t('advisor.removeStudent'), t('advisor.removeStudentDone'));
-            } catch (err: any) {
-              Alert.alert(t('common.error'), err.message || t('errors.unknown'));
-            }
-          },
-        },
-      ],
-    );
+    if (locks.current.has(member.membershipId) || failed) return;
+    const name = [member.firstName, member.lastName].filter(Boolean).join(' ');
+    Alert.alert(t('advisor.removeStudent'), t('advisor.removeStudentConfirm', { name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('advisor.removeStudent'), style: 'destructive', onPress: () => { void remove(member); } },
+    ]);
+  }
+  async function remove(member: GroupMember) {
+    if (!groupId || locks.current.has(member.membershipId) || !mounted.current ||
+        useAuthStore.getState().user?.id !== advisorId) return;
+    locks.current.add(member.membershipId); setRemoving(new Set(locks.current));
+    try {
+      await groupService.closeMembership(member.membershipId);
+      if (!mounted.current || useAuthStore.getState().user?.id !== advisorId) return;
+      // A failed refresh must not bring the removed membership back on screen.
+      sequence.current += 1;
+      setRows((previous) => previous.filter((row) => row.member?.membershipId !== member.membershipId));
+      Alert.alert(t('common.done'), t('advisor.removeStudentDone'));
+      await load();
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
+        const { key } = mapRpcError(err instanceof Error ? err.message : '');
+        Alert.alert(t('common.error'), t(key));
+      }
+    } finally {
+      locks.current.delete(member.membershipId);
+      if (mounted.current) setRemoving(new Set(locks.current));
+    }
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <BackButton href={groupId ? groupBack : '/(advisor)/dashboard'} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (groupId) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerContainer}>
-          <BackButton href={groupBack} />
-          <Text style={styles.screenTitle}>
-            {activeGroup?.name || t('advisor.studentMonitor')}
-          </Text>
-          <Text style={styles.countText}>{t('advisor.memberCount', { count: members.length })}</Text>
-        </View>
-
-        <FlatList
-          data={members}
-          keyExtractor={(item) => item.membershipId}
-          renderItem={({ item }) => (
-            <View style={styles.memberCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.initials}>
-                  {getInitials(item.firstName, item.lastName)}
-                </Text>
-              </View>
-              <View style={styles.nameSection}>
-                <Text style={styles.studentName} numberOfLines={1}>
-                  {item.firstName} {item.lastName}
-                </Text>
-                <Text style={styles.companyName} numberOfLines={1}>{item.email}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => confirmRemove(item)}
-                hitSlop={8}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="person-remove-outline" size={20} color={colors.error} />
-              </TouchableOpacity>
-            </View>
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-              <Text style={styles.emptyTitle}>{t('advisor.noStudentsYet')}</Text>
-              <Text style={styles.emptyText}>
-                {t('advisor.noStudentsYetHint')}
-              </Text>
-            </View>
-          }
-          ListHeaderComponent={loadFailed ? <LoadFailedBanner onRetry={loadData} /> : null}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const renderItem = ({ item }: { item: StudentMonitorItem }) => (
-    <View style={styles.card}>
-      {/* Top row: avatar + name + company */}
-      <View style={styles.cardTop}>
-        <View style={styles.avatar}>
-          <Text style={styles.initials}>
-            {getInitials(item.firstName, item.lastName)}
-          </Text>
-        </View>
-        <View style={styles.nameSection}>
-          <Text style={styles.studentName} numberOfLines={1}>
-            {item.firstName} {item.lastName}
-          </Text>
-          {item.companyName && (
-            <Text style={styles.companyName} numberOfLines={1}>{item.companyName}</Text>
-          )}
-        </View>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Lvl {item.currentLevel}</Text>
-        </View>
-      </View>
-
-      {/* Progress bar */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressLabel}>
-          <Text style={styles.progressLabelText}>Internship Progress</Text>
-          {item.daysCurrent !== null && item.daysTotal !== null && (
-            <Text style={styles.progressDays}>
-              {t('advisor.internshipDay', {
-                current: item.daysCurrent,
-                total: item.daysTotal,
-              })}
-            </Text>
-          )}
-        </View>
-        <ProgressBar
-          progress={item.completionPct / 100}
-          color={colors.primary}
-          height={8}
-        />
-      </View>
-
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Ionicons name="flash" size={14} color={colors.gamification.xp} />
-          <Text style={styles.statValue}>{item.totalXp}</Text>
-          <Text style={styles.statLabel}>XP</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Ionicons name="flame" size={14} color={colors.gamification.streak} />
-          <Text style={styles.statValue}>{item.currentStreak}</Text>
-          <Text style={styles.statLabel}>Streak</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Ionicons name="pie-chart" size={14} color={colors.info} />
-          <Text style={styles.statValue}>{item.completionPct}%</Text>
-          <Text style={styles.statLabel}>Done</Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContainer}>
-        <BackButton href="/(advisor)/dashboard" />
-        <Text style={styles.screenTitle}>{t('advisor.studentMonitor')}</Text>
-        <Text style={styles.countText}>{students.length} student{students.length !== 1 ? 's' : ''}</Text>
-      </View>
-
-      <FlatList
-        data={students}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No Students Assigned</Text>
-            <Text style={styles.emptyText}>
-              Students will appear here once they are assigned to you.
-            </Text>
+  const filtered = filterMonitorStudents(rows, search, i18n.language);
+  const displayDate = (value: string) => new Date(value + 'T12:00:00').toLocaleDateString(i18n.language);
+  return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
+    <FlatList data={filtered} keyExtractor={(row) => row.member?.membershipId ?? row.id}
+      contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }}
+        colors={[colors.primaryDark]} />}
+      ListHeaderComponent={<View style={{ gap: 16 }}>
+        <View style={ui.header}><View style={{ flex: 1 }}><BackButton href={back} /></View><AdvisorBell /></View>
+        <Text style={ui.title} accessibilityRole="header">{t('advisor.studentMonitor')}</Text>
+        {!!group && <Text style={ui.label}>{group.name}{group.term ? ' · ' + group.term : ''}</Text>}
+        <Text style={ui.secondary}>{t(groupId ? 'advisorMonitor.groupHint' : 'advisorMonitor.overviewHint')}</Text>
+        {group?.isArchived && <Text style={ui.secondary}>{t('advisorGroups.archived')}</Text>}
+        {failed && <LoadFailedBanner onRetry={() => void load()} />}
+        {unavailable ? <Text style={ui.body}>{t('advisorGroups.unavailable')}</Text> : <>
+          {loaded && <Text style={ui.label} accessibilityLiveRegion="polite">
+            {search.trim() ? t('advisorMonitor.results', { shown: filtered.length, total: rows.length })
+              : t('advisorGroups.memberCount', { count: rows.length })}
+          </Text>}
+          <TextInput style={ui.input} value={search} onChangeText={setSearch} autoCorrect={false}
+            accessibilityLabel={t('advisorMonitor.search')} placeholder={t('advisorMonitor.search')}
+            placeholderTextColor={colors.textSecondary} />
+          {!!search && <TouchableOpacity accessibilityRole="button" onPress={() => setSearch('')}>
+            <Text style={ui.link}>{t('advisorMonitor.clear')}</Text>
+          </TouchableOpacity>}
+          {group && <TouchableOpacity accessibilityRole="button" style={groupStyles.outline}
+            onPress={() => router.push(groupWorkspaceRoute('reports', group.id))}>
+            <Text style={groupStyles.linkText}>{t('advisorGroups.reportsTitle')}</Text>
+          </TouchableOpacity>}
+        </>}
+      </View>}
+      ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primaryDark} /> :
+        !failed && !unavailable ? <View style={ui.card}>
+          <Ionicons name="people-outline" size={32} color={colors.primaryDark} />
+          <Text style={ui.section}>{t(search.trim() ? 'advisorGroups.noMatches' : 'advisor.noStudentsYet')}</Text>
+          <Text style={ui.secondary}>{t(search.trim() ? 'advisorGroups.searchHint' : 'advisor.noStudentsYetHint')}</Text>
+        </View> : null}
+      renderItem={({ item }) => <View style={ui.card}>
+        <View style={ui.header}>
+          <View style={styles.avatar} accessible={false}><Text style={styles.initials}>
+            {(item.firstName[0] || '') + (item.lastName[0] || '') || '?'}
+          </Text></View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <Text style={ui.cardTitle}>{item.firstName} {item.lastName}</Text>
+            {!!item.email && <Text selectable style={ui.secondary}>{item.email}</Text>}
+            {!!item.companyName && <Text style={ui.secondary}>{item.companyName}</Text>}
           </View>
-        }
-        ListHeaderComponent={loadFailed ? <LoadFailedBanner onRetry={loadData} /> : null}
-      />
-    </SafeAreaView>
-  );
+        </View>
+        {item.member ? <>
+          <Text style={ui.secondary}>{t('advisorMonitor.memberHint')}</Text>
+          <TouchableOpacity accessibilityRole="button" style={styles.remove}
+            accessibilityLabel={t('advisor.removeStudent') + ': ' + item.firstName + ' ' + item.lastName}
+            accessibilityState={{ disabled: removing.has(item.member.membershipId) || failed, busy: removing.has(item.member.membershipId) }}
+            disabled={removing.has(item.member.membershipId) || failed} onPress={() => confirmRemove(item.member!)}>
+            {removing.has(item.member.membershipId) ? <ActivityIndicator color={colors.error} /> :
+              <Text style={styles.removeText}>{t('advisor.removeStudent')}</Text>}
+          </TouchableOpacity>
+        </> : <>
+          <Text style={ui.label}>{t('advisorMonitor.progress')}{item.completionPct !== null ? ' · ' + item.completionPct + '%' : ''}</Text>
+          {item.completionPct === null ? <Text style={ui.secondary}>{t('advisorMonitor.progressUnknown')}</Text> :
+            <View style={styles.track} accessible accessibilityRole="progressbar"
+              accessibilityLabel={t('advisorMonitor.progress')} accessibilityValue={{ min: 0, max: 100, now: item.completionPct }}>
+              <View style={[styles.fill, { width: `${Math.max(0, Math.min(100, item.completionPct))}%` }]} />
+            </View>}
+          <View style={styles.period}>
+            <Text style={ui.label}>{t('advisorMonitor.period')}</Text>
+            {item.daysCurrent !== null && item.daysTotal !== null ? <>
+              <Text style={ui.body}>{displayDate(item.internshipStartDate!)} – {displayDate(item.internshipEndDate!)}</Text>
+              <Text style={ui.secondary}>{t('advisor.internshipDay', { current: item.daysCurrent, total: item.daysTotal })}</Text>
+            </> : <Text style={ui.secondary}>{t('advisorMonitor.periodUnknown')}</Text>}
+          </View>
+          <Text style={ui.secondary}>{t('advisorMonitor.activity', {
+            xp: item.totalXp, level: item.currentLevel, weeks: item.currentStreak,
+          })}</Text>
+        </>}
+      </View>} />
+  </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerContainer: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  screenTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  countText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-
-  // Card
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  initials: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  nameSection: {
-    flex: 1,
-  },
-  studentName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  companyName: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 1,
-  },
-  levelBadge: {
-    backgroundColor: colors.gamification.levelUp + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
-    marginLeft: spacing.sm,
-  },
-  levelText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.gamification.levelUp,
-  },
-
-  // Progress
-  progressSection: {
-    marginBottom: spacing.sm,
-  },
-  progressLabel: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  progressLabelText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  progressDays: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  statDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: colors.divider,
-  },
-
-  // Group member card
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-
-  // Empty
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.xxl * 2,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
-  },
+  avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#eaf1fb', alignItems: 'center', justifyContent: 'center' },
+  initials: { fontSize: 18, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase' },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.divider },
+  fill: { height: 8, borderRadius: 4, backgroundColor: colors.primaryDark },
+  period: { padding: 14, gap: 8, backgroundColor: colors.background, borderRadius: 12 },
+  remove: { minHeight: 48, justifyContent: 'center', paddingVertical: 12 },
+  removeText: { color: '#a52929', fontSize: 15, fontWeight: '600' },
 });
