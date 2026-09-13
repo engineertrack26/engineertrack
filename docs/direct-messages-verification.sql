@@ -245,22 +245,26 @@ ROLLBACK;
 -- ============================================================
 -- PART C — the policies, actually evaluated. Submit BEGIN..ROLLBACK in one go.
 --   C1 participant reads own conversation and message      1 / 1   (positive control)
---   C2 THE ADVISOR reads two students' conversation         0 rows  (the reason this feature exists)
---   C3 the advisor reads their message                      0 rows
+--   C2 THE ADVISOR reads a conversation they are not in      0 rows  (the reason this feature exists)
+--   C3 the advisor reads its message                         0 rows
 --   C4 a student of another group reads it                  0 rows
 --   C5 non-participant send_message                         CONVERSATION_NOT_FOUND
 --   C6 after the membership is closed, the former participant  0 rows (and list_conversations empty)
--- C2-C4 need a second student; they SKIP otherwise.
+-- C2/C3/C5 need a second student or a mentor; C4 needs a third student. They
+-- SKIP otherwise.
+-- With one student and a mentor, the conversation under test is
+-- student<->mentor: the advisor is still an outsider to it, so C2/C3/C5 are real.
 -- ============================================================
 BEGIN;
 
 DO $$
-DECLARE adv UUID; stu UUID; stu2 UUID; stuB UUID; grp UUID; grpB UUID; c UUID; msg UUID;
+DECLARE adv UUID; stu UUID; stu2 UUID; stuB UUID; mentor UUID; grp UUID; grpB UUID; c UUID; msg UUID;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu2 FROM profiles WHERE role = 'student' AND id <> stu ORDER BY created_at LIMIT 1;
   SELECT id INTO stuB FROM profiles WHERE role = 'student' AND id NOT IN (stu, coalesce(stu2, stu)) ORDER BY created_at LIMIT 1;
+  SELECT id INTO mentor FROM profiles WHERE role = 'mentor' ORDER BY created_at LIMIT 1;
   IF adv IS NULL OR stu IS NULL THEN PERFORM set_config('probe.ready', 'no', true); RETURN; END IF;
 
   INSERT INTO internship_groups (advisor_id, name) VALUES (adv, 'Probe messages A') RETURNING id INTO grp;
@@ -270,11 +274,19 @@ BEGIN
   IF stu2 IS NOT NULL THEN INSERT INTO group_memberships (group_id, student_id) VALUES (grp, stu2); END IF;
   IF stuB IS NOT NULL THEN INSERT INTO group_memberships (group_id, student_id) VALUES (grpB, stuB); END IF;
 
-  -- The conversation under test: stu <-> stu2 when possible, else stu <-> adv.
+  -- The conversation under test: stu <-> stu2 when possible; else stu <-> mentor
+  -- (still an advisor-free pair, so the privacy checks stay meaningful); else
+  -- stu <-> adv as a last resort, where the advisor IS a participant.
   IF stu2 IS NOT NULL THEN
     INSERT INTO conversations (group_id, kind, a_id, b_id) VALUES (grp, 'member', LEAST(stu, stu2), GREATEST(stu, stu2)) RETURNING id INTO c;
+    PERFORM set_config('probe.mode', 'students', true);
+  ELSIF mentor IS NOT NULL THEN
+    UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
+    INSERT INTO conversations (group_id, kind, a_id, b_id) VALUES (grp, 'mentor', LEAST(stu, mentor), GREATEST(stu, mentor)) RETURNING id INTO c;
+    PERFORM set_config('probe.mode', 'mentor', true);
   ELSE
     INSERT INTO conversations (group_id, kind, a_id, b_id) VALUES (grp, 'member', LEAST(stu, adv), GREATEST(stu, adv)) RETURNING id INTO c;
+    PERFORM set_config('probe.mode', 'advisor', true);
   END IF;
   INSERT INTO messages (conversation_id, sender_id, body) VALUES (c, stu, 'private') RETURNING id INTO msg;
 
@@ -290,7 +302,7 @@ END $$;
 SET LOCAL ROLE authenticated;
 
 DO $$
-DECLARE adv UUID; stu UUID; stu2 UUID; stuB UUID; c UUID; n INT; m INT; log TEXT := '';
+DECLARE adv UUID; stu UUID; stu2 UUID; stuB UUID; c UUID; mode TEXT; n INT; m INT; log TEXT := '';
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN
     PERFORM set_config('probe.results', 'C1-C6' || E'\t' || 'SKIP: needs an advisor and a student' || E'\n', true); RETURN;
@@ -298,6 +310,7 @@ BEGIN
   adv := current_setting('probe.adv')::uuid; stu := current_setting('probe.stu')::uuid;
   stu2 := NULLIF(current_setting('probe.stu2'), '')::uuid; stuB := NULLIF(current_setting('probe.stuB'), '')::uuid;
   c := current_setting('probe.c')::uuid;
+  mode := current_setting('probe.mode', true);
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
   BEGIN
@@ -306,19 +319,19 @@ BEGIN
     log := log || 'C1 participant reads own conversation and message' || E'\t' || CASE WHEN n = 1 AND m = 1 THEN '1 / 1' ELSE 'FAIL: ' || n || ' / ' || m END || E'\n';
   EXCEPTION WHEN OTHERS THEN log := log || 'C1 participant reads own conversation and message' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
 
-  IF stu2 IS NULL THEN
-    log := log || 'C2 THE ADVISOR reads two students conversation' || E'\t' || 'SKIP: needs a second student' || E'\n';
-    log := log || 'C3 the advisor reads their message' || E'\t' || 'SKIP: needs a second student' || E'\n';
+  IF mode = 'advisor' THEN
+    log := log || 'C2 THE ADVISOR reads a conversation they are not in' || E'\t' || 'SKIP: needs a second student or a mentor' || E'\n';
+    log := log || 'C3 the advisor reads its message' || E'\t' || 'SKIP: needs a second student or a mentor' || E'\n';
   ELSE
     PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
     BEGIN
       SELECT count(*) INTO n FROM conversations WHERE id = c;
-      log := log || 'C2 THE ADVISOR reads two students conversation' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: the advisor can see it' END || E'\n';
-    EXCEPTION WHEN OTHERS THEN log := log || 'C2 THE ADVISOR reads two students conversation' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
+      log := log || 'C2 THE ADVISOR reads a conversation they are not in' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: the advisor can see it' END || E'\n';
+    EXCEPTION WHEN OTHERS THEN log := log || 'C2 THE ADVISOR reads a conversation they are not in' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
     BEGIN
       SELECT count(*) INTO n FROM messages WHERE conversation_id = c;
-      log := log || 'C3 the advisor reads their message' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: the advisor can read it' END || E'\n';
-    EXCEPTION WHEN OTHERS THEN log := log || 'C3 the advisor reads their message' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
+      log := log || 'C3 the advisor reads its message' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: the advisor can read it' END || E'\n';
+    EXCEPTION WHEN OTHERS THEN log := log || 'C3 the advisor reads its message' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
   END IF;
 
   IF stuB IS NULL THEN
@@ -334,7 +347,7 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
   BEGIN
     PERFORM send_message(c, 'intruder');
-    log := log || 'C5 non-participant send_message' || E'\t' || CASE WHEN stu2 IS NULL THEN 'n/a: the advisor is a participant here' ELSE 'FAIL: sent' END || E'\n';
+    log := log || 'C5 non-participant send_message' || E'\t' || CASE WHEN mode = 'advisor' THEN 'n/a: the advisor is a participant here' ELSE 'FAIL: sent' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'C5 non-participant send_message' || E'\t' || CASE WHEN SQLERRM LIKE 'CONVERSATION_NOT_FOUND%' THEN 'CONVERSATION_NOT_FOUND' ELSE 'FAIL: ' || SQLERRM END || E'\n';
   END;
