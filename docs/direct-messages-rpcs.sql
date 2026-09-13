@@ -169,6 +169,29 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION list_message_contacts(UUID) TO authenticated;
 
+-- ---- list_mentor_message_contacts ----
+-- A mentor's students may sit in different groups; each row carries the
+-- group a conversation would be opened in. SECURITY DEFINER because the
+-- mentor cannot read group_memberships directly.
+CREATE OR REPLACE FUNCTION list_mentor_message_contacts()
+RETURNS SETOF JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED'; END IF;
+  RETURN QUERY
+  SELECT jsonb_build_object('id', pp.id,
+                            'name', trim(coalesce(pp.first_name, '') || ' ' || coalesce(pp.last_name, '')),
+                            'role', 'student', 'groupId', m.group_id, 'groupName', g.name)
+  FROM student_profiles sp
+  JOIN group_memberships m ON m.student_id = sp.id AND m.left_at IS NULL
+  JOIN internship_groups g ON g.id = m.group_id
+  JOIN profiles_public pp ON pp.id = sp.id
+  WHERE sp.mentor_id = auth.uid()
+    AND can_message(m.group_id, auth.uid(), sp.id) IS NOT NULL
+  ORDER BY pp.first_name, pp.last_name;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION list_mentor_message_contacts() TO authenticated;
+
 -- ---- unread_message_count ----
 CREATE OR REPLACE FUNCTION unread_message_count()
 RETURNS INT LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public AS $$

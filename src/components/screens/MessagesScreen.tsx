@@ -84,9 +84,10 @@ export function MessagesScreen({ role }: Props) {
     try {
       if (role === 'mentor') {
         // A mentor's contacts are their linked students, each in their own
-        // group. list_message_contacts is per group, so ask per student's
-        // group: read the mentor's students, resolve each student's group.
-        const students = await groupService.listMentorStudentGroups(user!.id);
+        // group. list_message_contacts is per group, so this goes through
+        // its own RPC instead -- a mentor cannot read group_memberships
+        // directly, so this cannot be resolved client-side.
+        const students = await messageService.listMentorContacts();
         setContacts(students);
       } else if (groupId) {
         setContacts(await messageService.listContacts(groupId));

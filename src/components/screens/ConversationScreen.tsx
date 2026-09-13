@@ -33,6 +33,7 @@ export function ConversationScreen({ role }: Props) {
   const [sending, setSending] = useState(false);
   const focused = useRef(false);
   const request = useRef(0);
+  const loadingMore = useRef(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -90,7 +91,8 @@ export function ConversationScreen({ role }: Props) {
   });
 
   async function loadMore() {
-    if (!id || !hasMore || messages.length === 0) return;
+    if (!id || !hasMore || messages.length === 0 || loadingMore.current) return;
+    loadingMore.current = true;
     try {
       const older = await messageService.listMessages(id, messages[0].createdAt);
       const seen = new Set(messages.map((m) => m.id));
@@ -98,6 +100,8 @@ export function ConversationScreen({ role }: Props) {
       setHasMore(older.length === MESSAGES_PAGE_SIZE);
     } catch (err) {
       console.warn('Older messages load failed:', err instanceof Error ? err.message : err);
+    } finally {
+      loadingMore.current = false;
     }
   }
 
@@ -138,7 +142,16 @@ export function ConversationScreen({ role }: Props) {
 
   const canBlock = summary && summary.otherRole !== 'advisor' && role !== 'advisor';
   const groups = dayGroups(messages, i18n.language);
+  // Oldest first, day label before that day's messages -- the natural
+  // top-to-bottom reading order. Rendered in an INVERTED list, so it is
+  // reversed below: inverted lays out index 0 at the bottom of the screen
+  // and stacks each following index above it, which puts this array's last
+  // element (the oldest day's label) at the top once reversed back by the
+  // layout -- i.e. reversing `flat` and inverting the list cancel out, and
+  // the screen reads top-to-bottom exactly as `flat` is ordered here, newest
+  // message at the bottom where a chat conversation opens.
   const flat = groups.flatMap((g) => [{ type: 'day' as const, key: g.key, label: g.label }, ...g.messages.map((m) => ({ type: 'msg' as const, key: m.id, message: m }))]);
+  const flatReversed = [...flat].reverse();
 
   if (!user) return null;
   return (
@@ -159,15 +172,15 @@ export function ConversationScreen({ role }: Props) {
         {loadFailed && <View style={{ paddingHorizontal: spacing.lg }}><LoadFailedBanner onRetry={load} /></View>}
         {loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} /> : (
           <FlatList
-            data={flat}
+            data={flatReversed}
+            inverted
             keyExtractor={(x) => x.key}
             renderItem={({ item }) => item.type === 'day'
               ? <Text style={styles.day}>{item.label}</Text>
               : <MessageBubble message={item.message} mine={item.message.senderId === user.id} locale={i18n.language} />}
             contentContainerStyle={styles.list}
-            onStartReached={loadMore}
-            onStartReachedThreshold={0.2}
-            maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.2}
           />
         )}
         {summary?.blockedMe ? (

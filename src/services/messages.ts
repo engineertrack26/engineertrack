@@ -39,6 +39,12 @@ export const messageService = {
     ((await rpc<Array<Record<string, unknown>>>('list_messages', { p_conversation_id: conversationId, p_before: before ?? null, p_limit: MESSAGES_PAGE_SIZE })) || []).map(toMessage).reverse(),
   listContacts: async (groupId: string): Promise<MessageContact[]> =>
     ((await rpc<Array<Record<string, unknown>>>('list_message_contacts', { p_group_id: groupId })) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '' })),
+  /** A mentor's students, each with the group a conversation would be opened
+   *  in -- a mentor's students may sit in different groups. Backed by a
+   *  SECURITY DEFINER RPC because a mentor cannot read group_memberships
+   *  directly (see docs/direct-messages-rpcs.sql). */
+  listMentorContacts: async (): Promise<Array<MessageContact & { groupId: string; groupName: string }>> =>
+    ((await rpc<Array<Record<string, unknown>>>('list_mentor_message_contacts', {})) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: 'student', groupId: r.groupId as string, groupName: (r.groupName as string) || '' })),
   openConversation: (groupId: string, otherId: string) => rpc<string>('open_conversation', { p_group_id: groupId, p_other_id: otherId }),
   sendMessage: (conversationId: string, body: string) => rpc<string>('send_message', { p_conversation_id: conversationId, p_body: body }),
   markRead: (conversationId: string) => rpc<void>('mark_conversation_read', { p_conversation_id: conversationId }),

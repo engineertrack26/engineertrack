@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS conversation_blocks (
 CREATE OR REPLACE FUNCTION can_message(p_group_id UUID, p_user UUID, p_other UUID)
 RETURNS TEXT AS $$
   SELECT CASE
+    -- an archived group has no conversations, new or old
+    WHEN EXISTS (SELECT 1 FROM internship_groups g WHERE g.id = p_group_id AND g.is_archived) THEN NULL
     WHEN p_user IS NULL OR p_other IS NULL OR p_user = p_other THEN NULL
     -- member: both are the group's advisor or an active member
     WHEN (SELECT EXISTS (SELECT 1 FROM internship_groups g WHERE g.id = p_group_id AND g.advisor_id = p_user)

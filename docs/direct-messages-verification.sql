@@ -68,8 +68,9 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B8  unread: 1 for the recipient, 0 after mark_conversation_read
 --   B9  membership closed -> that student's conversations gone, the others remain
 --   B10 mentor changed -> mentor conversation gone, member conversations remain
+--   B12 mentor contacts list the linked student with the group
 --   B11 archive -> zero conversations for the group
--- Expected: eleven rows, none beginning FAIL / ABORTED.
+-- Expected: twelve rows, none beginning FAIL / ABORTED.
 -- ============================================================
 BEGIN;
 
@@ -225,6 +226,22 @@ BEGIN
       log := log || 'B10 mentor change deletes the mentor conversation' || E'\t' || CASE WHEN n = 0 AND m = 1 THEN 'gone, member kept' ELSE 'FAIL: ' || n || ' / ' || m END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B10 mentor change deletes the mentor conversation' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
+  -- B12 (mentor contacts list the linked student with the group) -- must run
+  -- before B11 archives the group. B10 already cleared mentor_id, so it is
+  -- restored here first, as owner (no impersonation needed for a direct
+  -- table UPDATE); request.jwt.claims is set to the mentor only afterwards,
+  -- for the RPC call that follows.
+  BEGIN
+    IF mentor IS NULL THEN
+      log := log || 'B12 mentor contacts list the linked student with the group' || E'\t' || 'SKIP: needs a mentor profile' || E'\n';
+    ELSE
+      UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
+      SELECT count(*) INTO n FROM list_mentor_message_contacts() x WHERE (x->>'id')::uuid = stu AND (x->>'groupId')::uuid = grp;
+      log := log || 'B12 mentor contacts list the linked student with the group' || E'\t' || CASE WHEN n = 1 THEN '1 contact' ELSE 'FAIL: ' || n END || E'\n';
+    END IF;
+  EXCEPTION WHEN OTHERS THEN log := log || 'B12 mentor contacts list the linked student with the group' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
   -- B11 (archive)
   BEGIN
