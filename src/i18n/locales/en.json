@@ -854,6 +854,11 @@
     }
   },
   "errors": {
+    "cannotMessage": "You can't message this person.",
+    "conversationNotFound": "This conversation is no longer available.",
+    "blocked": "You can't message this person.",
+    "messageEmpty": "Write a message first.",
+    "cannotBlock": "Conversations with your advisor can't be blocked.",
     "unknown": "Something went wrong. Please try again.",
     "notAuthenticated": "Your session expired. Please sign in again.",
     "roleNotAllowed": "Your role cannot perform this action.",
