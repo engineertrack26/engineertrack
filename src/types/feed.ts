@@ -36,6 +36,19 @@ export interface FeedPoll {
   myOptionId?: string;
 }
 
+export type FeedAttachmentKind = 'photo' | 'document' | 'link';
+
+export interface FeedAttachment {
+  id: string;
+  kind: FeedAttachmentKind;
+  /** photo/document: a SIGNED url once through feedService (the row holds
+   *  a storage path); link: the URL as entered. */
+  target: string;
+  name?: string;
+  mime?: string;
+  size?: number;
+}
+
 export interface FeedPost {
   id: string;
   kind: FeedPostKind;
@@ -50,6 +63,8 @@ export interface FeedPost {
   task?: FeedTask;
   poll?: FeedPoll;
   assignment?: FeedAssignment;
+  /** Always an array; empty for every kind but an announcement with files. */
+  attachments: FeedAttachment[];
 }
 
 export interface FeedComment {

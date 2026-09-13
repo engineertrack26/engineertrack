@@ -34,6 +34,7 @@ const ERROR_KEYS: Record<string, string> = {
   POLL_OPTIONS_RANGE: 'errors.pollOptionsRange',
   OPTION_MISMATCH: 'errors.optionMismatch',
   POST_NOT_FOUND: 'errors.postNotFound',
+  ATTACHMENT_LIMIT: 'errors.attachmentLimit',
 };
 
 /**

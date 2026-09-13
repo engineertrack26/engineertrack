@@ -705,7 +705,8 @@
     "kindNotAllowed": "That kind of post cannot be created here.",
     "pollOptionsRange": "A poll needs between 2 and 6 options.",
     "optionMismatch": "That option does not belong to this poll.",
-    "postNotFound": "This post no longer exists."
+    "postNotFound": "This post no longer exists.",
+    "attachmentLimit": "An announcement can carry one photo, one document and one link."
   },
   "tabs": {
     "dashboard": "Dashboard",
@@ -764,6 +765,11 @@
     "postFailed": "Could not post.",
     "posted": "Posted to the group.",
     "charCount": "{{count}}/{{max}}",
-    "document": "Document"
+    "document": "Document",
+    "addLink": "Add link",
+    "linkUrlPlaceholder": "https://…",
+    "linkTitlePlaceholder": "Link title (optional)",
+    "invalidLink": "Enter a full address starting with http:// or https://",
+    "attachmentUploadFailed": "Attachment upload failed. Remove it or try again."
   }
 }

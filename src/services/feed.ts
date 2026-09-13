@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
-import { signEvidence } from './evidenceUrls';
+import { signEvidence, signFeedAttachment, uploadToBucket, FEED_ATTACHMENT_BUCKET } from './evidenceUrls';
 import { RpcError } from './rpcError';
-import type { FeedPost, FeedComment, FeedPostKind } from '@/types/feed';
+import type { FeedPost, FeedComment, FeedPostKind, FeedAttachment, FeedAttachmentKind } from '@/types/feed';
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
 export const FEED_PAGE_SIZE = 20;
@@ -10,6 +10,7 @@ function toPost(raw: Record<string, unknown>): FeedPost {
   const task = raw.task as Record<string, unknown> | null;
   const poll = raw.poll as Record<string, unknown> | null;
   const assignment = raw.assignment as Record<string, unknown> | null;
+  const attachments = Array.isArray(raw.attachments) ? (raw.attachments as Array<Record<string, unknown>>) : [];
   return {
     id: raw.id as string,
     kind: raw.kind as FeedPostKind,
@@ -55,7 +56,22 @@ function toPost(raw: Record<string, unknown>): FeedPost {
           dueDate: (assignment.dueDate as string) || undefined,
         }
       : undefined,
+    // photo/document targets are storage paths here; listPosts signs them.
+    attachments: attachments.map((a) => ({
+      id: a.id as string,
+      kind: a.kind as FeedAttachmentKind,
+      target: (a.target as string) || '',
+      name: (a.name as string) || undefined,
+      mime: (a.mime as string) || undefined,
+      size: a.size === null || a.size === undefined ? undefined : Number(a.size),
+    })),
   };
+}
+
+/** Anything outside [A-Za-z0-9._-] becomes '_' so the object key is plain
+ *  ASCII whatever the device named the file. */
+function safeFileName(fileName: string): string {
+  return fileName.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
 export const feedService = {
@@ -80,19 +96,47 @@ export const feedService = {
         post.task.photos = signed.photos;
         post.task.documents = signed.documents;
       }
+      if (post.attachments.length > 0) {
+        // Sign photo/document targets; links pass through untouched. An
+        // attachment whose signing failed is DROPPED rather than kept with
+        // its bare path: a chip that opens nothing is worse than no chip,
+        // and the row still stands for the next read.
+        const signed = await Promise.all(post.attachments.map(async (a): Promise<FeedAttachment | undefined> => {
+          if (a.kind === 'link') return a;
+          const url = await signFeedAttachment(a.target);
+          return url ? { ...a, target: url } : undefined;
+        }));
+        post.attachments = signed.filter((a): a is FeedAttachment => a !== undefined);
+      }
       return post;
     }));
   },
 
-  async createPost(groupId: string, kind: 'announcement' | 'poll', body: string, options?: string[]): Promise<string> {
+  async createPost(
+    groupId: string,
+    kind: 'announcement' | 'poll',
+    body: string,
+    options?: string[],
+    attachments?: Array<{ kind: FeedAttachmentKind; target: string; name?: string; mime?: string; size?: number }>,
+  ): Promise<string> {
     const { data, error } = await supabase.rpc('create_feed_post', {
       p_group_id: groupId,
       p_kind: kind,
       p_body: body,
       p_options: options ?? null,
+      p_attachments: attachments ?? [],
     });
     if (error) throw new RpcError(error.message);
     return data as string;
+  },
+
+  /** Upload one announcement attachment; returns the storage PATH, which is
+   *  what the feed_attachments row stores. It is not a URL: the bucket is
+   *  private, so a URL only exists at read time (listPosts signs it). */
+  async uploadFeedAttachment(groupId: string, uri: string, fileName: string, mime: string): Promise<string> {
+    const path = `${groupId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}/${safeFileName(fileName)}`;
+    await uploadToBucket(FEED_ATTACHMENT_BUCKET, path, uri, fileName, mime);
+    return path;
   },
 
   async vote(postId: string, optionId: string): Promise<void> {

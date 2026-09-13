@@ -177,7 +177,32 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
       )}
 
       {post.kind === 'announcement' && (
-        <Text style={styles.body}>{post.body}</Text>
+        <View style={styles.section}>
+          <Text style={styles.body}>{post.body}</Text>
+          {/* Already in photo -> document -> link order and already signed
+              by feedService; a photo/document whose signing failed was
+              dropped there, so every target here is openable. */}
+          {post.attachments.map((a) => {
+            if (a.kind === 'photo') {
+              return (
+                <View key={a.id} style={styles.photoRow}>
+                  <TouchableOpacity onPress={() => onOpenPhoto(a.target)} activeOpacity={0.8}>
+                    <Image source={{ uri: a.target }} style={styles.photo} />
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+            const isLink = a.kind === 'link';
+            return (
+              <TouchableOpacity key={a.id} style={styles.docRow} onPress={() => Linking.openURL(a.target)} activeOpacity={0.7}>
+                <Ionicons name={isLink ? 'link-outline' : 'document-outline'} size={18} color={colors.primary} />
+                <Text style={styles.docName} numberOfLines={1}>
+                  {isLink ? (a.name || a.target) : (a.name || t('feed.document'))}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       )}
 
       {post.kind === 'assignment' && post.assignment && (

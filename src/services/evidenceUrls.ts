@@ -4,6 +4,7 @@ import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 export const PHOTO_BUCKET = 'log-photos';
 export const DOCUMENT_BUCKET = 'log-documents';
 export const ASSIGNMENT_DOC_BUCKET = 'assignment-docs';
+export const FEED_ATTACHMENT_BUCKET = 'feed-attachments';
 
 /** Long enough to open a document or scroll a review, short enough that a URL
  *  copied out of the app stops working. */
@@ -111,6 +112,24 @@ export async function signAssignmentDocument(
 
   const { data, error } = await supabase.storage
     .from(ASSIGNMENT_DOC_BUCKET)
+    .createSignedUrl(resolved, SIGNED_URL_TTL_SECONDS);
+  if (error || !data?.signedUrl) return undefined;
+  return data.signedUrl;
+}
+
+/** Sign one feed attachment path for display; undefined on failure (a bare
+ *  path is not a URL a screen can open). Links are never signed -- the
+ *  caller only routes photo/document targets here. Same shape and same
+ *  reasoning as signAssignmentDocument, on the feed-attachments bucket. */
+export async function signFeedAttachment(
+  path: string | undefined,
+): Promise<string | undefined> {
+  if (!path) return undefined;
+  const resolved = extractStoragePath(path, FEED_ATTACHMENT_BUCKET);
+  if (!resolved) return undefined;
+
+  const { data, error } = await supabase.storage
+    .from(FEED_ATTACHMENT_BUCKET)
     .createSignedUrl(resolved, SIGNED_URL_TTL_SECONDS);
   if (error || !data?.signedUrl) return undefined;
   return data.signedUrl;
