@@ -63,7 +63,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B3  student<->mentor opens as kind mentor
 --   B4  mentor<->advisor refused CANNOT_MESSAGE
 --   B5  send -> 1 message, 1 notification to the other side, last_message_at set
---   B6  block: blocked sender gets BLOCKED, blocker still sends
+--   B6  block (student-student, or mentor-student when there is one student): blocked sender gets BLOCKED, blocker still sends
 --   B7  advisor conversation: block refused CANNOT_BLOCK
 --   B8  unread: 1 for the recipient, 0 after mark_conversation_read
 --   B9  membership closed -> that student's conversations gone, the others remain
@@ -77,6 +77,7 @@ DO $$
 DECLARE
   adv UUID; stu UUID; stu2 UUID; mentor UUID; grp UUID;
   c_ss UUID; c_sa UUID; c_sm UUID; msg UUID; n INT; m INT; log TEXT := '';
+  v_bc UUID; v_blocker UUID;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
   SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
@@ -151,24 +152,33 @@ BEGIN
                 THEN '1 message, 1 notification, last_message_at set' ELSE 'FAIL: ' || n || ' messages, ' || m || ' notifications' END || E'\n';
   EXCEPTION WHEN OTHERS THEN log := log || 'B5 send writes message and notifies the other side' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
-  -- B6 (student-student block)
+  -- B6 (student-student or mentor-student block)
   BEGIN
-    IF stu2 IS NULL THEN
-      log := log || 'B6 block stops the other side, not the blocker' || E'\t' || 'SKIP: needs a second student' || E'\n';
+    v_bc := NULL; v_blocker := NULL;
+    IF stu2 IS NOT NULL THEN
+      v_bc := c_ss;
+      v_blocker := stu2;
+    ELSIF mentor IS NOT NULL THEN
+      v_bc := c_sm;
+      v_blocker := mentor;
     ELSE
-      PERFORM set_config('request.jwt.claims', json_build_object('sub', stu2, 'role', 'authenticated')::text, true);
-      PERFORM block_conversation(c_ss, true);
-      PERFORM send_message(c_ss, 'blocker can still write');
+      log := log || 'B6 block stops the other side, not the blocker' || E'\t' || 'SKIP: needs a second student or a mentor' || E'\n';
+    END IF;
+
+    IF v_bc IS NOT NULL THEN
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', v_blocker, 'role', 'authenticated')::text, true);
+      PERFORM block_conversation(v_bc, true);
+      PERFORM send_message(v_bc, 'blocker can still write');
       PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
       BEGIN
-        PERFORM send_message(c_ss, 'should be refused');
+        PERFORM send_message(v_bc, 'should be refused');
         log := log || 'B6 block stops the other side, not the blocker' || E'\t' || 'FAIL: blocked sender got through' || E'\n';
       EXCEPTION WHEN OTHERS THEN
         log := log || 'B6 block stops the other side, not the blocker' || E'\t'
             || CASE WHEN SQLERRM LIKE 'BLOCKED%' THEN 'BLOCKED for the blocked, sent for the blocker' ELSE 'FAIL: ' || SQLERRM END || E'\n';
       END;
-      PERFORM set_config('request.jwt.claims', json_build_object('sub', stu2, 'role', 'authenticated')::text, true);
-      PERFORM block_conversation(c_ss, false);
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', v_blocker, 'role', 'authenticated')::text, true);
+      PERFORM block_conversation(v_bc, false);
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B6 block stops the other side, not the blocker' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
