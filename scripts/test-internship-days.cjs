@@ -26,6 +26,7 @@ async function rejected(uid, sql, args, message) {
     CREATE TABLE student_profiles(id uuid PRIMARY KEY REFERENCES profiles,mentor_id uuid,advisor_id uuid,company_name text,internship_start_date date,internship_end_date date);
     CREATE TABLE internship_groups(id uuid PRIMARY KEY,advisor_id uuid,is_archived boolean DEFAULT false);
     CREATE TABLE group_memberships(id uuid PRIMARY KEY,group_id uuid,student_id uuid,left_at timestamptz);
+    CREATE TABLE notifications(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid,title text,body text,type text,data jsonb,created_at timestamptz DEFAULT now());
     CREATE TABLE competencies(id uuid PRIMARY KEY,name text);
     CREATE TABLE competency_kpis(id uuid PRIMARY KEY,competency_id uuid);
     CREATE TABLE kpi_triplets(id uuid PRIMARY KEY,kpi_id uuid);
@@ -72,6 +73,10 @@ async function rejected(uid, sql, args, message) {
   assert.deepEqual(options.map(t=>t.id),[task]);checks++;
   await as(student,save,[day,2,'Work','Learning','Tomorrow',0,true,'',task,null]);
   assert.equal((await week(mentor)).find(d=>d.id===day).experience,'Work');checks++;
+  // Notifications are written inside the RPCs: the mentor hears about the submit, nobody else does.
+  const notes=async(uid,type)=>{await db.exec('RESET ROLE');return (await db.query('SELECT count(*)::int AS n FROM notifications WHERE user_id=$1 AND type=$2',[uid,type])).rows[0].n;};
+  assert.equal(await notes(mentor,'internship_log_submitted'),1);checks++;
+  assert.equal(await notes(advisor,'internship_log_submitted'),0);checks++;
   await rejected(student,save,[day,3,'Edited','Learning','',0,true,'',task,null],'ID_REASON');
   const review='SELECT internship_review($1,$2,$3)';
   await rejected(advisor,review,[JSON.stringify([{id:day,version:3}]),'present',''],'ID_FORBIDDEN');
@@ -79,12 +84,17 @@ async function rejected(uid, sql, args, message) {
   assert.equal((await week(student)).find(d=>d.id===day).attendance,'pending');checks++;
   await as(mentor,review,[JSON.stringify([{id:day,version:3},{id:day2,version:1}]),'present','']);
   assert.equal((await week(student)).filter(d=>d.attendance==='present').length,2);checks++;
+  // One notification for the whole selection, not one per day.
+  assert.equal(await notes(student,'internship_attendance'),1);checks++;
   const total=(await as(advisor,'SELECT internship_totals($1) AS total',[student])).rows[0].total;
   assert.equal(total.present,2); assert.equal(total.missingLogs,1);checks++;
   await as(advisor,'SELECT internship_note($1,4,$2,true)',[day,'Please verify this date']);
   assert.equal((await week(student)).find(d=>d.id===day).correction_requested,true);checks++;
+  assert.equal(await notes(mentor,'internship_correction'),1);checks++;
   await rejected(mentor,review,[JSON.stringify([{id:day,version:5}]),'partial',''],'ID_REASON');
   await as(mentor,review,[JSON.stringify([{id:day,version:5}]),'partial','Corrected after checking']);
+  // Closing a correction tells the advisor who asked.
+  assert.equal(await notes(advisor,'internship_feedback'),1);checks++;
   const events=(await as(advisor,'SELECT internship_events($1) AS events',[day])).rows[0].events;
   assert.ok(events.some(e=>e.event_type==='correction'));
   assert.ok(!events.some(e=>e.event_type==='log_saved'));

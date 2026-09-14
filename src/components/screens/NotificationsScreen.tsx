@@ -40,6 +40,10 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   feed_comment: { name: 'chatbubble-ellipses', color: colors.info },
   feed_task_post: { name: 'clipboard-outline', color: colors.info },
   direct_message: { name: 'chatbubble-ellipses-outline', color: colors.primary },
+  internship_log_submitted: { name: 'book-outline', color: colors.primary },
+  internship_attendance: { name: 'calendar-outline', color: colors.success },
+  internship_correction: { name: 'alert-circle-outline', color: colors.error },
+  internship_feedback: { name: 'chatbox-ellipses-outline', color: colors.info },
 };
 
 interface NotificationsScreenProps {

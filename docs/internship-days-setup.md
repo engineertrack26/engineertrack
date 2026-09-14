@@ -68,7 +68,12 @@ Akış ve mesajlaşma tablolarını değiştirmez. Canlı veritabanına otomatik
   değilse rapor katılımsız çalışır.
 - İnternet gerekir. Başarısız kayıt sırasında form ekranda korunur; uygulama kapanınca
   gönderilmemiş metin için kalıcı çevrimdışı kuyruk yoktur. Ekrandan çıkarken
-  kaydedilmemiş değişiklikler için uyarı vardır. Otomatik bildirim/hatırlatıcı yoktur.
+  kaydedilmemiş değişiklikler için uyarı vardır.
+- Uygulama içi bildirimler RPC'lerin içinde yazılır (`internship_notify`): günlük gönderimi →
+  mentor; katılım kararı → öğrenci (seçim başına tek bildirim); düzeltme talebi → mentor;
+  geri bildirim → öğrenci; düzeltme talebinin kapanması → advisor. Hepsi ilgili rolün
+  Staj Günüm ekranına yönlenir. Zamanlanmış hatırlatıcı (haftalık "N gün onay bekliyor")
+  pg_cron gerektirir ve yapılmamıştır.
 
 ## Expo Go kabul testi
 

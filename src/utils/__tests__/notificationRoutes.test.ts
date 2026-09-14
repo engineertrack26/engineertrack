@@ -67,6 +67,14 @@ describe('routeForNotification', () => {
     expect(routeForNotification('feed_announcement', { postId: 'p1' }, 'mentor')).toBeNull();
   });
 
+  it('sends every internship-day notification to the internship-days screen of its role', () => {
+    for (const role of ['student', 'mentor', 'advisor'] as const) {
+      for (const type of ['internship_log_submitted', 'internship_attendance', 'internship_correction', 'internship_feedback']) {
+        expect(routeForNotification(type, { dayId: 'd1' }, role)).toEqual({ pathname: `/(${role})/internship-days` });
+      }
+    }
+  });
+
   it('sends a direct message to the conversation for every role', () => {
     for (const role of ['student', 'mentor', 'advisor'] as const) {
       expect(routeForNotification('direct_message', { conversationId: 'c1' }, role)).toEqual({

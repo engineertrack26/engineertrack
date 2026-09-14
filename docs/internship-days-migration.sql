@@ -178,6 +178,15 @@ BEGIN
 END;
 $$;
 
+-- One notification row, written inside the calling RPC's transaction (the
+-- same way send_message and the stream do it). Titles are English in the
+-- database, like every other notification here; the client shows them as is.
+CREATE OR REPLACE FUNCTION public.internship_notify(p_user uuid, p_type text, p_title text, p_body text, p_data jsonb)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$
+  INSERT INTO notifications(user_id,title,body,type,data) SELECT p_user,p_title,left(p_body,200),p_type,p_data WHERE p_user IS NOT NULL;
+$$;
+REVOKE ALL ON FUNCTION public.internship_notify(uuid,text,text,text,jsonb) FROM PUBLIC,anon,authenticated;
+
 CREATE OR REPLACE FUNCTION public.internship_save_log(p_day uuid,p_version integer,p_experience text,p_learning text,p_next_step text,p_support integer,p_submit boolean,p_reason text DEFAULT '',p_task uuid DEFAULT NULL,p_attachment jsonb DEFAULT NULL)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE d internship_days%ROWTYPE; task_label text; competency_label text;
@@ -213,6 +222,12 @@ BEGIN
       jsonb_build_object('experience',d.experience,'learning',d.learning,'next_step',d.next_step,'support_level',d.support_level,'log_status',d.log_status,'task_title',d.task_title,'attachment',d.attachment),
       jsonb_build_object('experience',experience,'learning',learning,'next_step',next_step,'support_level',support_level,'log_status',log_status,'task_title',task_title,'attachment',attachment)
     FROM internship_days WHERE id=p_day;
+  IF p_submit THEN
+    PERFORM internship_notify(p.mentor_id,'internship_log_submitted','Journal submitted',
+      concat_ws(' ',pr.first_name,pr.last_name)||' submitted the journal for '||to_char(d.day_date,'YYYY-MM-DD'),
+      jsonb_build_object('dayId',d.id,'studentId',d.student_id,'date',d.day_date))
+    FROM internship_placements p JOIN profiles pr ON pr.id=d.student_id WHERE p.id=d.placement_id;
+  END IF;
 END;
 $$;
 
@@ -233,7 +248,7 @@ GRANT EXECUTE ON FUNCTION public.internship_totals(uuid) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.internship_review(p_days jsonb,p_status text,p_note text DEFAULT '')
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE item jsonb; d internship_days%ROWTYPE;
+DECLARE item jsonb; d internship_days%ROWTYPE; v_student uuid; v_group uuid; v_count int := 0; v_closed int := 0; v_first date; v_last date;
 BEGIN
   IF (SELECT role FROM profiles WHERE id=auth.uid()) IS DISTINCT FROM 'mentor' THEN RAISE EXCEPTION 'ID_FORBIDDEN'; END IF;
   IF p_status IS NULL OR p_status NOT IN ('present','partial','excused','absent') OR jsonb_typeof(p_days) IS DISTINCT FROM 'array'
@@ -249,7 +264,28 @@ BEGIN
       correction_requested=false,version=version+1,updated_at=now() WHERE id=d.id;
     INSERT INTO internship_day_events(day_id,actor_id,event_type,note,previous_value,next_value)
       VALUES(d.id,auth.uid(),'attendance',coalesce(trim(p_note),''),jsonb_build_object('attendance',d.attendance,'correction_requested',d.correction_requested),jsonb_build_object('attendance',p_status));
+    -- A selection belongs to one student (the screen reviews one student at a
+    -- time); if it ever spans two, each student is told about their own days.
+    IF v_student IS DISTINCT FROM d.student_id AND v_student IS NOT NULL THEN
+      PERFORM internship_notify(v_student,'internship_attendance','Attendance decided',
+        v_count||' day(s) marked '||p_status||' ('||to_char(v_first,'YYYY-MM-DD')||' to '||to_char(v_last,'YYYY-MM-DD')||')',
+        jsonb_build_object('studentId',v_student,'status',p_status,'count',v_count));
+      v_count := 0; v_closed := 0; v_first := NULL;
+    END IF;
+    v_student := d.student_id; v_count := v_count+1; v_last := d.day_date; v_first := coalesce(v_first,d.day_date);
+    IF d.correction_requested THEN v_closed := v_closed+1; SELECT group_id INTO v_group FROM internship_placements WHERE id=d.placement_id; END IF;
   END LOOP;
+  IF v_student IS NOT NULL THEN
+    PERFORM internship_notify(v_student,'internship_attendance','Attendance decided',
+      v_count||' day(s) marked '||p_status||' ('||to_char(v_first,'YYYY-MM-DD')||' to '||to_char(v_last,'YYYY-MM-DD')||')',
+      jsonb_build_object('studentId',v_student,'status',p_status,'count',v_count));
+    IF v_closed > 0 THEN
+      PERFORM internship_notify(g.advisor_id,'internship_feedback','Correction answered',
+        concat_ws(' ',pr.first_name,pr.last_name)||': '||v_closed||' day(s) re-decided as '||p_status,
+        jsonb_build_object('studentId',v_student,'count',v_closed))
+      FROM internship_groups g JOIN profiles pr ON pr.id=v_student WHERE g.id=v_group;
+    END IF;
+  END IF;
 END;
 $$;
 
@@ -269,6 +305,16 @@ BEGIN
   UPDATE internship_days SET correction_requested=CASE WHEN p_correction THEN true ELSE correction_requested END,version=version+1,updated_at=now() WHERE id=p_day;
   INSERT INTO internship_day_events(day_id,actor_id,event_type,note)
     VALUES(p_day,auth.uid(),CASE WHEN p_correction THEN 'correction' ELSE 'feedback' END,trim(p_note));
+  IF p_correction THEN
+    PERFORM internship_notify(p.mentor_id,'internship_correction','Correction requested',
+      concat_ws(' ',pr.first_name,pr.last_name)||' / '||to_char(d.day_date,'YYYY-MM-DD')||': '||trim(p_note),
+      jsonb_build_object('dayId',d.id,'studentId',d.student_id,'date',d.day_date))
+    FROM internship_placements p JOIN profiles pr ON pr.id=d.student_id WHERE p.id=d.placement_id;
+  ELSE
+    PERFORM internship_notify(d.student_id,'internship_feedback','Feedback on your internship day',
+      to_char(d.day_date,'YYYY-MM-DD')||': '||trim(p_note),
+      jsonb_build_object('dayId',d.id,'date',d.day_date));
+  END IF;
 END;
 $$;
 

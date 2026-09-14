@@ -49,6 +49,11 @@ export function routeForNotification(
           const id = str(data?.conversationId);
           return id ? { pathname: '/(student)/conversation', params: { id } } : { pathname: '/(student)/messages' };
         }
+        case 'internship_log_submitted':
+        case 'internship_attendance':
+        case 'internship_correction':
+        case 'internship_feedback':
+          return { pathname: '/(student)/internship-days' };
         default:
           return null;
       }
@@ -63,6 +68,11 @@ export function routeForNotification(
           const id = str(data?.conversationId);
           return id ? { pathname: '/(mentor)/conversation', params: { id } } : { pathname: '/(mentor)/messages' };
         }
+        case 'internship_log_submitted':
+        case 'internship_attendance':
+        case 'internship_correction':
+        case 'internship_feedback':
+          return { pathname: '/(mentor)/internship-days' };
         default:
           return null;
       }
@@ -79,6 +89,11 @@ export function routeForNotification(
           const id = str(data?.conversationId);
           return id ? { pathname: '/(advisor)/conversation', params: { id } } : { pathname: '/(advisor)/messages' };
         }
+        case 'internship_log_submitted':
+        case 'internship_attendance':
+        case 'internship_correction':
+        case 'internship_feedback':
+          return { pathname: '/(advisor)/internship-days' };
         default:
           return null;
       }
