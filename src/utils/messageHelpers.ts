@@ -1,4 +1,4 @@
-import type { Message } from '@/types/messages';
+import type { ConversationKind, Message, Participant } from '@/types/messages';
 
 /** One-line preview for the conversation list. Counts code points, not
  *  UTF-16 units, so an emoji is never split. */
@@ -24,4 +24,18 @@ export function dayGroups(messages: Message[], locale: string): DayGroup[] {
     else out.push({ key, label: d.toLocaleDateString(locale), messages: [msg] });
   }
   return out;
+}
+
+/** A message bubble's sender name, falling back to `fallback` for a
+ *  participant who has since left the conversation (their row is gone but
+ *  their old messages remain). */
+export function senderName(participants: Participant[], senderId: string, fallback: string): string {
+  return participants.find((p) => p.id === senderId)?.name || fallback;
+}
+
+/** Case: the other participants' names. 1:1: the other's role label. */
+export function conversationSubtitle(kind: ConversationKind, participants: Participant[], me: string, roleLabel: (role: string) => string): string {
+  const others = participants.filter((p) => p.id !== me);
+  if (kind === 'case') return others.map((p) => p.name).join(', ');
+  return others[0] ? roleLabel(others[0].role) : '';
 }

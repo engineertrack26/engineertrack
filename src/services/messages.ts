@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { RpcError } from './rpcError';
-import type { ConversationSummary, Message, MessageContact } from '@/types/messages';
+import type { ConversationSummary, Message, MessageContact, Participant } from '@/types/messages';
 
 export const MESSAGES_PAGE_SIZE = 50;
 
@@ -10,9 +10,12 @@ function toSummary(r: Record<string, unknown>): ConversationSummary {
     kind: r.kind as ConversationSummary['kind'],
     groupId: r.groupId as string,
     groupName: (r.groupName as string) || '',
-    otherId: r.otherId as string,
-    otherName: (r.otherName as string) || '',
-    otherRole: (r.otherRole as string) || '',
+    subjectId: (r.subjectId as string) || null,
+    title: (r.title as string) || (r.otherName as string) || '',
+    participants: Array.isArray(r.participants) ? (r.participants as Participant[]) : [],
+    otherId: (r.otherId as string) || null,
+    otherName: (r.otherName as string) || null,
+    otherRole: (r.otherRole as string) || null,
     lastMessageAt: (r.lastMessageAt as string) || undefined,
     lastMessagePreview: (r.lastMessagePreview as string) || undefined,
     unreadCount: Number(r.unreadCount) || 0,
@@ -46,6 +49,9 @@ export const messageService = {
   listMentorContacts: async (): Promise<Array<MessageContact & { groupId: string; groupName: string }>> =>
     ((await rpc<Array<Record<string, unknown>>>('list_mentor_message_contacts', {})) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: 'student', groupId: r.groupId as string, groupName: (r.groupName as string) || '' })),
   openConversation: (groupId: string, otherId: string) => rpc<string>('open_conversation', { p_group_id: groupId, p_other_id: otherId }),
+  openCase: (groupId: string, studentId: string) => rpc<string>('open_case', { p_group_id: groupId, p_student_id: studentId }),
+  listCaseCandidates: async (groupId: string): Promise<MessageContact[]> =>
+    ((await rpc<Array<Record<string, unknown>>>('list_case_candidates', { p_group_id: groupId })) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '', hasCase: !!r.hasCase })),
   sendMessage: (conversationId: string, body: string) => rpc<string>('send_message', { p_conversation_id: conversationId, p_body: body }),
   markRead: (conversationId: string) => rpc<void>('mark_conversation_read', { p_conversation_id: conversationId }),
   setBlocked: (conversationId: string, block: boolean) => rpc<void>('block_conversation', { p_conversation_id: conversationId, p_block: block }),

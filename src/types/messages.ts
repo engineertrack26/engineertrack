@@ -1,13 +1,24 @@
-export type ConversationKind = 'member' | 'mentor';
+export type ConversationKind = 'member' | 'mentor' | 'staff' | 'case';
+
+export interface Participant {
+  id: string;
+  name: string;
+  role: string;
+}
 
 export interface ConversationSummary {
   id: string;
   kind: ConversationKind;
   groupId: string;
   groupName: string;
-  otherId: string;
-  otherName: string;
-  otherRole: 'student' | 'mentor' | 'advisor' | string;
+  /** The student a case is about; null for 1:1. */
+  subjectId: string | null;
+  /** Case: the student's name. 1:1: the other participant's name. */
+  title: string;
+  participants: Participant[];
+  otherId: string | null;
+  otherName: string | null;
+  otherRole: string | null;
   lastMessageAt?: string;
   lastMessagePreview?: string;
   unreadCount: number;
@@ -27,4 +38,5 @@ export interface MessageContact {
   id: string;
   name: string;
   role: string;
+  hasCase?: boolean;
 }

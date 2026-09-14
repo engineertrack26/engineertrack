@@ -1,4 +1,4 @@
-import { previewText, dayGroups } from '@/utils/messageHelpers';
+import { previewText, dayGroups, senderName, conversationSubtitle } from '@/utils/messageHelpers';
 
 describe('previewText', () => {
   it('collapses whitespace and newlines to single spaces', () => {
@@ -27,5 +27,20 @@ describe('dayGroups', () => {
   });
   it('returns no groups for no messages', () => {
     expect(dayGroups([], 'en')).toEqual([]);
+  });
+});
+
+describe('senderName', () => {
+  const parts = [{ id: 'a', name: 'Ayşe', role: 'student' }, { id: 'm', name: 'Mert', role: 'mentor' }];
+  it('resolves a participant and falls back to a label for a departed one', () => {
+    expect(senderName(parts, 'm', 'Former participant')).toBe('Mert');
+    expect(senderName(parts, 'gone', 'Former participant')).toBe('Former participant');
+  });
+});
+describe('conversationSubtitle', () => {
+  it('lists the other participants of a case and the role for a 1:1', () => {
+    const parts = [{ id: 'a', name: 'Ayşe', role: 'student' }, { id: 'm', name: 'Mert', role: 'mentor' }, { id: 'd', name: 'Deniz', role: 'advisor' }];
+    expect(conversationSubtitle('case', parts, 'd', (r) => r)).toBe('Ayşe, Mert');
+    expect(conversationSubtitle('mentor', parts.slice(0, 2), 'a', (r) => `R:${r}`)).toBe('R:mentor');
   });
 });

@@ -4,12 +4,13 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import type { TFunction } from 'i18next';
 import { useAuthStore } from '@/store/authStore';
 import { useMessageStore } from '@/store/messageStore';
 import { messageService, MESSAGES_PAGE_SIZE } from '@/services/messages';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { dayGroups } from '@/utils/messageHelpers';
+import { dayGroups, senderName, conversationSubtitle } from '@/utils/messageHelpers';
 import { LoadFailedBanner } from '@/components/common';
 import { MessageBubble } from '@/components/messages';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -17,6 +18,12 @@ import type { ConversationSummary, Message } from '@/types/messages';
 
 interface Props { role: 'student' | 'mentor' | 'advisor' }
 const BODY_MAX = 2000;
+
+function roleLabel(role: string, t: TFunction): string {
+  if (role === 'advisor') return t('messages.roleAdvisor', 'Advisor');
+  if (role === 'mentor') return t('messages.roleMentor', 'Mentor');
+  return t('messages.roleStudent', 'Student');
+}
 
 export function ConversationScreen({ role }: Props) {
   const { t, i18n } = useTranslation();
@@ -136,13 +143,13 @@ export function ConversationScreen({ role }: Props) {
       }
     };
     if (!block) { void doIt(); return; }
-    Alert.alert(t('messages.block', 'Block'), t('messages.blockConfirm', '{{name}} will no longer be able to message you. You keep the conversation.', { name: summary.otherName }), [
+    Alert.alert(t('messages.block', 'Block'), t('messages.blockConfirm', '{{name}} will no longer be able to message you. You keep the conversation.', { name: summary.title }), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('messages.block', 'Block'), style: 'destructive', onPress: () => void doIt() },
     ]);
   }
 
-  const canBlock = summary && summary.otherRole !== 'advisor' && role !== 'advisor';
+  const canBlock = summary && (summary.kind === 'member' || summary.kind === 'mentor') && summary.otherRole !== 'advisor' && role !== 'advisor';
   const groups = dayGroups(messages, i18n.language);
   // Oldest first, day label before that day's messages -- the natural
   // top-to-bottom reading order. Rendered in an INVERTED list, so it is
@@ -161,8 +168,12 @@ export function ConversationScreen({ role }: Props) {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}><Ionicons name="chevron-back" size={26} color={colors.text} /></TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>{summary?.otherName ?? ''}</Text>
-          {!!summary && <Text style={styles.meta} numberOfLines={1}>{summary.groupName}</Text>}
+          <Text style={styles.name} numberOfLines={1}>{summary?.title ?? ''}</Text>
+          {!!summary && (
+            <Text style={styles.meta} numberOfLines={1}>
+              {summary.kind === 'case' ? conversationSubtitle('case', summary.participants, user.id, (r) => roleLabel(r, t)) : summary.groupName}
+            </Text>
+          )}
         </View>
         {canBlock && (
           <TouchableOpacity onPress={toggleBlock} hitSlop={8}>
@@ -179,7 +190,14 @@ export function ConversationScreen({ role }: Props) {
             keyExtractor={(x) => x.key}
             renderItem={({ item }) => item.type === 'day'
               ? <Text style={styles.day}>{item.label}</Text>
-              : <MessageBubble message={item.message} mine={item.message.senderId === user.id} locale={i18n.language} />}
+              : (
+                <MessageBubble
+                  message={item.message}
+                  mine={item.message.senderId === user.id}
+                  locale={i18n.language}
+                  senderName={summary?.kind === 'case' && item.message.senderId !== user.id ? senderName(summary.participants, item.message.senderId, t('messages.formerParticipant', 'Former participant')) : undefined}
+                />
+              )}
             contentContainerStyle={styles.list}
             onEndReached={loadMore}
             onEndReachedThreshold={0.2}

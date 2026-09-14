@@ -990,6 +990,8 @@
     "blocked": "You can't message this person.",
     "messageEmpty": "Write a message first.",
     "cannotBlock": "Conversations with your advisor can't be blocked.",
+    "cannotOpenCase": "Only the group's advisor can open a case for an active member.",
+    "caseNeedsMentor": "This student has no linked mentor yet, so a case can't be opened.",
     "unknown": "Something went wrong. Please try again.",
     "notAuthenticated": "Your session expired. Please sign in again.",
     "roleNotAllowed": "Your role cannot perform this action.",
@@ -1036,7 +1038,14 @@
     "deleteWarning_one": "{{count}} conversation and its messages will be permanently deleted.",
     "deleteWarning_other": "{{count}} conversations and their messages will be permanently deleted.",
     "leaveWarning_one": "Joining another group deletes your {{count}} conversation in the current group permanently. Re-entering your current group's code changes nothing.",
-    "leaveWarning_other": "Joining another group deletes your {{count}} conversations in the current group permanently. Re-entering your current group's code changes nothing."
+    "leaveWarning_other": "Joining another group deletes your {{count}} conversations in the current group permanently. Re-entering your current group's code changes nothing.",
+    "caseLabel": "Case",
+    "newCase": "New case",
+    "pickCaseStudent": "Open a case for which student?",
+    "caseHint": "A case is a thread between you, the student and their mentor.",
+    "caseExists": "Case already open",
+    "formerParticipant": "Former participant",
+    "roleStaff": "Advisor · Mentor"
   },
   "tabs": {
     "messages": "Messages",

@@ -29,6 +29,7 @@ export function MessagesScreen({ role }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'contact' | 'case'>('contact');
   const [contacts, setContacts] = useState<MessageContact[] | null>(null);
   const [contactsFailed, setContactsFailed] = useState(false);
   const request = useRef(0);
@@ -81,6 +82,7 @@ export function MessagesScreen({ role }: Props) {
 
   async function openPicker() {
     setPicker(true);
+    setPickerMode('contact');
     setContacts(null);
     setContactsFailed(false);
     try {
@@ -103,7 +105,38 @@ export function MessagesScreen({ role }: Props) {
     }
   }
 
+  async function openCasePicker() {
+    if (!groupId) return;
+    setPicker(true);
+    setPickerMode('case');
+    setContacts(null);
+    setContactsFailed(false);
+    try {
+      setContacts(await messageService.listCaseCandidates(groupId));
+    } catch (err) {
+      console.warn('Case candidates load failed:', err instanceof Error ? err.message : err);
+      setContacts([]);
+      setContactsFailed(true);
+    }
+  }
+
+  function retryPicker() {
+    if (pickerMode === 'case') void openCasePicker(); else void openPicker();
+  }
+
   async function openWith(contact: MessageContact & { groupId?: string }) {
+    if (pickerMode === 'case') {
+      if (!groupId) return;
+      try {
+        const id = await messageService.openCase(groupId, contact.id);
+        setPicker(false);
+        router.push({ pathname: `/(${role})/conversation`, params: { id } } as never);
+      } catch (err) {
+        const { key } = mapRpcError(err instanceof Error ? err.message : '');
+        Alert.alert(t('common.error'), t(key));
+      }
+      return;
+    }
     const gid = contact.groupId ?? groupId;
     if (!gid) return;
     try {
@@ -121,15 +154,23 @@ export function MessagesScreen({ role }: Props) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{t('messages.title', 'Messages')}</Text>
-        <TouchableOpacity style={styles.newBtn} onPress={openPicker} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={18} color={colors.primary} />
-          <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
-        </TouchableOpacity>
+        <View style={styles.headerBtns}>
+          {role === 'advisor' && (
+            <TouchableOpacity style={styles.newBtn} onPress={openCasePicker} activeOpacity={0.7} disabled={!groupId}>
+              <Ionicons name="people-outline" size={18} color={groupId ? colors.primary : colors.textDisabled} />
+              <Text style={[styles.newText, !groupId && { color: colors.textDisabled }]}>{t('messages.newCase', 'New case')}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.newBtn} onPress={openPicker} activeOpacity={0.7}>
+            <Ionicons name="create-outline" size={18} color={colors.primary} />
+            <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <FlatList
         data={items}
         keyExtractor={(c) => c.id}
-        renderItem={({ item }) => <ConversationRow item={item} locale={i18n.language} onPress={() => router.push({ pathname: `/(${role})/conversation`, params: { id: item.id } } as never)} />}
+        renderItem={({ item }) => <ConversationRow item={item} me={user.id} locale={i18n.language} onPress={() => router.push({ pathname: `/(${role})/conversation`, params: { id: item.id } } as never)} />}
         ListHeaderComponent={
           <View>
             {loadFailed && <LoadFailedBanner onRetry={() => { loadGroups(); load(); }} />}
@@ -154,7 +195,16 @@ export function MessagesScreen({ role }: Props) {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
       />
-      <ContactPicker visible={picker} contacts={contacts} failed={contactsFailed} onPick={openWith} onClose={() => setPicker(false)} onRetry={openPicker} />
+      <ContactPicker
+        visible={picker}
+        contacts={contacts}
+        failed={contactsFailed}
+        onPick={openWith}
+        onClose={() => setPicker(false)}
+        onRetry={retryPicker}
+        title={pickerMode === 'case' ? t('messages.pickCaseStudent', 'Open a case for which student?') : undefined}
+        hint={pickerMode === 'case' ? t('messages.caseHint', 'A case is a thread between you, the student and their mentor.') : undefined}
+      />
     </SafeAreaView>
   );
 }
@@ -163,6 +213,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
   title: { fontSize: 24, fontWeight: '700', color: colors.text },
+  headerBtns: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   newBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   newText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, flexGrow: 1 },

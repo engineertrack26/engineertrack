@@ -40,6 +40,8 @@ const ERROR_KEYS: Record<string, string> = {
   BLOCKED: 'errors.blocked',
   MESSAGE_EMPTY: 'errors.messageEmpty',
   CANNOT_BLOCK: 'errors.cannotBlock',
+  CANNOT_OPEN_CASE: 'errors.cannotOpenCase',
+  CASE_NEEDS_MENTOR: 'errors.caseNeedsMentor',
 };
 
 /**
