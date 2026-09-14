@@ -9,6 +9,7 @@ import { advisorDashboardViewService } from '@/services/advisorDashboardView';
 import { notificationService } from '@/services/notifications';
 import { LoadFailedBanner } from '@/components/common';
 import { AdvisorBell, GroupRow, groupStyles } from '@/components/advisor/GroupUI';
+import { InternshipDaysLink } from '@/components/internship/InternshipDaysLink';
 import { ui } from '@/components/common/workflowStyles';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { groupCenterRoute } from '@/utils/advisorGroups';
@@ -102,6 +103,7 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
         <AdvisorBell />
       </View>
       <View style={styles.hero}>
+        <InternshipDaysLink role="advisor" />
         <View style={styles.heroIcon}><Ionicons name="school-outline" size={28} color={colors.primaryDark} /></View>
         <Text style={ui.cardTitle}>{t('advisorHome.heroTitle')}</Text>
         <Text style={ui.body}>{t('advisorHome.heroBody')}</Text>

@@ -45,6 +45,7 @@ export default function MentorLayout() {
         headerShown: false,
       }}
     >
+      <Tabs.Screen name="internship-days" options={{ href: null }} />
       <Tabs.Screen
         name="dashboard"
         options={{

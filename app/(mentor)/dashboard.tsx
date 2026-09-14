@@ -12,6 +12,7 @@ import { filterReviews } from '@/utils/mentorReviews';
 import { LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { ReviewHeader, ReviewIdentity } from '@/components/mentor/ReviewUI';
+import { InternshipDaysLink } from '@/components/internship/InternshipDaysLink';
 import { colors } from '@/theme';
 
 type DashboardStats = Awaited<ReturnType<typeof mentorService.getDashboardStats>>;
@@ -86,6 +87,7 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
     <View style={[ui.content, { paddingTop: 12, paddingBottom: 12 }]}><ReviewHeader brand /></View>
     <ScrollView contentContainerStyle={ui.content}
       refreshControl={<RefreshControl refreshing={statsLoading || queueLoading} onRefresh={load} tintColor={colors.primaryDark} />}>
+      <InternshipDaysLink role="mentor" />
       <View style={{ gap: 8 }}>
         <Text accessibilityRole="header" style={ui.title}>{name ? t('mentorHome.greeting', { name }) : t('mentorHome.welcome')}</Text>
         <Text style={ui.body}>{t('mentorHome.intro')}</Text>

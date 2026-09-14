@@ -13,6 +13,7 @@ import { competencyCompletion, CompletionMetrics } from '@/utils/reportMetrics';
 import { sortTasks, isActionable } from '@/utils/studentTasks';
 import { LoadFailedBanner, ProgressBar } from '@/components/common';
 import { StudentHeader, TaskCard, ui } from '@/components/student/StudentUI';
+import { InternshipDaysLink } from '@/components/internship/InternshipDaysLink';
 import { colors } from '@/theme';
 
 export default function StudentDashboard() {
@@ -72,6 +73,7 @@ export default function StudentDashboard() {
     <ScrollView contentContainerStyle={ui.content}
       refreshControl={<RefreshControl refreshing={tasks.refreshing && !tasks.loading} onRefresh={refresh} />}>
       <StudentHeader title="EngineerTrack" />
+      <InternshipDaysLink role="student" />
       <View style={{ gap: 8 }}>
         <Text accessibilityRole="header" style={ui.title}>{t('studentFlow.greeting', { name: user?.firstName || '' })}</Text>
         <Text style={ui.secondary}>{t('studentFlow.homeHint')}</Text>
