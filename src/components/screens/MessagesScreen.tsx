@@ -33,6 +33,7 @@ export function MessagesScreen({ role }: Props) {
   const [contacts, setContacts] = useState<MessageContact[] | null>(null);
   const [contactsFailed, setContactsFailed] = useState(false);
   const request = useRef(0);
+  const pickerReq = useRef(0);
 
   // Which group a NEW conversation is opened in. Student: their active
   // group. Advisor: the selected chip. Mentor: the group of the student they
@@ -81,6 +82,7 @@ export function MessagesScreen({ role }: Props) {
   const onRefresh = useCallback(async () => { setRefreshing(true); await loadGroups(); await load(); setRefreshing(false); }, [loadGroups, load]);
 
   async function openPicker() {
+    const req = ++pickerReq.current;
     setPicker(true);
     setPickerMode('contact');
     setContacts(null);
@@ -92,13 +94,17 @@ export function MessagesScreen({ role }: Props) {
         // its own RPC instead -- a mentor cannot read group_memberships
         // directly, so this cannot be resolved client-side.
         const students = await messageService.listMentorContacts();
+        if (req !== pickerReq.current) return;
         setContacts(students);
       } else if (groupId) {
-        setContacts(await messageService.listContacts(groupId));
+        const list = await messageService.listContacts(groupId);
+        if (req !== pickerReq.current) return;
+        setContacts(list);
       } else {
         setContacts([]);
       }
     } catch (err) {
+      if (req !== pickerReq.current) return;
       console.warn('Contacts load failed:', err instanceof Error ? err.message : err);
       setContacts([]);
       setContactsFailed(true);
@@ -107,13 +113,17 @@ export function MessagesScreen({ role }: Props) {
 
   async function openCasePicker() {
     if (!groupId) return;
+    const req = ++pickerReq.current;
     setPicker(true);
     setPickerMode('case');
     setContacts(null);
     setContactsFailed(false);
     try {
-      setContacts(await messageService.listCaseCandidates(groupId));
+      const list = await messageService.listCaseCandidates(groupId);
+      if (req !== pickerReq.current) return;
+      setContacts(list);
     } catch (err) {
+      if (req !== pickerReq.current) return;
       console.warn('Case candidates load failed:', err instanceof Error ? err.message : err);
       setContacts([]);
       setContactsFailed(true);
@@ -200,7 +210,7 @@ export function MessagesScreen({ role }: Props) {
         contacts={contacts}
         failed={contactsFailed}
         onPick={openWith}
-        onClose={() => setPicker(false)}
+        onClose={() => { pickerReq.current++; setPicker(false); }}
         onRetry={retryPicker}
         title={pickerMode === 'case' ? t('messages.pickCaseStudent', 'Open a case for which student?') : undefined}
         hint={pickerMode === 'case' ? t('messages.caseHint', 'A case is a thread between you, the student and their mentor.') : undefined}

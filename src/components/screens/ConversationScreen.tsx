@@ -203,7 +203,7 @@ export function ConversationScreen({ role }: Props) {
             onEndReachedThreshold={0.2}
           />
         )}
-        {summary?.blockedMe ? (
+        {summary?.blockedMe && (summary.kind === 'member' || summary.kind === 'mentor') ? (
           <View style={styles.blockedBar}><Text style={styles.blockedText}>{t('messages.blocked', "You can't message this person.")}</Text></View>
         ) : (
           <View style={styles.inputRow}>
