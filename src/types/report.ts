@@ -32,4 +32,43 @@ export interface GroupReportData {
   needsRevision: number;
   competencyBreakdown: CompetencyBreakdown[];
   studentProgress: StudentReportRow[];
+  /** From internship_group_attendance; null when the internship-days module
+   *  is not installed on this database, so the rest of the report still works. */
+  attendance: GroupAttendance | null;
+}
+
+/** One student's attendance totals across their placements in the group. */
+export interface AttendanceStudentRow {
+  id: string;
+  name: string;
+  company: string;
+  mentor: string;
+  present: number;
+  partial: number;
+  excused: number;
+  absent: number;
+  pending: number;
+  corrections: number;
+  submittedLogs: number;
+}
+
+/** One internship day as the CSV records it. No log content -- status only. */
+export interface AttendanceDayRow {
+  studentId: string;
+  name: string;
+  /** YYYY-MM-DD in the placement's timezone. */
+  date: string;
+  attendance: 'pending' | 'present' | 'partial' | 'excused' | 'absent';
+  /** The student opened the day on the day itself (server-stamped). */
+  checkedIn: boolean;
+  checkInAt: string | null;
+  decidedBy: string;
+  decidedAt: string | null;
+  correctionRequested: boolean;
+  logStatus: 'draft' | 'submitted';
+}
+
+export interface GroupAttendance {
+  students: AttendanceStudentRow[];
+  days: AttendanceDayRow[];
 }

@@ -3,7 +3,21 @@ import { competencyService } from './competency';
 import { groupService } from './group';
 import { competencyCompletion, averageCompletion } from '@/utils/reportMetrics';
 import type { CompetencyProgress } from '@/types/competency';
-import type { CompetencyBreakdown, GroupReportData, StudentReportRow } from '@/types/report';
+import type { CompetencyBreakdown, GroupAttendance, GroupReportData, StudentReportRow } from '@/types/report';
+
+/** Attendance for the report. The internship-days module is installed
+ *  separately (docs/internship-days-migration.sql); a database without it
+ *  answers "function not found", which is null here -- the rest of the
+ *  report must not fail over an optional section. Any other error is real. */
+async function groupAttendance(groupId: string): Promise<GroupAttendance | null> {
+  const { data, error } = await supabase.rpc('internship_group_attendance', { p_group_id: groupId });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') return null;
+    throw error;
+  }
+  const raw = (data || {}) as Partial<GroupAttendance>;
+  return { students: raw.students || [], days: raw.days || [] };
+}
 
 /** Daily logs were daily, so three days of nothing meant something. Tasks
  *  carry deadlines and a student may legitimately work several days on one,
@@ -397,9 +411,10 @@ export const advisorService = {
    *  `group_memberships` scoped to this group with `left_at IS NULL`, which
    *  is exactly "only active memberships count". */
   async getReportsData(groupId: string): Promise<GroupReportData> {
-    const [{ data: group, error: groupError }, members] = await Promise.all([
+    const [{ data: group, error: groupError }, members, attendance] = await Promise.all([
       supabase.from('internship_groups').select('id, name').eq('id', groupId).single(),
       groupService.listMembers(groupId),
+      groupAttendance(groupId),
     ]);
     if (groupError) throw groupError;
 
@@ -424,6 +439,8 @@ export const advisorService = {
         needsRevision: 0,
         competencyBreakdown: [],
         studentProgress: [],
+        // A student who left still has attendance history in the group.
+        attendance,
       };
     }
 
@@ -507,6 +524,7 @@ export const advisorService = {
       needsRevision: submissions.filter((s) => s.status === 'needs_revision').length,
       competencyBreakdown: Array.from(competencyMap.values()),
       studentProgress,
+      attendance,
     };
   },
 };

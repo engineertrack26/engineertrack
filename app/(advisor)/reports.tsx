@@ -11,10 +11,10 @@ import { BackButton, LoadFailedBanner } from '@/components/common';
 import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
-import { csvRow, filterReportStudents } from '@/utils/advisorReportView';
+import { attendanceDayRows, attendanceSummaryRows, csvRow, filterReportStudents } from '@/utils/advisorReportView';
 import { colors } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
-import type { GroupReportData } from '@/types/report';
+import type { AttendanceDayRow, GroupReportData } from '@/types/report';
 
 export default function ReportsScreen() {
   const { groupId, entry } = useLocalSearchParams<{ groupId?: string; entry?: string }>();
@@ -40,7 +40,7 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
   const [reportFailed, setReportFailed] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [groupSearch, setGroupSearch] = useState('');
-  const [tab, setTab] = useState<'summary' | 'competencies' | 'students'>('summary');
+  const [tab, setTab] = useState<'summary' | 'competencies' | 'students' | 'attendance'>('summary');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'name' | 'progress'>('name');
   const selectedRef = useRef<string | null>(null);
@@ -169,6 +169,36 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
         lines.push(csvRow([s.name, s.completionPercent, s.submitted, s.approved]));
       });
 
+      // Attendance: the section a university asks for as proof. Totals per
+      // student, then every internship day with the mentor's decision -- the
+      // day rows are the record, the totals are the summary of it. Absent
+      // entirely when the module is not installed, rather than an empty table
+      // that reads as "nobody attended".
+      if (data.attendance) {
+        const att = data.attendance;
+        lines.push('');
+        lines.push(t('advisorReports.csvAttendanceHeader', 'Attendance'));
+        lines.push(csvRow([
+          t('advisor.csvColName'), t('advisorReports.csvColCompany', 'Workplace'), t('advisorReports.csvColMentor', 'Mentor'),
+          attendanceLabel('present'), attendanceLabel('partial'), attendanceLabel('excused'), attendanceLabel('absent'), attendanceLabel('pending'),
+          t('advisorReports.csvColCorrections', 'Corrections requested'), t('advisorReports.csvColSubmittedLogs', 'Journals submitted'),
+        ]));
+        attendanceSummaryRows(att.students, i18n.language).forEach((row) => lines.push(csvRow(row)));
+        lines.push(csvRow([t('advisorReports.csvAttendanceNote', 'Counts are internship days recorded in the app. A day without a record is not counted as absent.')]));
+        lines.push('');
+        lines.push(t('advisorReports.csvAttendanceDaysHeader', 'Attendance days'));
+        lines.push(csvRow([
+          t('advisor.csvColName'), t('advisorReports.csvColDate', 'Date'), t('advisorReports.csvColAttendance', 'Attendance'),
+          t('advisorReports.csvColCheckedIn', 'Checked in on the day'), t('advisorReports.csvColCheckInAt', 'Check-in time'),
+          t('advisorReports.csvColDecidedBy', 'Decided by'), t('advisorReports.csvColDecidedAt', 'Decided at'),
+          t('advisorReports.csvColCorrection', 'Correction requested'), t('advisorReports.csvColLog', 'Journal'),
+        ]));
+        attendanceDayRows(att.days, i18n.language, {
+          yes: t('common.yes', 'Yes'), no: t('common.no', 'No'), attendance: attendanceLabel,
+          logStatus: (value) => t('advisorReports.log_' + value, value === 'submitted' ? 'Submitted' : 'Not submitted'),
+        }).forEach((row) => lines.push(csvRow(row)));
+      }
+
       await Share.share({
         message: lines.join('\n'),
         title: t('advisor.exportTitle', { group: data.groupName }),
@@ -178,6 +208,13 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
       Alert.alert(t('advisor.exportErrorTitle'), t('advisor.exportFailed'));
     } finally { exportLock.current = false; setExporting(false); }
   }
+
+  function attendanceLabel(value: AttendanceDayRow['attendance']): string {
+    const defaults = { present: 'Present', partial: 'Partial', excused: 'Excused', absent: 'Absent', pending: 'Awaiting decision' };
+    return t('advisorReports.attendance_' + value, defaults[value]);
+  }
+  const attendanceStudents = data?.attendance
+    ? [...data.attendance.students].sort((a, b) => a.name.localeCompare(b.name, i18n.language) || a.id.localeCompare(b.id)) : [];
 
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
   const matchingGroups = groups.filter((group) => (group.name + ' ' + (group.term ?? ''))
@@ -209,10 +246,10 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
           <Text style={ui.body}>{t(groups.length === 0 ? 'advisor.noGroupsForReports' : 'advisorGroups.unavailable')}</Text>
         </View> : <>
           <View style={styles.tabs} accessibilityRole="tablist">
-            {(['summary', 'competencies', 'students'] as const).map((value) => <TouchableOpacity
+            {(['summary', 'competencies', 'students', 'attendance'] as const).map((value) => <TouchableOpacity
               key={value} accessibilityRole="tab" accessibilityState={{ selected: tab === value }}
               style={[styles.tab, tab === value && styles.selected]} onPress={() => setTab(value)}>
-              <Text style={groupStyles.linkText}>{t('advisorReports.' + value)}</Text>
+              <Text style={groupStyles.linkText}>{value === 'attendance' ? t('advisorReports.attendance', 'Attendance') : t('advisorReports.' + value)}</Text>
             </TouchableOpacity>)}
           </View>
           {tab === 'summary' && <>
@@ -237,6 +274,9 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" style={groupStyles.outline} onPress={() => setTab('students')}>
               <Text style={groupStyles.linkText}>{t('advisor.studentCompletion')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" style={groupStyles.outline} onPress={() => setTab('attendance')}>
+              <Text style={groupStyles.linkText}>{t('advisorReports.attendance', 'Attendance')}</Text>
             </TouchableOpacity>
           </>}
           {tab === 'competencies' && <>
@@ -269,6 +309,26 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
               <Text style={ui.secondary}>{t('advisor.submittedCount', { count: student.submitted })}
                 {' ('}{t('advisor.approvedCount', { count: student.approved })}{')'}</Text>
             </View>)}
+          </>}
+          {tab === 'attendance' && <>
+            <Text style={ui.section} accessibilityRole="header">{t('advisorReports.attendance', 'Attendance')}</Text>
+            {!data.attendance ? <Text style={ui.body}>{t('advisorReports.attendanceNotInstalled', 'The internship-days module is not installed on this database.')}</Text> :
+              !attendanceStudents.length ? <Text style={ui.body}>{t('advisorReports.noAttendance', 'No internship days have been recorded in this group yet.')}</Text> : <>
+              <Text style={ui.secondary}>{t('advisorReports.attendanceHint', 'Days the students recorded in the app and what their mentors decided. A day without a record is not counted as absent.')}</Text>
+              {attendanceStudents.map((s) => <View key={s.id} style={ui.card}>
+                <Text style={ui.cardTitle}>{s.name}</Text>
+                {!!(s.company || s.mentor) && <Text style={ui.secondary}>{[s.company, s.mentor].filter(Boolean).join(' \u00b7 ')}</Text>}
+                <View style={styles.counts}>
+                  {([['present', s.present], ['partial', s.partial], ['excused', s.excused], ['absent', s.absent]] as const).map(([key, value]) =>
+                    <View key={key} style={styles.count}><Text style={styles.countValue}>{value}</Text><Text style={ui.secondary}>{attendanceLabel(key)}</Text></View>)}
+                </View>
+                {(s.pending > 0 || s.corrections > 0) && <Text style={[ui.label, { color: colors.warning }]}>
+                  {[s.pending > 0 ? t('advisorReports.pendingCount', '{{count}} awaiting the mentor', { count: s.pending }) : '',
+                    s.corrections > 0 ? t('advisorReports.correctionCount', '{{count}} correction requested', { count: s.corrections }) : ''].filter(Boolean).join(' \u00b7 ')}
+                </Text>}
+                <Text style={ui.secondary}>{t('advisorReports.submittedLogs', '{{count}} journals submitted', { count: s.submittedLogs })}</Text>
+              </View>)}
+            </>}
           </>}
           <View style={ui.card}>
             <Text style={ui.secondary}>{t('advisorReports.exportHint')}</Text>
@@ -313,6 +373,9 @@ const styles = StyleSheet.create({
   tab: { minHeight: 48, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center' },
   selected: { backgroundColor: '#eaf1fb', borderColor: colors.primaryDark },
   metrics: { flexDirection: 'row', gap: 12 },
+  counts: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  count: { minWidth: 64, alignItems: 'center' },
+  countValue: { fontSize: 22, color: colors.text, fontWeight: '700' },
   value: { fontSize: 30, color: colors.text, fontWeight: '700' },
   track: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.divider },
   fill: { height: 8, borderRadius: 4, backgroundColor: colors.primaryDark },

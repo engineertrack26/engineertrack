@@ -313,5 +313,44 @@ DROP POLICY IF EXISTS internship_files_select ON storage.objects;
 CREATE POLICY internship_files_select ON storage.objects FOR SELECT TO authenticated
 USING(bucket_id='internship-day-files' AND public.internship_file_allowed(name,false));
 -- No overwrite/delete permission: earlier attachments remain part of the audit trail.
+-- Group attendance for the advisor's report: per-student totals and the
+-- per-day record that backs the CSV. Ownership of the group is enough,
+-- archived or not -- the university reports after the term. Log CONTENT is
+-- never returned here, only each day's attendance and log status.
+CREATE OR REPLACE FUNCTION public.internship_group_attendance(p_group_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM internship_groups g WHERE g.id=p_group_id AND g.advisor_id=auth.uid()) THEN RAISE EXCEPTION 'ID_FORBIDDEN'; END IF;
+  RETURN jsonb_build_object(
+    'students', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+        'id',s.student_id,'name',s.name,'company',s.company,'mentor',s.mentor,
+        'present',s.present,'partial',s.partial,'excused',s.excused,'absent',s.absent,'pending',s.pending,
+        'corrections',s.corrections,'submittedLogs',s.submitted_logs) ORDER BY s.name,s.student_id),'[]'::jsonb)
+      FROM (SELECT d.student_id, concat_ws(' ',p.first_name,p.last_name) AS name,
+          string_agg(DISTINCT pl.company_name,', ') AS company,
+          string_agg(DISTINCT concat_ws(' ',mp.first_name,mp.last_name),', ') AS mentor,
+          count(*) FILTER (WHERE d.attendance='present') AS present,
+          count(*) FILTER (WHERE d.attendance='partial') AS partial,
+          count(*) FILTER (WHERE d.attendance='excused') AS excused,
+          count(*) FILTER (WHERE d.attendance='absent') AS absent,
+          count(*) FILTER (WHERE d.attendance='pending') AS pending,
+          count(*) FILTER (WHERE d.correction_requested) AS corrections,
+          count(*) FILTER (WHERE d.log_status='submitted') AS submitted_logs
+        FROM internship_days d JOIN internship_placements pl ON pl.id=d.placement_id
+        JOIN profiles p ON p.id=d.student_id LEFT JOIN profiles mp ON mp.id=pl.mentor_id
+        WHERE pl.group_id=p_group_id GROUP BY d.student_id,p.first_name,p.last_name) s),
+    'days', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+        'studentId',d.student_id,'name',concat_ws(' ',p.first_name,p.last_name),'date',d.day_date,
+        'attendance',d.attendance,'checkedIn',d.check_in_at IS NOT NULL,'checkInAt',d.check_in_at,
+        'decidedBy',concat_ws(' ',ap.first_name,ap.last_name),'decidedAt',d.attendance_at,
+        'correctionRequested',d.correction_requested,'logStatus',d.log_status) ORDER BY p.first_name,p.last_name,d.student_id,d.day_date),'[]'::jsonb)
+      FROM internship_days d JOIN internship_placements pl ON pl.id=d.placement_id
+      JOIN profiles p ON p.id=d.student_id LEFT JOIN profiles ap ON ap.id=d.attendance_by
+      WHERE pl.group_id=p_group_id));
+END;
+$$;
+REVOKE ALL ON FUNCTION public.internship_group_attendance(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.internship_group_attendance(uuid) TO authenticated;
+
 NOTIFY pgrst, 'reload schema';
 COMMIT;

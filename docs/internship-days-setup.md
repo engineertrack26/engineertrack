@@ -60,6 +60,10 @@ Akış ve mesajlaşma tablolarını değiştirmez. Canlı veritabanına otomatik
   ya da öğrenci gruptan ayrıldıktan sonra da kayıtları **okur** (üniversite raporu dönem
   bittikten sonra yazılır); arşivden sonra geri bildirim veya düzeltme talebi yazamaz.
   Öğrencinin kendi geçmişi her durumda kalır.
+- Advisor Raporlar ekranında "Katılım" sekmesi ve CSV'de iki bölüm vardır (öğrenci başına
+  toplamlar; gün başına karar, karar veren, check-in, günlük durumu). Kaynak
+  `internship_group_attendance(p_group_id)`; günlük içeriği rapora girmez. Modül kurulu
+  değilse rapor katılımsız çalışır.
 - İnternet gerekir. Başarısız kayıt sırasında form ekranda korunur; uygulama kapanınca
   gönderilmemiş metin için kalıcı çevrimdışı kuyruk yoktur. Ekrandan çıkarken
   kaydedilmemiş değişiklikler için uyarı vardır. Otomatik bildirim/hatırlatıcı yoktur.
