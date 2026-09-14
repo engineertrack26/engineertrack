@@ -73,13 +73,14 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B1  student<->student opens as kind member
 --   B2  student<->advisor opens as kind member
 --   B3  student<->mentor opens as kind mentor
---   B4  mentor<->advisor refused CANNOT_MESSAGE
+--   B4  mentor with a student they do not mentor refused CANNOT_MESSAGE
 --   B5  send -> 1 message, 1 notification to the other side, last_message_at set
 --   B6  block (student-student, or mentor-student when there is one student): blocked sender gets BLOCKED, blocker still sends
 --   B7  advisor conversation: block refused CANNOT_BLOCK
 --   B8  unread: 1 for the recipient, 0 after mark_conversation_read
 --   B9  membership closed -> that student's conversations gone, the others remain
 --   B10 mentor changed -> mentor conversation gone, member conversations remain
+--   B19 open_case without a mentor -> CASE_NEEDS_MENTOR
 --   B14 advisor opens a case -> 3 participants, 2 notified, reopen idempotent
 --   B15 the student cannot open a case -> CANNOT_OPEN_CASE
 --   B16 a message in the case notifies the two others; blocking is refused
@@ -88,7 +89,7 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B13 re-joining own group keeps conversations
 --   B12 mentor contacts list the linked student with the group
 --   B11 archive -> zero conversations for the group (cases included), zero notifications
--- Expected: eighteen rows, none beginning FAIL / ABORTED.
+-- Expected: nineteen rows, none beginning FAIL / ABORTED.
 -- ============================================================
 BEGIN;
 
@@ -104,7 +105,7 @@ BEGIN
   SELECT id INTO stu2 FROM profiles WHERE role = 'student' AND id <> stu ORDER BY created_at LIMIT 1;
   SELECT id INTO mentor FROM profiles WHERE role = 'mentor' ORDER BY created_at LIMIT 1;
   IF adv IS NULL OR stu IS NULL THEN
-    PERFORM set_config('probe.results', 'B1-B18' || E'\t' || 'SKIP: needs an advisor and a student' || E'\n', true);
+    PERFORM set_config('probe.results', 'B1-B19' || E'\t' || 'SKIP: needs an advisor and a student' || E'\n', true);
     RETURN;
   END IF;
 
@@ -145,20 +146,24 @@ BEGIN
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B3 student-mentor opens as mentor' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
-  -- B4
+  -- B4 (in v2, advisor<->mentor is a real 'staff' pairing -- B17 asserts that;
+  -- the surviving CANNOT_MESSAGE negative control is a mentor and a student
+  -- they do not mentor)
   BEGIN
     IF mentor IS NULL THEN
-      log := log || 'B4 mentor-advisor refused' || E'\t' || 'SKIP: needs a mentor profile' || E'\n';
+      log := log || 'B4 mentor with a student they do not mentor refused CANNOT_MESSAGE' || E'\t' || 'SKIP: needs a mentor profile' || E'\n';
+    ELSIF stu2 IS NULL THEN
+      log := log || 'B4 mentor with a student they do not mentor refused CANNOT_MESSAGE' || E'\t' || 'SKIP: needs a second student' || E'\n';
     ELSE
       PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
       BEGIN
-        PERFORM open_conversation(grp, adv);
-        log := log || 'B4 mentor-advisor refused' || E'\t' || 'FAIL: opened' || E'\n';
+        PERFORM open_conversation(grp, stu2);
+        log := log || 'B4 mentor with a student they do not mentor refused CANNOT_MESSAGE' || E'\t' || 'FAIL: opened' || E'\n';
       EXCEPTION WHEN OTHERS THEN
-        log := log || 'B4 mentor-advisor refused' || E'\t' || CASE WHEN SQLERRM LIKE 'CANNOT_MESSAGE%' THEN 'CANNOT_MESSAGE' ELSE 'FAIL: ' || SQLERRM END || E'\n';
+        log := log || 'B4 mentor with a student they do not mentor refused CANNOT_MESSAGE' || E'\t' || CASE WHEN SQLERRM LIKE 'CANNOT_MESSAGE%' THEN 'CANNOT_MESSAGE' ELSE 'FAIL: ' || SQLERRM END || E'\n';
       END;
     END IF;
-  EXCEPTION WHEN OTHERS THEN log := log || 'B4 mentor-advisor refused' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+  EXCEPTION WHEN OTHERS THEN log := log || 'B4 mentor with a student they do not mentor refused CANNOT_MESSAGE' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
   -- B5 (student -> advisor)
   BEGIN
@@ -245,6 +250,21 @@ BEGIN
       log := log || 'B10 mentor change deletes the mentor conversation' || E'\t' || CASE WHEN n = 0 AND m = 1 THEN 'gone, member kept' ELSE 'FAIL: ' || n || ' / ' || m END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B10 mentor change deletes the mentor conversation' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
+
+  -- B19 open_case without a mentor -> CASE_NEEDS_MENTOR (stu.mentor_id is NULL here, after B10)
+  BEGIN
+    IF mentor IS NULL THEN
+      log := log || 'B19 open_case without a mentor' || E'\t' || 'SKIP: needs a mentor profile' || E'\n';
+    ELSE
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+      BEGIN
+        PERFORM open_case(grp, stu);
+        log := log || 'B19 open_case without a mentor' || E'\t' || 'FAIL: opened' || E'\n';
+      EXCEPTION WHEN OTHERS THEN
+        log := log || 'B19 open_case without a mentor' || E'\t' || CASE WHEN SQLERRM LIKE 'CASE_NEEDS_MENTOR%' THEN 'CASE_NEEDS_MENTOR' ELSE 'FAIL: ' || SQLERRM END || E'\n';
+      END;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN log := log || 'B19 open_case without a mentor' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
   -- B14 advisor opens a case: 3 participants, 2 notifications
   BEGIN
@@ -372,13 +392,16 @@ ROLLBACK;
 --   C3 the advisor reads its message                         0 rows
 --   C4 a student of another group reads it                  0 rows
 --   C5 non-participant send_message                         CONVERSATION_NOT_FOUND
---   C6 after the membership is closed, the former participant  0 rows (and list_conversations empty)
+--   C6 after the membership is closed, the former participant  0 rows (list_conversations empty, case gone)
 --   C7 another student reads the case's messages             0 rows
---   C8 the case subject's mentor reads the case               no error (positive control)
+--   C8 the case subject's mentor reads the case               1 row (positive control)
 --   C9 the advisor reads the case                             1 row (the advisor IS a participant here)
 -- C2/C3/C5 need a second student or a mentor; C4 needs a third student; C7
 -- needs a second student; C8/C9 need a mentor profile (open_case needs one).
--- They SKIP otherwise.
+-- They SKIP otherwise. The case carries one real message (as owner, in setup)
+-- so C7's 0-rows and C8's 1-row are both real reads, not vacuous.
+-- C7-C9 print before C6: closing the membership deletes the case, so the case
+-- must be read while it still exists -- C6's own membership-close setup runs after.
 -- With one student and a mentor, the conversation under test for C1-C6 is
 -- student<->mentor: the advisor is still an outsider to it, so C2/C3/C5 are real.
 -- ============================================================
@@ -430,6 +453,9 @@ BEGIN
     UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
     c_case := open_case(grp, stu);
+    -- A real message, as owner: C7's "0 rows" and C8's "1 row" would otherwise
+    -- both be vacuous on an empty case.
+    INSERT INTO messages (conversation_id, sender_id, body) VALUES (c_case, adv, 'case private');
   END IF;
 
   PERFORM set_config('probe.ready', 'yes', true);
@@ -515,8 +541,8 @@ BEGIN
   ELSE
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
     BEGIN
-      PERFORM list_messages(c_case);
-      log := log || 'C8 the case subject''s mentor reads the case' || E'\t' || 'no error' || E'\n';
+      SELECT count(*) INTO n FROM list_messages(c_case);
+      log := log || 'C8 the case subject''s mentor reads the case' || E'\t' || CASE WHEN n = 1 THEN '1 row' ELSE 'FAIL: ' || n END || E'\n';
     EXCEPTION WHEN OTHERS THEN log := log || 'C8 the case subject''s mentor reads the case' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
   END IF;
 
@@ -544,16 +570,24 @@ BEGIN
 END $$;
 SET LOCAL ROLE authenticated;
 DO $$
-DECLARE stu UUID; c UUID; n INT; m INT; log TEXT;
+DECLARE stu UUID; c UUID; adv UUID; c_case UUID; n INT; m INT; k INT; log TEXT;
 BEGIN
   IF coalesce(current_setting('probe.ready', true), 'no') <> 'yes' THEN RETURN; END IF;
   stu := current_setting('probe.stu')::uuid; c := current_setting('probe.c')::uuid;
+  adv := current_setting('probe.adv')::uuid; c_case := NULLIF(current_setting('probe.case'), '')::uuid;
   log := current_setting('probe.results', true);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
   BEGIN
     SELECT count(*) INTO n FROM messages WHERE conversation_id = c;
     SELECT count(*) INTO m FROM list_conversations(NULL);
-    log := log || 'C6 former participant after leaving' || E'\t' || CASE WHEN n = 0 AND m = 0 THEN '0 rows, list empty' ELSE 'FAIL: ' || n || ' rows, ' || m || ' listed' END || E'\n';
+    IF c_case IS NULL THEN
+      k := 0;
+    ELSE
+      -- the case is deleted by the same membership-close trigger; check as the advisor
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+      SELECT count(*) INTO k FROM conversations WHERE id = c_case;
+    END IF;
+    log := log || 'C6 former participant after leaving' || E'\t' || CASE WHEN n = 0 AND m = 0 AND k = 0 THEN '0 rows, list empty, case gone' ELSE 'FAIL: ' || n || ' rows, ' || m || ' listed, ' || k || ' case rows' END || E'\n';
   EXCEPTION WHEN OTHERS THEN log := log || 'C6 former participant after leaving' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n'; END;
   PERFORM set_config('probe.results', log, true);
 END $$;

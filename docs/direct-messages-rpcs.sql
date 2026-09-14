@@ -37,10 +37,11 @@ BEGIN
   END IF;
   SELECT sp.mentor_id INTO v_mentor FROM student_profiles sp WHERE sp.id = p_student_id;
   IF v_mentor IS NULL THEN RAISE EXCEPTION 'CASE_NEEDS_MENTOR'; END IF;
-  SELECT id INTO v_id FROM conversations WHERE group_id = p_group_id AND subject_id = p_student_id;
+  INSERT INTO conversations (group_id, kind, subject_id, created_by) VALUES (p_group_id, 'case', p_student_id, auth.uid())
+  ON CONFLICT (group_id, subject_id) DO NOTHING RETURNING id INTO v_id;
   IF v_id IS NULL THEN
-    INSERT INTO conversations (group_id, kind, subject_id, created_by) VALUES (p_group_id, 'case', p_student_id, auth.uid())
-    RETURNING id INTO v_id;
+    SELECT id INTO v_id FROM conversations WHERE group_id = p_group_id AND subject_id = p_student_id;
+  ELSE
     v_new := true;
   END IF;
   INSERT INTO conversation_participants (conversation_id, user_id)
@@ -62,7 +63,7 @@ CREATE OR REPLACE FUNCTION list_case_candidates(p_group_id UUID)
 RETURNS SETOF JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED'; END IF;
-  IF NOT EXISTS (SELECT 1 FROM internship_groups g WHERE g.id = p_group_id AND g.advisor_id = auth.uid()) THEN
+  IF NOT EXISTS (SELECT 1 FROM internship_groups g WHERE g.id = p_group_id AND g.advisor_id = auth.uid() AND NOT g.is_archived) THEN
     RAISE EXCEPTION 'CANNOT_OPEN_CASE';
   END IF;
   RETURN QUERY
@@ -177,6 +178,7 @@ BEGIN
   LEFT JOIN profiles_public o ON o.id = conversation_other(c.id, auth.uid())
   LEFT JOIN profiles_public s ON s.id = c.subject_id
   WHERE (p_group_id IS NULL OR c.group_id = p_group_id)
+    AND EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = c.id AND cp.user_id = auth.uid())
     AND can_access_conversation(c.id)
   ORDER BY coalesce(c.last_message_at, c.created_at) DESC;
 END;
