@@ -13,7 +13,7 @@
 DO $$
 DECLARE t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['conversations','messages','conversation_reads','conversation_blocks'] LOOP
+  FOREACH t IN ARRAY ARRAY['conversations','conversation_participants','messages','conversation_reads','conversation_blocks'] LOOP
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = t) THEN
       RAISE EXCEPTION 'FAIL: table % is missing', t;
     END IF;
@@ -31,16 +31,22 @@ BEGIN
     END IF;
   END LOOP;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_pair_ordered') THEN
-    RAISE EXCEPTION 'FAIL: conversations_pair_ordered CHECK is missing';
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_case_has_subject') THEN
+    RAISE EXCEPTION 'FAIL: conversations_case_has_subject CHECK is missing';
   END IF;
-  FOREACH t IN ARRAY ARRAY['can_message','can_access_conversation'] LOOP
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'conversations_case_has_no_pair') THEN
+    RAISE EXCEPTION 'FAIL: conversations_case_has_no_pair CHECK is missing';
+  END IF;
+  FOREACH t IN ARRAY ARRAY['can_message','can_access_conversation','conversation_other'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = t) THEN
       RAISE EXCEPTION 'FAIL: %() is missing', t;
     END IF;
   END LOOP;
   IF has_function_privilege('authenticated', 'can_message(uuid,uuid,uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: can_message is callable by authenticated -- it must stay internal';
+  END IF;
+  IF has_function_privilege('authenticated', 'conversation_other(uuid,uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: conversation_other is callable by authenticated';
   END IF;
   FOREACH t IN ARRAY ARRAY['trg_dm_membership_closed','trg_dm_group_archived','trg_dm_mentor_changed','trg_dm_conversation_deleted'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = t AND NOT tgisinternal) THEN
