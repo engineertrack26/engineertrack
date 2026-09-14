@@ -33,8 +33,10 @@ Akış ve mesajlaşma tablolarını değiştirmez. Canlı veritabanına otomatik
 - Katılım ile günlük ayrı durum alanlarıdır. İzinli/katılmadı/kararsız günler,
   sırf günlük bulunmadığı için eksik günlük sayılmaz. Tam/kısmi gün ayrı sayılır;
   kısmi günü otomatik 0,5 gün sayma veya çalışma saati hesabı yapılmaz.
-- Hafta Pazartesi–Pazar'dır; hafta sonu devamsızlığı varsayılmaz. Çalışma takvimi
-  tanımlı olmadığı için beklenen iş günü/otomatik devamsızlık hesabı yoktur.
+- Hafta Pazartesi–Pazar'dır; hafta sonu devamsızlığı varsayılmaz. Advisor raporunda
+  "beklenen iş günü" placement tarihleri arasındaki Pzt–Cum günleridir (resmî tatil
+  takvimi yok); "şimdiye kadar" bugünde durur. Kayıtsız gün *bilinmeyen*dir, devamsızlık
+  değildir — rapor bunu açıkça yazar. Otomatik devamsızlık kararı yoktur.
 - Mentor seçtiği günlere toplu karar verir; önceden seçim yapılmaz. Tek bir gün
   yetkisiz/eski sürümse toplu işlem tamamen geri alınır. Önceki kararı değiştirme,
   advisor düzeltme talebini kapatma ve Katıldı dışındaki kararlar gerekçelidir.

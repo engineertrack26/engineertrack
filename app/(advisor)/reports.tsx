@@ -180,11 +180,13 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
         lines.push(t('advisorReports.csvAttendanceHeader', 'Attendance'));
         lines.push(csvRow([
           t('advisor.csvColName'), t('advisorReports.csvColCompany', 'Workplace'), t('advisorReports.csvColMentor', 'Mentor'),
+          t('advisorReports.csvColExpectedSoFar', 'Working days so far'), t('advisorReports.csvColExpectedTotal', 'Working days in internship'),
+          t('advisorReports.csvColUnrecorded', 'Days without a record'),
           attendanceLabel('present'), attendanceLabel('partial'), attendanceLabel('excused'), attendanceLabel('absent'), attendanceLabel('pending'),
           t('advisorReports.csvColCorrections', 'Corrections requested'), t('advisorReports.csvColSubmittedLogs', 'Journals submitted'),
         ]));
         attendanceSummaryRows(att.students, i18n.language).forEach((row) => lines.push(csvRow(row)));
-        lines.push(csvRow([t('advisorReports.csvAttendanceNote', 'Counts are internship days recorded in the app. A day without a record is not counted as absent.')]));
+        lines.push(csvRow([t('advisorReports.csvAttendanceNote', 'Working days are Monday to Friday between the internship dates; public holidays are not excluded. A day without a record is unknown, not absent.')]));
         lines.push('');
         lines.push(t('advisorReports.csvAttendanceDaysHeader', 'Attendance days'));
         lines.push(csvRow([
@@ -314,10 +316,13 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
             <Text style={ui.section} accessibilityRole="header">{t('advisorReports.attendance', 'Attendance')}</Text>
             {!data.attendance ? <Text style={ui.body}>{t('advisorReports.attendanceNotInstalled', 'The internship-days module is not installed on this database.')}</Text> :
               !attendanceStudents.length ? <Text style={ui.body}>{t('advisorReports.noAttendance', 'No internship days have been recorded in this group yet.')}</Text> : <>
-              <Text style={ui.secondary}>{t('advisorReports.attendanceHint', 'Days the students recorded in the app and what their mentors decided. A day without a record is not counted as absent.')}</Text>
+              <Text style={ui.secondary}>{t('advisorReports.attendanceHint', 'Days the students recorded in the app and what their mentors decided. Working days are Monday to Friday between the internship dates, public holidays included; a day without a record is unknown, not absent.')}</Text>
               {attendanceStudents.map((s) => <View key={s.id} style={ui.card}>
                 <Text style={ui.cardTitle}>{s.name}</Text>
                 {!!(s.company || s.mentor) && <Text style={ui.secondary}>{[s.company, s.mentor].filter(Boolean).join(' \u00b7 ')}</Text>}
+                <Text style={ui.label}>{t('advisorReports.expectedSoFar', '{{recorded}} of {{expected}} working days recorded so far', { recorded: s.recorded, expected: s.expectedSoFar })}
+                  {' \u00b7 '}{t('advisorReports.expectedTotal', '{{count}} in the whole internship', { count: s.expectedDays })}</Text>
+                {s.unrecorded > 0 && <Text style={[ui.label, { color: colors.warning }]}>{t('advisorReports.unrecordedCount', '{{count}} working days without a record', { count: s.unrecorded })}</Text>}
                 <View style={styles.counts}>
                   {([['present', s.present], ['partial', s.partial], ['excused', s.excused], ['absent', s.absent]] as const).map(([key, value]) =>
                     <View key={key} style={styles.count}><Text style={styles.countValue}>{value}</Text><Text style={ui.secondary}>{attendanceLabel(key)}</Text></View>)}

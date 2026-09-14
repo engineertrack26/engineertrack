@@ -50,6 +50,15 @@ export interface AttendanceStudentRow {
   pending: number;
   corrections: number;
   submittedLogs: number;
+  /** Days recorded in the app, whatever their attendance state. */
+  recorded: number;
+  /** Weekdays across the student's placements in the group (no holiday calendar). */
+  expectedDays: number;
+  /** The same, stopped at today in the placement's timezone. */
+  expectedSoFar: number;
+  /** expectedSoFar minus days recorded in the app, floored at 0. Not "absent":
+   *  a day nobody recorded is unknown, and the report says so. */
+  unrecorded: number;
 }
 
 /** One internship day as the CSV records it. No log content -- status only. */

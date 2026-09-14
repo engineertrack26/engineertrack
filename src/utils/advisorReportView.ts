@@ -30,7 +30,7 @@ export function filterReportStudents(rows: StudentReportRow[], query: string, so
  *  are sorted by name so two exports of the same group line up in a diff. */
 export function attendanceSummaryRows(students: AttendanceStudentRow[], locale: string): Array<Array<string | number>> {
   return [...students].sort((a, b) => a.name.localeCompare(b.name, locale) || a.id.localeCompare(b.id)).map((s) =>
-    [s.name, s.company, s.mentor, s.present, s.partial, s.excused, s.absent, s.pending, s.corrections, s.submittedLogs]);
+    [s.name, s.company, s.mentor, s.expectedSoFar, s.expectedDays, s.unrecorded, s.present, s.partial, s.excused, s.absent, s.pending, s.corrections, s.submittedLogs]);
 }
 
 /** One CSV row per internship day: who, when, what the mentor decided and

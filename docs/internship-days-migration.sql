@@ -313,8 +313,18 @@ DROP POLICY IF EXISTS internship_files_select ON storage.objects;
 CREATE POLICY internship_files_select ON storage.objects FOR SELECT TO authenticated
 USING(bucket_id='internship-day-files' AND public.internship_file_allowed(name,false));
 -- No overwrite/delete permission: earlier attachments remain part of the audit trail.
+-- Working days (Mon-Fri) in an inclusive date range; 0 when the range is
+-- empty. No public-holiday calendar: the report says so.
+CREATE OR REPLACE FUNCTION public.internship_weekdays(p_from date, p_to date)
+RETURNS integer LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE WHEN p_from IS NULL OR p_to IS NULL OR p_to < p_from THEN 0
+    ELSE (SELECT count(*)::int FROM generate_series(p_from, p_to, interval '1 day') AS d WHERE extract(isodow FROM d) < 6) END;
+$$;
+
 -- Group attendance for the advisor's report: per-student totals and the
--- per-day record that backs the CSV. Ownership of the group is enough,
+-- per-day record that backs the CSV. Expected days come from the placement's
+-- own start/end (weekdays only, in the placement's timezone); "so far" stops
+-- at today so a student mid-internship is not shown as missing the future. Ownership of the group is enough,
 -- archived or not -- the university reports after the term. Log CONTENT is
 -- never returned here, only each day's attendance and log status.
 CREATE OR REPLACE FUNCTION public.internship_group_attendance(p_group_id uuid)
@@ -325,8 +335,10 @@ BEGIN
     'students', (SELECT coalesce(jsonb_agg(jsonb_build_object(
         'id',s.student_id,'name',s.name,'company',s.company,'mentor',s.mentor,
         'present',s.present,'partial',s.partial,'excused',s.excused,'absent',s.absent,'pending',s.pending,
-        'corrections',s.corrections,'submittedLogs',s.submitted_logs) ORDER BY s.name,s.student_id),'[]'::jsonb)
-      FROM (SELECT d.student_id, concat_ws(' ',p.first_name,p.last_name) AS name,
+        'corrections',s.corrections,'submittedLogs',s.submitted_logs,
+        'recorded',s.recorded,'expectedDays',s.expected_days,'expectedSoFar',s.expected_so_far,
+        'unrecorded',GREATEST(0,s.expected_so_far - s.recorded)) ORDER BY s.name,s.student_id),'[]'::jsonb)
+      FROM (SELECT pl.student_id, concat_ws(' ',p.first_name,p.last_name) AS name,
           string_agg(DISTINCT pl.company_name,', ') AS company,
           string_agg(DISTINCT concat_ws(' ',mp.first_name,mp.last_name),', ') AS mentor,
           count(*) FILTER (WHERE d.attendance='present') AS present,
@@ -335,10 +347,16 @@ BEGIN
           count(*) FILTER (WHERE d.attendance='absent') AS absent,
           count(*) FILTER (WHERE d.attendance='pending') AS pending,
           count(*) FILTER (WHERE d.correction_requested) AS corrections,
-          count(*) FILTER (WHERE d.log_status='submitted') AS submitted_logs
-        FROM internship_days d JOIN internship_placements pl ON pl.id=d.placement_id
-        JOIN profiles p ON p.id=d.student_id LEFT JOIN profiles mp ON mp.id=pl.mentor_id
-        WHERE pl.group_id=p_group_id GROUP BY d.student_id,p.first_name,p.last_name) s),
+          count(*) FILTER (WHERE d.log_status='submitted') AS submitted_logs,
+          count(d.id) AS recorded,
+          -- one placement may carry many days: sum each placement's range once
+          (SELECT coalesce(sum(internship_weekdays(x.start_date,x.end_date)),0)::int FROM internship_placements x
+             WHERE x.student_id=pl.student_id AND x.group_id=p_group_id) AS expected_days,
+          (SELECT coalesce(sum(internship_weekdays(x.start_date,LEAST(x.end_date,(now() AT TIME ZONE x.timezone)::date))),0)::int
+             FROM internship_placements x WHERE x.student_id=pl.student_id AND x.group_id=p_group_id) AS expected_so_far
+        FROM internship_placements pl LEFT JOIN internship_days d ON d.placement_id=pl.id
+        JOIN profiles p ON p.id=pl.student_id LEFT JOIN profiles mp ON mp.id=pl.mentor_id
+        WHERE pl.group_id=p_group_id GROUP BY pl.student_id,p.first_name,p.last_name) s),
     'days', (SELECT coalesce(jsonb_agg(jsonb_build_object(
         'studentId',d.student_id,'name',concat_ws(' ',p.first_name,p.last_name),'date',d.day_date,
         'attendance',d.attendance,'checkedIn',d.check_in_at IS NOT NULL,'checkInAt',d.check_in_at,

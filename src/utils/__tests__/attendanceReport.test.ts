@@ -2,7 +2,8 @@ import { attendanceDayRows, attendanceSummaryRows } from '../advisorReportView';
 import type { AttendanceDayRow, AttendanceStudentRow } from '@/types/report';
 
 const student = (id: string, name: string, extra: Partial<AttendanceStudentRow> = {}): AttendanceStudentRow => ({
-  id, name, company: 'Acme', mentor: 'Mert', present: 0, partial: 0, excused: 0, absent: 0, pending: 0, corrections: 0, submittedLogs: 0, ...extra,
+  id, name, company: 'Acme', mentor: 'Mert', present: 0, partial: 0, excused: 0, absent: 0, pending: 0, corrections: 0, submittedLogs: 0,
+  recorded: 10, expectedDays: 40, expectedSoFar: 10, unrecorded: 0, ...extra,
 });
 const day = (studentId: string, name: string, date: string, extra: Partial<AttendanceDayRow> = {}): AttendanceDayRow => ({
   studentId, name, date, attendance: 'pending', checkedIn: false, checkInAt: null, decidedBy: '', decidedAt: null, correctionRequested: false, logStatus: 'draft', ...extra,
@@ -12,11 +13,11 @@ const labels = { yes: 'Y', no: 'N', attendance: (v: string) => `A:${v}`, logStat
 test('summary rows are sorted by name with the locale and carry every count in column order', () => {
   const rows = attendanceSummaryRows([
     student('2', 'İpek', { present: 4, pending: 1 }),
-    student('1', 'Zeynep', { partial: 1, absent: 2, corrections: 1, submittedLogs: 3 }),
+    student('1', 'Zeynep', { partial: 1, absent: 2, corrections: 1, submittedLogs: 3, expectedSoFar: 12, unrecorded: 9 }),
     student('3', 'Ali'),
   ], 'tr');
   expect(rows.map((r) => r[0])).toEqual(['Ali', 'İpek', 'Zeynep']);
-  expect(rows[2]).toEqual(['Zeynep', 'Acme', 'Mert', 0, 1, 0, 2, 0, 1, 3]);
+  expect(rows[2]).toEqual(['Zeynep', 'Acme', 'Mert', 12, 40, 9, 0, 1, 0, 2, 0, 1, 3]);
 });
 
 test('day rows are ordered by student then date, and render flags through the labels', () => {
