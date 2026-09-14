@@ -54,10 +54,12 @@ Akış ve mesajlaşma tablolarını değiştirmez. Canlı veritabanına otomatik
 - Eki günlükten kaldırmak dosyanın depodan silinmesi değildir. İptal edilmiş
   yüklemeler özel depoda sahipsiz kalabilir. Saklama/silme politikası belirlenip
   geçmişte referanslı dosyaları koruyan yönetici temizliği ayrıca kurulmalıdır.
-- Erişim aktif ilişkiyle sınırlandırılmıştır. Eski mentor ilişki değişince erişemez.
-  Grup arşivlenince veya üyelik bitince mentor/advisor erişimi kapanır; öğrencinin
-  kendi geçmişi kalır. Yeni mentor, eski mentorun placement kayıtlarına atanmaz.
-  Uzun süreli kurumsal arşiv erişimi gerekiyorsa ayrı yetkilendirme kararı gerekir.
+- Mentor erişimi aktif ilişkiyle sınırlıdır: ilişki değişince, grup arşivlenince veya
+  üyelik bitince eski mentor erişemez. Yeni mentor, eski mentorun placement kayıtlarına atanmaz.
+- Advisor erişimi dönemi aşar: placement'ın grubunun sahibi olan advisor, grup arşivlendikten
+  ya da öğrenci gruptan ayrıldıktan sonra da kayıtları **okur** (üniversite raporu dönem
+  bittikten sonra yazılır); arşivden sonra geri bildirim veya düzeltme talebi yazamaz.
+  Öğrencinin kendi geçmişi her durumda kalır.
 - İnternet gerekir. Başarısız kayıt sırasında form ekranda korunur; uygulama kapanınca
   gönderilmemiş metin için kalıcı çevrimdışı kuyruk yoktur. Ekrandan çıkarken
   kaydedilmemiş değişiklikler için uyarı vardır. Otomatik bildirim/hatırlatıcı yoktur.

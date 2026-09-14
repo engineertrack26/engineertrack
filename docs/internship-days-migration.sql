@@ -62,9 +62,14 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
     WHERE sp.id = p_student AND (
       (actor.role = 'student' AND sp.id = p_actor)
       OR (actor.role = 'mentor' AND sp.mentor_id = p_actor)
-      OR (actor.role = 'advisor' AND EXISTS (
-        SELECT 1 FROM group_memberships m JOIN internship_groups g ON g.id = m.group_id
-        WHERE m.student_id = sp.id AND m.left_at IS NULL AND NOT g.is_archived AND g.advisor_id = p_actor))
+      -- The advisor's access outlives the term: the university reports on
+      -- attendance after the group is archived, so ownership of the group is
+      -- enough -- for current members and for anyone with a placement there.
+      OR (actor.role = 'advisor' AND (
+        EXISTS (SELECT 1 FROM group_memberships m JOIN internship_groups g ON g.id = m.group_id
+                WHERE m.student_id = sp.id AND m.left_at IS NULL AND g.advisor_id = p_actor)
+        OR EXISTS (SELECT 1 FROM internship_placements pl JOIN internship_groups g ON g.id = pl.group_id
+                   WHERE pl.student_id = sp.id AND g.advisor_id = p_actor)))
     ));
 $$;
 REVOKE ALL ON FUNCTION public.internship_can_student(uuid,uuid) FROM PUBLIC, anon, authenticated;
@@ -75,13 +80,13 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
     SELECT 1 FROM internship_days d JOIN internship_placements p ON p.id = d.placement_id
     JOIN student_profiles sp ON sp.id = d.student_id
     WHERE d.id = p_day AND (
-      d.student_id = auth.uid() OR (
-        internship_can_student(d.student_id, auth.uid()) AND EXISTS (
+      d.student_id = auth.uid()
+      -- advisor: owns the placement's group; archived or not, member or not
+      OR EXISTS (SELECT 1 FROM internship_groups g WHERE g.id = p.group_id AND g.advisor_id = auth.uid())
+      -- mentor: only while the relationship and the membership are live
+      OR (sp.mentor_id = auth.uid() AND p.mentor_id = auth.uid() AND EXISTS (
           SELECT 1 FROM group_memberships m JOIN internship_groups g ON g.id = m.group_id
-          WHERE m.student_id = d.student_id AND m.group_id = p.group_id AND m.left_at IS NULL AND NOT g.is_archived
-          AND (g.advisor_id = auth.uid() OR (sp.mentor_id = auth.uid() AND p.mentor_id = auth.uid()))
-        )
-      )
+          WHERE m.student_id = d.student_id AND m.group_id = p.group_id AND m.left_at IS NULL AND NOT g.is_archived))
     ));
 $$;
 REVOKE ALL ON FUNCTION public.internship_can_day(uuid) FROM PUBLIC, anon;
@@ -256,6 +261,9 @@ BEGIN
   SELECT * INTO d FROM internship_days WHERE id=p_day FOR UPDATE;
   IF NOT FOUND OR NOT internship_can_day(p_day) OR actor_role IS NULL OR actor_role NOT IN ('mentor','advisor')
     OR (p_correction AND actor_role<>'advisor') THEN RAISE EXCEPTION 'ID_FORBIDDEN'; END IF;
+  -- After the archive the record is closed: the advisor can still read it, not write to it.
+  IF EXISTS (SELECT 1 FROM internship_placements p JOIN internship_groups g ON g.id=p.group_id
+             WHERE p.id=d.placement_id AND g.is_archived) THEN RAISE EXCEPTION 'ID_FORBIDDEN'; END IF;
   IF d.version IS DISTINCT FROM p_version THEN RAISE EXCEPTION 'ID_CONFLICT'; END IF;
   IF p_correction IS NULL OR nullif(trim(p_note),'') IS NULL OR char_length(p_note)>2000 THEN RAISE EXCEPTION 'ID_REQUIRED'; END IF;
   UPDATE internship_days SET correction_requested=CASE WHEN p_correction THEN true ELSE correction_requested END,version=version+1,updated_at=now() WHERE id=p_day;

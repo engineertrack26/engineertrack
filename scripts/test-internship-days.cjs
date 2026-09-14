@@ -107,7 +107,9 @@ async function rejected(uid, sql, args, message) {
   assert.deepEqual((await as(outsider,'SELECT internship_week($1,$2) AS days',[student,yesterday])).rows[0].days,[]);checks++;
   await db.exec('RESET ROLE');
   await db.query('UPDATE internship_groups SET is_archived=true WHERE id=$1',[group]);
-  await rejected(advisor,'SELECT internship_week($1,$2)',[student,yesterday],'ID_FORBIDDEN');
+  // The advisor's read access outlives the archive (the university reports afterwards); writes do not.
+  assert.equal((await as(advisor,'SELECT internship_week($1,$2) AS days',[student,yesterday])).rows[0].days.length,2);checks++;
+  await rejected(advisor,'SELECT internship_note($1,$2,$3,$4)',[day,3,'late note',false],'ID_FORBIDDEN');
   assert.equal((await week(student)).length,2);checks++;
   await db.exec('RESET ROLE; SET ROLE anon');
   await assert.rejects(()=>db.query('SELECT internship_people()'),/permission denied/);checks++;
