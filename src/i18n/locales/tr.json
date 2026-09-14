@@ -1,5 +1,12 @@
 {
   "messages": {
+    "caseLabel": "Vaka",
+    "newCase": "Yeni vaka",
+    "pickCaseStudent": "Hangi öğrenci için vaka açılsın?",
+    "caseHint": "Vaka; sen, öğrenci ve mentoru arasında ortak bir konuşmadır.",
+    "caseExists": "Vaka zaten açık",
+    "formerParticipant": "Eski katılımcı",
+    "roleStaff": "Danışman · Mentor",
     "title": "Mesajlar",
     "empty": "Henüz mesaj yok.",
     "newMessage": "Yeni mesaj",
@@ -965,6 +972,8 @@
     }
   },
   "errors": {
+    "cannotOpenCase": "Vakayı yalnızca grubun danışmanı, aktif bir üye için açabilir.",
+    "caseNeedsMentor": "Bu öğrencinin bağlı bir mentoru olmadığı için vaka açılamıyor.",
     "cannotMessage": "Bu kişiye mesaj gönderemezsin.",
     "conversationNotFound": "Bu konuşma artık mevcut değil.",
     "blocked": "Bu kişiye mesaj gönderemezsin.",
