@@ -12,7 +12,9 @@ Akış ve mesajlaşma tablolarını değiştirmez. Canlı veritabanına otomatik
 3. Supabase SQL Editor'de `docs/internship-days-migration.sql` dosyasını bütünüyle çalıştırın.
    İşlem bir transaction'dır. Yeni tablolar, RPC'ler ve özel `internship-day-files`
    bucket'ı eklenir. Migration bu sürüm için yeniden uygulanabilir.
-4. `docs/internship-days-verification.sql` ile yapı/izinleri kontrol edin.
+4. `docs/internship-days-verification.sql` üç parçadır, her biri ayrı gönderilir: Part A yapı
+   (tek satır PASS), Part B RPC davranışı (12 vaka, BEGIN..ROLLBACK), Part C `authenticated`
+   rolü altında gerçek yetki/politika testi (6 vaka). Hiçbir satır FAIL/ABORTED ile başlamamalı.
    Storage'da önceden tanımlanmış geniş kapsamlı politikalar da incelenmelidir:
    PostgreSQL izin veren politikaları OR ile birleştirir. Sadece yeni politikaların
    doğru olması, mevcut bir genel okuma politikasının oluşturduğu erişimi kapatmaz.
