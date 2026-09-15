@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, BackHandler, Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,8 @@ import { signAssignmentDocument } from '@/services/evidenceUrls';
 import { PendingReview, reviewNoteError, reviewVersion } from '@/utils/mentorReviews';
 import { taskDueDate } from '@/utils/studentTasks';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { LoadFailedBanner } from '@/components/common';
+import { levelLabel, SupervisionLevel } from '@/utils/selfAssessment';
+import { LevelPicker, LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { ReviewBack, ReviewIdentity, ReviewStatus } from '@/components/mentor/ReviewUI';
 import { ReviewNoteSheet } from '@/components/mentor/ReviewNoteSheet';
@@ -40,6 +41,8 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
   const [noteError, setNoteError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<'approve' | 'revise' | null>(null);
   const [openingBrief, setOpeningBrief] = useState(false);
+  const [level, setLevel] = useState<SupervisionLevel | null>(null);
+  const [levelError, setLevelError] = useState(false);
   const generation = useRef(0);
   const initialVersion = useRef<string | null>(null);
   const busy = useRef(false);
@@ -72,6 +75,10 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
     void load();
     return () => { generation.current++; };
   }, [load]));
+  useEffect(() => {
+    setLevel(null);
+    setLevelError(false);
+  }, [item?.id]);
 
   const goBack = useCallback(() => {
     if (busy.current) return;
@@ -101,6 +108,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
 
   async function decide(approved: boolean) {
     if (!item || !userId || busy.current || finished.current || changed || failed || loading) return;
+    if (approved && level === null) { setLevelError(true); return; }
     const note = approved ? approvalNote : reason;
     const validation = reviewNoteError(approved, note);
     if (validation) { setNoteError(validation); setSheet(approved ? 'note' : 'revision'); return; }
@@ -116,7 +124,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
         body: t(approved ? 'notifications.taskApprovedBody' : 'notifications.taskRevisionBody', {
           mentorName, title: item.assignment.title,
         }),
-      });
+      }, level ?? undefined);
       finished.current = true;
       useMentorReviewStore.getState().invalidate(userId);
       if (request !== generation.current) return;
@@ -205,6 +213,13 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
             <Text style={ui.label}>{t('mentorFlow.previousNote')}</Text>
             <Text style={ui.body}>{item.mentorNote}</Text>
           </View>}
+          {canReview && <View style={ui.card}>
+            <Text style={ui.label}>{t('assessment.studentSaid', "Student's own rating")}</Text>
+            <Text style={ui.body}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('mentorFlow.notProvided')}</Text>
+            <LevelPicker label={t('assessment.mentorQuestion', 'How did the student do this task?')} value={level}
+              onChange={(v) => { setLevel(v); setLevelError(false); }} />
+            {levelError && <Text style={[ui.body, { color: '#c00' }]}>{t('errors.levelRequired', 'Choose the level you observed before approving.')}</Text>}
+          </View>}
           {canReview && <Pressable accessibilityRole="button" disabled={!!submitting} onPress={() => openSheet('note')}>
             <Text style={ui.link}>{t('mentorFlow.optionalNote')}</Text>
             {!!approvalNote && <Text style={ui.body}>{approvalNote}</Text>}
@@ -218,8 +233,8 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
             onPress={() => openSheet('revision')} style={[ui.primary, { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#854600' }, !!submitting && { opacity: 0.6 }]}>
             <Text style={[ui.primaryText, { color: '#854600' }]}>{t('mentorFlow.requestRevision')}</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!submitting, busy: submitting === 'approve' }} disabled={!!submitting}
-            onPress={() => decide(true)} style={[ui.primary, { flex: 1 }, !!submitting && { opacity: 0.6 }]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!submitting || level === null, busy: submitting === 'approve' }} disabled={!!submitting || level === null}
+            onPress={() => decide(true)} style={[ui.primary, { flex: 1 }, (!!submitting || level === null) && { opacity: 0.6 }]}>
             {submitting === 'approve' && <ActivityIndicator color="#fff" />}
             <Text style={ui.primaryText}>{t('mentor.approveTask')}</Text>
           </Pressable>

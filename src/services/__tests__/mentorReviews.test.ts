@@ -30,12 +30,12 @@ describe('mentor review operations', () => {
   it('rechecks the specific submission and sends the trimmed reason', async () => {
     await mentorReviewService.submit(item, false, '  Add units  ', notification);
     expect(list).toHaveBeenCalledWith({ submissionId: 's1', signUrls: false });
-    expect(review).toHaveBeenCalledWith('s1', false, 'Add units');
+    expect(review).toHaveBeenCalledWith('s1', false, 'Add units', undefined);
     expect(notify).toHaveBeenCalledWith('u1', notification.title, notification.body, 'task_revision_requested', { assignmentId: 'a1' });
   });
   it('allows approval without a note', async () => {
     await mentorReviewService.submit(item, true, '', notification);
-    expect(review).toHaveBeenCalledWith('s1', true, '');
+    expect(review).toHaveBeenCalledWith('s1', true, '', undefined);
     expect(notify.mock.calls[0][3]).toBe('task_approved');
   });
   it('rejects a submission that was already reviewed or left the mentor scope', async () => {
