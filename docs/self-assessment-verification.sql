@@ -88,29 +88,36 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B5  mentor requests revision                        -> mentor_level NULL, observation gone
 --   B6  resubmit with self level 2, approve with level 2 -> competency_self_vs_mentor(stu): tasks=1, avgSelf=2.0, avgMentor=2.0, gap=0.0
 --   B7  a second task, self 3 / mentor 1                -> that competency row: tasks=2, gap=-1.0, overRated=1, underRated=0
---   B8  a second mentor is forbidden; the student themself is not
+--   B8a the student reads their own comparison           -> >=1 row for the probe competency (always runs)
+--   B8b another mentor is refused                        -> SELF_ASSESSMENT_FORBIDDEN (SKIP without a second mentor)
 --   B9  the advisor reads it                            -> rows returned
---   B10 list_feed_posts(grp) carries no rating
--- Expected: ten rows, none beginning FAIL / ABORTED (SKIP is fine when the
--- database has no second mentor for B8, or fewer than two triplets on the KPI
+--   B10 list_feed_posts(grp) carries no rating, and there is a real task post to check (not a vacuous pass)
+-- Expected: eleven rows, none beginning FAIL / ABORTED (SKIP is fine when the
+-- database has no second mentor for B8b, or fewer than two triplets on the KPI
 -- for B7 -- both print SKIP rather than silently passing).
 -- ============================================================
 BEGIN;
 
 DO $$
 DECLARE
-  adv UUID; stu UUID; mentor UUID; mentor2 UUID; grp UUID; kpi UUID;
+  adv UUID; stu UUID; mentor UUID; mentor2 UUID; grp UUID; kpi UUID; comp UUID;
   asg UUID; asg2 UUID; sub UUID; sub2 UUID;
   v_self SMALLINT; v_mentor SMALLINT; v_status TEXT;
   v_rows INT; v_tasks INT; v_avgself NUMERIC; v_avgmentor NUMERIC; v_gap NUMERIC;
   v_over INT; v_under INT; v_text TEXT;
-  n INT; m INT; log TEXT := '';
+  n INT; log TEXT := '';
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
-  SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
+  -- Joined to student_profiles, not picked from profiles alone: a profile
+  -- with no student_profiles row would let the UPDATE ... SET mentor_id
+  -- below match zero rows and silently leave the student unmentored, which
+  -- every later mentor-side case depends on.
+  SELECT p.id INTO stu FROM profiles p JOIN student_profiles sp ON sp.id = p.id
+    WHERE p.role = 'student' ORDER BY p.created_at LIMIT 1;
   SELECT id INTO mentor FROM profiles WHERE role = 'mentor' ORDER BY created_at LIMIT 1;
   SELECT id INTO mentor2 FROM profiles WHERE role = 'mentor' AND id <> mentor ORDER BY created_at LIMIT 1;
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
+  SELECT k.competency_id INTO comp FROM competency_kpis k WHERE k.id = kpi;
 
   IF adv IS NULL OR stu IS NULL OR mentor IS NULL OR kpi IS NULL THEN
     PERFORM set_config('probe.results', 'B1-B10' || E'\t' || 'SKIP: needs an advisor, a student, a mentor and a KPI' || E'\n', true);
@@ -150,7 +157,7 @@ BEGIN
 
   -- B2
   BEGIN
-    sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 1);
+    sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 1::smallint);
     SELECT s.self_level, s.mentor_level INTO v_self, v_mentor FROM assignment_submissions s WHERE s.id = sub;
     log := log || 'B2 submit with self level 1' || E'\t'
         || CASE WHEN v_self = 1 AND v_mentor IS NULL THEN 'self_level=1, mentor_level NULL'
@@ -169,7 +176,7 @@ BEGIN
       SELECT status INTO v_status FROM assignment_submissions WHERE id = sub;
       log := log || 'B3 mentor approves without a level' || E'\t'
           || CASE WHEN SQLERRM LIKE 'LEVEL_REQUIRED%' AND v_status = 'submitted' THEN 'LEVEL_REQUIRED, status still submitted'
-                  ELSE 'FAIL: ' || SQLERRM || ', status=' || v_status END || E'\n';
+                  ELSE 'FAIL: ' || SQLERRM || ', status=' || coalesce(v_status, 'NULL') END || E'\n';
     END;
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B3 mentor approves without a level' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
@@ -177,13 +184,14 @@ BEGIN
 
   -- B4
   BEGIN
-    PERFORM review_assignment(sub, true, 'looks good', 3);
+    PERFORM review_assignment(sub, true, 'looks good', 3::smallint);
     SELECT s.mentor_level, s.status INTO v_mentor, v_status FROM assignment_submissions s WHERE s.id = sub;
     SELECT count(*) INTO n FROM kpi_observations o WHERE o.assignment_submission_id = sub;
     log := log || 'B4 mentor approves with level 3' || E'\t'
         || CASE WHEN v_mentor = 3 AND v_status = 'approved' AND n = 1
                 THEN 'mentor_level=3, approved, 1 observation'
-                ELSE 'FAIL: mentor_level=' || coalesce(v_mentor::text, 'NULL') || ' status=' || v_status || ' observations=' || n END || E'\n';
+                ELSE 'FAIL: mentor_level=' || coalesce(v_mentor::text, 'NULL') || ' status=' || coalesce(v_status, 'NULL')
+                     || ' observations=' || coalesce(n::text, 'NULL') END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B4 mentor approves with level 3' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
@@ -195,7 +203,7 @@ BEGIN
     SELECT count(*) INTO n FROM kpi_observations o WHERE o.assignment_submission_id = sub;
     log := log || 'B5 revision request clears the mentor rating' || E'\t'
         || CASE WHEN v_mentor IS NULL AND n = 0 THEN 'mentor_level NULL, observation gone'
-                ELSE 'FAIL: mentor_level=' || coalesce(v_mentor::text, 'NULL') || ' observations=' || n END || E'\n';
+                ELSE 'FAIL: mentor_level=' || coalesce(v_mentor::text, 'NULL') || ' observations=' || coalesce(n::text, 'NULL') END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B5 revision request clears the mentor rating' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
@@ -205,17 +213,22 @@ BEGIN
   -- competency row's gap is exactly 0.0.
   BEGIN
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-    PERFORM submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2);
+    PERFORM submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
-    PERFORM review_assignment(sub, true, 'ok now', 2);
+    PERFORM review_assignment(sub, true, 'ok now', 2::smallint);
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+    -- Filtered to the probe's own competency, not asserted over the whole
+    -- result set, so this stays re-runnable once other rated approvals exist.
     SELECT count(*), max((x->>'tasks')::int), max((x->>'avgSelf')::numeric), max((x->>'avgMentor')::numeric), max((x->>'gap')::numeric)
       INTO v_rows, v_tasks, v_avgself, v_avgmentor, v_gap
-      FROM competency_self_vs_mentor(stu) x;
+      FROM competency_self_vs_mentor(stu) x
+      WHERE x->>'competencyId' = comp::text;
     log := log || 'B6 resubmit 2 / approve 2 -> comparison row' || E'\t'
         || CASE WHEN v_rows = 1 AND v_tasks = 1 AND v_avgself = 2.0 AND v_avgmentor = 2.0 AND v_gap = 0.0
                 THEN 'tasks=1, avgSelf=2.0, avgMentor=2.0, gap=0.0'
-                ELSE 'FAIL: rows=' || v_rows || ' tasks=' || v_tasks || ' avgSelf=' || v_avgself || ' avgMentor=' || v_avgmentor || ' gap=' || v_gap END || E'\n';
+                ELSE 'FAIL: rows=' || coalesce(v_rows::text, 'NULL') || ' tasks=' || coalesce(v_tasks::text, 'NULL')
+                     || ' avgSelf=' || coalesce(v_avgself::text, 'NULL') || ' avgMentor=' || coalesce(v_avgmentor::text, 'NULL')
+                     || ' gap=' || coalesce(v_gap::text, 'NULL') END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B6 resubmit 2 / approve 2 -> comparison row' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
@@ -229,43 +242,53 @@ BEGIN
       log := log || 'B7 a second task, self 3 / mentor 1' || E'\t' || 'SKIP: the KPI has fewer than two triplets' || E'\n';
     ELSE
       PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-      sub2 := submit_assignment(asg2, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 3);
+      sub2 := submit_assignment(asg2, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 3::smallint);
       PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
-      PERFORM review_assignment(sub2, true, 'ok', 1);
+      PERFORM review_assignment(sub2, true, 'ok', 1::smallint);
       PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+      -- Same competency filter as B6, for the same re-runnability reason.
       SELECT count(*), max((x->>'tasks')::int), max((x->>'gap')::numeric),
              max((x->>'overRated')::int), max((x->>'underRated')::int)
         INTO v_rows, v_tasks, v_gap, v_over, v_under
-        FROM competency_self_vs_mentor(stu) x;
+        FROM competency_self_vs_mentor(stu) x
+        WHERE x->>'competencyId' = comp::text;
       log := log || 'B7 a second task, self 3 / mentor 1' || E'\t'
           || CASE WHEN v_rows = 1 AND v_tasks = 2 AND v_gap = -1.0 AND v_over = 1 AND v_under = 0
                   THEN 'tasks=2, gap=-1.0, overRated=1, underRated=0'
-                  ELSE 'FAIL: rows=' || v_rows || ' tasks=' || v_tasks || ' gap=' || v_gap || ' overRated=' || v_over || ' underRated=' || v_under END || E'\n';
+                  ELSE 'FAIL: rows=' || coalesce(v_rows::text, 'NULL') || ' tasks=' || coalesce(v_tasks::text, 'NULL')
+                       || ' gap=' || coalesce(v_gap::text, 'NULL') || ' overRated=' || coalesce(v_over::text, 'NULL')
+                       || ' underRated=' || coalesce(v_under::text, 'NULL') END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B7 a second task, self 3 / mentor 1' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
-  -- B8
+  -- B8a: always runs, independent of whether the database has a second mentor.
+  BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
+    SELECT count(*) INTO n FROM competency_self_vs_mentor(stu) x WHERE x->>'competencyId' = comp::text;
+    log := log || 'B8a the student reads their own comparison' || E'\t'
+        || CASE WHEN n >= 1 THEN n || ' row(s)' ELSE 'FAIL: 0 rows' END || E'\n';
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B8a the student reads their own comparison' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B8b
   BEGIN
     IF mentor2 IS NULL THEN
-      log := log || 'B8 a second mentor is forbidden; the student themself is not' || E'\t' || 'SKIP: needs a second mentor profile' || E'\n';
+      log := log || 'B8b another mentor is refused' || E'\t' || 'SKIP: needs a second mentor profile' || E'\n';
     ELSE
       PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor2, 'role', 'authenticated')::text, true);
       BEGIN
         PERFORM competency_self_vs_mentor(stu);
-        m := 0;
+        log := log || 'B8b another mentor is refused' || E'\t' || 'FAIL: rows returned' || E'\n';
       EXCEPTION WHEN OTHERS THEN
-        m := CASE WHEN SQLERRM LIKE 'SELF_ASSESSMENT_FORBIDDEN%' THEN 1 ELSE 0 END;
+        log := log || 'B8b another mentor is refused' || E'\t'
+            || CASE WHEN SQLERRM LIKE 'SELF_ASSESSMENT_FORBIDDEN%' THEN 'SELF_ASSESSMENT_FORBIDDEN' ELSE 'FAIL: ' || SQLERRM END || E'\n';
       END;
-      PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-      SELECT count(*) INTO n FROM competency_self_vs_mentor(stu);
-      log := log || 'B8 a second mentor is forbidden; the student themself is not' || E'\t'
-          || CASE WHEN m = 1 AND n >= 1 THEN 'SELF_ASSESSMENT_FORBIDDEN, ' || n || ' row(s) for the student'
-                  ELSE 'FAIL: forbidden-check=' || m || ' student-rows=' || n END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN
-    log := log || 'B8 a second mentor is forbidden; the student themself is not' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+    log := log || 'B8b another mentor is refused' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
 
   -- B9
@@ -278,15 +301,19 @@ BEGIN
   END;
 
   -- B10: both tasks are approved by now (B6, B7), each with share_to_feed
-  -- left at its column default (true), so the stream has at least one task
-  -- card to check.
+  -- left at its column default (true), so the stream must have at least one
+  -- task card to inspect -- an empty or NULL stream is a FAIL, not a vacuous
+  -- pass (NOT ILIKE against '' is true for everything, including nothing).
   BEGIN
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
     SELECT string_agg(x::text, ' ') INTO v_text FROM list_feed_posts(grp) x;
+    SELECT count(*) INTO n FROM list_feed_posts(grp) x WHERE x->>'kind' = 'task';
     log := log || 'B10 list_feed_posts carries no rating' || E'\t'
-        || CASE WHEN coalesce(v_text, '') NOT ILIKE '%selflevel%' AND coalesce(v_text, '') NOT ILIKE '%mentorlevel%'
-                     AND coalesce(v_text, '') NOT ILIKE '%self_level%' AND coalesce(v_text, '') NOT ILIKE '%mentor_level%'
-                THEN 'clean' ELSE 'FAIL: a rating leaked into the stream' END || E'\n';
+        || CASE WHEN v_text IS NULL OR n < 1 THEN 'FAIL: no task post to inspect'
+                WHEN v_text NOT ILIKE '%selflevel%' AND v_text NOT ILIKE '%mentorlevel%'
+                     AND v_text NOT ILIKE '%self_level%' AND v_text NOT ILIKE '%mentor_level%'
+                THEN 'clean, ' || n || ' task post(s) inspected'
+                ELSE 'FAIL: a rating leaked into the stream' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B10 list_feed_posts carries no rating' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
   END;
@@ -305,10 +332,9 @@ ROLLBACK;
 --   C1 the student reads their own comparison       >=1 row (positive control)
 --   C2 the advisor of the group reads it             >=1 row
 --   C3 a second student (SKIP without one)           SELF_ASSESSMENT_FORBIDDEN
---   C4 the advisor's direct SELECT of self_level     see the row text -- this
---      does not gate on a fixed expectation because assignment_submissions'
---      SELECT policy is owned by docs/task-assignment-migration.sql, not this
---      feature; the row prints the count either way and names what it means.
+--   C4 the advisor's direct SELECT of self_level     1 row -- the "submissions
+--      read" policy (docs/task-assignment-migration.sql:161) already admits
+--      the advisor via is_group_advisor_of; this is definitive, not a hedge.
 -- Needs an advisor, a student, a mentor (linked) and a KPI; C3 needs a second
 -- student and SKIPs otherwise.
 -- ============================================================
@@ -319,7 +345,10 @@ DECLARE
   adv UUID; stu UUID; stu2 UUID; mentor UUID; grp UUID; kpi UUID; asg UUID; sub UUID;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
-  SELECT id INTO stu FROM profiles WHERE role = 'student' ORDER BY created_at LIMIT 1;
+  -- Joined to student_profiles, not picked from profiles alone -- see the
+  -- same guard in Part B's fixture.
+  SELECT p.id INTO stu FROM profiles p JOIN student_profiles sp ON sp.id = p.id
+    WHERE p.role = 'student' ORDER BY p.created_at LIMIT 1;
   SELECT id INTO stu2 FROM profiles WHERE role = 'student' AND id <> stu ORDER BY created_at LIMIT 1;
   SELECT id INTO mentor FROM profiles WHERE role = 'mentor' ORDER BY created_at LIMIT 1;
   SELECT k.id INTO kpi FROM competency_kpis k WHERE k.level = 1 ORDER BY k.kpi_index LIMIT 1;
@@ -339,9 +368,9 @@ BEGIN
   RETURNING id INTO asg;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2);
+  sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
-  PERFORM review_assignment(sub, true, 'ok', 2);
+  PERFORM review_assignment(sub, true, 'ok', 2::smallint);
 
   PERFORM set_config('probe.ready', 'yes', true);
   PERFORM set_config('probe.adv', adv::text, true);
@@ -396,8 +425,8 @@ BEGIN
   BEGIN
     SELECT count(*) INTO n FROM (SELECT self_level FROM assignment_submissions WHERE id = sub) x;
     log := log || 'C4 the advisor''s direct SELECT of self_level' || E'\t'
-        || CASE WHEN n = 0 THEN '0 rows'
-                ELSE n || ' row(s) -- the advisor''s existing policies DO read submissions directly; the controller should judge whether that is acceptable' END || E'\n';
+        || CASE WHEN n = 1 THEN '1 row (the advisor''s existing direct read; decision 4 grants them the ratings anyway)'
+                ELSE 'FAIL: ' || coalesce(n::text, 'NULL') || ' row(s), expected 1 via the "submissions read" policy' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'C4 the advisor''s direct SELECT of self_level' || E'\t' || 'ABORTED: ' || SQLERRM || E'\n';
   END;
