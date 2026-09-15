@@ -1,4 +1,11 @@
 -- ============================================
+-- !!! DESTRUCTIVE: this file DROPs and recreates conversations, participants,
+-- !!! messages, reads and blocks. Re-running it deletes every conversation.
+-- !!! Once the pilot has real messages, NEVER re-apply this file: ship any
+-- !!! change to can_message / can_access_conversation / the triggers in a
+-- !!! new file (e.g. docs/direct-messages-fix-<date>.sql). Applied once on 2026-09-15.
+-- ============================================
+-- ============================================
 -- Conversations v2: direct messages (member / mentor / staff) and case
 -- threads (advisor + student + mentor). Replaces v1 wholesale -- no
 -- production rows existed. Apply order: this file, docs/direct-messages-rpcs.sql,
@@ -191,6 +198,9 @@ BEGIN
       AND EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = c.id AND cp.user_id = OLD.mentor_id);
     DELETE FROM conversation_participants cp USING conversations c
     WHERE cp.conversation_id = c.id AND c.kind = 'case' AND c.subject_id = NEW.id AND cp.user_id = OLD.mentor_id;
+    DELETE FROM notifications n
+    WHERE n.user_id = OLD.mentor_id AND n.type = 'direct_message'
+      AND n.data->>'conversationId' IN (SELECT c.id::text FROM conversations c WHERE c.kind = 'case' AND c.subject_id = NEW.id);
     DELETE FROM conversations c
     WHERE c.kind = 'staff'
       AND EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = c.id AND cp.user_id = OLD.mentor_id)

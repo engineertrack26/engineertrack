@@ -47,7 +47,7 @@ export const messageService = {
    *  SECURITY DEFINER RPC because a mentor cannot read group_memberships
    *  directly (see docs/direct-messages-rpcs.sql). */
   listMentorContacts: async (): Promise<Array<MessageContact & { groupId: string; groupName: string }>> =>
-    ((await rpc<Array<Record<string, unknown>>>('list_mentor_message_contacts', {})) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: 'student', groupId: r.groupId as string, groupName: (r.groupName as string) || '' })),
+    ((await rpc<Array<Record<string, unknown>>>('list_mentor_message_contacts', {})) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || 'student', groupId: r.groupId as string, groupName: (r.groupName as string) || '' })),
   openConversation: (groupId: string, otherId: string) => rpc<string>('open_conversation', { p_group_id: groupId, p_other_id: otherId }),
   openCase: (groupId: string, studentId: string) => rpc<string>('open_case', { p_group_id: groupId, p_student_id: studentId }),
   listCaseCandidates: async (groupId: string): Promise<MessageContact[]> =>

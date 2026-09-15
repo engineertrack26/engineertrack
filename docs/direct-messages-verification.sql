@@ -97,7 +97,7 @@ DO $$
 DECLARE
   adv UUID; stu UUID; stu2 UUID; mentor UUID; grp UUID;
   c_ss UUID; c_sa UUID; c_sm UUID; c_case UUID; c_staff UUID; msg UUID;
-  n INT; m INT; k INT; k2 INT; v INT; log TEXT := '';
+  n INT; m INT; k INT; k2 INT; k3 INT; v INT; log TEXT := '';
   v_bc UUID; v_blocker UUID; v_code TEXT;
 BEGIN
   SELECT id INTO adv FROM profiles WHERE role = 'advisor' ORDER BY created_at LIMIT 1;
@@ -333,12 +333,13 @@ BEGIN
       BEGIN
         PERFORM list_messages(c_case); v := 0;
       EXCEPTION WHEN OTHERS THEN v := CASE WHEN SQLERRM LIKE 'CONVERSATION_NOT_FOUND%' THEN 1 ELSE 0 END; END;
+      SELECT count(*) INTO k3 FROM notifications WHERE user_id = mentor AND type = 'direct_message' AND (data->>'conversationId')::uuid = c_case;
       UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
       SELECT count(*) INTO k FROM conversation_participants WHERE conversation_id = c_case;
       log := log || 'B18 mentor change re-points the case' || E'\t' ||
-        CASE WHEN k2 = 0 AND n = 2 AND m = 0 AND v = 1 AND k = 3 THEN 'old mentor out, staff 1:1 gone, old mentor refused, re-link adds them back'
-             WHEN k2 > 0 AND n = 2 AND m = 1 AND v = 1 AND k = 3 THEN 'old mentor out, staff 1:1 kept (mentor still mentors another member), old mentor refused, re-link adds them back'
-             ELSE 'FAIL: ' || n || ' / ' || m || ' / ' || v || ' / ' || k || ' (k2=' || k2 || ')' END || E'\n';
+        CASE WHEN k2 = 0 AND n = 2 AND m = 0 AND v = 1 AND k = 3 AND k3 = 0 THEN 'old mentor out, staff 1:1 gone, old mentor refused, re-link adds them back, stale notifications gone'
+             WHEN k2 > 0 AND n = 2 AND m = 1 AND v = 1 AND k = 3 AND k3 = 0 THEN 'old mentor out, staff 1:1 kept (mentor still mentors another member), old mentor refused, re-link adds them back, stale notifications gone'
+             ELSE 'FAIL: ' || n || ' / ' || m || ' / ' || v || ' / ' || k || ' (k2=' || k2 || ')' || ' / notif ' || k3 END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN log := log || 'B18 mentor change re-points the case' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n'; END;
 
