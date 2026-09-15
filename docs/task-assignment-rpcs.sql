@@ -1,4 +1,5 @@
 -- docs/task-assignment-rpcs.sql
+-- NOTE 2026-09-15: review_assignment is now defined in docs/self-assessment-migration.sql (4 args); the 3-arg body below is history.
 -- Run AFTER docs/task-assignment-migration.sql. Idempotent.
 --
 -- Every column reference below is alias-qualified. RETURNS TABLE (level INT, …)

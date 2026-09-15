@@ -1,30 +1,45 @@
--- docs/daily-log-retirement-rpcs.sql
--- NOTE 2026-09-15: submit_assignment is now defined in docs/self-assessment-migration.sql (6 args); the 5-arg body below is history.
--- Run AFTER docs/daily-log-retirement-migration.sql. Idempotent.
+-- docs/self-assessment-migration.sql
+-- Self-assessment and mentor comparison: the student rates their own work on
+-- submit, the mentor rates it on approval, on the same four-step supervision
+-- scale the internship journal already uses (0 observed .. 3 independent).
+-- Neither rating gates progression -- approval still creates the KPI
+-- observation exactly as before this file.
 --
--- Every column reference below is alias-qualified. RETURNS TABLE (level INT, …)
--- creates a PL/pgSQL variable named `level`, and an unqualified `WHERE level = …`
--- raises 42702 — a bug that shipped in this codebase once and survived months,
--- because it only fires on the success path.
+-- Run AFTER docs/daily-log-retirement-rpcs.sql and docs/task-assignment-rpcs.sql
+-- (both of which defined the functions this file redefines with a rating
+-- parameter -- see the NOTE at the top of each). Idempotent; safe to re-run.
+-- Apply order: this file, then docs/self-assessment-verification.sql.
+-- Anonymous dollar-quoting only in the Supabase SQL editor.
+--
+-- Every column reference below is alias-qualified, for the same reason the
+-- two files above give: RETURNS TABLE (level INT, …) would shadow an
+-- unqualified `level`, and that bug only shows up on the success path.
+
+-- ---- columns ----
+ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS self_level SMALLINT;
+ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS mentor_level SMALLINT;
+ALTER TABLE assignment_submissions DROP CONSTRAINT IF EXISTS assignment_submissions_self_level_range;
+ALTER TABLE assignment_submissions ADD CONSTRAINT assignment_submissions_self_level_range CHECK (self_level IS NULL OR self_level BETWEEN 0 AND 3);
+ALTER TABLE assignment_submissions DROP CONSTRAINT IF EXISTS assignment_submissions_mentor_level_range;
+ALTER TABLE assignment_submissions ADD CONSTRAINT assignment_submissions_mentor_level_range CHECK (mentor_level IS NULL OR mentor_level BETWEEN 0 AND 3);
 
 -- ============================================
--- submit_assignment: new signature, carrying the reflection and the evidence
+-- submit_assignment: gains the student's own rating (spec decision 1,
+-- required). The old five-argument signature MUST be dropped, not merely
+-- replaced -- CREATE OR REPLACE with a different argument list creates an
+-- OVERLOAD, and PostgREST resolves overloads by the argument names a caller
+-- sends, so a client still sending the old five would silently keep hitting
+-- the old body forever. That is an intermittent wrong-behaviour bug, not an
+-- error at deploy time -- see docs/daily-log-retirement-rpcs.sql's own note
+-- on the three-argument signature it replaced, for the same reason.
 -- ============================================
---
--- The old signature MUST be dropped, not merely replaced. CREATE OR REPLACE
--- with a different argument list creates an OVERLOAD, and PostgREST resolves
--- overloads by the argument names a caller sends -- so both would live in the
--- catalog and a client sending the old three would silently keep hitting the
--- old body. That surfaces as an intermittent wrong-behaviour bug, not as an
--- error at deploy time.
-DROP FUNCTION IF EXISTS submit_assignment(UUID, TEXT, UUID);
-
 CREATE OR REPLACE FUNCTION submit_assignment(
   p_assignment_id UUID,
   p_note          TEXT  DEFAULT NULL,
   p_reflection    TEXT  DEFAULT NULL,
   p_photos        JSONB DEFAULT '[]'::jsonb,
-  p_documents     JSONB DEFAULT '[]'::jsonb
+  p_documents     JSONB DEFAULT '[]'::jsonb,
+  p_self_level    SMALLINT DEFAULT NULL
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -51,6 +66,11 @@ BEGIN
   -- refusal instead of a half-written submission.
   IF btrim(coalesce(p_reflection, '')) = '' THEN
     RAISE EXCEPTION 'REFLECTION_REQUIRED';
+  END IF;
+
+  -- The student's own rating on the supervision scale (spec decision 1). Required.
+  IF p_self_level IS NULL OR p_self_level NOT BETWEEN 0 AND 3 THEN
+    RAISE EXCEPTION 'SELF_LEVEL_REQUIRED';
   END IF;
 
   SELECT a.group_id, a.title INTO target_group, assignment_title
@@ -109,12 +129,14 @@ BEGIN
   -- 'needs_revision' and 'submitted' both pass the WHERE, which is the point:
   -- a resubmission after a revision request must still go through.
   INSERT INTO assignment_submissions
-    (assignment_id, student_id, status, student_note, reflection, submitted_at)
-  VALUES (p_assignment_id, auth.uid(), 'submitted', p_note, p_reflection, now())
+    (assignment_id, student_id, status, student_note, reflection, self_level, submitted_at)
+  VALUES (p_assignment_id, auth.uid(), 'submitted', p_note, p_reflection, p_self_level, now())
   ON CONFLICT (assignment_id, student_id) DO UPDATE
     SET status = 'submitted',
         student_note = EXCLUDED.student_note,
         reflection = EXCLUDED.reflection,
+        self_level = EXCLUDED.self_level,
+        mentor_level = NULL,
         submitted_at = now(),
         reviewed_at = NULL,
         reviewed_by = NULL
@@ -335,7 +357,8 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION submit_assignment(UUID, TEXT, TEXT, JSONB, JSONB) TO authenticated;
+DROP FUNCTION IF EXISTS submit_assignment(UUID, TEXT, TEXT, JSONB, JSONB);
+GRANT EXECUTE ON FUNCTION submit_assignment(UUID, TEXT, TEXT, JSONB, JSONB, SMALLINT) TO authenticated;
 
 -- Resubmitting after a revision request clears reviewed_at and reviewed_by, so
 -- the mentor's queue shows it as waiting again.
@@ -343,3 +366,179 @@ GRANT EXECUTE ON FUNCTION submit_assignment(UUID, TEXT, TEXT, JSONB, JSONB) TO a
 -- log_id stays on assignment_submissions and stops being written here. It is
 -- not dropped: docs/database-schema.sql and the archive screens still
 -- reference it, and a dropped column is not idempotent to re-add.
+
+-- ============================================
+-- review_assignment: gains the mentor's own rating (spec decision 2), stored
+-- only on approval and cleared on a revision request -- the approval it
+-- belonged to is gone. It never gates the observation below (spec decision
+-- 3: a v1 choice, not a schema limit). The old three-argument signature MUST
+-- be dropped for the same overload-resolution reason as submit_assignment
+-- above.
+-- ============================================
+CREATE OR REPLACE FUNCTION review_assignment(
+  p_submission_id UUID,
+  p_approved      BOOLEAN,
+  p_note          TEXT DEFAULT NULL,
+  p_level         SMALLINT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  the_student UUID;
+  the_kpi     UUID;
+  the_group   UUID;
+  the_comp    UUID;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'NOT_AUTHENTICATED';
+  END IF;
+
+  SELECT s.student_id, t.kpi_id, a.group_id, k.competency_id
+  INTO the_student, the_kpi, the_group, the_comp
+  FROM assignment_submissions s
+  JOIN group_assignments a ON a.id = s.assignment_id
+  JOIN kpi_triplets t      ON t.id = a.triplet_id
+  JOIN competency_kpis k   ON k.id = t.kpi_id
+  WHERE s.id = p_submission_id;
+
+  IF the_student IS NULL THEN
+    RAISE EXCEPTION 'SUBMISSION_NOT_FOUND';
+  END IF;
+
+  -- The workplace mentor evaluates. The advisor assigns and watches.
+  IF NOT is_mentor_of(the_student) THEN
+    RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
+  END IF;
+
+  -- Both guards below are gated on p_approved, and the gate is the fix for a
+  -- trap, not a convenience.
+  --
+  -- Each of them asks whether an observation written NOW would be meaningful.
+  -- That question only arises in the approve direction. A withdrawal writes no
+  -- observation; it DELETES one. There is nothing for these checks to validate,
+  -- and nothing they could protect by refusing -- refusing a withdrawal only
+  -- keeps evidence standing that the mentor has decided to take back.
+  --
+  -- Ungated, they made an approval permanently un-retractable. Mentor approves,
+  -- observation written, XP paid; the student then joins another group, which
+  -- closes the first membership; the mentor tries to retract and gets
+  -- STUDENT_LEFT_GROUP. The observation keeps counting -- get_competency_progress
+  -- filters on nothing about groups -- and kpi_observations has no DELETE policy
+  -- and no other RPC that removes a row, so the app has no way back at all.
+  -- NOT_IN_SCOPE set the identical trap one step later: an advisor narrowing the
+  -- group's scope after an approval would freeze that approval in place.
+  --
+  -- Approving is a claim about the present; withdrawing is a correction to the
+  -- past. Only the claim has preconditions.
+  IF p_approved THEN
+    -- The mentor's rating on the same scale (spec decision 2). Required on approval,
+    -- meaningless on a revision request. It never gates the observation below.
+    IF p_level IS NULL OR p_level NOT BETWEEN 0 AND 3 THEN
+      RAISE EXCEPTION 'LEVEL_REQUIRED';
+    END IF;
+
+    -- get_competency_progress computes against the student's ACTIVE membership,
+    -- while the scope check below validates against the ASSIGNMENT's group.
+    -- join_group_by_code closes the old membership and opens a new one, so a
+    -- student who re-joins between submitting and being approved would be
+    -- approved against group A's targets and read from group B's -- and if B
+    -- does not target that competency, nothing moves and nothing says why.
+    -- Approving into a void is worse than refusing with a name: the work
+    -- belongs to a term the student has left.
+    --
+    -- Reading group_memberships here is fine. This is a function body, not a
+    -- policy qual, so it cannot re-enter that table's policies and cause
+    -- 42P17 -- the same reason every SECURITY DEFINER helper in this project
+    -- reaches it.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_memberships m
+      WHERE m.group_id = the_group
+        AND m.student_id = the_student
+        AND m.left_at IS NULL
+    ) THEN
+      RAISE EXCEPTION 'STUDENT_LEFT_GROUP';
+    END IF;
+
+    -- An observation for a competency outside the group's scope is written but
+    -- never reported, because get_competency_progress only returns competencies
+    -- with a target row. The student would do the work, be approved, and see
+    -- nothing move.
+    IF NOT EXISTS (
+      SELECT 1 FROM group_competency_targets gt
+      WHERE gt.group_id = the_group AND gt.competency_id = the_comp
+    ) THEN
+      RAISE EXCEPTION 'NOT_IN_SCOPE';
+    END IF;
+  END IF;
+
+  UPDATE assignment_submissions s
+  SET status = CASE WHEN p_approved THEN 'approved' ELSE 'needs_revision' END,
+      mentor_note = p_note,
+      mentor_level = CASE WHEN p_approved THEN p_level ELSE NULL END,
+      reviewed_at = now(),
+      reviewed_by = auth.uid()
+  WHERE s.id = p_submission_id;
+
+  IF p_approved THEN
+    -- one_observation_per_submission is a PARTIAL unique index (predicate:
+    -- assignment_submission_id IS NOT NULL). Postgres only infers a partial
+    -- index as an ON CONFLICT arbiter when the conflict target repeats that
+    -- same predicate; without it, index inference finds no matching arbiter
+    -- and every call raises 42P10, not just genuine duplicates. Repeating the
+    -- WHERE here looks redundant next to the index definition but is load-
+    -- bearing -- do not drop it.
+    INSERT INTO kpi_observations
+      (student_id, kpi_id, log_id, observed_by, assignment_submission_id)
+    VALUES (the_student, the_kpi, NULL, auth.uid(), p_submission_id)
+    ON CONFLICT (assignment_submission_id) WHERE assignment_submission_id IS NOT NULL
+      DO UPDATE SET observed_by = auth.uid(), observed_at = now();
+  ELSE
+    -- A withdrawn approval must stop counting. Otherwise the student stays
+    -- promoted on evidence that was taken back.
+    DELETE FROM kpi_observations o
+    WHERE o.assignment_submission_id = p_submission_id;
+  END IF;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS review_assignment(UUID, BOOLEAN, TEXT);
+GRANT EXECUTE ON FUNCTION review_assignment(UUID, BOOLEAN, TEXT, SMALLINT) TO authenticated;
+
+-- ---- competency_self_vs_mentor ----
+-- The gap between what the student thought and what the mentor saw, per
+-- competency. Readable by the student, their mentor, and the advisor of a
+-- group they are an active member of. Approved submissions with both
+-- ratings only (legacy rows have NULLs and are ignored).
+CREATE OR REPLACE FUNCTION competency_self_vs_mentor(p_student_id UUID)
+RETURNS SETOF JSONB LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'NOT_AUTHENTICATED'; END IF;
+  IF NOT (p_student_id = auth.uid() OR is_mentor_of(p_student_id)
+          OR EXISTS (SELECT 1 FROM group_memberships m JOIN internship_groups g ON g.id = m.group_id
+                     WHERE m.student_id = p_student_id AND m.left_at IS NULL AND g.advisor_id = auth.uid())) THEN
+    RAISE EXCEPTION 'SELF_ASSESSMENT_FORBIDDEN';
+  END IF;
+  RETURN QUERY
+  SELECT jsonb_build_object(
+    'competencyId', c.id, 'code', c.code, 'name', c.name,
+    'tasks', count(*),
+    'avgSelf', round(avg(s.self_level)::numeric, 1),
+    'avgMentor', round(avg(s.mentor_level)::numeric, 1),
+    'gap', round((avg(s.mentor_level) - avg(s.self_level))::numeric, 1),
+    'overRated', count(*) FILTER (WHERE s.self_level > s.mentor_level),
+    'underRated', count(*) FILTER (WHERE s.self_level < s.mentor_level))
+  FROM assignment_submissions s
+  JOIN group_assignments a ON a.id = s.assignment_id
+  JOIN kpi_triplets t ON t.id = a.triplet_id
+  JOIN competency_kpis k ON k.id = t.kpi_id
+  JOIN competencies c ON c.id = k.competency_id
+  WHERE s.student_id = p_student_id AND s.status = 'approved'
+    AND s.self_level IS NOT NULL AND s.mentor_level IS NOT NULL
+  GROUP BY c.id, c.code, c.name
+  ORDER BY c.code;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION competency_self_vs_mentor(UUID) TO authenticated;
