@@ -14,7 +14,8 @@ import { TaskDraft, draftRevision, submissionDraft } from '@/utils/taskDrafts';
 import { isActionable, taskDueDate } from '@/utils/studentTasks';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { EvidencePicker } from '@/components/forms';
-import { LoadFailedBanner } from '@/components/common';
+import { LevelPicker, LoadFailedBanner } from '@/components/common';
+import { levelLabel } from '@/utils/selfAssessment';
 import { TaskStatus, ui } from '@/components/student/StudentUI';
 import { colors } from '@/theme';
 import type { MyAssignment } from '@/types/assignment';
@@ -30,7 +31,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const [task, setTask] = useState<MyAssignment | null>(null);
-  const [draft, setDraft] = useState<TaskDraft>({ note: '', reflection: '', photos: [], documents: [] });
+  const [draft, setDraft] = useState<TaskDraft>({ note: '', reflection: '', photos: [], documents: [], selfLevel: null });
   const currentDraft = useRef(draft);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -40,6 +41,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   const [uploading, setUploading] = useState(false);
   const [instructions, setInstructions] = useState(false);
   const [reflectionError, setReflectionError] = useState(false);
+  const [levelError, setLevelError] = useState(false);
   // Per-task, default on (spec decision 2). Not part of TaskDraft on purpose
   // -- see the Task 5 brief. Seeded from the server on load; sent as a
   // second call after submit_assignment returns.
@@ -178,6 +180,10 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       reflectionInput.current?.focus();
       return;
     }
+    if (currentDraft.current.selfLevel === null) {
+      setLevelError(true);
+      return;
+    }
     busy.current = true;
     setSubmitting(true);
     try {
@@ -187,7 +193,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
         return;
       }
       const value = currentDraft.current;
-      const submissionId = await assignmentService.submitAssignment(id, value.note.trim(), value.reflection.trim(), value.photos, value.documents);
+      const submissionId = await assignmentService.submitAssignment(id, value.note.trim(), value.reflection.trim(), value.photos, value.documents, value.selfLevel ?? undefined);
       // The sharing decision travels as a second call, not a sixth RPC
       // parameter (spec §3). It must not fail silently: a task shared
       // against the student's wish is the one outcome the switch exists to
@@ -249,6 +255,13 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
           {!!task.submission?.mentorNote && <View style={ui.note}>
             <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
             <Text style={ui.body}>{task.submission.mentorNote}</Text>
+          </View>}
+          {typeof task.submission?.selfLevel === 'number' && typeof task.submission?.mentorLevel === 'number' && <View style={ui.note}>
+            <Text style={ui.body}>
+              {t('assessment.you', 'You')}: {levelLabel(task.submission.selfLevel, t)} · {t('assessment.mentor', 'Mentor')}: {levelLabel(task.submission.mentorLevel, t)}
+            </Text>
+            {task.submission.mentorLevel > task.submission.selfLevel && <Text style={ui.secondary}>{t('assessment.theySawMore', 'Your mentor saw more')}</Text>}
+            {task.submission.mentorLevel < task.submission.selfLevel && <Text style={ui.secondary}>{t('assessment.theySawLess', 'Your mentor saw less')}</Text>}
           </View>}
           <View style={ui.card}>
             <Text style={ui.label}>{t('student.taskCriterion')}</Text>
@@ -321,6 +334,12 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       </ScrollView>
       {!loading && !failed && actionable && <View style={{ borderTopWidth: 1, borderColor: colors.divider, backgroundColor: '#fff' }}>
         <View style={[ui.content, { paddingVertical: 12, gap: 8 }]}>
+          <View style={levelError ? { borderWidth: 1, borderColor: colors.error, borderRadius: 12, padding: 8 } : undefined}>
+            <LevelPicker label={t('assessment.selfQuestion', 'How did you do this task?')}
+              value={draft.selfLevel} disabled={submitting || restoreFailed}
+              onChange={(selfLevel) => { setLevelError(false); edit({ selfLevel }); }} />
+          </View>
+          {levelError && <Text accessibilityRole="alert" style={{ color: colors.error }}>{t('errors.selfLevelRequired')}</Text>}
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: submitting || uploading || restoreFailed, busy: submitting }}
             disabled={submitting || uploading || restoreFailed} onPress={submit}
             style={[ui.primary, (submitting || uploading || restoreFailed) && { opacity: 0.6 }]}>

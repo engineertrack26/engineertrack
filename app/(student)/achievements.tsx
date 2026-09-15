@@ -53,6 +53,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
   const badges = data?.badges.status === 'fulfilled'
     ? new Set((data.badges.value || []).map((badge: Record<string, unknown>) => badge.badge_key as string)) : null;
   const progress = data?.competencies.status === 'fulfilled' ? data.competencies.value : null;
+  const selfVsMentor = data?.selfVsMentor.status === 'fulfilled' ? data.selfVsMentor.value : null;
   const history = data?.history.status === 'fulfilled' ? (data.history.value || []).slice(0, 10) : null;
   const failed = !!data && Object.values(data).some((section) => section.status === 'rejected');
   const shownBadges = BADGES.filter((badge) => !earnedOnly || badges?.has(badge.key));
@@ -106,13 +107,30 @@ function GrowthContent({ studentId }: { studentId: string }) {
           })}
         </>)}
         {tab === 'competencies' && (progress === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> :
-          !progress.length ? <Text style={ui.body}>{t('growthUi.noCompetencies')}</Text> :
-            progress.map((p) => <View key={p.competencyId} style={ui.card}>
-              <Text style={ui.cardTitle}>{p.name}</Text>
-              <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
-                ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
-              <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>
-            </View>))}
+          !progress.length ? <Text style={ui.body}>{t('growthUi.noCompetencies')}</Text> : <>
+            {!!selfVsMentor?.length && <Text style={ui.secondary}>{t('assessment.gapHint')}</Text>}
+            {progress.map((p) => {
+              const row = selfVsMentor?.find((r) => r.competencyId === p.competencyId);
+              return <View key={p.competencyId} style={ui.card}>
+                <Text style={ui.cardTitle}>{p.name}</Text>
+                <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
+                  ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
+                <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>
+                {!!row && <View style={{ gap: 6, marginTop: 8 }}>
+                  <View style={styles.barRow}>
+                    <Text style={styles.barLabel}>{t('assessment.you', 'You')}</Text>
+                    <View style={styles.barTrack}><View style={[styles.barFill, { width: `${(row.avgSelf / 3) * 100}%`, backgroundColor: colors.info }]} /></View>
+                    <Text style={styles.barValue}>{row.avgSelf.toFixed(1)}</Text>
+                  </View>
+                  <View style={styles.barRow}>
+                    <Text style={styles.barLabel}>{t('assessment.mentor', 'Mentor')}</Text>
+                    <View style={styles.barTrack}><View style={[styles.barFill, { width: `${(row.avgMentor / 3) * 100}%`, backgroundColor: colors.primary }]} /></View>
+                    <Text style={styles.barValue}>{row.avgMentor.toFixed(1)}</Text>
+                  </View>
+                </View>}
+              </View>;
+            })}
+          </>)}
         {tab === 'history' && (history === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> : <>
           <Text style={ui.secondary}>{t('growthUi.historyHint')}</Text>
           {!history.length && <Text style={ui.body}>{t('growthUi.noHistory')}</Text>}
@@ -139,4 +157,9 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 48, maxWidth: '100%', padding: 12, justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.divider },
   link: { fontSize: 16, fontWeight: '600', color: colors.primaryDark },
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  barLabel: { width: 52, fontSize: 12, color: colors.textSecondary },
+  barTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.divider, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
+  barValue: { width: 28, fontSize: 12, textAlign: 'right', color: colors.textSecondary },
 });

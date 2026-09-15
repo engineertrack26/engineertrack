@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 
 export const studentGrowthViewService = {
   async load(studentId: string) {
-    const [badges, history, profile, competencies] = await Promise.allSettled([
+    const [badges, history, profile, competencies, selfVsMentor] = await Promise.allSettled([
       gamificationService.getEarnedBadges(studentId),
       gamificationService.getXpHistory(studentId),
       (async () => {
@@ -16,7 +16,8 @@ export const studentGrowthViewService = {
           currentStreak: Number(data.current_streak) || 0, longestStreak: Number(data.longest_streak) || 0 };
       })(),
       competencyService.getProgress(studentId),
+      competencyService.selfVsMentor(studentId),
     ]);
-    return { badges, history, profile, competencies };
+    return { badges, history, profile, competencies, selfVsMentor };
   },
 };

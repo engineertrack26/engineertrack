@@ -4,7 +4,7 @@ import { competencyService } from '../competency';
 import { supabase } from '../supabase';
 
 jest.mock('../gamification', () => ({ gamificationService: { getEarnedBadges: jest.fn(), getXpHistory: jest.fn() } }));
-jest.mock('../competency', () => ({ competencyService: { getProgress: jest.fn() } }));
+jest.mock('../competency', () => ({ competencyService: { getProgress: jest.fn(), selfVsMentor: jest.fn() } }));
 jest.mock('../supabase', () => ({ supabase: { from: jest.fn() } }));
 
 const single = jest.fn();
@@ -18,6 +18,7 @@ beforeEach(() => {
   jest.mocked(gamificationService.getEarnedBadges).mockResolvedValue([]);
   jest.mocked(gamificationService.getXpHistory).mockResolvedValue([]);
   jest.mocked(competencyService.getProgress).mockResolvedValue([]);
+  jest.mocked(competencyService.selfVsMentor).mockResolvedValue([]);
 });
 
 test('reads the signed-in student data through existing APIs', async () => {
@@ -26,7 +27,9 @@ test('reads the signed-in student data through existing APIs', async () => {
   expect(gamificationService.getEarnedBadges).toHaveBeenCalledWith('student-1');
   expect(gamificationService.getXpHistory).toHaveBeenCalledWith('student-1');
   expect(competencyService.getProgress).toHaveBeenCalledWith('student-1');
+  expect(competencyService.selfVsMentor).toHaveBeenCalledWith('student-1');
   expect(result.profile).toEqual({ status: 'fulfilled', value: { totalXp: 200, currentLevel: 2, currentStreak: 3, longestStreak: 5 } });
+  expect(result.selfVsMentor).toEqual({ status: 'fulfilled', value: [] });
 });
 
 test('profile errors remain unavailable rather than turning into zero XP', async () => {
