@@ -3,7 +3,8 @@ import type { MyAssignment } from '@/types/assignment';
 
 const draft: TaskDraft = { note: 'Measured voltage', reflection: 'Calibration matters',
   photos: [{ uri: 'user/task/photo.jpg', caption: 'Probe' }],
-  documents: [{ uri: 'user/task/report.pdf', fileName: 'report.pdf', fileType: 'application/pdf', fileSize: 100 }] };
+  documents: [{ uri: 'user/task/report.pdf', fileName: 'report.pdf', fileType: 'application/pdf', fileSize: 100 }],
+  selfLevel: null };
 function setup() {
   const files = new Map<string, string>();
   const storage = {

@@ -1,10 +1,11 @@
-import type { MyAssignment, PhotoEvidence, DocumentEvidence } from '@/types/assignment';
+import type { MyAssignment, PhotoEvidence, DocumentEvidence, SupervisionLevel } from '@/types/assignment';
 
 export interface TaskDraft {
   note: string;
   reflection: string;
   photos: PhotoEvidence[];
   documents: DocumentEvidence[];
+  selfLevel: SupervisionLevel | null;
 }
 export interface DraftStorage {
   read(key: string): Promise<string | null>;
@@ -17,7 +18,8 @@ export function draftRevision(task: MyAssignment): string {
 }
 export function submissionDraft(task: MyAssignment): TaskDraft {
   return { note: task.submission?.studentNote || '', reflection: task.submission?.reflection || '',
-    photos: task.submission?.photos || [], documents: task.submission?.documents || [] };
+    photos: task.submission?.photos || [], documents: task.submission?.documents || [],
+    selfLevel: task.submission?.selfLevel ?? null };
 }
 function validDraft(value: unknown): value is TaskDraft {
   if (!value || typeof value !== 'object') return false;
@@ -25,7 +27,10 @@ function validDraft(value: unknown): value is TaskDraft {
   return typeof d.note === 'string' && typeof d.reflection === 'string' &&
     Array.isArray(d.photos) && d.photos.every(p => p && typeof p.uri === 'string' && (p.caption === undefined || typeof p.caption === 'string')) &&
     Array.isArray(d.documents) && d.documents.every(p => p && typeof p.uri === 'string' &&
-      typeof p.fileName === 'string' && typeof p.fileType === 'string' && typeof p.fileSize === 'number' && Number.isFinite(p.fileSize));
+      typeof p.fileName === 'string' && typeof p.fileType === 'string' && typeof p.fileSize === 'number' && Number.isFinite(p.fileSize)) &&
+    // Older saved drafts predate self-assessment and carry no selfLevel at
+    // all -- tolerated as absent rather than invalidating the whole draft.
+    (d.selfLevel === undefined || d.selfLevel === null || [0, 1, 2, 3].includes(d.selfLevel));
 }
 
 /** Per-account, per-task queue: a slow older write cannot replace a newer one,
@@ -50,7 +55,11 @@ export function createTaskDraftStore(storage: DraftStorage) {
         if (!raw) return null;
         const saved = JSON.parse(raw);
         if (saved.version !== 1 || !validDraft(saved.draft)) throw new Error('Invalid draft data');
-        return saved.revision === revision ? saved.draft : null;
+        // A draft saved before self-assessment existed has no selfLevel key
+        // at all -- normalized to null here rather than left undefined, so
+        // every caller of load() gets the same TaskDraft shape.
+        const draft: TaskDraft = { ...saved.draft, selfLevel: saved.draft.selfLevel ?? null };
+        return saved.revision === revision ? draft : null;
       });
     },
     save(userId: string, taskId: string, revision: string, draft: TaskDraft) {

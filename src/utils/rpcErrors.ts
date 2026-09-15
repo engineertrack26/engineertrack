@@ -42,6 +42,9 @@ const ERROR_KEYS: Record<string, string> = {
   CANNOT_BLOCK: 'errors.cannotBlock',
   CANNOT_OPEN_CASE: 'errors.cannotOpenCase',
   CASE_NEEDS_MENTOR: 'errors.caseNeedsMentor',
+  SELF_LEVEL_REQUIRED: 'errors.selfLevelRequired',
+  LEVEL_REQUIRED: 'errors.levelRequired',
+  SELF_ASSESSMENT_FORBIDDEN: 'errors.selfAssessmentForbidden',
 };
 
 /**

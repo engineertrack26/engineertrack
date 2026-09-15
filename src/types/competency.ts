@@ -35,3 +35,8 @@ export interface GroupCompetencyTarget {
   competencyId: string;
   targetLevel: number;
 }
+
+// Re-exported so competencyService's own types file names the shape its
+// selfVsMentor() returns; the definition lives in utils/selfAssessment.ts
+// alongside the pure helpers that consume it (gapTag, selfVsMentorCsvRows).
+export type { SelfVsMentorRow } from '@/utils/selfAssessment';

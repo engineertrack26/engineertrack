@@ -1,0 +1,42 @@
+import type { TFunction } from 'i18next';
+
+/** The four-step supervision scale used across the internship journal: a task
+ *  is one KPI, so a per-task rating is a per-KPI rating. See
+ *  docs/superpowers/specs/2026-09-15-self-assessment-design.md decision 1. */
+export type SupervisionLevel = 0 | 1 | 2 | 3;
+export const SUPERVISION_LEVELS: SupervisionLevel[] = [0, 1, 2, 3];
+
+export function levelLabel(
+  level: SupervisionLevel,
+  t: TFunction | ((k: string, d?: string) => string),
+): string {
+  const defaults = ['Observed', 'Heavy support', 'Partial support', 'Independent'];
+  return (t as (k: string, d?: string) => string)(`assessment.level_${level}`, defaults[level]);
+}
+
+/** One competency's tally from competency_self_vs_mentor -- see decision 4 in
+ *  the design. gap = avgMentor - avgSelf. */
+export interface SelfVsMentorRow {
+  competencyId: string;
+  code: string;
+  name: string;
+  tasks: number;
+  avgSelf: number;
+  avgMentor: number;
+  gap: number;
+  overRated: number;
+  underRated: number;
+}
+
+/** |gap| >= 1 is a full step on a four-step scale: worth a word. gap = mentor - self. */
+export function gapTag(gap: number): 'high' | 'low' | null {
+  if (gap >= 1) return 'low';
+  if (gap <= -1) return 'high';
+  return null;
+}
+
+export function selfVsMentorCsvRows(rows: SelfVsMentorRow[]): Array<Array<string | number>> {
+  return [...rows]
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map((r) => [r.name, r.tasks, r.avgSelf, r.avgMentor, r.gap]);
+}

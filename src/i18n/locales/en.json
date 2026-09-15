@@ -1016,7 +1016,31 @@
     "pollOptionsRange": "A poll needs between 2 and 6 options.",
     "optionMismatch": "That option does not belong to this poll.",
     "postNotFound": "This post no longer exists.",
-    "attachmentLimit": "An announcement can carry one photo, one document and one link."
+    "attachmentLimit": "An announcement can carry one photo, one document and one link.",
+    "selfLevelRequired": "Choose how you did this task before submitting.",
+    "levelRequired": "Choose the level you observed before approving.",
+    "selfAssessmentForbidden": "You can't view this student's self-assessment."
+  },
+  "assessment": {
+    "level_0": "Observed",
+    "level_1": "Heavy support",
+    "level_2": "Partial support",
+    "level_3": "Independent",
+    "selfQuestion": "How did you do this task?",
+    "mentorQuestion": "How did the student do this task?",
+    "studentSaid": "Student's own rating",
+    "you": "You",
+    "mentor": "Mentor",
+    "theySawMore": "Your mentor saw more",
+    "theySawLess": "Your mentor saw less",
+    "ratesHigh": "Rates self high",
+    "ratesLow": "Rates self low",
+    "gapHint": "Mentor rating minus self-rating, averaged per competency. Around zero means you see your work the way your mentor does.",
+    "csvHeader": "Self-assessment by competency",
+    "csvColTasks": "Rated tasks",
+    "csvColSelf": "Self (avg)",
+    "csvColMentor": "Mentor (avg)",
+    "csvColGap": "Gap"
   },
   "messages": {
     "title": "Messages",

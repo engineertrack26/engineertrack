@@ -1,3 +1,9 @@
+// Re-exported so the submission shape's own file names the type it depends
+// on -- the values themselves live in utils/selfAssessment.ts, which must not
+// import back from here (submitAssignment/reviewAssignment need it too).
+import type { SupervisionLevel } from '@/utils/selfAssessment';
+export type { SupervisionLevel };
+
 export interface KpiTriplet {
   id: string;
   kpiId: string;
@@ -60,6 +66,13 @@ export interface AssignmentSubmission {
    *  once approved. Server default true; undefined on older rows reads as
    *  true. Changed through feedService.setSubmissionSharing. */
   shareToFeed?: boolean;
+  /** The student's own rating, given on submit; required by the RPC going
+   *  forward but undefined on legacy rows (NULL in the database). */
+  selfLevel?: SupervisionLevel;
+  /** The mentor's rating, given on approval; cleared (undefined) whenever the
+   *  submission is not currently approved -- a revision request clears the
+   *  column server-side because the approval it belonged to is gone. */
+  mentorLevel?: SupervisionLevel;
 }
 
 /** One assignment's tallies as the SERVER counts them, which is not the same

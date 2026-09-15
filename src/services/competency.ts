@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { RpcError } from './rpcError';
 import type {
   Competency, CompetencyKpi, CompetencyProgress, WorkingKpi, GroupCompetencyTarget,
+  SelfVsMentorRow,
 } from '@/types/competency';
 
 function mapCompetency(row: Record<string, unknown>): Competency {
@@ -102,6 +103,29 @@ export const competencyService = {
       level: (r.level as number) ?? 0,
       kpiIndex: (r.kpi_index as number) ?? 0,
       statement: (r.statement as string) || '',
+    }));
+  },
+
+  /** Per-competency self-vs-mentor comparison, visible to the student (own),
+   *  their mentor and their group's advisor -- SELF_ASSESSMENT_FORBIDDEN for
+   *  anyone else. Only competencies with at least one submission carrying
+   *  both ratings get a row. See competency_self_vs_mentor and decision 4 in
+   *  docs/superpowers/specs/2026-09-15-self-assessment-design.md. */
+  async selfVsMentor(studentId: string): Promise<SelfVsMentorRow[]> {
+    const { data, error } = await supabase.rpc('competency_self_vs_mentor', {
+      p_student_id: studentId,
+    });
+    if (error) throw new RpcError(error.message);
+    return ((data as Array<Record<string, unknown>>) || []).map((r) => ({
+      competencyId: (r.competencyId as string) || '',
+      code: (r.code as string) || '',
+      name: (r.name as string) || '',
+      tasks: Number(r.tasks) || 0,
+      avgSelf: Number(r.avgSelf) || 0,
+      avgMentor: Number(r.avgMentor) || 0,
+      gap: Number(r.gap) || 0,
+      overRated: Number(r.overRated) || 0,
+      underRated: Number(r.underRated) || 0,
     }));
   },
 

@@ -1006,6 +1006,30 @@
     "reportSend": "Gönder",
     "reportSentRouted": "Raporunuz kurumunuzun yöneticisine gönderildi.",
     "reportSentStored": "Raporunuz kaydedildi. Lütfen kodu size veren kişiyle de iletişime geçin.",
-    "reportFailed": "Raporunuzu gönderemedik. Bağlantınızı kontrol edip tekrar deneyin."
+    "reportFailed": "Raporunuzu gönderemedik. Bağlantınızı kontrol edip tekrar deneyin.",
+    "selfLevelRequired": "Göndermeden önce bu görevi nasıl yaptığını seç.",
+    "levelRequired": "Onaylamadan önce gözlemlediğin düzeyi seç.",
+    "selfAssessmentForbidden": "Bu öğrencinin öz değerlendirmesini göremezsin."
+  },
+  "assessment": {
+    "level_0": "Gözlemledim",
+    "level_1": "Yoğun destekle",
+    "level_2": "Kısmi destekle",
+    "level_3": "Bağımsız",
+    "selfQuestion": "Bu görevi nasıl yaptın?",
+    "mentorQuestion": "Öğrenci bu görevi nasıl yaptı?",
+    "studentSaid": "Öğrencinin kendi puanı",
+    "you": "Sen",
+    "mentor": "Mentor",
+    "theySawMore": "Mentorun daha fazlasını gördü",
+    "theySawLess": "Mentorun daha azını gördü",
+    "ratesHigh": "Kendini yüksek görüyor",
+    "ratesLow": "Kendini düşük görüyor",
+    "gapHint": "Mentor puanı eksi öz puan, yetkinlik başına ortalama. Sıfıra yakın olması işini mentorunla aynı gördüğün anlamına gelir.",
+    "csvHeader": "Yetkinlik başına öz değerlendirme",
+    "csvColTasks": "Puanlanan görev",
+    "csvColSelf": "Öz (ort.)",
+    "csvColMentor": "Mentor (ort.)",
+    "csvColGap": "Fark"
   }
 }

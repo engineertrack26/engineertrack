@@ -5,7 +5,7 @@ import {
 } from './evidenceUrls';
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
-  AssignmentCounts, PhotoEvidence, DocumentEvidence,
+  AssignmentCounts, PhotoEvidence, DocumentEvidence, SupervisionLevel,
 } from '@/types/assignment';
 import { toPhotoPayload, toDocumentPayload } from '@/utils/evidenceMapping';
 
@@ -85,6 +85,8 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
     reviewedAt: (r.reviewed_at as string) || undefined,
     reviewedBy: (r.reviewed_by as string) || undefined,
     shareToFeed: r.share_to_feed === undefined || r.share_to_feed === null ? true : !!r.share_to_feed,
+    selfLevel: typeof r.self_level === 'number' ? (r.self_level as SupervisionLevel) : undefined,
+    mentorLevel: typeof r.mentor_level === 'number' ? (r.mentor_level as SupervisionLevel) : undefined,
     photos: photosRaw?.map((p) => ({
       uri: (p.uri as string) || '',
       caption: (p.caption as string) || undefined,
@@ -314,12 +316,18 @@ export const assignmentService = {
    *  a differing argument list would have made an OVERLOAD, and PostgREST
    *  resolves overloads by the argument names the caller sends, so the old body
    *  would have kept answering old callers with no error anywhere. */
+  // selfLevel stays an optional parameter here even though submit_assignment
+  // itself requires it (SELF_LEVEL_REQUIRED otherwise) -- the RPC's 5-argument
+  // overload is gone (Task 1), but the student screen that supplies a real
+  // value is Task 3's, so the client-side parameter cannot be made mandatory
+  // until that call site is wired without breaking every existing caller.
   async submitAssignment(
     assignmentId: string,
     note: string,
     reflection: string,
     photos: PhotoEvidence[],
     documents: DocumentEvidence[],
+    selfLevel?: SupervisionLevel,
   ): Promise<string> {
     const { data, error } = await supabase.rpc('submit_assignment', {
       p_assignment_id: assignmentId,
@@ -327,16 +335,26 @@ export const assignmentService = {
       p_reflection: reflection,
       p_photos: toPhotoPayload(photos),
       p_documents: toDocumentPayload(documents),
+      p_self_level: selfLevel ?? null,
     });
     if (error) throw new RpcError(error.message);
     return data as string;
   },
 
-  async reviewAssignment(submissionId: string, approved: boolean, note: string): Promise<void> {
+  // level is required by review_assignment only when approved is true
+  // (LEVEL_REQUIRED otherwise); on a revision request no level is given and
+  // the server clears mentor_level itself.
+  async reviewAssignment(
+    submissionId: string,
+    approved: boolean,
+    note: string,
+    level?: SupervisionLevel,
+  ): Promise<void> {
     const { error } = await supabase.rpc('review_assignment', {
       p_submission_id: submissionId,
       p_approved: approved,
       p_note: note,
+      p_level: level ?? null,
     });
     if (error) throw new RpcError(error.message);
   },
