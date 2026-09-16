@@ -1041,7 +1041,8 @@
     "csvColTasks": "Rated tasks",
     "csvColSelf": "Self (avg)",
     "csvColMentor": "Mentor (avg)",
-    "csvColGap": "Gap"
+    "csvColGap": "Gap",
+    "notRated": "Not rated"
   },
   "messages": {
     "title": "Messages",

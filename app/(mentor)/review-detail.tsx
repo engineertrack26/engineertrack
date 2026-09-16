@@ -215,7 +215,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
           </View>}
           {canReview && <View style={ui.card}>
             <Text style={ui.label}>{t('assessment.studentSaid', "Student's own rating")}</Text>
-            <Text style={ui.body}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('mentorFlow.notProvided')}</Text>
+            <Text style={ui.body}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('assessment.notRated', 'Not rated')}</Text>
             <LevelPicker label={t('assessment.mentorQuestion', 'How did the student do this task?')} value={level}
               onChange={(v) => { setLevel(v); setLevelError(false); }} />
             {levelError && <Text style={[ui.body, { color: '#c00' }]}>{t('errors.levelRequired', 'Choose the level you observed before approving.')}</Text>}

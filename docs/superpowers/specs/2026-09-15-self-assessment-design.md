@@ -25,7 +25,7 @@
 | `self_level` | `SMALLINT CHECK (self_level BETWEEN 0 AND 3)` | NULL only on legacy rows; `submit_assignment` requires it |
 | `mentor_level` | `SMALLINT CHECK (mentor_level BETWEEN 0 AND 3)` | set by `review_assignment` on approval; cleared to NULL on a later revision request (the approval it belonged to is gone) |
 
-No new tables. No new policies: both columns live under the existing submission policies (the student and their mentor read the row; the advisor's read is through RPCs).
+No new tables. No new policies: both columns live under the existing `"submissions read"` policy, whose readers — the student, their mentor, and the advisor of the group they are an active member of (`is_group_advisor_of`) — are exactly the audience decision 4 grants; verification C4 confirms the advisor's direct read.
 
 ## 3. RPCs
 

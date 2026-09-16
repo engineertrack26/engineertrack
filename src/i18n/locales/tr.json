@@ -1031,6 +1031,7 @@
     "csvColTasks": "Puanlanan görev",
     "csvColSelf": "Öz (ort.)",
     "csvColMentor": "Mentor (ort.)",
-    "csvColGap": "Fark"
+    "csvColGap": "Fark",
+    "notRated": "Puanlanmadı"
   }
 }

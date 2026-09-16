@@ -92,7 +92,9 @@ SELECT 'PASS: schema assertions held' AS result;
 --   B8b another mentor is refused                        -> SELF_ASSESSMENT_FORBIDDEN (SKIP without a second mentor)
 --   B9  the advisor reads it                            -> rows returned
 --   B10 list_feed_posts(grp) carries no rating, and there is a real task post to check (not a vacuous pass)
--- Expected: eleven rows, none beginning FAIL / ABORTED (SKIP is fine when the
+--   B11 unlinked mentor is refused                      -> SELF_ASSESSMENT_FORBIDDEN
+--   B12 advisor of a closed membership is refused        -> SELF_ASSESSMENT_FORBIDDEN
+-- Expected: thirteen rows, none beginning FAIL / ABORTED (SKIP is fine when the
 -- database has no second mentor for B8b, or fewer than two triplets on the KPI
 -- for B7 -- both print SKIP rather than silently passing).
 -- ============================================================
@@ -316,6 +318,43 @@ BEGIN
                 ELSE 'FAIL: a rating leaked into the stream' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B10 list_feed_posts carries no rating' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || SQLERRM || E'\n';
+  END;
+
+  -- B11: unlinking the mentor removes the only relationship that admits them
+  -- (they are neither the student nor the group's advisor), so the call must
+  -- refuse exactly as it would for any other mentor. Restored immediately so
+  -- nothing after this case depends on the student having no mentor.
+  BEGIN
+    UPDATE student_profiles SET mentor_id = NULL WHERE id = stu;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
+    BEGIN
+      PERFORM competency_self_vs_mentor(stu);
+      log := log || 'B11 unlinked mentor is refused' || E'\t' || 'FAIL: rows returned' || E'\n';
+    EXCEPTION WHEN OTHERS THEN
+      log := log || 'B11 unlinked mentor is refused' || E'\t'
+          || CASE WHEN SQLERRM LIKE 'SELF_ASSESSMENT_FORBIDDEN%' THEN 'SELF_ASSESSMENT_FORBIDDEN' ELSE 'FAIL: ' || coalesce(SQLERRM, 'NULL') END || E'\n';
+    END;
+    UPDATE student_profiles SET mentor_id = mentor WHERE id = stu;
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B11 unlinked mentor is refused' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
+  END;
+
+  -- B12: closing the membership (left_at) removes the "active member" half of
+  -- decision 4's grant to the advisor. Placed last -- the transaction rolls
+  -- back at the end of this block, so no restore is needed, but nothing later
+  -- in this DO block may rely on the membership still being open.
+  BEGIN
+    UPDATE group_memberships SET left_at = now() WHERE group_id = grp AND student_id = stu;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
+    BEGIN
+      PERFORM competency_self_vs_mentor(stu);
+      log := log || 'B12 advisor of a closed membership is refused' || E'\t' || 'FAIL: rows returned' || E'\n';
+    EXCEPTION WHEN OTHERS THEN
+      log := log || 'B12 advisor of a closed membership is refused' || E'\t'
+          || CASE WHEN SQLERRM LIKE 'SELF_ASSESSMENT_FORBIDDEN%' THEN 'SELF_ASSESSMENT_FORBIDDEN' ELSE 'FAIL: ' || coalesce(SQLERRM, 'NULL') END || E'\n';
+    END;
+  EXCEPTION WHEN OTHERS THEN
+    log := log || 'B12 advisor of a closed membership is refused' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
   END;
 
   PERFORM set_config('probe.results', log, true);
