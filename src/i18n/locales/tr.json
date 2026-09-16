@@ -1025,6 +1025,7 @@
     "theySawLess": "Mentorun daha azını gördü",
     "ratesHigh": "Kendini yüksek görüyor",
     "ratesLow": "Kendini düşük görüyor",
+    "selfVsMentor": "Öz / mentor",
     "gapHint": "Mentor puanı eksi öz puan, yetkinlik başına ortalama. Sıfıra yakın olması işini mentorunla aynı gördüğün anlamına gelir.",
     "csvHeader": "Yetkinlik başına öz değerlendirme",
     "csvColTasks": "Puanlanan görev",

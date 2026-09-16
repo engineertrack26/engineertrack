@@ -40,3 +40,19 @@ export function selfVsMentorCsvRows(rows: SelfVsMentorRow[]): Array<Array<string
     .sort((a, b) => a.code.localeCompare(b.code))
     .map((r) => [r.name, r.tasks, r.avgSelf, r.avgMentor, r.gap]);
 }
+
+/** Weighted mean of `gap` weighted by `tasks`, one decimal. Null when there
+ *  are no rows -- distinct from a genuine 0, which a report should still
+ *  show. See decision 4 in the design. */
+export function weightedGap(rows: Array<{ gap: number; tasks: number }>): number | null {
+  const totalTasks = rows.reduce((sum, r) => sum + r.tasks, 0);
+  if (totalTasks === 0) return null;
+  const weighted = rows.reduce((sum, r) => sum + r.gap * r.tasks, 0);
+  return Math.round((weighted / totalTasks) * 10) / 10;
+}
+
+/** Weighted mean of `avgSelf` or `avgMentor` across rows, weighted by
+ *  `tasks`, one decimal. Null when there are no rows. */
+export function weightedAverage(rows: SelfVsMentorRow[], key: 'avgSelf' | 'avgMentor'): number | null {
+  return weightedGap(rows.map((r) => ({ gap: r[key], tasks: r.tasks })));
+}

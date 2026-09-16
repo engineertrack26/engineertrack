@@ -1,3 +1,5 @@
+import type { SelfVsMentorRow } from '@/utils/selfAssessment';
+
 /** One competency's standing across a group's active students. */
 export interface CompetencyBreakdown {
   competencyId: string;
@@ -15,6 +17,12 @@ export interface StudentReportRow {
   completionPercent: number;
   submitted: number;
   approved: number;
+  /** Per-competency self vs mentor tallies (competencyService.selfVsMentor);
+   *  empty when the load failed or the student has no rated submissions. */
+  selfVsMentor: SelfVsMentorRow[];
+  /** Mean of selfVsMentor's `gap` weighted by `tasks`, one decimal; null
+   *  when selfVsMentor is empty. See weightedGap in selfAssessment.ts. */
+  selfVsMentorGap: number | null;
 }
 
 /** advisorService.getReportsData(groupId)'s return shape. `groupName` rides

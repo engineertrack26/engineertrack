@@ -9,9 +9,9 @@ import sr from '@/i18n/locales/sr.json';
 import el from '@/i18n/locales/el.json';
 
 const rows: StudentReportRow[] = [
-  { id: '1', name: 'Zeynep', completionPercent: 70, submitted: 3, approved: 1 },
-  { id: '2', name: 'İpek', completionPercent: 20, submitted: 2, approved: 1 },
-  { id: '3', name: 'Ali', completionPercent: 20, submitted: 1, approved: 0 },
+  { id: '1', name: 'Zeynep', completionPercent: 70, submitted: 3, approved: 1, selfVsMentor: [], selfVsMentorGap: null },
+  { id: '2', name: 'İpek', completionPercent: 20, submitted: 2, approved: 1, selfVsMentor: [], selfVsMentorGap: null },
+  { id: '3', name: 'Ali', completionPercent: 20, submitted: 1, approved: 0, selfVsMentor: [], selfVsMentorGap: null },
 ];
 
 test('student search supports Turkish casing and trimmed input', () => {

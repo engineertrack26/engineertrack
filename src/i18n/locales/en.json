@@ -1035,6 +1035,7 @@
     "theySawLess": "Your mentor saw less",
     "ratesHigh": "Rates self high",
     "ratesLow": "Rates self low",
+    "selfVsMentor": "Self vs mentor",
     "gapHint": "Mentor rating minus self-rating, averaged per competency. Around zero means you see your work the way your mentor does.",
     "csvHeader": "Self-assessment by competency",
     "csvColTasks": "Rated tasks",

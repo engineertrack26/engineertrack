@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { competencyService } from './competency';
 import { groupService } from './group';
 import { competencyCompletion, averageCompletion } from '@/utils/reportMetrics';
+import { weightedGap, type SelfVsMentorRow } from '@/utils/selfAssessment';
 import type { CompetencyProgress } from '@/types/competency';
 import type { CompetencyBreakdown, GroupAttendance, GroupReportData, StudentReportRow } from '@/types/report';
 
@@ -468,9 +469,19 @@ export const advisorService = {
     }
 
     const progressByStudent = new Map<string, CompetencyProgress[]>();
+    const selfVsMentorByStudent = new Map<string, SelfVsMentorRow[]>();
     await Promise.all(
       studentIds.map(async (id) => {
         progressByStudent.set(id, await competencyService.getProgress(id));
+        // Self-assessment is a nice-to-have on top of the report, not load
+        // bearing for it -- a mentor rating that never came in, or a query
+        // that fails, must not take the whole report down with it.
+        try {
+          selfVsMentorByStudent.set(id, await competencyService.selfVsMentor(id));
+        } catch (err) {
+          console.warn('Self-assessment load failed for', id, err instanceof Error ? err.message : err);
+          selfVsMentorByStudent.set(id, []);
+        }
       }),
     );
 
@@ -478,6 +489,7 @@ export const advisorService = {
       const progress = progressByStudent.get(m.id) || [];
       const { percent } = competencyCompletion(progress);
       const mySubmissions = submissions.filter((s) => s.student_id === m.id);
+      const selfVsMentor = selfVsMentorByStudent.get(m.id) || [];
       return {
         id: m.id,
         name: `${m.firstName} ${m.lastName}`.trim(),
@@ -489,6 +501,8 @@ export const advisorService = {
         // "nobody has submitted at all".
         submitted: mySubmissions.length,
         approved: mySubmissions.filter((s) => s.status === 'approved').length,
+        selfVsMentor,
+        selfVsMentorGap: weightedGap(selfVsMentor),
       };
     });
 

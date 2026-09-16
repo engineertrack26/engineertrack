@@ -12,6 +12,7 @@ import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/Group
 import { ui } from '@/components/common/workflowStyles';
 import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
 import { attendanceDayRows, attendanceSummaryRows, csvRow, filterReportStudents } from '@/utils/advisorReportView';
+import { gapTag, selfVsMentorCsvRows, weightedAverage } from '@/utils/selfAssessment';
 import { colors } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
 import type { AttendanceDayRow, GroupReportData } from '@/types/report';
@@ -163,10 +164,37 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
           t('advisor.csvColCompletion'),
           t('advisor.csvColSubmitted'),
           t('advisor.csvColApproved'),
+          t('assessment.csvColSelf'),
+          t('assessment.csvColMentor'),
+          t('assessment.csvColGap'),
         ]),
       );
       data.studentProgress.forEach((s) => {
-        lines.push(csvRow([s.name, s.completionPercent, s.submitted, s.approved]));
+        lines.push(csvRow([
+          s.name, s.completionPercent, s.submitted, s.approved,
+          weightedAverage(s.selfVsMentor, 'avgSelf') ?? '',
+          weightedAverage(s.selfVsMentor, 'avgMentor') ?? '',
+          s.selfVsMentorGap ?? '',
+        ]));
+      });
+
+      // One row per student x competency -- students with no rated
+      // submissions simply contribute none, same as their blank cells in the
+      // Student table above.
+      lines.push('');
+      lines.push(t('assessment.csvHeader'));
+      lines.push(
+        csvRow([
+          t('advisor.csvColName'),
+          t('advisor.csvColCompetency'),
+          t('assessment.csvColTasks'),
+          t('assessment.csvColSelf'),
+          t('assessment.csvColMentor'),
+          t('assessment.csvColGap'),
+        ]),
+      );
+      data.studentProgress.forEach((s) => {
+        selfVsMentorCsvRows(s.selfVsMentor).forEach((row) => lines.push(csvRow([s.name, ...row])));
       });
 
       // Attendance: the section a university asks for as proof. Totals per
@@ -310,6 +338,13 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
               <ReportProgress label={student.name + ': ' + t('advisorMonitor.progress')} percent={student.completionPercent} />
               <Text style={ui.secondary}>{t('advisor.submittedCount', { count: student.submitted })}
                 {' ('}{t('advisor.approvedCount', { count: student.approved })}{')'}</Text>
+              <Text style={ui.secondary}>{t('assessment.selfVsMentor', 'Self vs mentor')}
+                {': '}{student.selfVsMentorGap == null ? '—'
+                  : (student.selfVsMentorGap >= 0 ? '+' : '') + student.selfVsMentorGap.toFixed(1)}</Text>
+              {student.selfVsMentorGap != null && gapTag(student.selfVsMentorGap) && <Text style={[ui.label, { color: colors.warning }]}>
+                {t(gapTag(student.selfVsMentorGap) === 'high' ? 'assessment.ratesHigh' : 'assessment.ratesLow',
+                  gapTag(student.selfVsMentorGap) === 'high' ? 'Rates self high' : 'Rates self low')}
+              </Text>}
             </View>)}
           </>}
           {tab === 'attendance' && <>

@@ -1,4 +1,4 @@
-import { gapTag, levelLabel, selfVsMentorCsvRows } from '@/utils/selfAssessment';
+import { gapTag, levelLabel, selfVsMentorCsvRows, weightedGap } from '@/utils/selfAssessment';
 
 const t = (k: string, d?: string) => d ?? k;
 
@@ -21,4 +21,16 @@ test('csv rows are one per competency in code order with the three numbers', () 
     { competencyId: 'a', code: 'C1', name: 'One', tasks: 1, avgSelf: 1, avgMentor: 3, gap: 2, overRated: 0, underRated: 1 },
   ]);
   expect(rows).toEqual([['One', 1, 1, 3, 2], ['Two', 3, 2.3, 1.7, -0.6]]);
+});
+
+test('weightedGap weights by tasks', () => {
+  expect(weightedGap([{ gap: 1, tasks: 1 }, { gap: -1, tasks: 3 }])).toBe(-0.5);
+});
+
+test('weightedGap is null with no rows', () => {
+  expect(weightedGap([])).toBeNull();
+});
+
+test('weightedGap of a single row is its own gap', () => {
+  expect(weightedGap([{ gap: 0.6, tasks: 2 }])).toBe(0.6);
 });
