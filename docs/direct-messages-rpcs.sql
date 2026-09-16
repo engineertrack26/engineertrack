@@ -1,3 +1,5 @@
+-- NOTE 2026-09-16: open_conversation, open_case, send_message now live in
+-- docs/internship-closure-guards.sql (closure guard added); the bodies below are history.
 -- ============================================
 -- Conversations v2 RPCs. Apply after docs/direct-messages-migration.sql.
 -- All SECURITY DEFINER; the actor is always auth.uid().

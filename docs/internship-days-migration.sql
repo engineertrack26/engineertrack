@@ -1,3 +1,5 @@
+-- NOTE 2026-09-16: internship_open_day, internship_save_log, internship_review,
+-- internship_note now live in docs/internship-closure-guards.sql (closure guard added); the bodies below are history.
 -- Internship days v1. Additive: no legacy daily_logs, XP, feed or messages writes.
 -- Apply once before enabling the UI; safe to re-run this version. See internship-days-setup.md.
 BEGIN;
