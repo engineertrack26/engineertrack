@@ -75,6 +75,31 @@ describe('routeForNotification', () => {
     }
   });
 
+  it('sends closure notifications to the report for student and mentor, with both ids', () => {
+    for (const role of ['student', 'mentor'] as const) {
+      for (const type of ['internship_closed', 'internship_reopened']) {
+        expect(routeForNotification(type, { studentId: 's1', groupId: 'g1' }, role)).toEqual({
+          pathname: `/(${role})/internship-report`,
+          params: { studentId: 's1', groupId: 'g1' },
+        });
+      }
+    }
+  });
+
+  it('falls back to the dashboard for a closure notification missing an id', () => {
+    for (const role of ['student', 'mentor'] as const) {
+      expect(routeForNotification('internship_closed', { studentId: 's1' }, role)).toEqual({ pathname: `/(${role})/dashboard` });
+      expect(routeForNotification('internship_reopened', {}, role)).toEqual({ pathname: `/(${role})/dashboard` });
+    }
+  });
+
+  it('sends the advisor to student monitor for a closure notification, no ids needed', () => {
+    expect(routeForNotification('internship_closed', { studentId: 's1', groupId: 'g1' }, 'advisor')).toEqual({
+      pathname: '/(advisor)/student-monitor',
+    });
+    expect(routeForNotification('internship_reopened', {}, 'advisor')).toEqual({ pathname: '/(advisor)/student-monitor' });
+  });
+
   it('sends a direct message to the conversation for every role', () => {
     for (const role of ['student', 'mentor', 'advisor'] as const) {
       expect(routeForNotification('direct_message', { conversationId: 'c1' }, role)).toEqual({

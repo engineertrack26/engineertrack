@@ -1019,7 +1019,15 @@
     "attachmentLimit": "An announcement can carry one photo, one document and one link.",
     "selfLevelRequired": "Choose how you did this task before submitting.",
     "levelRequired": "Choose the level you observed before approving.",
-    "selfAssessmentForbidden": "You can't view this student's self-assessment."
+    "selfAssessmentForbidden": "You can't view this student's self-assessment.",
+    "internshipClosed": "This internship is closed; records are read-only.",
+    "pendingReviews": "There are tasks awaiting the mentor's review; those need to be decided first.",
+    "alreadyClosed": "This internship is already closed.",
+    "notClosed": "This internship is not closed.",
+    "reasonRequired": "Write a reason.",
+    "reportForbidden": "You can't view this report.",
+    "noReport": "No report yet.",
+    "studentNotInGroup": "This student is not an active member of this group."
   },
   "assessment": {
     "level_0": "Observed",
@@ -1148,5 +1156,24 @@
     "publish": "Publish",
     "publishConfirm": "Publish this to the group now? Students will be notified.",
     "draftSaved": "Saved as a draft. Publish it from the top of the stream when you are ready."
+  },
+  "closure": {
+    "banner": "Your internship is closed — records are read-only",
+    "myReport": "My report",
+    "reportTitle": "Internship report",
+    "version": "Version {{n}} · {{date}}",
+    "noReport": "No report yet.",
+    "share": "Share",
+    "close": "Close internship",
+    "closeConfirmTitle": "Close this internship?",
+    "closeConfirmBody": "Records become read-only and the report is generated. You can reopen with a reason.",
+    "pendingReviews": "{{count}} awaiting the mentor",
+    "closedOn": "Closed on {{date}}",
+    "reopened": "Reopened",
+    "reopen": "Reopen",
+    "reopenReason": "Why are you reopening?",
+    "reopenConfirm": "Reopen",
+    "viewReport": "View report",
+    "badge": "Closed"
   }
 }

@@ -40,6 +40,7 @@ export default function AdvisorLayout() {
       }}
     >
       <Tabs.Screen name="internship-days" options={{ href: null }} />
+      <Tabs.Screen name="internship-report" options={{ href: null }} />
       <Tabs.Screen
         name="dashboard"
         options={{

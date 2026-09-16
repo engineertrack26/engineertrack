@@ -19,7 +19,9 @@ export type NotificationType =
   | 'internship_log_submitted'
   | 'internship_attendance'
   | 'internship_correction'
-  | 'internship_feedback';
+  | 'internship_feedback'
+  | 'internship_closed'
+  | 'internship_reopened';
 
 export interface AppNotification {
   id: string;

@@ -20,6 +20,8 @@ export function routeForNotification(
   role: UserRole | undefined,
 ): NotificationRoute | null {
   const assignmentId = str(data?.assignmentId);
+  const closureStudentId = str(data?.studentId);
+  const closureGroupId = str(data?.groupId);
 
   switch (role) {
     case 'student':
@@ -54,6 +56,11 @@ export function routeForNotification(
         case 'internship_correction':
         case 'internship_feedback':
           return { pathname: '/(student)/internship-days' };
+        case 'internship_closed':
+        case 'internship_reopened':
+          return closureStudentId && closureGroupId
+            ? { pathname: '/(student)/internship-report', params: { studentId: closureStudentId, groupId: closureGroupId } }
+            : { pathname: '/(student)/dashboard' };
         default:
           return null;
       }
@@ -73,6 +80,11 @@ export function routeForNotification(
         case 'internship_correction':
         case 'internship_feedback':
           return { pathname: '/(mentor)/internship-days' };
+        case 'internship_closed':
+        case 'internship_reopened':
+          return closureStudentId && closureGroupId
+            ? { pathname: '/(mentor)/internship-report', params: { studentId: closureStudentId, groupId: closureGroupId } }
+            : { pathname: '/(mentor)/dashboard' };
         default:
           return null;
       }
@@ -94,6 +106,9 @@ export function routeForNotification(
         case 'internship_correction':
         case 'internship_feedback':
           return { pathname: '/(advisor)/internship-days' };
+        case 'internship_closed':
+        case 'internship_reopened':
+          return { pathname: '/(advisor)/student-monitor' };
         default:
           return null;
       }

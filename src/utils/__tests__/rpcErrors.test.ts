@@ -48,4 +48,15 @@ describe('mapRpcError', () => {
     expect(mapRpcError('STUDENT_LEFT_GROUP').key).toBe('errors.studentLeftGroup');
     expect(mapRpcError('ASSIGNMENT_LOCKED').key).toBe('errors.assignmentLocked');
   });
+
+  it('maps the internship closure error codes, PENDING_REVIEWS by its code prefix with the count as detail', () => {
+    expect(mapRpcError('INTERNSHIP_CLOSED')).toEqual({ code: 'INTERNSHIP_CLOSED', key: 'errors.internshipClosed' });
+    expect(mapRpcError('PENDING_REVIEWS: 3')).toEqual({ code: 'PENDING_REVIEWS', key: 'errors.pendingReviews', detail: '3' });
+    expect(mapRpcError('ALREADY_CLOSED')).toEqual({ code: 'ALREADY_CLOSED', key: 'errors.alreadyClosed' });
+    expect(mapRpcError('NOT_CLOSED')).toEqual({ code: 'NOT_CLOSED', key: 'errors.notClosed' });
+    expect(mapRpcError('REASON_REQUIRED')).toEqual({ code: 'REASON_REQUIRED', key: 'errors.reasonRequired' });
+    expect(mapRpcError('REPORT_FORBIDDEN')).toEqual({ code: 'REPORT_FORBIDDEN', key: 'errors.reportForbidden' });
+    expect(mapRpcError('NO_REPORT')).toEqual({ code: 'NO_REPORT', key: 'errors.noReport' });
+    expect(mapRpcError('STUDENT_NOT_IN_GROUP')).toEqual({ code: 'STUDENT_NOT_IN_GROUP', key: 'errors.studentNotInGroup' });
+  });
 });

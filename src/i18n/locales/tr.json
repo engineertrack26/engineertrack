@@ -1009,7 +1009,15 @@
     "reportFailed": "Raporunuzu gönderemedik. Bağlantınızı kontrol edip tekrar deneyin.",
     "selfLevelRequired": "Göndermeden önce bu görevi nasıl yaptığını seç.",
     "levelRequired": "Onaylamadan önce gözlemlediğin düzeyi seç.",
-    "selfAssessmentForbidden": "Bu öğrencinin öz değerlendirmesini göremezsin."
+    "selfAssessmentForbidden": "Bu öğrencinin öz değerlendirmesini göremezsin.",
+    "internshipClosed": "Bu staj tamamlandı; kayıtlar salt okunur.",
+    "pendingReviews": "Mentor onayı bekleyen görevler var; önce onlar karara bağlanmalı.",
+    "alreadyClosed": "Bu staj zaten tamamlanmış.",
+    "notClosed": "Bu staj tamamlanmamış.",
+    "reasonRequired": "Bir gerekçe yaz.",
+    "reportForbidden": "Bu raporu göremezsin.",
+    "noReport": "Henüz rapor yok.",
+    "studentNotInGroup": "Öğrenci bu grubun aktif üyesi değil."
   },
   "assessment": {
     "level_0": "Gözlemledim",
@@ -1033,5 +1041,24 @@
     "csvColMentor": "Mentor (ort.)",
     "csvColGap": "Fark",
     "notRated": "Puanlanmadı"
+  },
+  "closure": {
+    "banner": "Stajın tamamlandı — kayıtlar salt okunur",
+    "myReport": "Raporum",
+    "reportTitle": "Staj raporu",
+    "version": "Sürüm {{n}} · {{date}}",
+    "noReport": "Henüz rapor yok.",
+    "share": "Paylaş",
+    "close": "Stajı tamamla",
+    "closeConfirmTitle": "Staj tamamlansın mı?",
+    "closeConfirmBody": "Kayıtlar salt okunur olur ve rapor üretilir. Gerekçeyle yeniden açabilirsin.",
+    "pendingReviews": "{{count}} görev mentor onayı bekliyor",
+    "closedOn": "{{date}} tarihinde tamamlandı",
+    "reopened": "Yeniden açıldı",
+    "reopen": "Yeniden aç",
+    "reopenReason": "Neden yeniden açıyorsun?",
+    "reopenConfirm": "Yeniden aç",
+    "viewReport": "Raporu gör",
+    "badge": "Tamamlandı"
   }
 }

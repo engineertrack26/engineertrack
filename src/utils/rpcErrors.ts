@@ -45,6 +45,14 @@ const ERROR_KEYS: Record<string, string> = {
   SELF_LEVEL_REQUIRED: 'errors.selfLevelRequired',
   LEVEL_REQUIRED: 'errors.levelRequired',
   SELF_ASSESSMENT_FORBIDDEN: 'errors.selfAssessmentForbidden',
+  INTERNSHIP_CLOSED: 'errors.internshipClosed',
+  PENDING_REVIEWS: 'errors.pendingReviews',
+  ALREADY_CLOSED: 'errors.alreadyClosed',
+  NOT_CLOSED: 'errors.notClosed',
+  REASON_REQUIRED: 'errors.reasonRequired',
+  REPORT_FORBIDDEN: 'errors.reportForbidden',
+  NO_REPORT: 'errors.noReport',
+  STUDENT_NOT_IN_GROUP: 'errors.studentNotInGroup',
 };
 
 /**

@@ -7,3 +7,5 @@ export { ErrorFallback } from './ErrorFallback';
 export { LoadFailedBanner } from './LoadFailedBanner';
 export { BackButton } from './BackButton';
 export { LevelPicker } from './LevelPicker';
+export { MarkdownView } from './MarkdownView';
+export { ClosureBanner } from './ClosureBanner';
