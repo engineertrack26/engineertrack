@@ -69,7 +69,7 @@ BEGIN
   IF n < 1 THEN
     RAISE EXCEPTION 'FAIL: internship_closures has no SELECT policy';
   END IF;
-  SELECT count(*) INTO n FROM pg_policies WHERE tablename = 'internship_closures' AND cmd IN ('INSERT','UPDATE','DELETE');
+  SELECT count(*) INTO n FROM pg_policies WHERE tablename = 'internship_closures' AND cmd IN ('INSERT','UPDATE','DELETE','ALL');
   IF n <> 0 THEN
     RAISE EXCEPTION 'FAIL: internship_closures has a direct write policy (% found) -- writes must go through the RPCs', n;
   END IF;

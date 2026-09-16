@@ -93,14 +93,17 @@ BEGIN
     FROM internship_groups g JOIN profiles_public pp ON pp.id = g.advisor_id WHERE g.id = p_group_id;
   SELECT coalesce(max(report_version), 0) + 1 INTO v_version FROM internship_closures WHERE student_id = p_student_id AND group_id = p_group_id;
 
-  v_md := '# Internship report — ' || coalesce(v_student, '') || E'\n\n'
+  -- Free text (names, company, group, term) can legally contain "|" and would
+  -- otherwise break the Markdown table it sits in -- replace, same as r.title
+  -- below, never strip, so a stray pipe reads as a slash instead of vanishing.
+  v_md := '# Internship report — ' || replace(coalesce(v_student, ''), '|', '/') || E'\n\n'
        || '| | |' || E'\n' || '|---|---|' || E'\n'
-       || '| Workplace | ' || coalesce(v_company, '—') || ' |' || E'\n'
-       || '| Mentor | ' || coalesce(nullif(v_mentor, ''), '—') || ' |' || E'\n'
-       || '| Advisor | ' || coalesce(v_advisor, '—') || ' |' || E'\n'
-       || '| Group | ' || coalesce(v_group, '—') || coalesce(' (' || nullif(v_term, '') || ')', '') || ' |' || E'\n'
+       || '| Workplace | ' || replace(coalesce(v_company, '—'), '|', '/') || ' |' || E'\n'
+       || '| Mentor | ' || replace(coalesce(nullif(v_mentor, ''), '—'), '|', '/') || ' |' || E'\n'
+       || '| Advisor | ' || replace(coalesce(v_advisor, '—'), '|', '/') || ' |' || E'\n'
+       || '| Group | ' || replace(coalesce(v_group, '—'), '|', '/') || coalesce(' (' || replace(nullif(v_term, ''), '|', '/') || ')', '') || ' |' || E'\n'
        || '| Internship dates | ' || coalesce(v_start::text, '—') || ' – ' || coalesce(v_end::text, '—') || ' |' || E'\n'
-       || '| Closed | ' || to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC by ' || coalesce(v_advisor, '—') || ' |' || E'\n'
+       || '| Closed | ' || to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC by ' || replace(coalesce(v_advisor, '—'), '|', '/') || ' |' || E'\n'
        || '| Report version | ' || v_version || ' |' || E'\n\n';
 
   -- Competencies: the group's targets, the student's level (closure_reached_level,
@@ -118,7 +121,7 @@ BEGIN
       (SELECT round(avg(s.mentor_level)::numeric, 1) FROM assignment_submissions s JOIN group_assignments a ON a.id = s.assignment_id JOIN kpi_triplets t ON t.id = a.triplet_id JOIN competency_kpis k ON k.id = t.kpi_id
          WHERE s.student_id = p_student_id AND a.group_id = p_group_id AND k.competency_id = c.id AND s.status = 'approved' AND s.self_level IS NOT NULL AND s.mentor_level IS NOT NULL) AS avg_mentor
     FROM group_competency_targets gt JOIN competencies c ON c.id = gt.competency_id
-    WHERE gt.group_id = p_group_id ORDER BY c.code
+    WHERE gt.group_id = p_group_id ORDER BY c.display_order
   LOOP
     v_md := v_md || '| ' || r.name || ' | ' || r.target_level || ' | ' || r.reached || ' | ' || r.observations || ' | '
          || coalesce(r.avg_self::text, '—') || ' | ' || coalesce(r.avg_mentor::text, '—') || ' | '
@@ -132,7 +135,11 @@ BEGIN
     SELECT a.title, c.name AS competency,
       CASE s.status WHEN 'approved' THEN 'approved' WHEN 'needs_revision' THEN 'sent back' WHEN 'submitted' THEN 'awaiting review' ELSE 'not started' END AS status,
       closure_level_word(s.self_level) AS self_word, closure_level_word(s.mentor_level) AS mentor_word,
-      CASE WHEN s.status = 'approved' THEN to_char(s.reviewed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') ELSE '—' END AS approved_on
+      -- reviewed_at is set together with status='approved' in review_assignment,
+      -- but the column itself is nullable (the schema allows an approved row
+      -- with a NULL reviewed_at, and fixtures create such rows) -- coalesce
+      -- so that case can never NULL the whole report and fail the INSERT.
+      CASE WHEN s.status = 'approved' THEN coalesce(to_char(s.reviewed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '—') ELSE '—' END AS approved_on
     FROM group_assignments a
     JOIN kpi_triplets t ON t.id = a.triplet_id JOIN competency_kpis k ON k.id = t.kpi_id JOIN competencies c ON c.id = k.competency_id
     LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.student_id = p_student_id
@@ -151,7 +158,13 @@ BEGIN
              (x->>'excused')::int AS excused, (x->>'absent')::int AS absent, (x->>'pending')::int AS pending, (x->>'submittedLogs')::int AS journals
         INTO v_att
         FROM jsonb_array_elements(internship_group_attendance(p_group_id)->'students') x WHERE (x->>'id')::uuid = p_student_id;
-      IF v_att.recorded IS NOT NULL THEN
+      -- Gate on whether a row for this student's id was found at all (FOUND),
+      -- not on any one field being non-NULL. Gating on e.g. v_att.recorded
+      -- would silently skip this whole section if that key were ever renamed
+      -- upstream; gating on FOUND means a key drift shows up as a wrong/zero
+      -- number inside a section that is still rendered, not a section that
+      -- quietly disappears.
+      IF FOUND THEN
         v_md := v_md || E'\n' || '## Attendance' || E'\n\n'
              || '| Working days so far | Recorded | Present | Partial | Excused | Absent | Awaiting decision | Journals submitted |' || E'\n'
              || '|---|---|---|---|---|---|---|---|' || E'\n'
@@ -167,6 +180,11 @@ BEGIN
              || ' · partial ' || coalesce(v_j2, 0) || ' · independent ' || coalesce(v_j3, 0) || E'\n';
       END IF;
     END IF;
+  -- internship_group_attendance requires the caller to be the group's
+  -- advisor; close_internship already requires owns_group (the same
+  -- predicate), so ID_FORBIDDEN is unreachable here. The guard only covers a
+  -- database without the internship-days module; any other error must
+  -- surface, never be stored as a report missing its section.
   EXCEPTION WHEN undefined_function OR undefined_table THEN
     NULL;
   END;
