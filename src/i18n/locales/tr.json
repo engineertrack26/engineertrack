@@ -962,16 +962,28 @@
     "viewUsers": "Kullanıcılar"
   },
   "levels": {
-    "beginner": "Başlangıç",
-    "novice": "Çaylak",
-    "apprentice": "Çırak",
-    "journeyman": "Kalfa",
-    "expert": "Uzman",
-    "master": "Usta",
-    "grandmaster": "Büyük Usta",
-    "legend": "Efsane",
-    "mythic": "Mitik",
-    "transcendent": "Aşkın"
+    "beginner": "İlk Adım",
+    "novice": "Keşif",
+    "apprentice": "Katılım",
+    "journeyman": "Pratik",
+    "expert": "İlerleme",
+    "master": "Katkı",
+    "grandmaster": "Gelişen Deneyim",
+    "legend": "Birikim",
+    "mythic": "Güçlü Birikim",
+    "transcendent": "Yeni Ufuklar"
+  },
+  "levelJourney": {
+    "stage": "Gelişim aşaması {{level}} / {{count}}",
+    "hint": "Aşamanız, toplam XP birikiminizi gösterir; mesleki yeterlilik veya stajın tamamlandığı anlamına gelmez.",
+    "show": "Aşamaları ve XP kurallarını gör",
+    "hide": "Yol haritasını kapat",
+    "current": "Şu anki aşamanız",
+    "reached": "Ulaşıldı",
+    "ahead": "Sırada",
+    "maximum": "Son XP aşamasına ulaştınız. Deneyim biriktirmeye ve başarı rozetlerini tamamlamaya devam edebilirsiniz.",
+    "rules": "İlk görev gönderimi 10 XP, ilk onay 20 XP kazandırır. Görev fotoğrafları için fotoğraf başına 3, en fazla 15 XP eklenir. Günlükler ve yeni başarı rozetleri ek XP vermez. Geçmiş XP kayıtları toplamınıza dahildir.",
+    "threshold": "{{xp}} toplam XP"
   },
   "badges": {
     "firstLog": {

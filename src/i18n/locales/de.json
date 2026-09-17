@@ -879,16 +879,28 @@
     "viewUsers": "Benutzer"
   },
   "levels": {
-    "beginner": "Anfänger",
-    "novice": "Neuling",
-    "apprentice": "Lehrling",
-    "journeyman": "Geselle",
-    "expert": "Experte",
-    "master": "Meister",
-    "grandmaster": "Großmeister",
-    "legend": "Legende",
-    "mythic": "Mythisch",
-    "transcendent": "Transzendent"
+    "beginner": "Erster Schritt",
+    "novice": "Entdeckung",
+    "apprentice": "Teilnahme",
+    "journeyman": "Praxis",
+    "expert": "Fortschritt",
+    "master": "Beitrag",
+    "grandmaster": "Wachsende Erfahrung",
+    "legend": "Erfahrungsschatz",
+    "mythic": "Reiche Erfahrung",
+    "transcendent": "Neue Horizonte"
+  },
+  "levelJourney": {
+    "stage": "Entwicklungsstufe {{level}} / {{count}}",
+    "hint": "Ihre Stufe zeigt gesammelte XP, nicht berufliche Kompetenz oder den Abschluss des Praktikums.",
+    "show": "Stufen und XP-Regeln ansehen",
+    "hide": "Übersicht schließen",
+    "current": "Ihre aktuelle Stufe",
+    "reached": "Erreicht",
+    "ahead": "Noch offen",
+    "maximum": "Sie haben die letzte XP-Stufe erreicht. Sammeln Sie weiter Erfahrungen und Erfolgsabzeichen.",
+    "rules": "Die erste Aufgabenabgabe bringt 10 XP, die erste Freigabe 20 XP. Aufgabenfotos bringen je 3 XP, maximal 15 XP. Tagebücher und neue Erfolgsabzeichen bringen keine zusätzlichen XP. Frühere XP bleiben in der Gesamtsumme enthalten.",
+    "threshold": "{{xp}} XP insgesamt"
   },
   "badges": {
     "firstLog": {

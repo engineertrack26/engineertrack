@@ -879,16 +879,28 @@
     "viewUsers": "Utenti"
   },
   "levels": {
-    "beginner": "Principiante",
-    "novice": "Novizio",
-    "apprentice": "Apprendista",
-    "journeyman": "Artigiano",
-    "expert": "Esperto",
-    "master": "Maestro",
-    "grandmaster": "Gran Maestro",
-    "legend": "Leggenda",
-    "mythic": "Mitico",
-    "transcendent": "Trascendente"
+    "beginner": "Primo passo",
+    "novice": "Scoperta",
+    "apprentice": "Partecipazione",
+    "journeyman": "Pratica",
+    "expert": "Progresso",
+    "master": "Contributo",
+    "grandmaster": "Esperienza in crescita",
+    "legend": "Bagaglio di esperienze",
+    "mythic": "Esperienza consolidata",
+    "transcendent": "Nuovi orizzonti"
+  },
+  "levelJourney": {
+    "stage": "Tappa di crescita {{level}} / {{count}}",
+    "hint": "La tappa indica gli XP accumulati, non la competenza professionale o il completamento del tirocinio.",
+    "show": "Vedi tappe e regole XP",
+    "hide": "Chiudi il percorso",
+    "current": "La tua tappa attuale",
+    "reached": "Raggiunta",
+    "ahead": "Da raggiungere",
+    "maximum": "Hai raggiunto l'ultima tappa XP. Continua ad accumulare esperienze e a ottenere distintivi.",
+    "rules": "Il primo invio di un compito dà 10 XP e la prima approvazione 20 XP. Le foto dei compiti danno 3 XP ciascuna, fino a 15 XP. Diari e nuovi distintivi non danno XP aggiuntivi. Gli XP precedenti restano nel totale.",
+    "threshold": "{{xp}} XP totali"
   },
   "badges": {
     "firstLog": {

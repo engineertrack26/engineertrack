@@ -879,16 +879,28 @@
     "viewUsers": "Utilizatori"
   },
   "levels": {
-    "beginner": "Începător",
-    "novice": "Novice",
-    "apprentice": "Ucenic",
-    "journeyman": "Calfă",
-    "expert": "Expert",
-    "master": "Maestru",
-    "grandmaster": "Mare Maestru",
-    "legend": "Legendă",
-    "mythic": "Mitic",
-    "transcendent": "Transcendent"
+    "beginner": "Primul pas",
+    "novice": "Descoperire",
+    "apprentice": "Participare",
+    "journeyman": "Practică",
+    "expert": "Progres",
+    "master": "Contribuție",
+    "grandmaster": "Experiență în creștere",
+    "legend": "Experiență acumulată",
+    "mythic": "Experiență bogată",
+    "transcendent": "Orizonturi noi"
+  },
+  "levelJourney": {
+    "stage": "Etapa de dezvoltare {{level}} / {{count}}",
+    "hint": "Etapa reflectă XP acumulate, nu competența profesională sau finalizarea stagiului.",
+    "show": "Vezi etapele și regulile XP",
+    "hide": "Închide parcursul",
+    "current": "Etapa ta actuală",
+    "reached": "Atinsă",
+    "ahead": "Urmează",
+    "maximum": "Ai atins ultima etapă XP. Continuă să acumulezi experiență și să obții insigne.",
+    "rules": "Prima trimitere a unei sarcini aduce 10 XP, iar prima aprobare 20 XP. Fotografiile sarcinii aduc câte 3 XP, maximum 15 XP. Jurnalele și noile insigne nu aduc XP suplimentare. XP anterioare rămân incluse în total.",
+    "threshold": "{{xp}} XP în total"
   },
   "badges": {
     "firstLog": {

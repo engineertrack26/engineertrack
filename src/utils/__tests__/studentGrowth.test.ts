@@ -6,6 +6,35 @@ import it from '@/i18n/locales/it.json';
 import ro from '@/i18n/locales/ro.json';
 import sr from '@/i18n/locales/sr.json';
 import el from '@/i18n/locales/el.json';
+import { LEVELS } from '@/types/gamification';
+
+test('journey stages keep the existing server XP thresholds and continuous ranges', () => {
+  expect(LEVELS.map(level => level.minXp)).toEqual([0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500]);
+  LEVELS.forEach((level, index) => {
+    expect(level.level).toBe(index + 1);
+    expect(level.maxXp).toBe(LEVELS[index + 1]?.minXp ?? Infinity);
+    const state = growthLevel(level.minXp, level.level);
+    expect(state.current).toBe(level);
+    expect(state.progress).toBe(index === LEVELS.length - 1 ? 1 : 0);
+    if (index < LEVELS.length - 1) {
+      expect(growthLevel(level.maxXp - 1, level.level).remaining).toBe(1);
+    }
+  });
+});
+
+test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s localizes every journey stage and explanation', (_language, locale) => {
+  expect(new Set(Object.values(locale.levels)).size).toBe(10);
+  for (const level of LEVELS) {
+    const key = level.nameKey.split('.')[1] as keyof typeof en.levels;
+    expect(locale.levels[key].trim()).not.toBe('');
+  }
+  expect(Object.keys(locale.levelJourney).sort()).toEqual(Object.keys(en.levelJourney).sort());
+  for (const key of Object.keys(en.levelJourney) as Array<keyof typeof en.levelJourney>) {
+    expect(locale.levelJourney[key].trim()).not.toBe('');
+    expect((locale.levelJourney[key].match(/\{\{\w+\}\}/g) || []).sort())
+      .toEqual((en.levelJourney[key].match(/\{\{\w+\}\}/g) || []).sort());
+  }
+});
 
 test('current goals exclude retired badges but retain historical awards', () => {
   const empty = growthBadges(new Set());

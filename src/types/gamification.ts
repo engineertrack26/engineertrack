@@ -16,6 +16,9 @@ export interface Level {
   maxXp: number;
 }
 
+// XP journey stages, not professional titles or competency assessments.
+// Translation keys remain stable for existing consumers. Thresholds mirror
+// calculate_level in docs/gamification-server-side-migration.sql.
 export const LEVELS: Level[] = [
   { level: 1, nameKey: 'levels.beginner', minXp: 0, maxXp: 100 },
   { level: 2, nameKey: 'levels.novice', minXp: 100, maxXp: 300 },

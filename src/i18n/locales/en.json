@@ -962,16 +962,28 @@
     "reminderBody": "{{advisor}} noticed you have not submitted a task recently. Please take a look at your tasks."
   },
   "levels": {
-    "beginner": "Beginner",
-    "novice": "Novice",
-    "apprentice": "Apprentice",
-    "journeyman": "Journeyman",
-    "expert": "Expert",
-    "master": "Master",
-    "grandmaster": "Grandmaster",
-    "legend": "Legend",
-    "mythic": "Mythic",
-    "transcendent": "Transcendent"
+    "beginner": "First Step",
+    "novice": "Discovery",
+    "apprentice": "Participation",
+    "journeyman": "Practice",
+    "expert": "Progress",
+    "master": "Contribution",
+    "grandmaster": "Growing Experience",
+    "legend": "Experience Base",
+    "mythic": "Rich Experience",
+    "transcendent": "New Horizons"
+  },
+  "levelJourney": {
+    "stage": "Growth stage {{level}} / {{count}}",
+    "hint": "Your stage reflects accumulated XP, not professional competence or internship completion.",
+    "show": "View stages and XP rules",
+    "hide": "Close roadmap",
+    "current": "Your current stage",
+    "reached": "Reached",
+    "ahead": "Ahead",
+    "maximum": "You have reached the final XP stage. Keep building experience and working towards achievement badges.",
+    "rules": "A first task submission earns 10 XP and its first approval earns 20 XP. Task photos add 3 XP each, up to 15 XP. Journals and new achievement badges do not grant extra XP. Historical XP remains included in your total.",
+    "threshold": "{{xp}} total XP"
   },
   "badges": {
     "firstLog": {

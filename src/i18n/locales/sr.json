@@ -879,16 +879,28 @@
     "viewUsers": "Korisnici"
   },
   "levels": {
-    "beginner": "Početnik",
-    "novice": "Novajlija",
-    "apprentice": "Šegrt",
-    "journeyman": "Kalfa",
-    "expert": "Ekspert",
-    "master": "Majstor",
-    "grandmaster": "Velemajstor",
-    "legend": "Legenda",
-    "mythic": "Mitski",
-    "transcendent": "Transcendentan"
+    "beginner": "Prvi korak",
+    "novice": "Otkrivanje",
+    "apprentice": "Učešće",
+    "journeyman": "Praksa",
+    "expert": "Napredak",
+    "master": "Doprinos",
+    "grandmaster": "Iskustvo u razvoju",
+    "legend": "Prikupljeno iskustvo",
+    "mythic": "Bogato iskustvo",
+    "transcendent": "Novi horizonti"
+  },
+  "levelJourney": {
+    "stage": "Faza razvoja {{level}} / {{count}}",
+    "hint": "Faza prikazuje prikupljeni XP, a ne stručnu osposobljenost ili završetak prakse.",
+    "show": "Pogledaj faze i XP pravila",
+    "hide": "Zatvori pregled",
+    "current": "Tvoja trenutna faza",
+    "reached": "Dostignuto",
+    "ahead": "Predstoji",
+    "maximum": "Dostigli ste poslednju XP fazu. Nastavite da stičete iskustvo i osvajate značke.",
+    "rules": "Prva predaja zadatka donosi 10 XP, a prvo odobrenje 20 XP. Fotografije zadatka donose po 3 XP, najviše 15 XP. Dnevnici i nove značke ne donose dodatni XP. Raniji XP ostaje uključen u zbir.",
+    "threshold": "{{xp}} XP ukupno"
   },
   "badges": {
     "firstLog": {

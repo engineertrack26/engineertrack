@@ -13,6 +13,7 @@ import { ui } from '@/components/common/workflowStyles';
 import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
 import { colors } from '@/theme';
 import { GrowthJourney } from '@/components/gamification/GrowthJourney';
+import { LEVELS } from '@/types/gamification';
 
 type GrowthData = Awaited<ReturnType<typeof studentGrowthViewService.load>>;
 
@@ -27,6 +28,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'badges' | 'competencies' | 'history'>('badges');
   const [showLegacy, setShowLegacy] = useState(false);
+  const [showLevels, setShowLevels] = useState(false);
   const sequence = useRef(0);
   const load = useCallback(async () => {
     const request = ++sequence.current;
@@ -67,15 +69,37 @@ function GrowthContent({ studentId }: { studentId: string }) {
       {loading && !data ? <ActivityIndicator size="large" color={colors.primaryDark} /> : <>
         {failed && <LoadFailedBanner onRetry={() => void load()} />}
         {profile && level ? <View style={[ui.card, styles.featured]}>
-          <View style={ui.header}><Ionicons name="shield-checkmark-outline" size={32} color={colors.primaryDark} />
-            <View style={{ flex: 1, gap: 4 }}><Text style={ui.secondary}>{t('gamification.level')} {profile.currentLevel}</Text>
+          <View style={ui.header}><Ionicons name="trail-sign-outline" size={32} color={colors.primaryDark} />
+            <View style={{ flex: 1, gap: 4 }}><Text style={ui.secondary}>{t('levelJourney.stage', { level: level.current.level, count: LEVELS.length })}</Text>
               <Text style={ui.cardTitle}>{t(level.current.nameKey)}</Text></View></View>
           <Text style={styles.xp}>{profile.totalXp.toLocaleString(i18n.language)} XP</Text>
           <View style={styles.track} accessible accessibilityRole="progressbar" accessibilityLabel={t('growthUi.levelProgress')}
             accessibilityValue={{ min: 0, max: 100, now: Math.round(level.progress * 100) }}>
             <View style={[styles.fill, { width: `${level.progress * 100}%` }]} />
           </View>
-          <Text style={ui.body}>{level.next ? t('growthUi.nextLevel', { xp: level.remaining, level: level.next.level, name: t(level.next.nameKey) }) : t('growthUi.maximum')}</Text>
+          <Text style={ui.body}>{level.next ? t('growthUi.nextLevel', { xp: level.remaining, level: level.next.level, name: t(level.next.nameKey) }) : t('levelJourney.maximum')}</Text>
+          <Text style={ui.secondary}>{t('levelJourney.hint')}</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: showLevels }}
+            onPress={() => setShowLevels(!showLevels)} style={styles.levelToggle}>
+            <Text style={[styles.link, { flex: 1 }]}>{t(showLevels ? 'levelJourney.hide' : 'levelJourney.show')}</Text>
+            <Ionicons name={showLevels ? 'chevron-up' : 'chevron-down'} size={22} color={colors.primaryDark} />
+          </TouchableOpacity>
+          {showLevels && <View style={{ gap: 12 }}>
+            <Text style={ui.secondary}>{t('levelJourney.rules')}</Text>
+            {LEVELS.map(stage => {
+              const current = stage.level === level.current.level;
+              const reached = stage.level < level.current.level;
+              return <View key={stage.level} style={styles.levelRow}>
+                <Ionicons name={current ? 'location-outline' : reached ? 'checkmark-circle-outline' : 'ellipse-outline'}
+                  size={24} color={colors.primaryDark} />
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={ui.label}>{stage.level}. {t(stage.nameKey)}</Text>
+                  <Text style={ui.secondary}>{t('levelJourney.threshold', { xp: stage.minXp.toLocaleString(i18n.language) })}</Text>
+                  <Text style={current ? styles.link : ui.secondary}>{t(current ? 'levelJourney.current' : reached ? 'levelJourney.reached' : 'levelJourney.ahead')}</Text>
+                </View>
+              </View>;
+            })}
+          </View>}
         </View> : <Text style={ui.secondary}>{t('growthUi.unavailable')}</Text>}
         <View style={styles.wrap} accessibilityRole="tablist">
           {(['badges', 'competencies', 'history'] as const).map((value) => <TouchableOpacity key={value}
@@ -145,6 +169,8 @@ function GrowthContent({ studentId }: { studentId: string }) {
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
+  levelToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  levelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#b8ccea' },
   featured: { backgroundColor: '#eaf1fb', borderColor: '#b8ccea' },
   xp: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.divider, overflow: 'hidden' },
