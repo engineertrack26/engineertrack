@@ -8,14 +8,17 @@ import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
 import { messageService } from '@/services/messages';
+import { closureService } from '@/services/closure';
 import { groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { mapMonitorStudent, filterMonitorStudents, type StudentMonitorItem } from '@/utils/advisorStudentMonitor';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { closureLabel, pendingReviewsMessage } from '@/utils/closure';
 import { BackButton, LoadFailedBanner } from '@/components/common';
-import { AdvisorBell, groupStyles } from '@/components/advisor/GroupUI';
+import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
 import type { GroupMember, InternshipGroup } from '@/types/group';
+import type { ClosureStatus } from '@/types/closure';
 
 type MonitorRow = StudentMonitorItem & { member?: GroupMember; email?: string };
 
@@ -43,6 +46,13 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
   const confirming = useRef(false);
   const sequence = useRef(0);
   const mounted = useRef(false);
+  const [closures, setClosures] = useState<Map<string, ClosureStatus | null>>(new Map());
+  const [closing, setClosing] = useState<Set<string>>(new Set());
+  const closingLocks = useRef(new Set<string>());
+  const [reopenTarget, setReopenTarget] = useState<GroupMember | null>(null);
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenTouched, setReopenTouched] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const load = useCallback(async () => {
     const request = ++sequence.current;
@@ -63,6 +73,18 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
           id: member.id, profiles: { first_name: member.firstName, last_name: member.lastName },
           completionAvailable: false,
         }), member, email: member.email })));
+        const settled = await Promise.allSettled(members.map((member) => closureService.status(member.id, groupId)));
+        if (!current()) return;
+        const map = new Map<string, ClosureStatus | null>();
+        settled.forEach((result, i) => {
+          if (result.status === 'fulfilled') {
+            map.set(members[i].id, result.value);
+          } else {
+            console.warn('Closure status load failed for', members[i].id, result.reason);
+            map.set(members[i].id, null);
+          }
+        });
+        setClosures(map);
       } else {
         const result = await advisorService.getDashboardStats(advisorId);
         if (!current()) return;
@@ -119,6 +141,93 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
       locks.current.delete(member.membershipId);
       if (mounted.current) setRemoving(new Set(locks.current));
     }
+  }
+
+  function confirmClose(member: GroupMember) {
+    if (!groupId || closingLocks.current.has(member.id) || failed) return;
+    Alert.alert(t('closure.closeConfirmTitle'), t('closure.closeConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('closure.close'), style: 'destructive', onPress: () => { void doClose(member); } },
+    ]);
+  }
+  async function doClose(member: GroupMember) {
+    if (!groupId || closingLocks.current.has(member.id) || !mounted.current ||
+        useAuthStore.getState().user?.id !== advisorId) return;
+    closingLocks.current.add(member.id); setClosing(new Set(closingLocks.current));
+    try {
+      await closureService.close(member.id, groupId);
+      if (!mounted.current || useAuthStore.getState().user?.id !== advisorId) return;
+      await load();
+      Alert.alert(t('common.done'), t('closure.closedOn', { date: new Date().toLocaleDateString(i18n.language) }));
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
+        const { key } = mapRpcError(err instanceof Error ? err.message : '');
+        Alert.alert(t('common.error'), t(key));
+      }
+    } finally {
+      closingLocks.current.delete(member.id);
+      if (mounted.current) setClosing(new Set(closingLocks.current));
+    }
+  }
+
+  function openReopen(member: GroupMember) {
+    if (closingLocks.current.has(member.id)) return;
+    setReopenTarget(member); setReopenReason(''); setReopenTouched(false);
+  }
+  function closeReopen() {
+    if (reopening) return;
+    setReopenTarget(null);
+  }
+  async function confirmReopen() {
+    if (!reopenTarget || !groupId || reopening) return;
+    const reason = reopenReason.trim();
+    if (!reason) { setReopenTouched(true); return; }
+    setReopening(true);
+    try {
+      await closureService.reopen(reopenTarget.id, groupId, reason);
+      if (!mounted.current || useAuthStore.getState().user?.id !== advisorId) return;
+      setReopenTarget(null);
+      await load();
+      Alert.alert(t('common.done'), t('closure.reopened'));
+    } catch (err) {
+      if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
+        const { key } = mapRpcError(err instanceof Error ? err.message : '');
+        Alert.alert(t('common.error'), t(key));
+      }
+    } finally {
+      if (mounted.current) setReopening(false);
+    }
+  }
+
+  function renderClosure(member: GroupMember) {
+    const status = closures.get(member.id) ?? null;
+    if (!status) return null;
+    if (!status.closed) {
+      const pending = status.pendingReviews > 0;
+      const isClosing = closing.has(member.id);
+      return <>
+        <TouchableOpacity accessibilityRole="button" style={[styles.closeButton, (pending || isClosing) && { opacity: 0.5 }]}
+          accessibilityLabel={t('closure.close') + ': ' + member.firstName + ' ' + member.lastName}
+          accessibilityState={{ disabled: pending || isClosing, busy: isClosing }}
+          disabled={pending || isClosing} onPress={() => confirmClose(member)}>
+          {isClosing ? <ActivityIndicator color={colors.primaryDark} /> : <Text style={styles.closeButtonText}>{t('closure.close')}</Text>}
+        </TouchableOpacity>
+        {pending && <Text style={ui.secondary}>{pendingReviewsMessage(status.pendingReviews, t)}</Text>}
+      </>;
+    }
+    return <View style={{ gap: 6 }}>
+      <View style={styles.closedRow}>
+        <Text style={[ui.badge, styles.closedBadge]}>{t('closure.badge', 'Closed')}</Text>
+        <Text style={ui.secondary}>{closureLabel(status, t, i18n.language)}</Text>
+      </View>
+      <TouchableOpacity accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/(advisor)/internship-report', params: { studentId: member.id, groupId: groupId! } })}>
+        <Text style={ui.link}>{t('closure.viewReport')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" onPress={() => openReopen(member)}>
+        <Text style={ui.link}>{t('closure.reopen')}</Text>
+      </TouchableOpacity>
+    </View>;
   }
 
   const filtered = filterMonitorStudents(rows, search, i18n.language);
@@ -178,6 +287,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
             {removing.has(item.member.membershipId) ? <ActivityIndicator color={colors.error} /> :
               <Text style={styles.removeText}>{t('advisor.removeStudent')}</Text>}
           </TouchableOpacity>
+          {!failed && renderClosure(item.member)}
         </> : <>
           <Text style={ui.label}>{t('advisorMonitor.progress')}{item.completionPct !== null ? ' · ' + item.completionPct + '%' : ''}</Text>
           {item.completionPct === null ? <Text style={ui.secondary}>{t('advisorMonitor.progressUnknown')}</Text> :
@@ -197,6 +307,17 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
           })}</Text>
         </>}
       </View>} />
+    {reopenTarget && <GroupModal title={t('closure.reopen')} onClose={closeReopen} busy={reopening}
+      footer={<TouchableOpacity accessibilityRole="button" style={[ui.primary, reopening && { opacity: 0.6 }]}
+        accessibilityState={{ disabled: reopening, busy: reopening }} disabled={reopening} onPress={() => void confirmReopen()}>
+        {reopening ? <ActivityIndicator color="#fff" /> : <Text style={ui.primaryText}>{t('closure.reopenConfirm')}</Text>}
+      </TouchableOpacity>}>
+      <Text style={ui.body}>{t('closure.reopenReason')}</Text>
+      <TextInput style={[ui.input, { minHeight: 100 }]} value={reopenReason} onChangeText={setReopenReason}
+        multiline autoCorrect={false} accessibilityLabel={t('closure.reopenReason')}
+        placeholder={t('closure.reopenReason')} placeholderTextColor={colors.textSecondary} />
+      {reopenTouched && !reopenReason.trim() && <Text style={[ui.secondary, { color: colors.error }]}>{t('errors.reasonRequired')}</Text>}
+    </GroupModal>}
   </SafeAreaView>;
 }
 
@@ -208,4 +329,8 @@ const styles = StyleSheet.create({
   period: { padding: 14, gap: 8, backgroundColor: colors.background, borderRadius: 12 },
   remove: { minHeight: 48, justifyContent: 'center', paddingVertical: 12 },
   removeText: { color: '#a52929', fontSize: 15, fontWeight: '600' },
+  closeButton: { minHeight: 48, justifyContent: 'center', alignItems: 'flex-start', paddingVertical: 12 },
+  closeButtonText: { color: colors.primaryDark, fontSize: 15, fontWeight: '600' },
+  closedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  closedBadge: { color: colors.primaryDark, backgroundColor: '#eaf2fe' },
 });

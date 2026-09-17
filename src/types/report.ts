@@ -43,6 +43,10 @@ export interface GroupReportData {
   /** From internship_group_attendance; null when the internship-days module
    *  is not installed on this database, so the rest of the report still works. */
   attendance: GroupAttendance | null;
+  /** Student ids with a live closure (internship_closures.reopened_at IS
+   *  NULL) in this group. A failed lookup returns [] rather than failing the
+   *  whole report -- the badge is a nice-to-have, not load bearing. */
+  closedStudentIds: string[];
 }
 
 /** One student's attendance totals across their placements in the group. */

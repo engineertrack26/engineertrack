@@ -333,7 +333,11 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
             <Text style={ui.secondary} accessibilityLiveRegion="polite">{t('advisorMonitor.results', { shown: students.length, total: data.studentProgress.length })}</Text>
             {!students.length && <Text style={ui.body}>{t(search.trim() ? 'advisorGroups.noMatches' : 'advisor.noStudentsYet')}</Text>}
             {students.map((student) => <View key={student.id} style={ui.card}>
-              <Text style={ui.cardTitle}>{student.name}</Text>
+              <View style={groupStyles.row}>
+                <Text style={[ui.cardTitle, { flex: 1 }]}>{student.name}</Text>
+                {data.closedStudentIds.includes(student.id) &&
+                  <Text style={[ui.badge, { color: colors.primaryDark, backgroundColor: '#eaf2fe' }]}>{t('closure.badge', 'Closed')}</Text>}
+              </View>
               <Text style={ui.label}>{t('advisorMonitor.progress')} · {student.completionPercent}%</Text>
               <ReportProgress label={student.name + ': ' + t('advisorMonitor.progress')} percent={student.completionPercent} />
               <Text style={ui.secondary}>{t('advisor.submittedCount', { count: student.submitted })}

@@ -20,6 +20,25 @@ async function groupAttendance(groupId: string): Promise<GroupAttendance | null>
   return { students: raw.students || [], days: raw.days || [] };
 }
 
+/** Student ids with a live closure in this group, for the Students tab's
+ *  "Closed" badge. Best-effort: RLS already limits this to the group's own
+ *  advisor, but any failure (network, RLS surprise) must not take the rest
+ *  of the report down with it -- an absent badge is a cosmetic loss. */
+async function groupClosedStudentIds(groupId: string): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('internship_closures')
+      .select('student_id')
+      .eq('group_id', groupId)
+      .is('reopened_at', null);
+    if (error) throw error;
+    return (data || []).map((row) => (row as Record<string, unknown>).student_id as string);
+  } catch (err) {
+    console.warn('Closed students load failed for group', groupId, err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
 /** Daily logs were daily, so three days of nothing meant something. Tasks
  *  carry deadlines and a student may legitimately work several days on one,
  *  so the silence that is worth an advisor's attention starts a week out. */
@@ -412,10 +431,11 @@ export const advisorService = {
    *  `group_memberships` scoped to this group with `left_at IS NULL`, which
    *  is exactly "only active memberships count". */
   async getReportsData(groupId: string): Promise<GroupReportData> {
-    const [{ data: group, error: groupError }, members, attendance] = await Promise.all([
+    const [{ data: group, error: groupError }, members, attendance, closedStudentIds] = await Promise.all([
       supabase.from('internship_groups').select('id, name').eq('id', groupId).single(),
       groupService.listMembers(groupId),
       groupAttendance(groupId),
+      groupClosedStudentIds(groupId),
     ]);
     if (groupError) throw groupError;
 
@@ -442,6 +462,7 @@ export const advisorService = {
         studentProgress: [],
         // A student who left still has attendance history in the group.
         attendance,
+        closedStudentIds,
       };
     }
 
@@ -539,6 +560,7 @@ export const advisorService = {
       competencyBreakdown: Array.from(competencyMap.values()),
       studentProgress,
       attendance,
+      closedStudentIds,
     };
   },
 };
