@@ -1,4 +1,14 @@
-import { LEVELS } from '@/types/gamification';
+import { BADGES, LEVELS } from '@/types/gamification';
+
+// Only these badges have an earning path in the current task workflow.
+// Keep historical keys and awards intact; do not advertise retired goals.
+export const ACTIVE_BADGE_KEYS = new Set(['first_task', 'streak_7', 'streak_30']);
+export function growthBadges(earned: ReadonlySet<string>) {
+  return {
+    active: BADGES.filter(badge => ACTIVE_BADGE_KEYS.has(badge.key)),
+    historical: BADGES.filter(badge => !ACTIVE_BADGE_KEYS.has(badge.key) && earned.has(badge.key)),
+  };
+}
 
 export function growthLevel(totalXp: number, currentLevel: number) {
   const current = LEVELS.find((level) => level.level === currentLevel) || LEVELS[0];
@@ -10,6 +20,10 @@ export function growthLevel(totalXp: number, currentLevel: number) {
 export function growthReason(reason: string): string {
   const known: Record<string, string> = {
     assignment_submitted: 'growthUi.submitted', assignment_approved: 'growthUi.approved',
+    assignment_photo: 'growthUi.photoBonus', daily_log_submit: 'growthUi.oldLogSubmit',
+    log_approved: 'growthUi.oldLogApproved', photo_attached: 'growthUi.oldPhoto',
+    self_assessment: 'growthUi.oldAssessment', poll_completed: 'growthUi.oldPoll',
+    quiz_perfect_score: 'growthUi.oldQuiz',
   };
   return known[reason.split(':')[0]] || 'growthUi.xpUpdate';
 }

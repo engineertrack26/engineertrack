@@ -1,9 +1,10 @@
 import { supabase } from './supabase';
 import { LEVELS } from '@/types/gamification';
 
-// All XP, streak and badge WRITES happen server-side via database triggers
-// (see docs/gamification-server-side-migration.sql): log submit/approval XP
-// fires on daily_logs status transitions, poll XP on poll_responses inserts.
+// All XP, streak and badge WRITES happen server-side. Current task submission
+// rewards are in submit_assignment (latest: internship-closure-guards.sql);
+// approval rewards use award_assignment_xp. Old daily-log writes are retired.
+// The legacy poll trigger is separate from the current Stream poll workflow.
 // Client-side writes were removed because RLS only checked row ownership,
 // not amounts, so a student could grant themselves arbitrary XP through the
 // REST API. This service is read-only.

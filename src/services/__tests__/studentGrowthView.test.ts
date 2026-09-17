@@ -2,6 +2,8 @@ import { studentGrowthViewService } from '../studentGrowthView';
 import { gamificationService } from '../gamification';
 import { competencyService } from '../competency';
 import { supabase } from '../supabase';
+import { getGrowthJourney } from '../growthJourney';
+jest.mock('../growthJourney', () => ({ getGrowthJourney: jest.fn() }));
 
 jest.mock('../gamification', () => ({ gamificationService: { getEarnedBadges: jest.fn(), getXpHistory: jest.fn() } }));
 jest.mock('../competency', () => ({ competencyService: { getProgress: jest.fn(), selfVsMentor: jest.fn() } }));
@@ -13,6 +15,7 @@ const select = jest.fn(() => ({ eq }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getGrowthJourney).mockResolvedValue({ groupId: null } as Awaited<ReturnType<typeof getGrowthJourney>>);
   (supabase.from as jest.Mock).mockReturnValue({ select });
   single.mockResolvedValue({ data: { total_xp: 200, current_level: 2, current_streak: 3, longest_streak: 5 }, error: null });
   jest.mocked(gamificationService.getEarnedBadges).mockResolvedValue([]);
@@ -45,10 +48,12 @@ test('missing profile is not presented as a new level-one account', async () => 
 });
 
 test('individual section failures preserve other successful sections', async () => {
+  jest.mocked(getGrowthJourney).mockRejectedValue({ code: 'PGRST202' });
   jest.mocked(gamificationService.getEarnedBadges).mockRejectedValue(new Error('badges'));
   jest.mocked(competencyService.getProgress).mockRejectedValue(new Error('competencies'));
   const result = await studentGrowthViewService.load('student-1');
   expect(result.badges.status).toBe('rejected');
+  expect(result.journey.status).toBe('rejected');
   expect(result.competencies.status).toBe('rejected');
   expect(result.profile.status).toBe('fulfilled');
   expect(result.history).toEqual({ status: 'fulfilled', value: [] });

@@ -1,10 +1,11 @@
 import { gamificationService } from './gamification';
 import { competencyService } from './competency';
 import { supabase } from './supabase';
+import { getGrowthJourney } from './growthJourney';
 
 export const studentGrowthViewService = {
   async load(studentId: string) {
-    const [badges, history, profile, competencies, selfVsMentor] = await Promise.allSettled([
+    const [badges, history, profile, competencies, selfVsMentor, journey] = await Promise.allSettled([
       gamificationService.getEarnedBadges(studentId),
       gamificationService.getXpHistory(studentId),
       (async () => {
@@ -17,7 +18,8 @@ export const studentGrowthViewService = {
       })(),
       competencyService.getProgress(studentId),
       competencyService.selfVsMentor(studentId),
+      getGrowthJourney(),
     ]);
-    return { badges, history, profile, competencies, selfVsMentor };
+    return { badges, history, profile, competencies, selfVsMentor, journey };
   },
 };

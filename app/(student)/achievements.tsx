@@ -10,9 +10,9 @@ import { studentGrowthViewService } from '@/services/studentGrowthView';
 import { LoadFailedBanner } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
 import { ui } from '@/components/common/workflowStyles';
-import { BADGES } from '@/types/gamification';
-import { growthLevel, growthReason } from '@/utils/studentGrowth';
+import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
 import { colors } from '@/theme';
+import { GrowthJourney } from '@/components/gamification/GrowthJourney';
 
 type GrowthData = Awaited<ReturnType<typeof studentGrowthViewService.load>>;
 
@@ -26,7 +26,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'badges' | 'competencies' | 'history'>('badges');
-  const [earnedOnly, setEarnedOnly] = useState(false);
+  const [showLegacy, setShowLegacy] = useState(false);
   const sequence = useRef(0);
   const load = useCallback(async () => {
     const request = ++sequence.current;
@@ -56,7 +56,8 @@ function GrowthContent({ studentId }: { studentId: string }) {
   const selfVsMentor = data?.selfVsMentor.status === 'fulfilled' ? data.selfVsMentor.value : null;
   const history = data?.history.status === 'fulfilled' ? (data.history.value || []).slice(0, 10) : null;
   const failed = !!data && Object.values(data).some((section) => section.status === 'rejected');
-  const shownBadges = BADGES.filter((badge) => !earnedOnly || badges?.has(badge.key));
+  const catalog = growthBadges(badges || new Set<string>());
+  const legacyBadges = [...catalog.active,...catalog.historical].filter(badge=>badges?.has(badge.key));
   return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={ui.content}
       refreshControl={<RefreshControl refreshing={refreshing} colors={[colors.primaryDark]}
@@ -76,36 +77,26 @@ function GrowthContent({ studentId }: { studentId: string }) {
           </View>
           <Text style={ui.body}>{level.next ? t('growthUi.nextLevel', { xp: level.remaining, level: level.next.level, name: t(level.next.nameKey) }) : t('growthUi.maximum')}</Text>
         </View> : <Text style={ui.secondary}>{t('growthUi.unavailable')}</Text>}
-        <TouchableOpacity accessibilityRole="button" style={styles.action} onPress={() => router.push('/(student)/leaderboard')}>
-          <Ionicons name="podium-outline" size={24} color={colors.primaryDark} />
-          <Text style={[styles.link, { flex: 1 }]}>{t('growthUi.openRanking')}</Text>
-          <Ionicons name="chevron-forward" size={22} color={colors.primaryDark} />
-        </TouchableOpacity>
         <View style={styles.wrap} accessibilityRole="tablist">
           {(['badges', 'competencies', 'history'] as const).map((value) => <TouchableOpacity key={value}
             accessibilityRole="tab" accessibilityState={{ selected: tab === value }}
             style={[styles.chip, tab === value && styles.featured]} onPress={() => setTab(value)}>
-            <Text style={styles.link}>{t(value === 'badges' ? 'gamification.badges' : value === 'competencies' ? 'student.myCompetencies' : 'growthUi.history')}</Text>
+            <Text style={styles.link}>{t(value === 'badges' ? 'awardUi.title' : value === 'competencies' ? 'student.myCompetencies' : 'growthUi.history')}</Text>
           </TouchableOpacity>)}
         </View>
-        {tab === 'badges' && (badges === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> : <>
-          <Text style={ui.secondary}>{t('growthUi.badgeCount', { count: BADGES.filter((badge) => badges.has(badge.key)).length, total: BADGES.length })}</Text>
-          <View style={styles.wrap}>{[false, true].map((value) => <TouchableOpacity key={String(value)}
-            accessibilityRole="button" accessibilityState={{ selected: earnedOnly === value }}
-            style={[styles.chip, value === earnedOnly && styles.featured]} onPress={() => setEarnedOnly(value)}>
-            <Text style={styles.link}>{t(value ? 'growthUi.earned' : 'growthUi.allBadges')}</Text>
-          </TouchableOpacity>)}</View>
-          {!shownBadges.length && <Text style={ui.body}>{t('growthUi.noBadges')}</Text>}
-          {shownBadges.map((badge) => {
-            const earned = badges.has(badge.key);
-            return <View key={badge.id} style={ui.card}>
-              <View style={ui.header}><Ionicons name={earned ? 'ribbon-outline' : 'lock-closed-outline'} size={28} color={colors.primaryDark} />
-                <Text style={[ui.cardTitle, { flex: 1 }]}>{t(badge.nameKey)}</Text></View>
-              <Text style={ui.body}>{t(badge.descriptionKey)}</Text>
-              <Text style={ui.secondary}>{t(earned ? 'growthUi.earned' : 'growthUi.notEarned')} · {t('growthUi.' + badge.tier)}</Text>
-            </View>;
-          })}
-        </>)}
+        {tab === 'badges' && <>
+          <GrowthJourney metrics={data?.journey.status === 'fulfilled' ? data.journey.value : null}
+            error={data?.journey.status === 'rejected' ? data.journey.reason : undefined} onRetry={() => void load()} />
+          {legacyBadges.length > 0 && <>
+            <TouchableOpacity accessibilityRole="button" accessibilityState={{expanded:showLegacy}} onPress={()=>setShowLegacy(!showLegacy)} style={styles.action}>
+              <Text style={styles.link}>{t('growthUi.historicalBadges')} {showLegacy?'−':'+'}</Text>
+            </TouchableOpacity>
+            {showLegacy && legacyBadges.map(badge=><View key={badge.key} style={ui.card}>
+              <Text style={ui.label}>{t(badge.nameKey,{count:badge.requirement})}</Text>
+              <Text style={ui.secondary}>{t('growthUi.earned')}</Text>
+            </View>)}
+          </>}
+        </>}
         {tab === 'competencies' && (progress === null ? <Text style={ui.body}>{t('growthUi.unavailable')}</Text> :
           !progress.length ? <Text style={ui.body}>{t('growthUi.noCompetencies')}</Text> : <>
             {!!selfVsMentor?.length && <Text style={ui.secondary}>{t('assessment.gapHint')}</Text>}
@@ -144,6 +135,11 @@ function GrowthContent({ studentId }: { studentId: string }) {
             </View>;
           })}
         </>)}
+        <TouchableOpacity accessibilityRole="button" style={styles.action} onPress={() => router.push('/(student)/leaderboard')}>
+          <Ionicons name="podium-outline" size={24} color={colors.primaryDark} />
+          <Text style={[styles.link, { flex: 1 }]}>{t('growthUi.openRanking')}</Text>
+          <Ionicons name="chevron-forward" size={22} color={colors.primaryDark} />
+        </TouchableOpacity>
       </>}
     </ScrollView>
   </SafeAreaView>;

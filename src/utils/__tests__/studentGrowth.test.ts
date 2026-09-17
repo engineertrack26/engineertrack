@@ -1,4 +1,4 @@
-import { growthLevel, growthReason, leaderboardName } from '../studentGrowth';
+import { growthBadges, growthLevel, growthReason, leaderboardName } from '../studentGrowth';
 import en from '@/i18n/locales/en.json';
 import tr from '@/i18n/locales/tr.json';
 import de from '@/i18n/locales/de.json';
@@ -6,6 +6,25 @@ import it from '@/i18n/locales/it.json';
 import ro from '@/i18n/locales/ro.json';
 import sr from '@/i18n/locales/sr.json';
 import el from '@/i18n/locales/el.json';
+
+test('current goals exclude retired badges but retain historical awards', () => {
+  const empty = growthBadges(new Set());
+  expect(empty.active.map(b => b.key)).toEqual(['first_task', 'streak_7', 'streak_30']);
+  expect(empty.active.map(b => b.requirement)).toEqual([1, 4, 8]);
+  expect(empty.historical).toEqual([]);
+  const earned = new Set(['first_log', 'quality_10', 'quiz_master', 'first_task']);
+  expect(growthBadges(earned).historical.map(b => b.key)).toEqual(['first_log', 'quality_10', 'quiz_master']);
+  expect(earned.size).toBe(4);
+});
+
+test.each([
+  ['assignment_photo:private-id', 'photoBonus'], ['daily_log_submit', 'oldLogSubmit'],
+  ['log_approved', 'oldLogApproved'], ['photo_attached', 'oldPhoto'],
+  ['self_assessment', 'oldAssessment'], ['poll_completed', 'oldPoll'],
+  ['quiz_perfect_score', 'oldQuiz'],
+])('explains reward %s without leaking identifiers', (reason, key) => {
+  expect(growthReason(reason)).toBe('growthUi.' + key);
+});
 
 test('uses the existing level thresholds without awarding or recalculating levels', () => {
   expect(growthLevel(200, 2)).toMatchObject({ current: { level: 2 }, next: { level: 3 }, remaining: 100, progress: 0.5 });

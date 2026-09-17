@@ -43,8 +43,8 @@ export const BADGES: Badge[] = [
   {
     id: 'first_task',
     key: 'first_task',
-    nameKey: 'badges.firstTask.name',
-    descriptionKey: 'badges.firstTask.description',
+    nameKey: 'growthUi.firstTaskName',
+    descriptionKey: 'growthUi.firstTaskRule',
     icon: 'pencil',
     tier: 'bronze',
     requirement: 1,
@@ -53,21 +53,21 @@ export const BADGES: Badge[] = [
   {
     id: 'streak_7',
     key: 'streak_7',
-    nameKey: 'badges.streak7.name',
-    descriptionKey: 'badges.streak7.description',
+    nameKey: 'growthUi.weekBadge',
+    descriptionKey: 'growthUi.weekRule',
     icon: 'fire',
     tier: 'bronze',
-    requirement: 7,
+    requirement: 4,
     category: 'consistency',
   },
   {
     id: 'streak_30',
     key: 'streak_30',
-    nameKey: 'badges.streak30.name',
-    descriptionKey: 'badges.streak30.description',
+    nameKey: 'growthUi.weekBadge',
+    descriptionKey: 'growthUi.weekRule',
     icon: 'fire',
     tier: 'silver',
-    requirement: 30,
+    requirement: 8,
     category: 'consistency',
   },
   {
@@ -93,8 +93,8 @@ export const BADGES: Badge[] = [
   {
     id: 'quiz_master',
     key: 'quiz_master',
-    nameKey: 'badges.quizMaster.name',
-    descriptionKey: 'badges.quizMaster.description',
+    nameKey: 'growthUi.oldPoll',
+    descriptionKey: 'growthUi.historicalHint',
     icon: 'school',
     tier: 'silver',
     requirement: 5,
@@ -102,6 +102,9 @@ export const BADGES: Badge[] = [
   },
 ];
 
+// Legacy reference only, not an executable reward policy. Current task rewards
+// live in submit_assignment and award_assignment_xp on the server. Entries such
+// as revisionPenalty/documentAttached must not be advertised as active rules.
 export const POINT_VALUES = {
   dailyLogSubmit: 10,
   logApproved: 20,

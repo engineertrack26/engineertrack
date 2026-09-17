@@ -39,10 +39,10 @@ export function BadgeCard({ badge, earned }: BadgeCardProps) {
         )}
       </View>
       <Text style={[styles.name, !earned && styles.textLocked]}>
-        {t(badge.nameKey)}
+        {t(badge.nameKey, { count: badge.requirement })}
       </Text>
       <Text style={[styles.description, !earned && styles.textLocked]}>
-        {t(badge.descriptionKey)}
+        {t(badge.descriptionKey, { count: badge.requirement })}
       </Text>
       <View style={[styles.tierBadge, { backgroundColor: earned ? tierColor + '25' : colors.divider }]}>
         <Text style={[styles.tierText, { color: earned ? tierColor : colors.textDisabled }]}>
