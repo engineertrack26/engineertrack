@@ -211,6 +211,7 @@ BEGIN
 
   -- B1
   BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
     BEGIN
       PERFORM close_internship(stu, grp);
       log := log || 'B1 close with a pending review' || E'\t' || 'FAIL: accepted with a submitted row outstanding' || E'\n';
@@ -324,7 +325,7 @@ BEGIN
       SELECT count(*) INTO v_comments_after FROM feed_comments WHERE post_id = post_a;
       log := log || 'B7 a stream comment on the task''s post' || E'\t'
           || CASE WHEN v_comments_after = v_comments_before + 1
-                  THEN 'insert accepted (owner session -- RLS not evaluated here; see Part C for a real policy test elsewhere in the suite)'
+                  THEN 'owner-session INSERT -- proves no trigger refuses the write; RLS on comments is not evaluated here'
                   ELSE 'FAIL: comment count ' || coalesce(v_comments_before::text, 'NULL') || ' -> ' || coalesce(v_comments_after::text, 'NULL') END || E'\n';
     END IF;
   EXCEPTION WHEN OTHERS THEN
@@ -347,6 +348,7 @@ BEGIN
 
   -- B9
   BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
     BEGIN
       PERFORM reopen_internship(stu, grp, NULL);
       log := log || 'B9 reopen without a reason' || E'\t' || 'FAIL: accepted' || E'\n';
@@ -360,6 +362,7 @@ BEGIN
 
   -- B10
   BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
     PERFORM reopen_internship(stu, grp, 'Needs another round of tasks');
     v_status := internship_closure_status(stu, grp);
     SELECT count(*) INTO m FROM notifications WHERE type = 'internship_reopened'
@@ -396,7 +399,7 @@ BEGIN
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
     v_report2 := get_internship_report(stu, grp);
     log := log || 'B12 report readable by student and mentor' || E'\t'
-        || CASE WHEN left(v_report, 20) = '# Internship report' AND left(v_report2, 20) = '# Internship report'
+        || CASE WHEN v_report LIKE '# Internship report%' AND v_report2 LIKE '# Internship report%'
                 THEN 'both start with "# Internship report"'
                 ELSE 'FAIL: student=' || coalesce(left(v_report, 20), 'NULL') || ' mentor=' || coalesce(left(v_report2, 20), 'NULL') END || E'\n';
   EXCEPTION WHEN OTHERS THEN
@@ -505,7 +508,7 @@ BEGIN
     SELECT count(*) INTO n FROM internship_closures WHERE student_id = stu AND group_id = grp;
     log := log || 'C1 the student''s direct SELECT' || E'\t' || CASE WHEN n = 1 THEN '1 row' ELSE 'FAIL: ' || coalesce(n::text, 'NULL') || ' rows' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
-    log := log || 'C1 the student''s direct SELECT' || E'\t' || 'ABORTED: ' || coalesce(SQLERRM, 'NULL') || E'\n';
+    log := log || 'C1 the student''s direct SELECT' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
   END;
 
   -- C2
@@ -514,7 +517,7 @@ BEGIN
     SELECT count(*) INTO n FROM internship_closures WHERE student_id = stu AND group_id = grp;
     log := log || 'C2 the mentor''s direct SELECT' || E'\t' || CASE WHEN n = 1 THEN '1 row' ELSE 'FAIL: ' || coalesce(n::text, 'NULL') || ' rows' END || E'\n';
   EXCEPTION WHEN OTHERS THEN
-    log := log || 'C2 the mentor''s direct SELECT' || E'\t' || 'ABORTED: ' || coalesce(SQLERRM, 'NULL') || E'\n';
+    log := log || 'C2 the mentor''s direct SELECT' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
   END;
 
   -- C3
@@ -526,7 +529,7 @@ BEGIN
       SELECT count(*) INTO n FROM internship_closures WHERE student_id = stu AND group_id = grp;
       log := log || 'C3 a second student''s direct SELECT' || E'\t' || CASE WHEN n = 0 THEN '0 rows' ELSE 'FAIL: ' || coalesce(n::text, 'NULL') || ' rows leaked' END || E'\n';
     EXCEPTION WHEN OTHERS THEN
-      log := log || 'C3 a second student''s direct SELECT' || E'\t' || 'ABORTED: ' || coalesce(SQLERRM, 'NULL') || E'\n';
+      log := log || 'C3 a second student''s direct SELECT' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
     END;
   END IF;
 
@@ -538,7 +541,7 @@ BEGIN
         || CASE WHEN (v_status->>'closed')::boolean IS TRUE THEN 'closed=true'
                 ELSE 'FAIL: closed=' || coalesce(v_status->>'closed', 'NULL') END || E'\n';
   EXCEPTION WHEN OTHERS THEN
-    log := log || 'C4 internship_closure_status as the student' || E'\t' || 'ABORTED: ' || coalesce(SQLERRM, 'NULL') || E'\n';
+    log := log || 'C4 internship_closure_status as the student' || E'\t' || 'ABORTED: ' || SQLSTATE || ' ' || coalesce(SQLERRM, 'NULL') || E'\n';
   END;
 
   PERFORM set_config('probe.results', log, true);
