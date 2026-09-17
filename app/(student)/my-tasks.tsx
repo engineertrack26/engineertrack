@@ -3,17 +3,30 @@ import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, Refres
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/store/authStore';
 import { useStudentTasks } from '@/hooks/useStudentTasks';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
+import { groupService } from '@/services/group';
 import { StudentHeader, TaskCard, ui } from '@/components/student/StudentUI';
-import { LoadFailedBanner } from '@/components/common';
+import { ClosureBanner, LoadFailedBanner } from '@/components/common';
 import { TASK_STATES, TaskState, taskState, taskStateKey, filterTasks } from '@/utils/studentTasks';
 import { colors } from '@/theme';
 
 export default function MyTasksScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const userId = useAuthStore(s => s.user?.id);
   const { open } = useLocalSearchParams<{ open?: string }>();
   const { items, hasGroup, loading, refreshing, failed, reload } = useStudentTasks();
+  const [groupId, setGroupId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!userId) { setGroupId(null); return; }
+    let current = true;
+    groupService.getMyGroup(userId).then(g => { if (current) setGroupId(g?.id ?? null); })
+      .catch(error => console.warn('Group load for closure banner failed:', error instanceof Error ? error.message : error));
+    return () => { current = false; };
+  }, [userId]);
+  const { status: closure } = useClosureStatus(userId, groupId);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<TaskState | 'all'>('all');
   const [expanded, setExpanded] = useState({ waiting: false, done: false });
@@ -28,6 +41,7 @@ export default function MyTasksScreen() {
     <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={reload} />}>
       <StudentHeader title={t('student.myTasks')} />
+      <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: userId, groupId: groupId! } })} />
       <TextInput style={ui.input} value={query} onChangeText={setQuery} placeholder={t('studentFlow.searchTasks')}
         accessibilityLabel={t('studentFlow.searchTasks')} placeholderTextColor={colors.textSecondary} returnKeyType="search" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>

@@ -1,17 +1,20 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getCalendars } from 'expo-localization';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { internshipDayService as service } from '@/services/internshipDays';
+import { groupService } from '@/services/group';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
 import type { Attendance, DayEvent, DayLogForm, DayTask, InternshipDay, InternshipPerson } from '@/types/internshipDay';
 import { dayError, dayLogForm, daySummary, dayWeek, logFormError, needsAttendanceReview, shiftDay, visibleDayDates } from '@/utils/internshipDays';
 import { internshipDateString, parseInternshipDate } from '@/utils/internshipForm';
 import { AuthButton } from '@/components/common/AuthForm';
 import { BackButton } from '@/components/common/BackButton';
+import { ClosureBanner } from '@/components/common/ClosureBanner';
 import { ProfileSheet } from '@/components/mentor/ProfileSheet';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
@@ -52,6 +55,16 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
   const [eventError, setEventError] = useState('');
   const [sheetError, setSheetError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [studentGroupId, setStudentGroupId] = useState<string | null>(null);
+  useEffect(() => {
+    if (role !== 'student') { setStudentGroupId(null); return; }
+    let current = true;
+    groupService.getMyGroup(ownerId).then(g => { if (current) setStudentGroupId(g?.id ?? null); })
+      .catch(failure => console.warn('Group load for closure banner failed:', failure instanceof Error ? failure.message : failure));
+    return () => { current = false; };
+  }, [role, ownerId]);
+  const { status: closure } = useClosureStatus(role === 'student' ? ownerId : null, studentGroupId);
+  const closed = role === 'student' && !!closure?.closed;
   const lock = useRef(false), active = useRef(false), sequence = useRef(0), eventSequence = useRef(0);
   const currentAccount = () => useAuthStore.getState().user?.id === ownerId;
   const load = useCallback(async () => {
@@ -168,6 +181,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
       <BackButton disabled={busy} href={role === 'student' ? '/(student)/dashboard' : role === 'mentor' ? '/(mentor)/dashboard' : '/(advisor)/dashboard'} />
       <Text style={ui.title} accessibilityRole="header">{t(role === 'student' ? 'days.title' : role === 'mentor' ? 'days.pendingTitle' : 'days.staffTitle')}</Text>
       <Text style={ui.secondary}>{t(role === 'student' ? 'days.studentIntro' : role === 'mentor' ? 'days.mentorIntro' : 'days.intro')}</Text>
+      {role === 'student' && <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: ownerId, groupId: studentGroupId! } })} />}
       {success && <Text style={ui.body} accessibilityLiveRegion="polite">{t('mentorProfile.saved')}</Text>}
       {!sheet && !!sheetError && <Text style={[ui.body, { color: colors.error }]} accessibilityRole="alert">{t(sheetError)}</Text>}
       {loading && <ActivityIndicator color={colors.primaryDark} />}
@@ -253,7 +267,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
             </> : <>
               <Text style={ui.secondary}>{t(eligible ? 'days.noRecord' : 'days.outside')}</Text>
               {eligible && role === 'student' && date === today && <Text style={ui.secondary}>{t('days.pending')}</Text>}
-              {eligible && role !== 'advisor' && <AuthButton title={t(date === today && role === 'student' ? 'days.checkIn' : 'days.addDay')} disabled={busy || !person.mentorId}
+              {eligible && role !== 'advisor' && <AuthButton title={t(date === today && role === 'student' ? 'days.checkIn' : 'days.addDay')} disabled={busy || !person.mentorId || closed}
                 onPress={() => {
                   if (role === 'student' && date === today) {
                     void run(() => service.open(studentId,date,getCalendars()[0]?.timeZone || 'UTC',''));
@@ -340,8 +354,8 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
           </>}
           <AuthButton title={t('days.attach')} variant="ghost" disabled={busy} onPress={()=>void attach(sheet.day)} /></>}
           {sheet.day.log_status==='submitted' && field(t('days.reason'),form.reason,value=>setForm({...form,reason:value}))}
-          <AuthButton title={t(sheet.day.log_status === 'draft' ? 'days.sendMentor' : 'common.save')} loading={busy} onPress={()=>saveLog(sheet.day,true)} />
-          {sheet.day.log_status==='draft' && <AuthButton title={t('days.saveDraft')} variant="ghost" disabled={busy} onPress={()=>saveLog(sheet.day,false)} />}
+          <AuthButton title={t(sheet.day.log_status === 'draft' ? 'days.sendMentor' : 'common.save')} loading={busy} disabled={closed} onPress={()=>saveLog(sheet.day,true)} />
+          {sheet.day.log_status==='draft' && <AuthButton title={t('days.saveDraft')} variant="ghost" disabled={busy || closed} onPress={()=>saveLog(sheet.day,false)} />}
         </> : <>
           {sheet.day.log_status==='submitted' ? <>
             <Text style={ui.label}>{t('days.experience')}</Text><Text style={ui.body}>{sheet.day.experience}</Text>

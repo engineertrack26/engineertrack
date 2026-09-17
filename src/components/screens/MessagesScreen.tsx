@@ -8,8 +8,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useMessageStore } from '@/store/messageStore';
 import { messageService } from '@/services/messages';
 import { groupService } from '@/services/group';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { LoadFailedBanner } from '@/components/common';
+import { ClosureBanner, LoadFailedBanner } from '@/components/common';
 import { ConversationRow, conversationListStyles, ContactPicker } from '@/components/messages';
 import { colors, spacing, borderRadius } from '@/theme';
 import type { ConversationSummary, MessageContact } from '@/types/messages';
@@ -34,6 +35,7 @@ export function MessagesScreen({ role }: Props) {
   const [contactsFailed, setContactsFailed] = useState(false);
   const request = useRef(0);
   const pickerReq = useRef(0);
+  const { status: closure } = useClosureStatus(role === 'student' ? user?.id : null, role === 'student' ? groupId : null);
 
   // Which group a NEW conversation is opened in. Student: their active
   // group. Advisor: the selected chip. Mentor: the group of the student they
@@ -171,10 +173,12 @@ export function MessagesScreen({ role }: Props) {
               <Text style={[styles.newText, !groupId && { color: colors.textDisabled }]}>{t('messages.newCase', 'New case')}</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.newBtn} onPress={openPicker} activeOpacity={0.7}>
-            <Ionicons name="create-outline" size={18} color={colors.primary} />
-            <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
-          </TouchableOpacity>
+          {!closure?.closed && (
+            <TouchableOpacity style={styles.newBtn} onPress={openPicker} activeOpacity={0.7}>
+              <Ionicons name="create-outline" size={18} color={colors.primary} />
+              <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       <FlatList
@@ -184,6 +188,9 @@ export function MessagesScreen({ role }: Props) {
         ListHeaderComponent={
           <View>
             {loadFailed && <LoadFailedBanner onRetry={() => { loadGroups(); load(); }} />}
+            {role === 'student' && (
+              <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: user.id, groupId: groupId ?? '' } })} />
+            )}
             <Text style={conversationListStyles.note}>{t('messages.lifetimeNote', 'Messages are deleted when the group is archived or when someone leaves it.')}</Text>
             {role === 'advisor' && groups.length > 1 && (
               <View style={styles.chipRow}>

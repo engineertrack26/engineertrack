@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { mentorService } from './mentor';
+import { messageService } from './messages';
 import { mapMentorStudent } from '@/utils/mentorStudents';
 
 export const mentorStudentService = {
@@ -34,5 +35,14 @@ export const mentorStudentService = {
     };
     const [total, approved, pending] = await Promise.all([count(), count('approved'), count('submitted')]);
     return { total, approved, pending };
+  },
+  // A mentor cannot read group_memberships directly under RLS (that policy
+  // is "student or owner"), so the student's group comes from the same
+  // SECURITY DEFINER RPC the message picker already uses instead of a
+  // direct query -- see Task 5's ruling.
+  async studentGroup(studentId: string): Promise<{ id: string; name: string } | null> {
+    const contacts = await messageService.listMentorContacts();
+    const found = contacts.find(c => c.id === studentId);
+    return found ? { id: found.groupId, name: found.groupName } : null;
   },
 };

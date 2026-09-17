@@ -11,10 +11,12 @@ import { StudentDates, StudentIdentity } from './StudentIdentity';
 import { mentorStudentService } from '@/services/mentorStudents';
 import { MentorStudent } from '@/utils/mentorStudents';
 import { useAuthStore } from '@/store/authStore';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
+import { closureLabel } from '@/utils/closure';
 import { colors } from '@/theme';
 
 export function StudentDetail({ userId, studentId, onBack }: { userId: string; studentId: string; onBack: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { width, fontScale } = useWindowDimensions();
   const [student, setStudent] = useState<MentorStudent | null>(null);
@@ -22,6 +24,7 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [countsFailed, setCountsFailed] = useState(false);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
@@ -37,11 +40,18 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
           const result = await mentorStudentService.summary(studentId);
           if (current()) setSummary(result);
         } catch { if (current()) setCountsFailed(true); }
+        try {
+          const group = await mentorStudentService.studentGroup(studentId);
+          if (current()) setGroupId(group?.id ?? null);
+        } catch (error) {
+          if (current()) console.warn('Student group load for closure badge failed:', error instanceof Error ? error.message : error);
+        }
       }
     } catch { if (current()) { setFailed(true); setStudent(null); } }
     finally { if (current()) setLoading(false); }
   }, [studentId, userId]);
   useFocusEffect(useCallback(() => { void load(); return () => { generation.current++; }; }, [load]));
+  const { status: closure } = useClosureStatus(studentId, groupId);
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true; });
     return () => subscription.remove();
@@ -57,6 +67,16 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
             <Text style={ui.label}>{t('mentorStudents.calendar')}</Text>
             <StudentDates student={student} />
           </View>
+          {!!closure?.closed && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={ui.label}>{t('closure.badge', 'Closed')}</Text>
+              <Text style={ui.secondary}>{closureLabel(closure, t, i18n.language)}</Text>
+            </View>
+            <Pressable accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/(mentor)/internship-report', params: { studentId, groupId: groupId! } })}>
+              <Text style={ui.link}>{t('closure.viewReport', 'View report')}</Text>
+            </Pressable>
+          </View>}
           <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.summary')}</Text>
           {countsFailed && <LoadFailedBanner onRetry={load} />}
           <View style={{ flexDirection: width < 360 || fontScale > 1.3 ? 'column' : 'row', gap: 12 }}>
@@ -65,12 +85,12 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
                 <Text style={ui.title}>{metric.value ?? '—'}</Text><Text style={ui.secondary}>{metric.label}</Text>
               </View>)}
           </View>
-          {!!summary?.pending && <Pressable accessibilityRole="button" style={ui.primary}
+          {!closure?.closed && !!summary?.pending && <Pressable accessibilityRole="button" style={ui.primary}
             onPress={() => router.push({ pathname: '/(mentor)/pending-reviews', params: { studentId, assignmentId: '' } })}>
             <Text style={ui.primaryText}>{t('mentorStudents.openPending', { count: summary.pending })}</Text>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </Pressable>}
-          {summary?.pending === 0 && <Text style={ui.secondary}>{t('mentorStudents.noPending')}</Text>}
+          {!closure?.closed && summary?.pending === 0 && <Text style={ui.secondary}>{t('mentorStudents.noPending')}</Text>}
           <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.other')}</Text>
           <View style={ui.card}>
             {[{ label: t('mentorStudents.total'), value: summary?.total ?? '—' },

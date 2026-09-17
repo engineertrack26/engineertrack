@@ -13,8 +13,9 @@ import { DOCUMENT_BUCKET, PHOTO_BUCKET, extractStoragePath, signEvidence } from 
 import { TaskDraft, draftRevision, submissionDraft } from '@/utils/taskDrafts';
 import { isActionable, taskDueDate } from '@/utils/studentTasks';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { EvidencePicker } from '@/components/forms';
-import { LevelPicker, LoadFailedBanner } from '@/components/common';
+import { ClosureBanner, LevelPicker, LoadFailedBanner } from '@/components/common';
 import { levelLabel } from '@/utils/selfAssessment';
 import { TaskStatus, ui } from '@/components/student/StudentUI';
 import { colors } from '@/theme';
@@ -53,7 +54,8 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   const saveVersion = useRef(0);
   const busy = useRef(false);
   busy.current = uploading || submitting;
-  const actionable = !!task && isActionable(task);
+  const { status: closure } = useClosureStatus(userId, task?.groupId);
+  const actionable = !!task && isActionable(task) && !closure?.closed;
 
   const load = useCallback(async () => {
     const request = ++generation.current;
@@ -246,6 +248,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             {t('studentFlow.draft' + saveState[0].toUpperCase() + saveState.slice(1))}
           </Text>}
         </View>
+        <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: userId, groupId: task?.groupId } })} />
         {loading ? <ActivityIndicator size="large" color={colors.primary} /> : failed ? <LoadFailedBanner onRetry={load} /> : !task ?
           <Text style={ui.body}>{t('errors.assignmentNotFound')}</Text> : <>
           <Text accessibilityRole="header" style={ui.title}>{task.title}</Text>
@@ -314,7 +317,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             </>}
           </View>
           {actionable && <Text style={ui.secondary}>{t('studentFlow.localDraft')}</Text>}
-          {(actionable || task.submission?.status === 'approved') && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          {!closure?.closed && (actionable || task.submission?.status === 'approved') && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={ui.label}>{t('student.shareToFeed')}</Text>
               <Text style={ui.secondary}>{t('student.shareToFeedHint')}</Text>

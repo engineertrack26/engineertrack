@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -7,10 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { studentGrowthViewService } from '@/services/studentGrowthView';
+import { groupService } from '@/services/group';
+import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { LoadFailedBanner } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
 import { ui } from '@/components/common/workflowStyles';
 import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
+import { closureLabel } from '@/utils/closure';
 import { colors } from '@/theme';
 import { GrowthJourney } from '@/components/gamification/GrowthJourney';
 import { LEVELS } from '@/types/gamification';
@@ -29,6 +32,14 @@ function GrowthContent({ studentId }: { studentId: string }) {
   const [tab, setTab] = useState<'badges' | 'competencies' | 'history'>('badges');
   const [showLegacy, setShowLegacy] = useState(false);
   const [showLevels, setShowLevels] = useState(false);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    groupService.getMyGroup(studentId).then(g => { if (current) setGroupId(g?.id ?? null); })
+      .catch(error => console.warn('Group load for closure link failed:', error instanceof Error ? error.message : error));
+    return () => { current = false; };
+  }, [studentId]);
+  const { status: closure } = useClosureStatus(studentId, groupId);
   const sequence = useRef(0);
   const load = useCallback(async () => {
     const request = ++sequence.current;
@@ -66,6 +77,12 @@ function GrowthContent({ studentId }: { studentId: string }) {
         onRefresh={() => { setRefreshing(true); void load(); }} />}>
       <StudentHeader title={t('studentFlow.growth')} />
       <Text style={ui.secondary}>{t('growthUi.intro')}</Text>
+      {!!closure?.closed && <View style={ui.card}>
+        <Text style={ui.body}>{closureLabel(closure, t, i18n.language)}</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => router.push({ pathname: '/(student)/internship-report', params: { studentId, groupId: groupId! } })}>
+          <Text style={styles.link}>{t('closure.myReport', 'My report')}</Text>
+        </TouchableOpacity>
+      </View>}
       {loading && !data ? <ActivityIndicator size="large" color={colors.primaryDark} /> : <>
         {failed && <LoadFailedBanner onRetry={() => void load()} />}
         {profile && level ? <View style={[ui.card, styles.featured]}>
