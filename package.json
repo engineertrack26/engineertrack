@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "9.1.0",
     "@sentry/react-native": "~7.11.0",
