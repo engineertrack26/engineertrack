@@ -36,6 +36,8 @@ internship_closures
 
 Guards added (one `IF internship_closed(...) THEN RAISE EXCEPTION 'INTERNSHIP_CLOSED'` each, after authentication and before any write) in: `submit_assignment` (assignment's group), `review_assignment` (the submission's group), `set_submission_sharing`, `internship_open_day`, `internship_save_log`, `internship_review` (per day), `internship_note`, `open_conversation` / `open_case` / `send_message` (the conversation's group, when the caller **or the subject** is a closed student of that group). `create_feed_post`, likes and comments are not guarded (decision 3).
 
+The direct evidence policies on `log_photos` / `log_documents` (student INSERT/DELETE on non-approved submissions) also refuse while a closure is live — `docs/internship-closure-evidence-policies.sql`.
+
 ## 4. RPCs (SECURITY DEFINER; stable codes)
 
 - `close_internship(p_student_id, p_group_id) RETURNS JSONB {closureId, reportVersion}` — caller owns the group (`NOT_GROUP_OWNER`); the student is an active member (`STUDENT_NOT_IN_GROUP`); no `submitted` rows on the group's assignments for the student (`PENDING_REVIEWS: <n>`); already closed → `ALREADY_CLOSED`. Builds the report, inserts or updates the row (version +1 on a re-close, clears `reopened_*`), notifies student + mentor.

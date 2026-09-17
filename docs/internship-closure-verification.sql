@@ -9,10 +9,14 @@
 -- ============================================================
 
 -- ============================================================
--- PART A — schema assertions. Expected: one row "PASS: schema assertions held".
+-- PART A — schema assertions, plus a guard-presence check over the ten write
+-- RPCs whose bodies live in docs/internship-closure-guards.sql (each must
+-- still call internship_closed(...) -- re-running an RPC's original file
+-- would silently strip the guard). Expected: one row "PASS: schema
+-- assertions held".
 -- ============================================================
 DO $$
-DECLARE n INT;
+DECLARE n INT; f TEXT;
 BEGIN
   -- Table + columns.
   IF to_regclass('public.internship_closures') IS NULL THEN
@@ -113,6 +117,28 @@ BEGIN
   IF NOT has_function_privilege('authenticated', 'internship_closure_status(uuid, uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: internship_closure_status is not granted to authenticated';
   END IF;
+
+  -- Guard presence: the ten write RPCs relocated to
+  -- docs/internship-closure-guards.sql each gained exactly one closure guard.
+  -- If any of them was re-applied from its original file since, the guard is
+  -- gone and the cast below still succeeds (the function exists) but the
+  -- LIKE check catches the regression.
+  FOREACH f IN ARRAY ARRAY[
+    'submit_assignment(uuid,text,text,jsonb,jsonb,smallint)',
+    'review_assignment(uuid,boolean,text,smallint)',
+    'set_submission_sharing(uuid,boolean)',
+    'internship_open_day(uuid,date,text,text)',
+    'internship_save_log(uuid,integer,text,text,text,integer,boolean,text,uuid,jsonb)',
+    'internship_review(jsonb,text,text)',
+    'internship_note(uuid,integer,text,boolean)',
+    'open_conversation(uuid,uuid)',
+    'open_case(uuid,uuid)',
+    'send_message(uuid,text)'
+  ] LOOP
+    IF pg_get_functiondef(f::regprocedure) NOT LIKE '%internship_closed(%' THEN
+      RAISE EXCEPTION 'FAIL: % lost its closure guard -- re-apply docs/internship-closure-guards.sql', f;
+    END IF;
+  END LOOP;
 
   RAISE NOTICE 'PASS: schema assertions held';
 END $$;

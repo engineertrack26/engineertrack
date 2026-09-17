@@ -40,6 +40,6 @@ export function dayError(error: unknown): string {
   const e = error as { code?: string; message?: string } | null;
   if (e?.code === 'PGRST202' || e?.code === '42P01') return 'days.notInstalled';
   const messages: Record<string,string> = { ID_FORBIDDEN: 'days.forbidden', ID_SETUP: 'days.setup', ID_INVALID: 'days.invalid',
-    ID_REASON: 'days.reasonRequired', ID_CONFLICT: 'days.conflict', ID_REQUIRED: 'days.required' };
+    ID_REASON: 'days.reasonRequired', ID_CONFLICT: 'days.conflict', ID_REQUIRED: 'days.required', INTERNSHIP_CLOSED: 'errors.internshipClosed' };
   return messages[e?.message || ''] || 'days.failed';
 }

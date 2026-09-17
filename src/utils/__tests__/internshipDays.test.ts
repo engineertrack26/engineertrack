@@ -53,6 +53,7 @@ test('errors explain migration, concurrency and permission failures without leak
   expect(dayError({message:'ID_CONFLICT'})).toBe('days.conflict');
   expect(dayError({message:'ID_FORBIDDEN'})).toBe('days.forbidden');
   expect(dayError({message:'secret'})).toBe('days.failed');
+  expect(dayError({ message: 'INTERNSHIP_CLOSED' })).toBe('errors.internshipClosed');
 });
 const en=JSON.parse(readFileSync('src/i18n/locales/en.json','utf8')).days;
 test.each(['en','tr','de','it','ro','sr','el'])('%s contains all internship labels and placeholders',lang=>{

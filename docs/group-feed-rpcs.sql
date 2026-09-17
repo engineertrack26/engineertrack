@@ -1,5 +1,7 @@
 -- NOTE 2026-09-16: set_submission_sharing now lives in
--- docs/internship-closure-guards.sql (closure guard added); the body below is history.
+-- docs/internship-closure-guards.sql. RE-RUNNING THIS FILE REMOVES THE
+-- CLOSURE GUARD from it -- re-apply docs/internship-closure-guards.sql
+-- afterwards.
 -- ============================================
 -- Group feed RPCs. Apply after docs/group-feed-migration.sql.
 -- All SECURITY DEFINER; the actor is always auth.uid(), never a parameter.

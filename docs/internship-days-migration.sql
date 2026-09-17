@@ -1,7 +1,9 @@
 -- NOTE 2026-09-16: internship_open_day, internship_save_log, internship_review,
--- internship_note now live in docs/internship-closure-guards.sql (closure guard added); the bodies below are history.
+-- internship_note now live in docs/internship-closure-guards.sql. RE-RUNNING
+-- THIS FILE REMOVES THE CLOSURE GUARD from them -- re-apply
+-- docs/internship-closure-guards.sql afterwards.
 -- Internship days v1. Additive: no legacy daily_logs, XP, feed or messages writes.
--- Apply once before enabling the UI; safe to re-run this version. See internship-days-setup.md.
+-- Apply once before enabling the UI; re-runnable, but see the NOTE above about the closure guard. See internship-days-setup.md.
 BEGIN;
 CREATE TABLE IF NOT EXISTS public.internship_placements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

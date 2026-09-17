@@ -1,5 +1,7 @@
 -- NOTE 2026-09-16: submit_assignment, review_assignment now live in
--- docs/internship-closure-guards.sql (closure guard added); the bodies below are history.
+-- docs/internship-closure-guards.sql. RE-RUNNING THIS FILE REMOVES THE
+-- CLOSURE GUARD from them -- re-apply docs/internship-closure-guards.sql
+-- afterwards.
 -- docs/self-assessment-migration.sql
 -- Self-assessment and mentor comparison: the student rates their own work on
 -- submit, the mentor rates it on approval, on the same four-step supervision

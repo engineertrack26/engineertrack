@@ -46,6 +46,11 @@ export function parseMarkdownBlocks(md: string): Block[] {
         if (!isSeparator) rows.push(cells);
         i++;
       }
+      // The report's tables carry no header text of their own (the report
+      // is generated, not authored) -- a first row of only empty cells is
+      // the placeholder header, not data, so it is dropped rather than
+      // rendered as a blank row.
+      if (rows.length && rows[0].every((c) => c === '')) rows.shift();
       blocks.push({ type: 'table', rows });
       continue;
     }

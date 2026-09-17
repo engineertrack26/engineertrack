@@ -1,7 +1,7 @@
 import { parseMarkdownBlocks } from '@/utils/markdownBlocks';
 
 describe('parseMarkdownBlocks', () => {
-  it('parses a heading followed by a table, dropping the separator row', () => {
+  it('parses a heading followed by a table, dropping the separator row and the empty header row', () => {
     const md = [
       '# Internship report — Ada Lovelace',
       '',
@@ -11,7 +11,14 @@ describe('parseMarkdownBlocks', () => {
     ].join('\n');
     expect(parseMarkdownBlocks(md)).toEqual([
       { type: 'h1', text: 'Internship report — Ada Lovelace' },
-      { type: 'table', rows: [['', ''], ['Workplace', 'Acme Corp']] },
+      { type: 'table', rows: [['Workplace', 'Acme Corp']] },
+    ]);
+  });
+
+  it('drops a table\'s leading all-empty row while keeping its data row', () => {
+    const md = ['| | |', '|---|---|', '| Workplace | Acme |'].join('\n');
+    expect(parseMarkdownBlocks(md)).toEqual([
+      { type: 'table', rows: [['Workplace', 'Acme']] },
     ]);
   });
 
