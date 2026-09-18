@@ -604,7 +604,25 @@
     "useServerCopy": "Use server copy",
     "taskChanged": "This task changed elsewhere. Return to Tasks and open the current record. This screen's content was not submitted.",
     "submitReview": "Send for review",
-    "reviewHint": "Your mentor will review your work after you submit."
+    "reviewHint": "Your mentor will review your work after you submit.",
+    "competencies_title": "Competencies"
+  },
+  "dash": {
+    "dayLine": "Day {{day}} of your internship · {{company}}",
+    "dayLineEnded": "Internship period ended · {{company}}",
+    "mentor": "Mentor",
+    "jobCard": "JOB CARD",
+    "evidenceHint": "Evidence: at least one photo",
+    "thisWeek": "This week",
+    "checkedIn": "At the internship",
+    "weekEmpty": "Nothing recorded this week yet.",
+    "targetHint": "target: dashed"
+  },
+  "stamp": {
+    "approved": "Approved",
+    "revision": "Revision",
+    "pending": "Awaiting review",
+    "closed": "Internship closed"
   },
   "flow": {
     "archiveEmpty": "No archived records",

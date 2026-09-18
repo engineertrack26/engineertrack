@@ -658,7 +658,25 @@
     "useServerCopy": "Sunucudaki kayıtla devam et",
     "taskChanged": "Bu görevin durumu başka bir yerde değişti. Görev listesine dönüp güncel kaydı aç. Bu ekrandaki içerik gönderilmedi.",
     "submitReview": "İncelemeye gönder",
-    "reviewHint": "Gönderdiğinde mentorun çalışmanı inceleyecek."
+    "reviewHint": "Gönderdiğinde mentorun çalışmanı inceleyecek.",
+    "competencies_title": "Yetkinlikler"
+  },
+  "dash": {
+    "dayLine": "Stajının {{day}}. günü · {{company}}",
+    "dayLineEnded": "Staj süresi sona erdi · {{company}}",
+    "mentor": "Mentor",
+    "jobCard": "İŞ KARTI",
+    "evidenceHint": "Kanıt: en az bir fotoğraf",
+    "thisWeek": "Bu hafta",
+    "checkedIn": "Stajdayım",
+    "weekEmpty": "Bu hafta henüz bir kayıt yok.",
+    "targetHint": "hedef: kesikli"
+  },
+  "stamp": {
+    "approved": "Onaylandı",
+    "revision": "Revizyon",
+    "pending": "Onay bekliyor",
+    "closed": "Staj tamamlandı"
   },
   "flow": {
     "archiveEmpty": "Arşiv kaydı yok",

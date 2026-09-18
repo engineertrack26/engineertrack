@@ -7,6 +7,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import type * as Notifications from 'expo-notifications';
 import { ActivityIndicator, LogBox, Pressable, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useFonts } from 'expo-font';
+import {
+  IBMPlexSans_400Regular,
+  IBMPlexSans_400Regular_Italic,
+  IBMPlexSans_500Medium,
+  IBMPlexSans_600SemiBold,
+} from '@expo-google-fonts/ibm-plex-sans';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -95,6 +102,12 @@ const AUTHENTICATED_AUTH_ROUTES = ['consent', 'privacy-policy', 'reset-password'
 
 export default function RootLayout() {
   const { t } = useTranslation();
+  const [fontsLoaded, fontError] = useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_400Regular_Italic,
+    IBMPlexSans_500Medium,
+    IBMPlexSans_600SemiBold,
+  });
   const { setUser, setSession, setLoading, reset, isAuthenticated, user } = useAuthStore();
   const resetLogStore = useLogStore((s) => s.reset);
   const resetGamificationStore = useGamificationStore((s) => s.reset);
@@ -286,9 +299,12 @@ export default function RootLayout() {
   }, []);
 
   // Network/auth work gets a visible loading/error UI, never an endless logo.
+  // Held until the app's font is loaded too, so nothing renders in the
+  // system fallback face and then swaps to IBM Plex Sans a frame later.
   useEffect(() => {
+    if (!fontsLoaded && !fontError) return;
     void SplashScreen.hideAsync().catch(() => {});
-  }, []);
+  }, [fontsLoaded, fontError]);
 
   // Protected routing
   useEffect(() => {
@@ -325,6 +341,8 @@ export default function RootLayout() {
       }
     }
   }, [isAuthenticated, appReady, segments, user]);
+
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

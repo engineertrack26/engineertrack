@@ -9,3 +9,6 @@ export { BackButton } from './BackButton';
 export { LevelPicker } from './LevelPicker';
 export { MarkdownView } from './MarkdownView';
 export { ClosureBanner } from './ClosureBanner';
+export { Stamp } from './Stamp';
+export type { StampKind } from './Stamp';
+export { LevelRail } from './LevelRail';

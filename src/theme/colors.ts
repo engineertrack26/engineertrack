@@ -1,28 +1,40 @@
 export const colors = {
-  primary: '#1a73e8',
-  primaryLight: '#4a90d9',
-  primaryDark: '#1557b0',
+  primary: '#12315E',
+  primaryLight: '#3E5375',
+  primaryDark: '#12315E',
 
-  secondary: '#34a853',
-  secondaryLight: '#5bb974',
-  secondaryDark: '#1e8e3e',
+  secondary: '#2F7D5B',
+  secondaryLight: '#E7F2EC',
+  secondaryDark: '#2F7D5B',
 
-  background: '#f8f9fa',
-  surface: '#ffffff',
-  card: '#ffffff',
+  background: '#EEF0EC',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
 
-  text: '#202124',
-  textSecondary: '#5f6368',
-  textDisabled: '#9aa0a6',
+  text: '#1B2430',
+  textSecondary: '#5B6672',
+  textDisabled: '#9AA59B',
   textOnPrimary: '#ffffff',
 
-  border: '#dadce0',
-  divider: '#e8eaed',
+  border: '#9AA59B',
+  divider: '#D3D8D1',
 
-  error: '#d93025',
-  warning: '#f9ab00',
-  success: '#34a853',
-  info: '#4285f4',
+  error: '#B3261E',
+  warning: '#D9A400',
+  success: '#2F7D5B',
+  info: '#3E5375',
+
+  // "Staj Defteri" design tokens
+  ink: '#12315E',
+  inkSoft: '#3E5375',
+  paper: '#FFFFFF',
+  page: '#EEF0EC',
+  rule: '#D3D8D1',
+  ruleStrong: '#9AA59B',
+  stamp: '#2F7D5B',
+  stampBg: '#E7F2EC',
+  warnBg: '#FBF3D6',
+  warnText: '#8A6800',
 
   // Gamification colors
   gamification: {
@@ -37,12 +49,12 @@ export const colors = {
 
   // Log status colors
   status: {
-    draft: '#9aa0a6',
-    submitted: '#4285f4',
-    underReview: '#f9ab00',
-    approved: '#34a853',
-    needsRevision: '#ea4335',
-    revised: '#fb8c00',
-    validated: '#1b5e20',
+    draft: '#9AA59B',
+    submitted: '#3E5375',
+    underReview: '#D9A400',
+    approved: '#2F7D5B',
+    needsRevision: '#8A6800',
+    revised: '#D9A400',
+    validated: '#2F7D5B',
   },
 } as const;
