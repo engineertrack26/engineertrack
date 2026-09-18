@@ -615,6 +615,8 @@
     "evidenceHint": "Evidence: at least one photo",
     "thisWeek": "This week",
     "checkedIn": "At the internship",
+    "checkInToday": "I'm at the internship today",
+    "myDays": "My internship days",
     "weekEmpty": "Nothing recorded this week yet.",
     "targetHint": "target: dashed"
   },

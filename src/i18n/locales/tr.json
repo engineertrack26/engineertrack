@@ -669,6 +669,8 @@
     "evidenceHint": "Kanıt: en az bir fotoğraf",
     "thisWeek": "Bu hafta",
     "checkedIn": "Stajdayım",
+    "checkInToday": "Bugün stajdayım",
+    "myDays": "Staj günlerim",
     "weekEmpty": "Bu hafta henüz bir kayıt yok.",
     "targetHint": "hedef: kesikli"
   },

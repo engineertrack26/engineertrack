@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { supabase } from '@/services/supabase';
@@ -13,7 +14,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { sortTasks, isActionable } from '@/utils/studentTasks';
 import { LoadFailedBanner, Stamp, LevelRail } from '@/components/common';
 import { StudentHeader, JobCard, ui } from '@/components/student/StudentUI';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import type { CompetencyProgress } from '@/types/competency';
 import type { MyAssignment } from '@/types/assignment';
 import type { InternshipDay } from '@/types/internshipDay';
@@ -67,10 +68,58 @@ interface WeekRow {
   title: string;
   subtitle?: string;
   right: ReactNode;
+  /** Set only on the "check in today" prompt -- the row is a button rather
+   *  than a plain information line. */
+  onPress?: () => void;
 }
 
-function buildTaskRows(items: MyAssignment[], monday: Date, sunday: Date, lang: string): WeekRow[] {
-  const rows: { date: Date; row: WeekRow }[] = [];
+function checkinRight(lang: string, checkInAt: string): ReactNode {
+  const time = new Date(checkInAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+  return <Text style={{ fontSize: 13, fontWeight: '500', fontFamily: fonts.medium, color: colors.stamp }}>{`✓ ${time}`}</Text>;
+}
+
+/** The ledger's first row is always today, whether or not there is anything
+ *  to show yet: checked in already -> a plain row like any other day;
+ *  otherwise a button that is the dashboard's one remaining entry point into
+ *  the internship-days check-in screen (the old quick-link card is gone).
+ *  Rendered even when the days service call failed -- that screen explains
+ *  its own unavailability, this row must not silently disappear instead. */
+function buildTodayRow(
+  checkins: InternshipDay[], todayIso: string, lang: string,
+  checkedInLabel: string, checkInPromptLabel: string, onCheckIn: () => void,
+): WeekRow {
+  const weekday = parseCalendarDate(todayIso).toLocaleDateString(lang, { weekday: 'short' });
+  const today = checkins.find((d) => d.day_date === todayIso);
+  if (today?.check_in_at) {
+    return { key: 'today', weekday, title: checkedInLabel, right: checkinRight(lang, today.check_in_at) };
+  }
+  return {
+    key: 'today', weekday, title: checkInPromptLabel,
+    right: <Ionicons name="chevron-forward" size={18} color={colors.ink} />,
+    onPress: onCheckIn,
+  };
+}
+
+/** Every other row in the week: earlier check-ins plus task submissions,
+ *  merged and sorted oldest-first (today's own check-in is handled above
+ *  and excluded here so it is never shown twice). */
+function buildOtherRows(
+  items: MyAssignment[], checkins: InternshipDay[], monday: Date, sunday: Date, todayIso: string,
+  lang: string, checkedInLabel: string,
+): WeekRow[] {
+  const dated: { date: Date; row: WeekRow }[] = [];
+  for (const d of checkins) {
+    if (!d.check_in_at || d.day_date === todayIso) continue;
+    dated.push({
+      date: new Date(d.check_in_at),
+      row: {
+        key: `checkin-${d.id}`,
+        weekday: parseCalendarDate(d.day_date).toLocaleDateString(lang, { weekday: 'short' }),
+        title: checkedInLabel,
+        right: checkinRight(lang, d.check_in_at),
+      },
+    });
+  }
   for (const task of items) {
     const submission = task.submission;
     if (!submission) continue;
@@ -83,7 +132,7 @@ function buildTaskRows(items: MyAssignment[], monday: Date, sunday: Date, lang: 
     const right = submission.status === 'approved' ? <Stamp kind="approved" date={shortDate} />
       : submission.status === 'needs_revision' ? <Stamp kind="revision" />
       : <Stamp kind="pending" />;
-    rows.push({
+    dated.push({
       date: eventDate,
       row: {
         key: task.id,
@@ -94,21 +143,8 @@ function buildTaskRows(items: MyAssignment[], monday: Date, sunday: Date, lang: 
       },
     });
   }
-  rows.sort((a, b) => a.date.getTime() - b.date.getTime());
-  return rows.map((r) => r.row);
-}
-
-function buildCheckinRows(days: InternshipDay[], lang: string, checkedInLabel: string): WeekRow[] {
-  return days.filter((d) => !!d.check_in_at).map((d) => {
-    const checkedInAt = new Date(d.check_in_at as string);
-    const time = checkedInAt.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
-    return {
-      key: `checkin-${d.id}`,
-      weekday: parseCalendarDate(d.day_date).toLocaleDateString(lang, { weekday: 'short' }),
-      title: checkedInLabel,
-      right: <Text style={{ fontSize: 13, fontWeight: '500', color: colors.stamp }}>{`✓ ${time}`}</Text>,
-    };
-  });
+  dated.sort((a, b) => a.date.getTime() - b.date.getTime());
+  return dated.map((r) => r.row);
 }
 
 export default function StudentDashboard() {
@@ -177,11 +213,14 @@ export default function StudentDashboard() {
   const refresh = () => { void tasks.reload(); void loadProfile(); };
 
   const { monday, sunday } = useMemo(() => weekRange(), []);
+  const todayIso = useMemo(() => isoDate(new Date()), []);
   const checkedInLabel = t('dash.checkedIn', 'At the internship');
+  const checkInPromptLabel = t('dash.checkInToday', "I'm at the internship today");
+  const goToInternshipDays = useCallback(() => router.push('/(student)/internship-days'), [router]);
   const weekRows = useMemo(() => [
-    ...buildCheckinRows(weekCheckins, i18n.language, checkedInLabel),
-    ...buildTaskRows(tasks.items, monday, sunday, i18n.language),
-  ], [weekCheckins, tasks.items, monday, sunday, i18n.language, checkedInLabel]);
+    buildTodayRow(weekCheckins, todayIso, i18n.language, checkedInLabel, checkInPromptLabel, goToInternshipDays),
+    ...buildOtherRows(tasks.items, weekCheckins, monday, sunday, todayIso, i18n.language, checkedInLabel),
+  ], [weekCheckins, tasks.items, monday, sunday, todayIso, i18n.language, checkedInLabel, checkInPromptLabel, goToInternshipDays]);
   const weekRangeLabel = `${monday.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}`;
 
   const info = profileSummary && dayInfo(profileSummary.startDate, profileSummary.endDate);
@@ -216,15 +255,22 @@ export default function StudentDashboard() {
         <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }} />
         {weekRows.length === 0 ? <Text style={[ui.secondary, { paddingVertical: 12 }]}>
           {t('dash.weekEmpty', 'Nothing recorded this week yet.')}
-        </Text> : weekRows.map((row) => <View key={row.key}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.divider }}>
-          <Text style={{ width: 34, fontSize: 13, color: colors.textSecondary, fontVariant: ['tabular-nums'] }}>{row.weekday}</Text>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ fontSize: 15, color: colors.text }}>{row.title}</Text>
-            {!!row.subtitle && <Text style={{ fontSize: 12.5, color: colors.textSecondary }}>{row.subtitle}</Text>}
-          </View>
-          {row.right}
-        </View>)}
+        </Text> : weekRows.map((row) => {
+          const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.divider };
+          const inner = <>
+            <Text style={{ width: 34, fontSize: 13, color: colors.textSecondary, fontVariant: ['tabular-nums' as const], fontFamily: fonts.regular }}>{row.weekday}</Text>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={row.onPress
+                ? { fontSize: 15, color: colors.ink, fontFamily: fonts.medium }
+                : { fontSize: 15, color: colors.text, fontFamily: fonts.regular }}>{row.title}</Text>
+              {!!row.subtitle && <Text style={{ fontSize: 12.5, color: colors.textSecondary, fontFamily: fonts.regular }}>{row.subtitle}</Text>}
+            </View>
+            {row.right}
+          </>;
+          return row.onPress
+            ? <Pressable key={row.key} accessibilityRole="button" onPress={row.onPress} style={rowStyle}>{inner}</Pressable>
+            : <View key={row.key} style={rowStyle}>{inner}</View>;
+        })}
       </View>
 
       <View style={{ gap: 12 }}>
@@ -247,7 +293,7 @@ export default function StudentDashboard() {
         </>}
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 18 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18, rowGap: 8 }}>
         <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/feed')}>
           <Text style={ui.link}>{t('tabs.feed')}</Text>
         </Pressable>
@@ -256,6 +302,9 @@ export default function StudentDashboard() {
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/log-history')}>
           <Text style={ui.link}>{t('studentFlow.archive')}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={goToInternshipDays}>
+          <Text style={ui.link}>{t('dash.myDays', 'My internship days')}</Text>
         </Pressable>
       </View>
     </ScrollView>
