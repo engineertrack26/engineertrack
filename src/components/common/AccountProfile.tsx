@@ -14,6 +14,7 @@ import type { SupportedLanguage, User } from '@/types/user';
 import { ui } from '@/components/common/workflowStyles';
 import { ProfileSheet } from '@/components/mentor/ProfileSheet';
 import { colors } from '@/theme';
+import { StudentAvatarProfile } from '@/components/student/StudentAvatarProfile';
 
 type Mode = 'name' | 'language' | 'password' | 'photo' | null;
 /** Shared account UI; role-specific content and navigation are supplied by callers. */
@@ -131,18 +132,19 @@ export function AccountProfile({ user, header, roleLabel, children }: {
       {!!success && <Text accessibilityLiveRegion="polite" style={ui.body}>{t(success)}</Text>}
       {!!error && !mode && <Text accessibilityRole="alert" style={[ui.body, { color: colors.error }]}>{t(error)}</Text>}
       <View style={ui.card}>
+        {user.role === 'student' && <StudentAvatarProfile key={user.id} userId={user.id} disabled={busy} />}
         <View style={ui.header}>
-          {user.avatarUrl && failedAvatar !== user.avatarUrl ? <Image source={{ uri: user.avatarUrl }} accessibilityLabel={t('mentorProfile.photo')}
+          {user.role !== 'student' && (user.avatarUrl && failedAvatar !== user.avatarUrl ? <Image source={{ uri: user.avatarUrl }} accessibilityLabel={t('mentorProfile.photo')}
             onError={() => setFailedAvatar(user.avatarUrl || null)} style={{ width: 72, height: 72, borderRadius: 36 }} /> :
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fe', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={[ui.title, { color: colors.primaryDark }]}>{reviewInitials(user.firstName + ' ' + user.lastName)}</Text>
-            </View>}
+            </View>)}
           <View style={{ flex: 1, gap: 8 }}><Text style={ui.section}>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}</Text>
             <Text style={[ui.badge, { backgroundColor: '#eaf2fe', color: colors.primaryDark }]}>{roleLabel}</Text></View>
         </View>
-        <Pressable accessibilityRole="button" disabled={busy} onPress={() => open('photo')} style={[ui.header, { minHeight: 48 }]}>
+        {user.role !== 'student' && <Pressable accessibilityRole="button" disabled={busy} onPress={() => open('photo')} style={[ui.header, { minHeight: 48 }]}>
           <Ionicons name="camera-outline" size={22} color={colors.primaryDark} /><Text style={[ui.link, { flexShrink: 1 }]}>{t('mentorProfile.changePhoto')}</Text>
-        </Pressable>
+        </Pressable>}
         <View style={{ borderTopWidth: 1, borderColor: colors.divider, paddingTop: 16, gap: 4 }}>
           <Text style={ui.secondary}>{t('auth.email')}</Text><Text selectable style={ui.body}>{user.email || '—'}</Text>
         </View>

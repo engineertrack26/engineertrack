@@ -10,6 +10,8 @@ import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
 import type { UserRole, SupportedLanguage } from '@/types/user';
+import type { StudentAvatarId } from '@/utils/studentAvatar';
+import { RegistrationAvatar } from '@/components/student/RegistrationAvatar';
 
 const ROLES: { key: UserRole; icon: string; color?: string }[] = [
   { key: 'student', icon: '🎓' },
@@ -30,6 +32,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
+  const [avatarId, setAvatarId] = useState<StudentAvatarId | null>(null);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -83,6 +86,7 @@ export default function RegisterScreen() {
         role,
         language: currentLang,
         consentVersion: PRIVACY_POLICY_VERSION,
+        avatarId: role === 'student' ? avatarId : null,
       });
 
       if (session && user) {
@@ -221,6 +225,7 @@ export default function RegisterScreen() {
             })}
           </View>
 
+          {role === 'student' && <RegistrationAvatar value={avatarId} onChange={setAvatarId} disabled={isSubmitting} />}
           <View style={styles.consentRow}>
             <TouchableOpacity
               onPress={() => setConsentAccepted((value) => !value)}

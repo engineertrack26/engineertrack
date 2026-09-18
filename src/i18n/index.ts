@@ -9,6 +9,7 @@ import el from './locales/el.json';
 import it from './locales/it.json';
 import ro from './locales/ro.json';
 import de from './locales/de.json';
+import { avatarCopy } from './avatarCopy';
 
 const supportedLanguages = ['en', 'tr', 'sr', 'el', 'it', 'ro', 'de'];
 // Start with the device language when supported; the user's saved
@@ -18,13 +19,13 @@ const defaultLanguage = supportedLanguages.includes(deviceLanguage) ? deviceLang
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { translation: en },
-    tr: { translation: tr },
-    sr: { translation: sr },
-    el: { translation: el },
-    it: { translation: it },
-    ro: { translation: ro },
-    de: { translation: de },
+    en: { translation: { ...en, avatarUi: avatarCopy.en } },
+    tr: { translation: { ...tr, avatarUi: avatarCopy.tr } },
+    sr: { translation: { ...sr, avatarUi: avatarCopy.sr } },
+    el: { translation: { ...el, avatarUi: avatarCopy.el } },
+    it: { translation: { ...it, avatarUi: avatarCopy.it } },
+    ro: { translation: { ...ro, avatarUi: avatarCopy.ro } },
+    de: { translation: { ...de, avatarUi: avatarCopy.de } },
   },
   lng: defaultLanguage,
   fallbackLng: 'en',

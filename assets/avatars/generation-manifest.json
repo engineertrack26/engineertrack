@@ -1,0 +1,172 @@
+{
+  "tool": "built-in image_gen",
+  "status": "artwork and registration/profile integration complete; live SQL and Expo Go acceptance pending",
+  "references": [
+    "C:/Users/Girisimci/.codex/generated_images/01a08cbd-380c-7182-8484-87977828a051/exec-29b87865-ac6a-4366-8bf0-9144033c48e9.png",
+    "C:/Users/Girisimci/.codex/generated_images/01a08cbd-380c-7182-8484-87977828a051/exec-30831eb3-9a07-46e8-a15f-3b465f38cffd.png"
+  ],
+  "assets": [
+    {
+      "id": "01-1",
+      "file": "01-1.png",
+      "prompt": "Use case: identity-preserve. Production mobile avatar image, SINGLE CHARACTER ONLY. Reference1 is identity sheet: extract character01 top-left, young man with voluminous dark wavy hair, brown eyes, light olive skin, faint stubble. Reference2 is his approved stage progression. Reproduce LEFT stage1, original blue overshirt over white T-shirt holding closed silver laptop. Preserve EXACT face/hair/age and approved polished stylized 3D quality. Waist-up portrait with full hair and shoulders, centered, generous 8% headroom and side space, waist at bottom edge. Square composition, pale blue seamless backdrop edge-to-edge. Natural hands, friendly expression. No typography, numbers, borders, rounded card corners, collage or other characters. No badge. This is one final image asset, not a concept board.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-74436838-f429-43a0-bc8a-eb993204475b.png"
+    },
+    {
+      "id": "01-5",
+      "file": "01-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production mobile avatar image, character01 top-left of reference1, same young man as reference2. Reproduce MIDDLE stage5 reference2: blue overshirt with cyan seam accents, white shirt, holding tablet with CAD geometry, pale blue drafting-line background. Reference1 is approved identity sheet; reference2 demonstrates evolution style only. Exact same face, hair, skin tone, age and stylized 3D rendering quality as specified character. Waist-up portrait, centered, full hair and shoulders, 8% headroom, square composition with backdrop edge-to-edge. Friendly expression, clean anatomical hands. No text, numbers, borders, badges, collages, rounded corners, other characters or logos.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-b1f5cc40-3b40-455c-ad29-974c66f0e5f1.png"
+    },
+    {
+      "id": "01-10",
+      "file": "01-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production mobile avatar image, character01 top-left of reference1, same young man as reference2. Reproduce RIGHT stage10 reference2: practical navy work jacket with teal panels, tablet in one arm and small robot prototype in other hand, refined blue engineering-line background. Reference1 is approved identity sheet; reference2 demonstrates evolution style only. Exact same face, hair, skin tone, age and stylized 3D rendering quality as specified character. Waist-up portrait, centered, full hair and shoulders, 8% headroom, square composition with backdrop edge-to-edge. Friendly expression, clean anatomical hands. No text, numbers, borders, badges, collages, rounded corners, other characters or logos.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-9edbe9e1-f0e1-4105-98e3-8406e9414ba2.png"
+    },
+    {
+      "id": "02-1",
+      "file": "02-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production mobile avatar image, character02 top-middle of reference1: young woman curly brown tied-back hair, teal practical shirt holding small circuit board. Stage1, preserve original outfit and facial identity exactly, pale mint backdrop. Reference1 is approved identity sheet; reference2 demonstrates evolution style only. Exact same face, hair, skin tone, age and stylized 3D rendering quality as specified character. Waist-up portrait, centered, full hair and shoulders, 8% headroom, square composition with backdrop edge-to-edge. Friendly expression, clean anatomical hands. No text, numbers, borders, badges, collages, rounded corners, other characters or logos.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-cd7e6848-4d42-4f60-a434-e6072e146f1d.png"
+    },
+    {
+      "id": "02-5",
+      "file": "02-5-v2.png",
+      "prompt": "Edit only the backdrop of this exact avatar. Preserve the woman, face, hair, teal outfit, hands, circuit board, tablet, framing and all identity details UNCHANGED. Fill the entire square canvas edge-to-edge with a continuous fully OPAQUE pale mint background and subtle circuit diagram linework. Remove the irregular transparent/black vignette edges. No transparency, black corners, feathered cutoff, border, text or new objects. Final should be a clean square production avatar portrait with full rectangular backdrop.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-61ccbfce-b3a9-418d-a30a-2db3f28561d9.png"
+    },
+    {
+      "id": "02-10",
+      "file": "02-10.png",
+      "prompt": "Use case: identity-preserve. Production avatar SINGLE PERSON, character 02 top-middle, curly brunette woman, teal shirt from first reference. Second reference is only the approved evolution styling approach. dark teal practical jacket with mint panels, holding compact electronic sensor prototype and tablet, richer teal subtle circuit-line background. Preserve exact original facial identity, hair, age20-24 and skin tone. Same premium stylized 3D waist-up human avatar aesthetic. Square edge-to-edge background, full hair and shoulders, 8% margin around head, waist at bottom, naturally posed hands, friendly smile. No text, numbers, collage, badge, logo, borders, or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-97f83123-c2f2-4621-b7a9-5a422165ced0.png"
+    },
+    {
+      "id": "03-1",
+      "file": "03-1.png",
+      "prompt": "Use case: identity-preserve. Production avatar SINGLE PERSON, character 03 top-right, young woman short dark bob, white hardhat, amber safety vest from first reference. Second reference is only the approved evolution styling approach. original white hardhat amber safety vest over dark shirt, holding rolled engineering plans, pale warm cream backdrop. Preserve exact original facial identity, hair, age20-24 and skin tone. Same premium stylized 3D waist-up human avatar aesthetic. Square edge-to-edge background, full hair and shoulders, 8% margin around head, waist at bottom, naturally posed hands, friendly smile. No text, numbers, collage, badge, logo, borders, or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-ad17a764-2987-426f-a4a5-85b906778650.png"
+    },
+    {
+      "id": "03-5",
+      "file": "03-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 03 top-right, short dark bob young woman, white hardhat from reference1. Reference2 only illustrates evolution. amber safety vest with navy work-shirt sleeves, holding tablet displaying structural plan, pale amber drafting-line background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-73f6b185-b19e-4017-8da5-543392423533.png"
+    },
+    {
+      "id": "03-10",
+      "file": "03-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 03 top-right, short dark bob young woman, white hardhat from reference1. Reference2 only illustrates evolution. refined navy practical field jacket under amber reflective safety vest, holding compact bridge structural model, richer amber geometric engineering-line background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-53b1183e-269d-48dd-a8ff-8ef69bbf70c8.png"
+    },
+    {
+      "id": "04-1",
+      "file": "04-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 04 middle-left, young brown-skinned man curly dark hair round glasses light facial stubble from reference1. Reference2 only illustrates evolution. original plum sweatshirt and small mechanical gear assembly held with both hands, pale lilac background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-4cb4c4f8-e98c-44ff-839c-0a35a5390020.png"
+    },
+    {
+      "id": "04-5",
+      "file": "04-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 04 middle-left man, curly dark hair, round glasses, brown skin, light stubble from reference1. Reference2 only illustrates approved evolution. plum overshirt with pale violet seams over original sweatshirt, tablet showing gear CAD and small gear sample, light lilac technical background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-c27ba828-c7f4-4e4b-9989-21f4c3ffa28d.png"
+    },
+    {
+      "id": "04-10",
+      "file": "04-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 04 middle-left man, curly dark hair, round glasses, brown skin, light stubble from reference1. Reference2 only illustrates approved evolution. dark plum practical work jacket with violet accents, holding compact mechanical transmission prototype, deeper lilac mechanical drafting background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-1a731193-ae31-4598-aa29-56a20e5fa554.png"
+    },
+    {
+      "id": "05-1",
+      "file": "05-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 05 center young woman in neatly styled NAVY HEADSCARF with brown eyes from reference1. Reference2 only illustrates approved evolution. original light blue work shirt and navy headscarf, holding CAD tablet, pale blue background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-d3a4cc8c-ce9a-48bc-93dd-412d012f5eaa.png"
+    },
+    {
+      "id": "05-5",
+      "file": "05-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 05 center young woman in neatly styled NAVY HEADSCARF with brown eyes from reference1. Reference2 only illustrates approved evolution. light blue work shirt with subtle turquoise seams, unchanged navy headscarf, tablet and small CAD part sample, pale blue drafting-line background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-2a6b03a3-bb13-490c-b97b-013e00aa9188.png"
+    },
+    {
+      "id": "05-10",
+      "file": "05-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 05 center young woman in neatly styled NAVY HEADSCARF with brown eyes from reference1. Reference2 only illustrates approved evolution. practical navy jacket with light blue panels and unchanged navy headscarf, holding compact 3D printed structural prototype and tablet, deeper blue engineering-line background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-e8c7c953-4fae-4f42-b4db-5d3c7bf069f0.png"
+    },
+    {
+      "id": "06-1",
+      "file": "06-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 06 middle-right young dark-skinned man, short tight black curls from reference1. Reference2 only illustrates approved evolution. original olive green overshirt over white tee, holding small solar panel model, pale sage background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-cb5e5dbb-b80e-489b-b201-ddf0f55e5d8c.png"
+    },
+    {
+      "id": "06-5",
+      "file": "06-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 06 middle-right young dark-skinned man, short tight black curls from reference1. Reference2 only illustrates approved evolution. olive shirt with sage seam accents over white tee, holding solar model and slim tablet, pale sage energy schematic background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-97a354f7-0ebd-4167-9576-873ce2e2b214.png"
+    },
+    {
+      "id": "06-10",
+      "file": "06-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 06 middle-right young dark-skinned man, short tight black curls from reference1. Reference2 only illustrates approved evolution. dark green practical jacket with sage panels, holding compact solar energy prototype model, richer sage-green energy schematic background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-0062c1fe-b3b4-4e5a-a5d7-4a32891843b3.png"
+    },
+    {
+      "id": "07-1",
+      "file": "07-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 07 bottom-left young woman auburn ponytail clear safety glasses from reference1. Reference2 only illustrates approved evolution. original white lab coat over charcoal shirt holding small gray materials sample, pale peach backdrop. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-170e067c-b814-4fb3-895d-a19408d8bb11.png"
+    },
+    {
+      "id": "07-5",
+      "file": "07-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 07 bottom-left young woman auburn ponytail clear safety glasses from reference1. Reference2 only illustrates approved evolution. same white lab coat with discreet peach seam accents, holding materials sample and tablet showing lattice structure, pale peach geometric drafting background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-f0576087-06d2-4bcb-a3d7-f92ff493ee95.png"
+    },
+    {
+      "id": "07-10",
+      "file": "07-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 07 bottom-left young woman auburn ponytail clear safety glasses from reference1. Reference2 only illustrates approved evolution. white lab coat with restrained terracotta trim over dark shirt, holding structured lattice materials prototype with tablet in arm, richer warm peach materials diagram background. Preserve exact face, hair, skin tone, age20-24, glasses/headwear if specified. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-54c50e9e-6f1e-462f-b75e-47a408bdda49.png"
+    },
+    {
+      "id": "08-1",
+      "file": "08-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 08 bottom-center young East Asian man with straight black hair from reference1. Reference2 only illustrates approved evolution. original slate overshirt over white tee holding small wheeled robotics prototype, pale slate-blue backdrop. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-934b12d3-eada-4fcb-8479-ddfda3f7fd7f.png"
+    },
+    {
+      "id": "08-5",
+      "file": "08-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 08 bottom-center young East Asian man with straight black hair from reference1. Reference2 only illustrates approved evolution. slate work shirt with cyan seam details holding small wheeled robotics prototype and tablet, pale slate robotics drafting-line backdrop. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-3261b4a3-7205-4db2-8566-d91b7b0b5f7a.png"
+    },
+    {
+      "id": "08-10",
+      "file": "08-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 08 bottom-center young East Asian man with straight black hair from reference1. Reference2 only illustrates approved evolution. dark slate practical jacket with cyan shoulder panels holding compact articulated robotics prototype, richer slate blue technical-line background. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-5c00c8e2-6bd9-47fd-ae3e-f7387f6b57ee.png"
+    },
+    {
+      "id": "09-1",
+      "file": "09-1.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 09 bottom-right young woman warm brown skin shoulder-length wavy dark hair from reference1. Reference2 only illustrates approved evolution. original terracotta work shirt holding technical sketch notebook, pale warm sand backdrop. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-f0081f87-dc73-4960-9475-8df066e8734e.png"
+    },
+    {
+      "id": "09-5",
+      "file": "09-5.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 09 bottom-right young woman warm brown skin shoulder-length wavy dark hair from reference1. Reference2 only illustrates approved evolution. terracotta work shirt with copper seam detail holding tablet with engineering drawing and stylus, pale warm sand drafting-line backdrop. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-80c150f9-aca9-4e9c-88a3-2dea5dcdab1c.png"
+    },
+    {
+      "id": "09-10",
+      "file": "09-10.png",
+      "prompt": "Use case: identity-preserve. SINGLE production avatar. Character 09 bottom-right young woman warm brown skin shoulder-length wavy dark hair from reference1. Reference2 only illustrates approved evolution. dark terracotta practical work jacket with muted copper accents, holding a small structural prototype and tablet, richer warm terracotta engineering-line background. Preserve exact face, hair, skin tone, age20-24. Premium approved stylized 3D, waist-up centered, full hair and shoulders, 8% headroom, square composition. Fully OPAQUE backdrop covering EVERY pixel edge-to-edge, no transparency or vignette. Friendly natural expression, correct hands. No text, numbers, panel borders, collage, badges, logos or other people.",
+      "source": "C:\\Users\\Girisimci\\.codex\\generated_images\\01a08cbd-380c-7182-8484-87977828a051\\exec-7edb1050-a443-4e5d-8e8b-5f86f33f447a.png"
+    }
+  ]
+}

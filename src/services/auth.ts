@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { createClient, Session } from '@supabase/supabase-js';
 import { User, UserRole, SupportedLanguage } from '@/types/user';
+import { isStudentAvatarId, type StudentAvatarId } from '@/utils/studentAvatar';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -13,6 +14,7 @@ interface SignUpParams {
   role: UserRole;
   language: SupportedLanguage;
   consentVersion?: string;
+  avatarId?: StudentAvatarId | null;
 }
 
 interface SignInParams {
@@ -34,7 +36,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 }
 
 export const authService = {
-  async signUp({ email, password, firstName, lastName, role, language, consentVersion }: SignUpParams) {
+  async signUp({ email, password, firstName, lastName, role, language, consentVersion, avatarId }: SignUpParams) {
     const metadata: Record<string, unknown> = {
       first_name: firstName,
       last_name: lastName,
@@ -43,6 +45,10 @@ export const authService = {
     };
     if (consentVersion) {
       metadata.consent_version = consentVersion;
+    }
+    if (role === 'student' && avatarId != null) {
+      if (!isStudentAvatarId(avatarId)) throw new Error('AVATAR_INVALID');
+      metadata.student_avatar_id = avatarId;
     }
     const { data, error } = await supabase.auth.signUp({
       email,
