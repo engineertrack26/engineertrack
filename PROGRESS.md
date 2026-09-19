@@ -227,6 +227,12 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Turkish stream interface completion
+
+- Fixed the stream's English fallback: the Turkish `feed` section previously contained only its title. Added all missing stream labels for comments, likes, polls, attachments, group publishing, drafts, confirmations and empty/error states, preserving interpolation placeholders and plural variants.
+- Added six missing stream RPC error translations, the archived-group label and the assigned-task post label. User-written posts, comments, poll choices and custom task content remain unchanged; no SQL migration is needed.
+- Added regression coverage for feed translation completeness, counters, draft actions and RPC errors. TypeScript passed; full Jest suite passed (58 suites / 561 tests). Expo Go visual verification remains with the owner.
+
 ### Turkish ready-task content and competency names
 
 - **Delivered and pushed:** `0048870` on `feature/competency-framework`.
