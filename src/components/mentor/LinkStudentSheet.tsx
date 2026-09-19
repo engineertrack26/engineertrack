@@ -42,7 +42,7 @@ export function LinkStudentSheet({ userId, onClose, onLinked }: {
       style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
       <Pressable accessible={false} onPress={close} style={{ position: 'absolute', inset: 0 }} />
       <SafeAreaView accessibilityViewIsModal edges={['bottom', 'left', 'right']}
-        style={{ backgroundColor: '#fff', maxHeight: '90%', width: '100%', maxWidth: 720, alignSelf: 'center', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+        style={{ backgroundColor: colors.paper, maxHeight: '90%', width: '100%', maxWidth: 720, alignSelf: 'center', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, gap: 16 }}>
           <View style={ui.header}>
             <Text accessibilityRole="header" style={[ui.section, { flex: 1 }]}>{t('mentorStudents.link')}</Text>

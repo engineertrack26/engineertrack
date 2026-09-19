@@ -136,11 +136,11 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         <View style={ui.header}>
           {user.role !== 'student' && (user.avatarUrl && failedAvatar !== user.avatarUrl ? <Image source={{ uri: user.avatarUrl }} accessibilityLabel={t('mentorProfile.photo')}
             onError={() => setFailedAvatar(user.avatarUrl || null)} style={{ width: 72, height: 72, borderRadius: 36 }} /> :
-            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fe', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={[ui.title, { color: colors.primaryDark }]}>{reviewInitials(user.firstName + ' ' + user.lastName)}</Text>
             </View>)}
           <View style={{ flex: 1, gap: 8 }}><Text style={ui.section}>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}</Text>
-            <Text style={[ui.badge, { backgroundColor: '#eaf2fe', color: colors.primaryDark }]}>{roleLabel}</Text></View>
+            <Text style={[ui.badge, { backgroundColor: colors.inkBg, color: colors.ink }]}>{roleLabel}</Text></View>
         </View>
         {user.role !== 'student' && <Pressable accessibilityRole="button" disabled={busy} onPress={() => open('photo')} style={[ui.header, { minHeight: 48 }]}>
           <Ionicons name="camera-outline" size={22} color={colors.primaryDark} /><Text style={[ui.link, { flexShrink: 1 }]}>{t('mentorProfile.changePhoto')}</Text>
@@ -148,7 +148,7 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         <View style={{ borderTopWidth: 1, borderColor: colors.divider, paddingTop: 16, gap: 4 }}>
           <Text style={ui.secondary}>{t('auth.email')}</Text><Text selectable style={ui.body}>{user.email || '—'}</Text>
         </View>
-        <Pressable accessibilityRole="button" disabled={busy} onPress={() => open('name')} style={[ui.primary, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.primaryDark }]}>
+        <Pressable accessibilityRole="button" disabled={busy} onPress={() => open('name')} style={[ui.primary, { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.ink }]}>
           <Ionicons name="pencil-outline" size={22} color={colors.primaryDark} /><Text style={[ui.primaryText, { color: colors.primaryDark }]}>{t('mentorProfile.edit')}</Text>
         </Pressable>
       </View>
@@ -162,7 +162,7 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         {row(t('legal.privacy.title'), 'shield-checkmark-outline', () => router.push('/(auth)/privacy-policy'))}
       </View>
       <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={signOut}
-        style={[ui.primary, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.error }]}>
+        style={[ui.primary, { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.error }]}>
         {busy && !mode ? <ActivityIndicator color={colors.error} /> : <Ionicons name="log-out-outline" size={22} color={colors.error} />}
         <Text style={[ui.primaryText, { color: colors.error }]}>{t('auth.signOut')}</Text>
       </Pressable>
@@ -176,7 +176,7 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         <Text style={ui.body}>{t('mentorProfile.languageHint')}</Text>
         <View accessibilityRole="radiogroup">
           {PROFILE_LANGUAGES.map(item => <Pressable key={item.code} accessibilityRole="radio" accessibilityState={{ checked: language === item.code, disabled: busy }}
-            disabled={busy} onPress={() => setLanguage(item.code)} style={[ui.header, { minHeight: 52, padding: 12, borderRadius: 8, backgroundColor: language === item.code ? '#eaf2fe' : '#fff' }]}>
+            disabled={busy} onPress={() => setLanguage(item.code)} style={[ui.header, { minHeight: 52, padding: 12, borderRadius: 6, borderWidth: 1, borderColor: language === item.code ? colors.ink : colors.divider, backgroundColor: language === item.code ? colors.inkBg : colors.paper }]}>
             <Ionicons name={language === item.code ? 'radio-button-on' : 'radio-button-off'} size={24} color={language === item.code ? colors.primaryDark : colors.textSecondary} />
             <Text style={ui.body}>{item.label}</Text>
           </Pressable>)}

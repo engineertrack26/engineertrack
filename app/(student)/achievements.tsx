@@ -9,11 +9,10 @@ import { useGamificationStore } from '@/store/gamificationStore';
 import { studentGrowthViewService } from '@/services/studentGrowthView';
 import { groupService } from '@/services/group';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
-import { LoadFailedBanner } from '@/components/common';
+import { LoadFailedBanner, Stamp } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
 import { ui } from '@/components/common/workflowStyles';
 import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
-import { closureLabel } from '@/utils/closure';
 import { colors } from '@/theme';
 import { GrowthJourney } from '@/components/gamification/GrowthJourney';
 import { LEVELS } from '@/types/gamification';
@@ -78,7 +77,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
       <StudentHeader title={t('studentFlow.growth')} />
       <Text style={ui.secondary}>{t('growthUi.intro')}</Text>
       {!!closure?.closed && <View style={ui.card}>
-        <Text style={ui.body}>{closureLabel(closure, t, i18n.language)}</Text>
+        <Stamp kind="closed" date={closure.closedAt ? new Date(closure.closedAt).toLocaleDateString(i18n.language) : undefined} />
         <TouchableOpacity accessibilityRole="button" onPress={() => router.push({ pathname: '/(student)/internship-report', params: { studentId, groupId: groupId! } })}>
           <Text style={styles.link}>{t('closure.myReport', 'My report')}</Text>
         </TouchableOpacity>
@@ -171,7 +170,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
             const date = new Date(String(tx.created_at || ''));
             return <View key={String(tx.id)} style={ui.card}>
               <Text style={ui.label}>{t(growthReason(String(tx.reason || '')))}</Text>
-              <Text style={[styles.link, { color: amount < 0 ? '#a52929' : '#21613e' }]}>{amount > 0 ? '+' : ''}{amount} XP</Text>
+              <Text style={[styles.link, { color: amount < 0 ? colors.error : colors.stamp }]}>{amount > 0 ? '+' : ''}{amount} XP</Text>
               {!Number.isNaN(date.getTime()) && <Text style={ui.secondary}>{date.toLocaleDateString(i18n.language)}</Text>}
             </View>;
           })}
@@ -187,14 +186,14 @@ function GrowthContent({ studentId }: { studentId: string }) {
 }
 const styles = StyleSheet.create({
   levelToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  levelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#b8ccea' },
-  featured: { backgroundColor: '#eaf1fb', borderColor: '#b8ccea' },
+  levelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.rule },
+  featured: { borderColor: colors.ink, borderWidth: 1.5 },
   xp: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.divider, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: colors.primaryDark },
-  action: { minHeight: 52, flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderWidth: 1, borderColor: colors.primaryDark, borderRadius: 14 },
+  action: { minHeight: 52, flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderWidth: 1, borderColor: colors.primaryDark, borderRadius: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { minHeight: 48, maxWidth: '100%', padding: 12, justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.divider },
+  chip: { minHeight: 48, maxWidth: '100%', padding: 12, justifyContent: 'center', borderRadius: 6, borderWidth: 1, borderColor: colors.divider },
   link: { fontSize: 16, fontWeight: '600', color: colors.primaryDark },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   barLabel: { width: 52, fontSize: 12, color: colors.textSecondary },

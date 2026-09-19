@@ -136,7 +136,7 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
           <Text style={ui.secondary}>{t('advisorHome.followUpHint')}</Text>
           {followUp === null ? <Text style={ui.body}>{t('advisorHome.unavailable')}</Text> :
             followUp.length === 0 ? <View style={styles.calm}>
-              <Ionicons name="checkmark-circle-outline" size={24} color={colors.primaryDark} />
+              <Ionicons name="checkmark-circle-outline" size={24} color={colors.stamp} />
               <Text style={[ui.body, { flex: 1 }]}>{t('advisorHome.allClear')}</Text>
             </View> : visibleFollowUp?.map((student) => {
               const name = [student.firstName, student.lastName].filter(Boolean).join(' ');
@@ -192,13 +192,13 @@ function Metric({ label, value }: { label: string; value?: number }) {
 }
 
 const styles = StyleSheet.create({
-  hero: { backgroundColor: '#eaf1fb', borderRadius: 20, padding: 20, gap: 14, borderWidth: 1, borderColor: '#cadcf7' },
-  heroIcon: { backgroundColor: '#fff', width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  hero: { backgroundColor: colors.paper, borderRadius: 6, padding: 20, gap: 14, borderWidth: 1.5, borderColor: colors.ink },
+  heroIcon: { backgroundColor: colors.inkBg, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   metrics: { flexDirection: 'row', gap: 12 },
   metricValue: { fontSize: 30, fontWeight: '700', color: colors.text },
   percent: { fontSize: 22, fontWeight: '700', color: colors.primaryDark },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden' },
   fill: { height: 8, backgroundColor: colors.primaryDark, borderRadius: 4 },
-  calm: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#eaf1fb', borderRadius: 16, padding: 16 },
-  followCard: { borderLeftWidth: 4, borderLeftColor: '#9b6919' },
+  calm: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.stampBg, borderRadius: 6, padding: 16 },
+  followCard: { borderLeftWidth: 4, borderLeftColor: colors.warning },
 });

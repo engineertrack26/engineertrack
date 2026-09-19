@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useGroupStore } from '@/store/groupStore';
 import { useAuthStore } from '@/store/authStore';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { ui } from '@/components/common/workflowStyles';
 
 export function AdvisorBell() {
@@ -67,8 +67,8 @@ export const groupStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   grow: { flex: 1, gap: 4 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-  outline: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: colors.primaryDark, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  linkText: { fontSize: 16, fontWeight: '600', color: colors.primaryDark, flexShrink: 1 },
-  pill: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 24, backgroundColor: colors.surface, justifyContent: 'center' },
-  selected: { backgroundColor: '#e8f0fe' },
+  outline: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: colors.ink, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  linkText: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink, flexShrink: 1 },
+  pill: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.divider, backgroundColor: colors.paper, justifyContent: 'center' },
+  selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
 });

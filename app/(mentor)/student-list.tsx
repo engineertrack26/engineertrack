@@ -81,7 +81,7 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
           {!!query && <Pressable accessibilityRole="button" accessibilityLabel={t('mentorStudents.clearSearch')}
             onPress={() => setQuery('')} style={ui.iconButton}><Ionicons name="close" size={22} color={colors.textSecondary} /></Pressable>}
         </View>
-        <Pressable accessibilityRole="button" style={[ui.primary, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.primaryDark }]}
+        <Pressable accessibilityRole="button" style={[ui.primary, { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.ink }]}
           onPress={() => { setSuccess(''); setLinking(true); }}>
           <Ionicons name="add" size={22} color={colors.primaryDark} />
           <Text style={[ui.primaryText, { color: colors.primaryDark }]}>{t('mentorStudents.link')}</Text>
@@ -91,7 +91,7 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
           {[false, true].map(value => <Pressable key={String(value)} accessibilityRole="button"
             accessibilityState={{ selected: pendingOnly === value, disabled: value && counts === null }}
             disabled={value && counts === null} onPress={() => setPendingOnly(value)}
-            style={[ui.badge, { minHeight: 48, justifyContent: 'center', backgroundColor: pendingOnly === value ? '#eaf2fe' : '#fff', borderWidth: 1, borderColor: colors.divider }]}>
+            style={[ui.badge, { minHeight: 48, justifyContent: 'center', backgroundColor: pendingOnly === value ? colors.inkBg : colors.paper, borderWidth: 1, borderColor: pendingOnly === value ? colors.ink : colors.divider }]}>
             <Text style={[ui.secondary, pendingOnly === value && { color: colors.primaryDark, fontWeight: '600' }]}>
               {value ? t('mentorStudents.pendingFilter') : t('mentorStudents.all')} ({value ? counts === null ? '—' : pendingStudents : loading || failed ? '—' : students.length})
             </Text>
@@ -105,8 +105,8 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
         onPress={() => router.setParams({ studentId: item.id })} style={({ pressed }) => [ui.card, { opacity: pressed ? 0.7 : 1 }]}>
         <StudentIdentity student={item} />
         <StudentDates student={item} />
-        <Text style={[ui.badge, { color: counts && counts[item.id] > 0 ? '#855000' : colors.textSecondary,
-          backgroundColor: counts && counts[item.id] > 0 ? '#fff7e8' : colors.background }]}>
+        <Text style={[ui.badge, { color: counts && counts[item.id] > 0 ? colors.warnText : colors.textSecondary,
+          backgroundColor: counts && counts[item.id] > 0 ? colors.warnBg : colors.page }]}>
           {counts === null ? t('mentorStudents.countUnknown') : counts[item.id] > 0 ? t('mentorStudents.waiting', { count: counts[item.id] }) : t('mentorStudents.noPending')}
         </Text>
         <View style={[ui.header, { borderTopWidth: 1, borderColor: colors.divider, minHeight: 48 }]}>

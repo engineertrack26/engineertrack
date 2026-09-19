@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
 import { colors } from '@/theme';
-import { BackButton, LoadFailedBanner } from '@/components/common';
+import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { mapTaskFeedback, mapLegacyFeedback, filterFeedback, feedbackDate, feedbackOutcome,
   type FeedbackItem, type FeedbackFilter } from '@/utils/mentorFeedbackView';
@@ -93,7 +93,6 @@ function FeedbackContent({ mentorId }: { mentorId: string }) {
         </View> : null}
       renderItem={({ item }) => {
         const outcome = feedbackOutcome(item);
-        const color = outcome === 'approved' ? '#21613e' : outcome === 'revision' ? '#854f0b' : colors.textSecondary;
         const note = item.kind === 'task' ? item.note : item.comments;
         return <View style={ui.card}>
           <View style={ui.header}>
@@ -105,17 +104,13 @@ function FeedbackContent({ mentorId }: { mentorId: string }) {
               <Text style={ui.secondary}>{t('feedbackUi.reviewed', { date: formatDate(item.kind === 'task' ? item.reviewedAt : item.createdAt) })}</Text>
             </View>
           </View>
-          <View style={[styles.badge, { backgroundColor: outcome === 'approved' ? '#eaf5ee' : '#fff5e5' }]}>
-            <Ionicons name={outcome === 'approved' ? 'checkmark-circle-outline' : outcome === 'revision' ? 'refresh-outline' : 'time-outline'}
-              size={20} color={color} />
-            <Text style={[ui.label, { color, flexShrink: 1 }]}>{t(outcome === 'approved' ? 'mentor.statusApproved' :
-              outcome === 'revision' ? 'mentor.statusRevision' : 'feedbackUi.other')}</Text>
-          </View>
+          {outcome === 'approved' || outcome === 'revision' ? <Stamp kind={outcome} /> :
+            <Text style={ui.secondary}>{t('feedbackUi.other')}</Text>}
           <Text style={ui.cardTitle}>{item.kind === 'task' ? item.assignmentTitle : item.logTitle}</Text>
           {item.kind === 'legacy' && <>
             <Text style={ui.secondary}>{t('feedbackUi.logDate', { date: formatDate(item.logDate) })}</Text>
             <View style={styles.wrap} accessible accessibilityLabel={t('feedbackUi.rating', { rating: item.rating })}>
-              {[1, 2, 3, 4, 5].map((star) => <Ionicons key={star} name={star <= item.rating ? 'star' : 'star-outline'} size={20} color="#805400" />)}
+              {[1, 2, 3, 4, 5].map((star) => <Ionicons key={star} name={star <= item.rating ? 'star' : 'star-outline'} size={20} color={colors.warnText} />)}
               <Text style={ui.label}>{item.rating}/5</Text>
             </View>
           </>}
@@ -133,11 +128,10 @@ function FeedbackContent({ mentorId }: { mentorId: string }) {
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  chip: { minHeight: 48, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center', maxWidth: '100%' },
-  selected: { backgroundColor: '#eaf1fb', borderColor: colors.primaryDark },
+  chip: { minHeight: 48, padding: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center', maxWidth: '100%' },
+  selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
   link: { color: colors.primaryDark, fontSize: 16, fontWeight: '600' },
-  avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#eaf1fb', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' },
   initials: { fontSize: 18, color: colors.primaryDark, fontWeight: '700', textTransform: 'uppercase' },
-  badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', padding: 10, gap: 8, borderRadius: 12, maxWidth: '100%' },
-  note: { padding: 16, borderRadius: 12, backgroundColor: colors.background, gap: 8 },
+  note: { padding: 16, borderRadius: 6, backgroundColor: colors.page, gap: 8 },
 });

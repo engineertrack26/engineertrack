@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
-import { BackButton, LoadFailedBanner } from '@/components/common';
+import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
@@ -335,8 +335,7 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
             {students.map((student) => <View key={student.id} style={ui.card}>
               <View style={groupStyles.row}>
                 <Text style={[ui.cardTitle, { flex: 1 }]}>{student.name}</Text>
-                {data.closedStudentIds.includes(student.id) &&
-                  <Text style={[ui.badge, { color: colors.primaryDark, backgroundColor: '#eaf2fe' }]}>{t('closure.badge', 'Closed')}</Text>}
+                {data.closedStudentIds.includes(student.id) && <Stamp kind="closed" />}
               </View>
               <Text style={ui.label}>{t('advisorMonitor.progress')} · {student.completionPercent}%</Text>
               <ReportProgress label={student.name + ': ' + t('advisorMonitor.progress')} percent={student.completionPercent} />
@@ -414,8 +413,8 @@ function ReportProgress({ label, percent }: { label: string; percent: number }) 
 }
 const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tab: { minHeight: 48, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center' },
-  selected: { backgroundColor: '#eaf1fb', borderColor: colors.primaryDark },
+  tab: { minHeight: 48, padding: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center' },
+  selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
   metrics: { flexDirection: 'row', gap: 12 },
   counts: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   count: { minWidth: 64, alignItems: 'center' },

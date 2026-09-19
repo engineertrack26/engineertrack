@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { ui } from '@/components/common/workflowStyles';
+import { Stamp } from '@/components/common/Stamp';
 import { useNotificationStore } from '@/store/notificationStore';
 import { reviewInitials, reviewSubmittedAt } from '@/utils/mentorReviews';
 import { colors } from '@/theme';
@@ -34,7 +35,7 @@ export function ReviewHeader({ brand = false }: { brand?: boolean }) {
 export function ReviewIdentity({ name, submittedAt }: { name: string; submittedAt: string }) {
   const { t, i18n } = useTranslation();
   return <View style={ui.header}>
-    <View accessible={false} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#eaf2fe', justifyContent: 'center', alignItems: 'center' }}>
+    <View accessible={false} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.inkBg, justifyContent: 'center', alignItems: 'center' }}>
       <Text style={{ fontSize: 16, color: colors.primaryDark, fontWeight: '700' }}>{reviewInitials(name)}</Text>
     </View>
     <View style={{ flex: 1, gap: 4 }}>
@@ -45,6 +46,5 @@ export function ReviewIdentity({ name, submittedAt }: { name: string; submittedA
 }
 
 export function ReviewStatus() {
-  const { t } = useTranslation();
-  return <Text style={[ui.badge, { color: colors.primaryDark, backgroundColor: '#eaf2fe' }]}>{t('mentorFlow.awaiting')}</Text>;
+  return <Stamp kind="pending" />;
 }

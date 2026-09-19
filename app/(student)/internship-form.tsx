@@ -198,7 +198,7 @@ function InternshipContent({ userId, returnTo }: { userId: string; returnTo?: st
 const styles = StyleSheet.create({
   back: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
   date: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  error: { borderColor: '#a52929', borderWidth: 2 },
-  errorText: { color: '#a52929', fontSize: 14, lineHeight: 21 },
+  error: { borderColor: colors.error, borderWidth: 2 },
+  errorText: { color: colors.error, fontSize: 14, lineHeight: 21 },
   footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

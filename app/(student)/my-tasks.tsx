@@ -47,8 +47,8 @@ export default function MyTasksScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {(['all', ...TASK_STATES] as const).map(state => <Pressable key={state} accessibilityRole="button"
           accessibilityState={{ selected: filter === state }} onPress={() => setFilter(state)}
-          style={{ minHeight: 48, justifyContent: 'center', borderRadius: 24, paddingHorizontal: 16, backgroundColor: filter === state ? colors.primaryDark : '#e8eaed' }}>
-          <Text style={{ color: filter === state ? '#fff' : colors.text, fontWeight: '600' }}>
+          style={{ minHeight: 48, justifyContent: 'center', borderRadius: 6, paddingHorizontal: 16, borderWidth: 1, borderColor: filter === state ? colors.ink : colors.divider, backgroundColor: filter === state ? colors.ink : colors.paper }}>
+          <Text style={{ color: filter === state ? colors.textOnPrimary : colors.text, fontWeight: '600' }}>
             {t(state === 'all' ? 'studentFlow.all' : taskStateKey(state))} {!loading && '(' + (state === 'all' ? items.length : items.filter(a => taskState(a) === state).length) + ')'}
           </Text>
         </Pressable>)}

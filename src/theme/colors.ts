@@ -31,6 +31,7 @@ export const colors = {
   page: '#EEF0EC',
   rule: '#D3D8D1',
   ruleStrong: '#9AA59B',
+  inkBg: '#E8ECF3',
   stamp: '#2F7D5B',
   stampBg: '#E7F2EC',
   warnBg: '#FBF3D6',

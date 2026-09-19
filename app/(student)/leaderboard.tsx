@@ -81,9 +81,9 @@ function RankingContent({ studentId }: { studentId: string }) {
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
-  mine: { backgroundColor: '#eaf1fb', borderColor: colors.primaryDark },
-  rank: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
-  position: { minWidth: 48, minHeight: 48, borderRadius: 12, padding: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f4f8' },
-  positionText: { fontSize: 18, fontWeight: '700', color: colors.text },
-  you: { fontSize: 14, color: colors.primaryDark, fontWeight: '700' },
+  mine: { borderColor: colors.ink, borderWidth: 1.5 },
+  rank: { fontSize: 32, fontWeight: '600', color: colors.ink, fontVariant: ['tabular-nums'] },
+  position: { minWidth: 48, minHeight: 48, borderRadius: 6, padding: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page },
+  positionText: { fontSize: 18, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  you: { fontSize: 14, color: colors.ink, fontWeight: '600' },
 });

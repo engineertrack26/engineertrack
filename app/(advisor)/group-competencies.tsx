@@ -219,8 +219,8 @@ function TargetsContent({ advisorId, groupId, fromGroup }: { advisorId: string; 
 const styles = StyleSheet.create({
   back: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'flex-start' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  choice: { minWidth: 48, minHeight: 48, borderWidth: 1, borderColor: colors.divider, borderRadius: 12, padding: 12, alignItems: 'center', justifyContent: 'center' },
-  selected: { backgroundColor: '#f2f6fc', borderColor: '#b8ccea' },
+  choice: { minWidth: 48, minHeight: 48, borderWidth: 1, borderColor: colors.divider, borderRadius: 6, padding: 12, alignItems: 'center', justifyContent: 'center' },
+  selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
   activeLevel: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
   footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

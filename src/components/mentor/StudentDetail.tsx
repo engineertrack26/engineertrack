@@ -5,14 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ui } from '@/components/common/workflowStyles';
-import { LoadFailedBanner } from '@/components/common';
+import { LoadFailedBanner, Stamp } from '@/components/common';
 import { ReviewBack } from './ReviewUI';
 import { StudentDates, StudentIdentity } from './StudentIdentity';
 import { mentorStudentService } from '@/services/mentorStudents';
 import { MentorStudent } from '@/utils/mentorStudents';
 import { useAuthStore } from '@/store/authStore';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
-import { closureLabel } from '@/utils/closure';
 import { colors } from '@/theme';
 
 export function StudentDetail({ userId, studentId, onBack }: { userId: string; studentId: string; onBack: () => void }) {
@@ -68,9 +67,8 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
             <StudentDates student={student} />
           </View>
           {!!closure?.closed && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={ui.label}>{t('closure.badge', 'Closed')}</Text>
-              <Text style={ui.secondary}>{closureLabel(closure, t, i18n.language)}</Text>
+            <View style={{ flex: 1 }}>
+              <Stamp kind="closed" date={closure.closedAt ? new Date(closure.closedAt).toLocaleDateString(i18n.language) : undefined} />
             </View>
             <Pressable accessibilityRole="button"
               onPress={() => router.push({ pathname: '/(mentor)/internship-report', params: { studentId, groupId: groupId! } })}>
@@ -101,7 +99,7 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
                   <Text style={ui.secondary}>{row.label}</Text><Text style={ui.label}>{row.value}</Text>
                 </View>)}
           </View>
-          <View style={[ui.card, { backgroundColor: '#eaf2fe' }]}><Text style={ui.body}>{t('mentorStudents.reviewHint')}</Text></View>
+          <View style={ui.note}><Text style={ui.body}>{t('mentorStudents.reviewHint')}</Text></View>
         </>}
     </ScrollView>
   </SafeAreaView>;

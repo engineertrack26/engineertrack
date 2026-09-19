@@ -15,7 +15,7 @@ async function setupAndroidChannel() {
       name: 'Default',
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#1a73e8',
+      lightColor: '#12315E',
     });
   }
 }

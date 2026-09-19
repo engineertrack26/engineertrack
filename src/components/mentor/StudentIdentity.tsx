@@ -9,7 +9,7 @@ import { colors } from '@/theme';
 export function StudentIdentity({ student }: { student: MentorStudent }) {
   const { t } = useTranslation();
   return <View style={ui.header}>
-    <View accessible={false} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#eaf2fe', alignItems: 'center', justifyContent: 'center' }}>
+    <View accessible={false} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' }}>
       <Text style={[ui.section, { color: colors.primaryDark }]}>{reviewInitials(student.name)}</Text>
     </View>
     <View style={{ flex: 1, gap: 4 }}>

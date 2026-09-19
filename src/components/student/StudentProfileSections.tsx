@@ -90,7 +90,7 @@ export function StudentProfileSections({ userId }: { userId: string }) {
   const editInternship = () => router.push({ pathname: '/(student)/internship-form', params: { return: 'profile' } });
   const button = (label: string, icon: keyof typeof Ionicons.glyphMap, onPress: () => void, primary = false, working = false) =>
     <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!busy, busy: working }} disabled={!!busy} onPress={onPress}
-      style={[ui.primary, !primary && { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.primaryDark }, !!busy && { opacity: 0.6 }]}>
+      style={[ui.primary, !primary && { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.ink }, !!busy && { opacity: 0.6 }]}>
       {working ? <ActivityIndicator color={primary ? '#fff' : colors.primaryDark} /> : <Ionicons name={icon} size={22} color={primary ? '#fff' : colors.primaryDark} />}
       <Text style={[ui.primaryText, !primary && { color: colors.primaryDark }]}>{label}</Text>
     </Pressable>;
@@ -137,7 +137,7 @@ export function StudentProfileSections({ userId }: { userId: string }) {
       {!!success && feedbackKind !== 'join' && <Text accessibilityLiveRegion="polite" style={ui.body}>{t(success.key)}</Text>}
       {!!error && feedbackKind !== 'join' && <Text accessibilityRole="alert" style={[ui.body, { color: colors.error }]}>{t(error)}</Text>}
       {code?.code ? <>
-        <View style={{ padding: 16, backgroundColor: '#eaf2fe', borderRadius: 12, alignItems: 'center' }}>
+        <View style={{ padding: 16, backgroundColor: colors.inkBg, borderRadius: 6, alignItems: 'center' }}>
           <Text selectable style={[ui.title, { color: colors.primaryDark, letterSpacing: 3 }]}>{code.code}</Text>
         </View>
         {button(t('studentProfileView.copyCode'), 'copy-outline', () => { void mutate('copy', async () => {

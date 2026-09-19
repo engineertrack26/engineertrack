@@ -25,7 +25,7 @@ export function ReviewNoteSheet({ mode, context, value, error, busy, onChange, o
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <Pressable style={{ position: 'absolute', inset: 0 }} accessible={false} onPress={close} />
       <SafeAreaView edges={['bottom', 'left', 'right']} accessibilityViewIsModal
-        style={{ maxHeight: '90%', width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+        style={{ maxHeight: '90%', width: '100%', maxWidth: 720, alignSelf: 'center', backgroundColor: colors.paper, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, gap: 16 }}>
           <View style={ui.header}>
             <Text accessibilityRole="header" style={[ui.title, { flex: 1 }]}>{t(revision ? 'mentorFlow.requestRevision' : 'mentorFlow.optionalNote')}</Text>

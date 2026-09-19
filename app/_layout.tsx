@@ -356,7 +356,7 @@ export default function RootLayout() {
               {t('common.loadFailed')}
             </Text>
             <Pressable accessibilityRole="button" onPress={() => setStartupAttempt(value => value + 1)}
-              style={{ minHeight: 48, padding: 16, borderRadius: 12, backgroundColor: colors.primaryDark }}>
+              style={{ minHeight: 48, padding: 16, borderRadius: 6, backgroundColor: colors.primaryDark }}>
               <Text style={{ color: '#fff', fontSize: 16 }}>{t('common.retry')}</Text>
             </Pressable>
           </> : <>

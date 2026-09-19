@@ -12,8 +12,8 @@ import { closureService } from '@/services/closure';
 import { groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { mapMonitorStudent, filterMonitorStudents, type StudentMonitorItem } from '@/utils/advisorStudentMonitor';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { closureLabel, pendingReviewsMessage } from '@/utils/closure';
-import { BackButton, LoadFailedBanner } from '@/components/common';
+import { pendingReviewsMessage } from '@/utils/closure';
+import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
@@ -216,10 +216,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
       </>;
     }
     return <View style={{ gap: 6 }}>
-      <View style={styles.closedRow}>
-        <Text style={[ui.badge, styles.closedBadge]}>{t('closure.badge', 'Closed')}</Text>
-        <Text style={ui.secondary}>{closureLabel(status, t, i18n.language)}</Text>
-      </View>
+      <Stamp kind="closed" date={status.closedAt ? new Date(status.closedAt).toLocaleDateString(i18n.language) : undefined} />
       <TouchableOpacity accessibilityRole="button"
         onPress={() => router.push({ pathname: '/(advisor)/internship-report', params: { studentId: member.id, groupId: groupId! } })}>
         <Text style={ui.link}>{t('closure.viewReport')}</Text>
@@ -322,15 +319,13 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
 }
 
 const styles = StyleSheet.create({
-  avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#eaf1fb', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' },
   initials: { fontSize: 18, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase' },
   track: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.divider },
   fill: { height: 8, borderRadius: 4, backgroundColor: colors.primaryDark },
-  period: { padding: 14, gap: 8, backgroundColor: colors.background, borderRadius: 12 },
+  period: { padding: 14, gap: 8, backgroundColor: colors.background, borderRadius: 6 },
   remove: { minHeight: 48, justifyContent: 'center', paddingVertical: 12 },
-  removeText: { color: '#a52929', fontSize: 15, fontWeight: '600' },
+  removeText: { color: colors.error, fontSize: 15, fontWeight: '600' },
   closeButton: { minHeight: 48, justifyContent: 'center', alignItems: 'flex-start', paddingVertical: 12 },
   closeButtonText: { color: colors.primaryDark, fontSize: 15, fontWeight: '600' },
-  closedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  closedBadge: { color: colors.primaryDark, backgroundColor: '#eaf2fe' },
 });

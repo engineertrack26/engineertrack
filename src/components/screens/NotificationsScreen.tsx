@@ -20,7 +20,7 @@ import { BackButton } from '@/components/common';
 import { useNotificationStore } from '@/store/notificationStore';
 import { AppNotification } from '@/types/notification';
 import type { UserRole } from '@/types/user';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }> = {
   log_approved: { name: 'checkmark-circle', color: colors.success },
@@ -232,21 +232,21 @@ const styles = StyleSheet.create({
   viewport: { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
   content: { padding: 24, paddingBottom: 32, flexGrow: 1 },
   header: { gap: 16, marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: '700', color: colors.text },
-  summary: { backgroundColor: '#e8f0fe', borderRadius: 16, padding: 16, gap: 8 },
-  summaryText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.primaryDark },
+  title: { fontSize: 26, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
+  summary: { backgroundColor: colors.inkBg, borderRadius: 6, padding: 16, gap: 8 },
+  summaryText: { fontSize: 16, lineHeight: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
   action: { minHeight: 48, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  actionText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.primaryDark, flexShrink: 1 },
-  feedback: { padding: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12 },
-  card: { padding: 20, gap: 10, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider, marginBottom: 12 },
-  unreadCard: { borderColor: '#b7cdf0', backgroundColor: '#f0f5ff' },
+  actionText: { fontSize: 16, lineHeight: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink, flexShrink: 1 },
+  feedback: { padding: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 6 },
+  card: { padding: 20, gap: 10, borderRadius: 6, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.divider, marginBottom: 12 },
+  unreadCard: { borderColor: colors.ink, borderWidth: 1.5 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   status: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.textSecondary },
-  unreadText: { color: colors.primaryDark, fontWeight: '700' },
-  cardTitle: { fontSize: 18, lineHeight: 26, fontWeight: '600', color: colors.text },
-  body: { fontSize: 16, lineHeight: 24, color: colors.textSecondary },
-  time: { fontSize: 14, lineHeight: 21, color: colors.textSecondary },
+  unreadText: { color: colors.ink, fontWeight: '600', fontFamily: fonts.semibold },
+  cardTitle: { fontSize: 18, lineHeight: 26, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular, color: colors.textSecondary },
+  time: { fontSize: 14, lineHeight: 21, fontFamily: fonts.regular, color: colors.textSecondary },
   empty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
   center: { textAlign: 'center' },
   footer: { paddingVertical: 20 },

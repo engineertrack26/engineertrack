@@ -34,7 +34,7 @@ export function ReviewEvidence({ photos = [], documents = [], onRetry }: {
         </Pressable> : <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.enlargePhoto', { number: index + 1 }) + (photo.caption ? ': ' + photo.caption : '')}
           onPress={() => setLightbox(photo)}>
           <Image source={{ uri: photo.uri }} onError={() => setFailedPhotos(s => ({ ...s, [photo.uri]: true }))}
-            style={{ width: '100%', aspectRatio: 1.2, borderRadius: 12, backgroundColor: colors.divider }} />
+            style={{ width: '100%', aspectRatio: 1.2, borderRadius: 6, backgroundColor: colors.divider }} />
           <View style={{ position: 'absolute', right: 8, bottom: 8, padding: 6, backgroundColor: '#202124bb', borderRadius: 16 }}>
             <Ionicons name="expand-outline" color="#fff" size={18} />
           </View>
