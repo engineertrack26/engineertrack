@@ -3,11 +3,12 @@ import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, Refres
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useStudentTasks } from '@/hooks/useStudentTasks';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { groupService } from '@/services/group';
-import { StudentHeader, TaskCard, ui } from '@/components/student/StudentUI';
+import { StudentHeader, TaskRow, ui } from '@/components/student/StudentUI';
 import { ClosureBanner, LoadFailedBanner } from '@/components/common';
 import { TASK_STATES, TaskState, taskState, taskStateKey, filterTasks } from '@/utils/studentTasks';
 import { colors, fonts } from '@/theme';
@@ -63,12 +64,16 @@ export default function MyTasksScreen() {
           if (!tasks.length) return null;
           const collapsible = (state === 'waiting' || state === 'done') && filter === 'all' && !query.trim();
           const collapsed = collapsible && !expanded[state as 'waiting' | 'done'];
-          return <View key={state} style={{ gap: 12 }}>
+          const heading = <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 40 }}>
+            <Text style={ui.section}>{t(taskStateKey(state))} ({tasks.length})</Text>
+            {collapsible && <Ionicons name={collapsed ? 'chevron-down' : 'chevron-up'} size={18} color={colors.inkSoft} />}
+          </View>;
+          return <View key={state}>
             {collapsible ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: !collapsed }}
-              onPress={() => setExpanded(s => ({ ...s, [state]: !s[state as 'waiting' | 'done'] }))} style={{ minHeight: 48, justifyContent: 'center' }}>
-              <Text style={ui.section}>{t(taskStateKey(state))} ({tasks.length}) {collapsed ? '⌄' : '⌃'}</Text>
-            </Pressable> : <Text style={ui.section}>{t(taskStateKey(state))} ({tasks.length})</Text>}
-            {!collapsed && tasks.map(task => <TaskCard key={task.id} task={task} />)}
+              onPress={() => setExpanded(s => ({ ...s, [state]: !s[state as 'waiting' | 'done'] }))}>{heading}</Pressable> : heading}
+            <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }}>
+              {!collapsed && tasks.map(task => <TaskRow key={task.id} task={task} />)}
+            </View>
           </View>;
         })}
       </>}

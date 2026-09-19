@@ -8,11 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { mentorReviewService } from '@/services/mentorReviews';
-import { filterReviews, PendingReview, ReviewSort } from '@/utils/mentorReviews';
+import { filterReviews, reviewSubmittedAt, PendingReview, ReviewSort } from '@/utils/mentorReviews';
 import { LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
-import { ReviewBack, ReviewHeader, ReviewIdentity, ReviewStatus } from '@/components/mentor/ReviewUI';
-import { colors } from '@/theme';
+import { ReviewBack, ReviewHeader } from '@/components/mentor/ReviewUI';
+import { colors, fonts } from '@/theme';
 
 export default function PendingReviewsScreen() {
   const userId = useAuthStore(s => s.user?.id);
@@ -60,7 +60,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
 
   return <SafeAreaView style={ui.safe}>
     <FlatList data={loading ? [] : visible} keyExtractor={item => item.id}
-      contentContainerStyle={[ui.content, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled"
+      contentContainerStyle={[ui.content, { flexGrow: 1, gap: 0 }]} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={load} />}
       ListHeaderComponent={<View style={{ gap: 16 }}>
         <ReviewBack label={t(studentId ? 'mentorStudents.detail' : 'studentFlow.home')} onPress={() => studentId
@@ -69,14 +69,15 @@ function ReviewQueue({ userId }: { userId?: string }) {
         {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: items.length })}</Text>}
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
           placeholderTextColor={colors.textSecondary} accessibilityLabel={t('mentorFlow.search')} returnKeyType="search" />
-        <View style={[ui.header, { flexWrap: 'wrap', justifyContent: 'space-between' }]}>
-          <Text style={[ui.badge, { backgroundColor: colors.ink, color: colors.textOnPrimary }]}>{t('mentorFlow.pending')} {!loading && '(' + visible.length + ')'}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.sort') + ': ' + t('mentorFlow.' + order)}
-            onPress={() => setOrder(order === 'oldest' ? 'newest' : 'oldest')} style={ui.header}>
-            <Text style={ui.link}>{t('mentorFlow.' + order)}</Text>
-            <Ionicons name="swap-vertical-outline" size={18} color={colors.primaryDark} />
+        <View><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 40 }}>
+          <Text style={ui.section}>{t('mentorFlow.pending')}{!loading ? ' (' + visible.length + ')' : ''}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.sort') + ': ' + t('mentorFlow.' + order)} hitSlop={8}
+            onPress={() => setOrder(order === 'oldest' ? 'newest' : 'oldest')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.ink, fontFamily: fonts.medium }}>{t('mentorFlow.' + order)}</Text>
+            <Ionicons name="swap-vertical-outline" size={16} color={colors.ink} />
           </Pressable>
         </View>
+        <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }} /></View>
         {!!(assignmentId || studentId) && <View style={ui.note}>
           <Text style={ui.body}>{studentId ? t('mentorStudents.studentFilter', { name: names[studentId] || t('mentorFlow.unknownStudent') }) : t('mentorFlow.notificationFilter')}</Text>
           <Pressable accessibilityRole="button" onPress={() => { setQuery(''); router.setParams({ assignmentId: '', studentId: '' }); }}>
@@ -86,24 +87,26 @@ function ReviewQueue({ userId }: { userId?: string }) {
         {failed && <LoadFailedBanner onRetry={load} />}
         {loading && <ActivityIndicator size="large" color={colors.primary} />}
       </View>}
-      ListEmptyComponent={!loading && !failed ? <View style={ui.card}>
+      ListEmptyComponent={!loading && !failed ? <View style={[ui.card, { marginTop: 16 }]}>
         <Text style={ui.body}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.noResults' : 'mentor.noPendingReviews')}</Text>
       </View> : null}
-      renderItem={({ item }) => <View style={ui.card}>
-        <ReviewIdentity name={names[item.studentId] || ''} submittedAt={item.submittedAt} />
-        <Text style={ui.cardTitle}>{taskContent(item.assignment.title, i18n.language)}</Text>
-        <ReviewStatus />
-        <View style={ui.header}>
-          <Ionicons name="attach-outline" size={20} color={colors.textSecondary} />
-          <Text style={[ui.secondary, { flex: 1 }]}>{t('mentorFlow.attachments', { photos: item.photos?.length || 0, documents: item.documents?.length || 0 })}</Text>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.inspect') + ': ' + (names[item.studentId] || t('mentorFlow.unknownStudent')) + ', ' + taskContent(item.assignment.title, i18n.language)}
-          onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })} style={ui.primary}>
-          <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
-        </Pressable>
-      </View>}
-      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center' }]}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
+      renderItem={({ item }) => {
+        const name = names[item.studentId] || t('mentorFlow.unknownStudent');
+        const facts = [reviewSubmittedAt(item.submittedAt, i18n.language),
+          t('mentorFlow.attachments', { photos: item.photos?.length || 0, documents: item.documents?.length || 0 })].join(' · ');
+        return <Pressable accessibilityRole="button"
+          accessibilityLabel={t('mentorFlow.inspect') + ': ' + name + ', ' + taskContent(item.assignment.title, i18n.language) + '. ' + facts}
+          onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider }}>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={{ fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.text }}>{name}</Text>
+            <Text style={{ fontSize: 15, lineHeight: 21, fontFamily: fonts.regular, color: colors.text }}>{taskContent(item.assignment.title, i18n.language)}</Text>
+            <Text style={{ fontSize: 13, lineHeight: 18, fontFamily: fonts.regular, color: colors.textSecondary, fontVariant: ['tabular-nums'] }}>{facts}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.ink} />
+        </Pressable>;
+      }}
+      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center', marginTop: 16 }]}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
     />
   </SafeAreaView>;
 }

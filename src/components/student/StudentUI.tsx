@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@/store/notificationStore';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { taskState, taskStateKey, taskDueDate } from '@/utils/studentTasks';
 import type { MyAssignment } from '@/types/assignment';
 import { taskContent } from '@/utils/taskContent';
@@ -86,26 +86,26 @@ export function JobCard({ task }: { task: MyAssignment }) {
   </Pressable>;
 }
 
-export function TaskCard({ task, prominent = false }: { task: MyAssignment; prominent?: boolean }) {
+/** One line of the task ledger: title, the facts, the stamp. The whole row
+ *  opens the task -- no "view" link to find. */
+export function TaskRow({ task }: { task: MyAssignment }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const due = taskDueDate(task.dueDate, i18n.language);
   const open = () => router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
-  const spokenLabel = [taskContent(task.title, i18n.language), t(taskStateKey(taskState(task))), competencyContent(task.competencyName, i18n.language),
-    due && `${t('student.taskDueDate')}: ${due}`, prominent && task.submission?.mentorNote,
-    t(prominent ? 'studentFlow.continueTask' : 'studentFlow.viewTask')].filter(Boolean).join('. ');
-  return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel}
-    onPress={open} style={[ui.card, prominent && ui.featured]}>
+  const facts = [
+    task.competencyName && `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}`,
+    due && `${t('student.taskDueDate')} ${due}`,
+  ].filter(Boolean).join(' · ');
+  const spokenLabel = [taskContent(task.title, i18n.language), t(taskStateKey(taskState(task))), facts,
+    t('studentFlow.viewTask')].filter(Boolean).join('. ');
+  return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel} onPress={open}
+    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider }}>
+    <View style={{ flex: 1, gap: 3 }}>
+      <Text style={{ fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.text }}>{taskContent(task.title, i18n.language)}</Text>
+      {!!facts && <Text style={{ fontSize: 13, lineHeight: 18, fontFamily: fonts.regular, color: colors.textSecondary, fontVariant: ['tabular-nums'] }}>{facts}</Text>}
+    </View>
     <TaskStatus task={task} />
-    <Text style={ui.cardTitle}>{taskContent(task.title, i18n.language)}</Text>
-    {!!task.competencyName && <Text style={ui.secondary}>{competencyContent(task.competencyName, i18n.language)}</Text>}
-    {!!due && <Text style={ui.secondary}>{t('student.taskDueDate')}: {due}</Text>}
-    {prominent && task.submission?.mentorNote && <View style={ui.note}>
-      <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
-      <Text style={ui.body}>{task.submission.mentorNote}</Text>
-    </View>}
-    {prominent ? <View style={ui.primary}><Text style={ui.primaryText}>{t('studentFlow.continueTask')}</Text>
-      <Ionicons name="arrow-forward" size={20} color="#fff" /></View> :
-      <Text style={ui.link}>{t('studentFlow.viewTask')} →</Text>}
+    <Ionicons name="chevron-forward" size={18} color={colors.ink} />
   </Pressable>;
 }
