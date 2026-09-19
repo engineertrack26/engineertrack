@@ -537,11 +537,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
     borderWidth: 1.5,
-    borderColor: colors.primary + '40',
+    borderColor: colors.inkSoft,
     borderStyle: 'dashed',
     borderRadius: borderRadius.sm,
     justifyContent: 'center',
-    backgroundColor: colors.primary + '06',
+    backgroundColor: 'transparent',
   },
   addBtnDisabled: {
     opacity: 0.5,

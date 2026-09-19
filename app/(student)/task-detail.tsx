@@ -236,6 +236,15 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   }
 
   const due = taskDueDate(task?.dueDate, i18n.language);
+  const rated = typeof task?.submission?.selfLevel === 'number' && typeof task?.submission?.mentorLevel === 'number';
+  const facts = task ? [
+    task.competencyName && { label: t('dash.competency', 'Competency'), value: `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}` },
+    due && { label: t('student.taskDueDate'), value: due },
+    rated && { label: `${t('assessment.you', 'You')} / ${t('assessment.mentor', 'Mentor')}`,
+      value: `${levelLabel(task.submission!.selfLevel!, t)} / ${levelLabel(task.submission!.mentorLevel!, t)}` },
+  ].filter((f): f is { label: string; value: string } => !!f) : [];
+  const gapNote = rated && task!.submission!.mentorLevel! > task!.submission!.selfLevel! ? t('assessment.theySawMore', 'Your mentor saw more')
+    : rated && task!.submission!.mentorLevel! < task!.submission!.selfLevel! ? t('assessment.theySawLess', 'Your mentor saw less') : '';
   return <SafeAreaView style={ui.safe}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled">
@@ -253,34 +262,36 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
         <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: userId, groupId: task?.groupId } })} />
         {loading ? <ActivityIndicator size="large" color={colors.primary} /> : failed ? <LoadFailedBanner onRetry={load} /> : !task ?
           <Text style={ui.body}>{t('errors.assignmentNotFound')}</Text> : <>
-          <Text accessibilityRole="header" style={ui.title}>{taskContent(task.title, i18n.language)}</Text>
-          <TaskStatus task={task} />
-          {!!due && <Text style={ui.secondary}>{t('student.taskDueDate')}: {due}</Text>}
-          {!!task.competencyName && <Text style={ui.secondary}>{competencyContent(task.competencyName, i18n.language)}{task.level ? ' · L' + task.level : ''}</Text>}
+          <View style={{ gap: 10 }}>
+            <Text accessibilityRole="header" style={ui.title}>{taskContent(task.title, i18n.language)}</Text>
+            <TaskStatus task={task} />
+          </View>
+          {facts.length > 0 && <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderColor: colors.rule }}>
+            {facts.map((f) => <View key={f.label} style={{ flexDirection: 'row', gap: 12 }}>
+              <Text style={[ui.secondary, { width: 96 }]}>{f.label}</Text>
+              <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21, fontVariant: ['tabular-nums'] }]}>{f.value}</Text>
+            </View>)}
+            {!!gapNote && <Text style={ui.secondary}>{gapNote}</Text>}
+          </View>}
           {!!task.submission?.mentorNote && <View style={ui.note}>
             <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
             <Text style={ui.body}>{task.submission.mentorNote}</Text>
           </View>}
-          {typeof task.submission?.selfLevel === 'number' && typeof task.submission?.mentorLevel === 'number' && <View style={ui.note}>
-            <Text style={ui.body}>
-              {t('assessment.you', 'You')}: {levelLabel(task.submission.selfLevel, t)} · {t('assessment.mentor', 'Mentor')}: {levelLabel(task.submission.mentorLevel, t)}
-            </Text>
-            {task.submission.mentorLevel > task.submission.selfLevel && <Text style={ui.secondary}>{t('assessment.theySawMore', 'Your mentor saw more')}</Text>}
-            {task.submission.mentorLevel < task.submission.selfLevel && <Text style={ui.secondary}>{t('assessment.theySawLess', 'Your mentor saw less')}</Text>}
-          </View>}
-          <View style={ui.card}>
-            <Text style={ui.label}>{t('student.taskCriterion')}</Text>
+          <View style={{ gap: 8 }}>
+            <Text style={ui.section}>{t('student.taskCriterion')}</Text>
             <Text style={ui.body}>{taskContent(task.criterion, i18n.language, 'criterion')}</Text>
-            <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}>
-              <Text style={ui.link}>{t('studentFlow.instructions')} {instructions ? '⌃' : '⌄'}</Text>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 }}>
+              <Text style={[ui.link, { paddingVertical: 0 }]}>{t('studentFlow.instructions')}</Text>
+              <Ionicons name={instructions ? 'chevron-up' : 'chevron-down'} size={18} color={colors.ink} />
             </Pressable>
-            {instructions && <>
+            {instructions && <View style={{ gap: 8, paddingLeft: 12, borderLeftWidth: 2, borderColor: colors.rule }}>
               <Text style={ui.label}>{t('student.taskObjective')}</Text><Text style={ui.body}>{taskContent(task.objective, i18n.language, 'objective')}</Text>
               {!!task.description && <Text style={ui.body}>{task.description}</Text>}
               {!!task.documentPath && <Pressable accessibilityRole="button" onPress={() => openDocument(task.documentUrl)}>
                 <Text style={ui.link}>{task.documentName || t('student.taskDocument')} ↗</Text>
               </Pressable>}
-            </>}
+            </View>}
           </View>
           {restoreFailed && <View style={ui.note}>
             <Text style={ui.body}>{t('studentFlow.restoreFailed')}</Text>
@@ -308,7 +319,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
               photos={draft.photos} documents={draft.documents} onChange={(photos, documents) => edit({ photos, documents })}
               onUploadingChange={setUploading} disabled={submitting || restoreFailed} /> : <>
               {draft.photos.map((photo, index) => <View key={index} style={ui.card}>
-                <Image source={{ uri: photo.uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 12 }}
+                <Image source={{ uri: photo.uri }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 6 }}
                   accessibilityLabel={photo.caption || t('studentFlow.evidence')} />
                 {!!photo.caption && <Text style={ui.body}>{photo.caption}</Text>}
               </View>)}
@@ -319,7 +330,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             </>}
           </View>
           {actionable && <Text style={ui.secondary}>{t('studentFlow.localDraft')}</Text>}
-          {!closure?.closed && (actionable || task.submission?.status === 'approved') && <View style={[ui.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          {!closure?.closed && (actionable || task.submission?.status === 'approved') && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule }}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={ui.label}>{t('student.shareToFeed')}</Text>
               <Text style={ui.secondary}>{t('student.shareToFeedHint')}</Text>
@@ -329,7 +340,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
               onValueChange={actionable ? setShareToFeed : changeSharing}
               disabled={submitting || sharingBusy || restoreFailed}
               accessibilityLabel={t('student.shareToFeed')}
-              trackColor={{ true: colors.primaryDark }}
+              trackColor={{ true: colors.ink }}
             />
           </View>}
           {saveState === 'error' && <Pressable accessibilityRole="button" onPress={() => persist(currentDraft.current)}>
@@ -339,7 +350,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
       </ScrollView>
       {!loading && !failed && actionable && <View style={{ borderTopWidth: 1, borderColor: colors.divider, backgroundColor: colors.paper }}>
         <View style={[ui.content, { paddingVertical: 12, gap: 8 }]}>
-          <View style={levelError ? { borderWidth: 1, borderColor: colors.error, borderRadius: 12, padding: 8 } : undefined}>
+          <View style={levelError ? { borderWidth: 1, borderColor: colors.error, borderRadius: 6, padding: 8 } : undefined}>
             <LevelPicker label={t('assessment.selfQuestion', 'How did you do this task?')}
               value={draft.selfLevel} disabled={submitting || restoreFailed}
               onChange={(selfLevel) => { setLevelError(false); edit({ selfLevel }); }} />
