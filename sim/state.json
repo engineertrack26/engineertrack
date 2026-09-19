@@ -101,7 +101,54 @@
     "elif-kaya": {
       "userId": "5d9c97c7-b804-4a65-890d-7eb65270f2ca",
       "studentCode": "8N2TXF",
-      "membershipId": "8ab6c2ab-d348-45c5-bf8d-e276434be086"
+      "membershipId": "8ab6c2ab-d348-45c5-bf8d-e276434be086",
+      "days": [
+        {
+          "date": "2026-09-14",
+          "id": "22983bf6-6c56-4b7f-863b-7cb60d114357"
+        },
+        {
+          "date": "2026-09-15",
+          "id": "10e2bd88-c7e7-48b3-83d0-a4908da2d0b2"
+        },
+        {
+          "date": "2026-09-16",
+          "id": "4f2e473f-d77d-4aa8-aea0-fbe678c7885e"
+        },
+        {
+          "date": "2026-09-17",
+          "id": "494030c3-489d-4f33-990c-211cf8a4aad5"
+        },
+        {
+          "date": "2026-09-18",
+          "id": "d424decb-b5ab-4ef0-a9ff-7fe3aa490b87"
+        },
+        {
+          "date": "2026-09-19",
+          "id": "92dc3d03-f0c8-42e7-ab4c-8f6b4f965dec"
+        }
+      ],
+      "submissions": [
+        {
+          "assignmentId": "45e71428-169c-44fc-b055-e5f5ea417dca",
+          "submissionId": "1caded2d-76c7-428e-bd1d-7bb39019af56"
+        },
+        {
+          "assignmentId": "1f33b091-3224-4d46-beb9-2f49ec67aa7c",
+          "submissionId": "6b2b95e1-b84b-4a71-bcb5-fa13aaa5eb76"
+        },
+        {
+          "assignmentId": "1591a485-21dd-429a-90aa-7cfd74bae804",
+          "submissionId": "e2074e55-cb5a-458e-87d5-521a38448f5b"
+        },
+        {
+          "assignmentId": "67247cb8-c6a4-442f-aa81-fcf6e96b7be7",
+          "submissionId": "c46538e8-6dd1-4719-a2f0-1f64c3832586"
+        }
+      ],
+      "conversations": {
+        "classmate": "46ff887c-1eb7-4d60-b8bf-763b401bfd97"
+      }
     },
     "burak-sahin": {
       "userId": "99a265a1-eb47-4e4c-95d0-beee40653f71",
