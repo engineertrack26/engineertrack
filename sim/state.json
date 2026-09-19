@@ -444,7 +444,29 @@
   },
   "mentors": {
     "hakan-demir": {
-      "userId": "69b34767-16ec-4483-a869-badcd064dc2d"
+      "userId": "69b34767-16ec-4483-a869-badcd064dc2d",
+      "reviewed": [
+        {
+          "submissionId": "1caded2d-76c7-428e-bd1d-7bb39019af56",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "6b2b95e1-b84b-4a71-bcb5-fa13aaa5eb76",
+          "approved": true,
+          "level": 3
+        },
+        {
+          "submissionId": "e2074e55-cb5a-458e-87d5-521a38448f5b",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "c46538e8-6dd1-4719-a2f0-1f64c3832586",
+          "approved": true,
+          "level": 2
+        }
+      ]
     },
     "gamze-ozturk": {
       "userId": "02ab2d3e-1e39-456a-a4d1-74b3bd1caf0e"

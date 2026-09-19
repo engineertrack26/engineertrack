@@ -21,3 +21,24 @@
 - `11:58:14` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
 - _11:58:14_ [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Staj — Güz 2026"},{"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","name":"Elif Kaya","role":"student","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Staj — Güz 2026"}]
 - _11:58:14_ Faz 3b bitti.
+- `17:41:54` **auth.signIn** {"email":"hakan.demir@sim.engineertrack.test"} → 69b34767-16ec-4483-a869-badcd064dc2d
+- `17:41:54` **internship_week** {"p_student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","p_from":"2026-09-13"} → [{"id":"22983bf6-6c56-4b7f-863b-7cb60d114357","company":"Marmara Su ve Kanalizasyon İdaresi","task_id":null,"version":3,"day_date":"2026-09-14","learning":"N…
+- `17:41:54` **internship_review** {"p_days":[{"id":"22983bf6-6c56-4b7f-863b-7cb60d114357","version":3},{"id":"10e2bd88-c7e7-48b3-83d0-a4908da2d0b2","version":3},{"id":"4f2e473f-d77d-4aa8-aea0… → null
+- `17:41:55` **internship_week** {"p_student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","p_from":"2026-09-13"} → [{"id":"22983bf6-6c56-4b7f-863b-7cb60d114357","company":"Marmara Su ve Kanalizasyon İdaresi","task_id":null,"version":4,"day_date":"2026-09-14","learning":"N…
+- `17:41:55` **internship_note** {"p_day":"22983bf6-6c56-4b7f-863b-7cb60d114357","p_version":4,"p_note":"Numune etiketi kısmı çok iyi; DO ölçüm saatini de yazsaydın tam olurdu.","p_correctio… → null
+- `17:41:55` **internship_events** {"p_day":"22983bf6-6c56-4b7f-863b-7cb60d114357"} → [{"id":"003ad8be-96a2-4d66-bf0b-f8362b1f131b","note":"Numune etiketi kısmı çok iyi; DO ölçüm saatini de yazsaydın tam olurdu.","day_id":"22983bf6-6c56-4b7f-8…
+- `17:41:55` **table.assignment_submissions.select** {} → [{"id":"1caded2d-76c7-428e-bd1d-7bb39019af56","assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","sta…
+- _17:41:55_ listPendingReviews → 4 row(s), all mine (RLS "submissions read": student_id = auth.uid() OR is_mentor_of() OR is_group_advisor_of() — scoped correctly at the read layer).
+- `17:41:55` **review_assignment** {"p_submission_id":"1caded2d-76c7-428e-bd1d-7bb39019af56","p_approved":true,"p_note":"Onay","p_level":null} → **ERROR** LEVEL_REQUIRED
+- _17:41:55_ expected refusal LEVEL_REQUIRED for: approve without a level
+- `17:41:55` **review_assignment** {"p_submission_id":"1caded2d-76c7-428e-bd1d-7bb39019af56","p_approved":true,"p_note":"Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de… → null
+- `17:41:55` **review_assignment** {"p_submission_id":"6b2b95e1-b84b-4a71-bcb5-fa13aaa5eb76","p_approved":true,"p_note":"Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de… → null
+- `17:41:56` **review_assignment** {"p_submission_id":"e2074e55-cb5a-458e-87d5-521a38448f5b","p_approved":true,"p_note":"Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de… → null
+- `17:41:56` **review_assignment** {"p_submission_id":"c46538e8-6dd1-4719-a2f0-1f64c3832586","p_approved":true,"p_note":"Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de… → null
+- `17:41:56` **review_assignment** {"p_submission_id":"1caded2d-76c7-428e-bd1d-7bb39019af56","p_approved":true,"p_note":"tekrar","p_level":2} → null
+- _17:41:56_ review_assignment on an already-approved submission (1caded2d-76c7-428e-bd1d-7bb39019af56) succeeded — adaptation #2: no ALREADY_APPROVED guard in review_assignment (only submit_assignment has one); idempotent by design, XP not re-paid (award_assignment_xp guards on OLD.status). Not filed as a bug.
+- `17:41:56` **review_assignment** {"p_submission_id":"a14dc85e-33c6-45b6-a992-bad2d27fc2cd","p_approved":true,"p_note":"x","p_level":2} → **ERROR** ROLE_NOT_ALLOWED
+- _17:41:56_ review another mentor's student refused with ROLE_NOT_ALLOWED (guessed SUBMISSION_NOT_FOUND; real code is ROLE_NOT_ALLOWED via is_mentor_of() in review_assignment — expected, adaptation #1, not filed as a bug).
+- `17:41:56` **competency_self_vs_mentor** {"p_student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca"} → [{"gap":0,"code":"communication","name":"Professional Communication","tasks":1,"avgSelf":2,"avgMentor":2,"overRated":0,"underRated":0,"competencyId":"a2979e3…
+- `17:41:56` **table.notifications.select** {} → [{"id":"5296823b-9016-4157-a818-40aad2288441","user_id":"69b34767-16ec-4483-a869-badcd064dc2d","title":"Task Submitted","body":"Elif Kaya submitted \"Type a …
+- _17:41:56_ Faz 5 bitti.
