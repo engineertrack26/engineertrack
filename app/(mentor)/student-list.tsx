@@ -102,7 +102,7 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
       </View>}
       renderItem={({ item }) => <Pressable accessibilityRole="button"
         accessibilityLabel={t('mentorStudents.viewDetail') + ': ' + (item.name || t('mentorFlow.unknownStudent'))}
-        onPress={() => router.setParams({ studentId: item.id })} style={({ pressed }) => [ui.card, { opacity: pressed ? 0.7 : 1 }]}>
+        onPress={() => router.setParams({ studentId: item.id })} style={ui.card}>
         <StudentIdentity student={item} />
         <StudentDates student={item} />
         <Text style={[ui.badge, { color: counts && counts[item.id] > 0 ? colors.warnText : colors.textSecondary,
