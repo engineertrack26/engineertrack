@@ -227,6 +227,14 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Official EngineerTrack logo integration
+
+- Expo Go follow-up: the owner still saw the previous icon during launch. Changed `expo.icon` to a newly named generated asset (`engineertrack-app-icon.png`) to avoid reuse of the old asset URL. The owner subsequently confirmed the launch logo is now correct and reported no issue. Native release-build verification remains separate.
+- Follow-up after the owner reported seeing only the logo after sign-out: the native Image could inherit the asset's intrinsic height because only width/aspect ratio were supplied. Moved branding into a shared `AuthBrand` with an aspect-ratio frame and absolutely positioned image sized to that frame, preventing the 740 px source height from displacing the auth form. Sign-out/session behavior was not changed. The owner's subsequent Android screenshot shows the new logo, both input fields, sign-in button, registration link and language control together without clipping; actual sign-in interaction was not verified by that screenshot.
+- Integrated the owner's transparent horizontal logo into Login and Register with a responsive, aspect-preserving layout and an accessible brand label; removed the duplicate text brand heading. Original `engineertrack_logo.png` and `engineertrack_logo_square.png` remain unchanged.
+- Replaced the old generated track/star artwork pipeline with deterministic packaging of the supplied square logo: opaque 1024 px icon, transparent adaptive foreground with safe padding, splash artwork and 48 px favicon. Native background matches the light page color (`#EEF0EC`); splash image width is 200. No redesign of the supplied artwork.
+- Verification: TypeScript passed; 11 targeted branding/auth tests passed, including dimensions, opacity, adaptive safe-circle bounds and auth/config references. After the layout fix, the full suite passed (59 suites / 565 tests). Generated full icon visually inspected. The wordmark remains small at launcher/favicon sizes; no native build or export was run. Login layout was visually checked from the owner's Expo Go screenshot; registration and final native launcher/splash appearance still need device checks. No SQL changes.
+
 ### Turkish stream interface completion
 
 - Fixed the stream's English fallback: the Turkish `feed` section previously contained only its title. Added all missing stream labels for comments, likes, polls, attachments, group publishing, drafts, confirmations and empty/error states, preserving interpolation placeholders and plural variants.

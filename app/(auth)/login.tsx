@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
+import { AuthBrand } from '@/components/common/AuthBrand';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
@@ -55,12 +56,7 @@ export default function LoginScreen() {
     <ScreenWrapper>
       <View style={[styles.container, authStyles.container]}>
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/icon.png')}
-            style={styles.logoMark}
-            resizeMode="contain"
-          />
-          <Text style={styles.logo}>EngineerTrack</Text>
+          <AuthBrand />
           <Text style={styles.subtitle}>{t('auth.login')}</Text>
         </View>
 
@@ -141,17 +137,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 24,
-  },
-  logo: {
-    fontSize: 32,
-    fontWeight: '600', fontFamily: fonts.semibold,
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  logoMark: {
-    width: 88,
-    height: 88,
-    marginBottom: 12,
   },
   subtitle: {
     fontSize: 18, fontFamily: fonts.regular,
