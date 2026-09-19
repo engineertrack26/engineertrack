@@ -26,3 +26,44 @@
 - `11:40:55` **table.notifications.select** {} → []
 - `11:40:55` **get_competency_progress** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
 - _11:40:55_ Bitti.
+- `12:11:01` **auth.signIn** {"email":"zeynep.arslan@sim.engineertrack.test"} → 0588262e-6301-4a16-abb8-82b9a963b2da
+- _12:11:01_ Signed in (adaptation, as in the template): Zeynep already exists from phase 2, so this script does not sign up again.
+- `12:11:03` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-14","p_timezone":"Europe/Istanbul","p_reason":"Günü zamanında kapatamadım, sahadaydı… → 164b0333-b025-41df-b4c6-5be93de0187a
+- `12:11:03` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-15","p_timezone":"Europe/Istanbul","p_reason":"Günü zamanında kapatamadım, sahadaydı… → 326b3a33-9200-4fc7-8b0c-78bd4070fcdc
+- `12:11:03` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-16","p_timezone":"Europe/Istanbul","p_reason":"Günü zamanında kapatamadım, sahadaydı… → 6e456326-92a3-45ec-a40f-25ab30e20b96
+- `12:11:03` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-17","p_timezone":"Europe/Istanbul","p_reason":"Günü zamanında kapatamadım, sahadaydı… → 7e14296b-f8d9-41ea-86e2-015ea65d443d
+- `12:11:04` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-18","p_timezone":"Europe/Istanbul","p_reason":"Günü zamanında kapatamadım, sahadaydı… → 6ebf5e0a-ff26-48a9-a311-ffd526521a87
+- `12:11:04` **internship_open_day** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_date":"2026-09-19","p_timezone":"Europe/Istanbul","p_reason":""} → a8c55fbc-0379-4abe-a4cf-86e548cf0871
+- `12:11:04` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":1,"day_date":"2026-09-14…
+- `12:11:04` **internship_save_log** {"p_day":"164b0333-b025-41df-b4c6-5be93de0187a","p_version":1,"p_experience":"Hava kalitesi istasyonunda PM10 verisini kontrol ettim.","p_learning":"PM10 lim… → null
+- `12:11:04` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":2,"day_date":"2026-09-14…
+- `12:11:04` **internship_save_log** {"p_day":"164b0333-b025-41df-b4c6-5be93de0187a","p_version":2,"p_experience":"Hava kalitesi istasyonunda PM10 verisini kontrol ettim.","p_learning":"PM10 lim… → null
+- `12:11:04` **internship_save_log** {"p_day":"326b3a33-9200-4fc7-8b0c-78bd4070fcdc","p_version":1,"p_experience":"Şikayet dosyalarını inceledim.","p_learning":"Şikayetler bölgeye göre gruplanıy… → null
+- `12:11:04` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `12:11:05` **internship_save_log** {"p_day":"326b3a33-9200-4fc7-8b0c-78bd4070fcdc","p_version":2,"p_experience":"Şikayet dosyalarını inceledim.","p_learning":"Şikayetler bölgeye göre gruplanıy… → null
+- `12:11:05` **internship_save_log** {"p_day":"6e456326-92a3-45ec-a40f-25ab30e20b96","p_version":1,"p_experience":"Ölçüm cihazının kalibrasyon kaydına baktım.","p_learning":"Kalibrasyon süresi g… → null
+- `12:11:05` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `12:11:05` **internship_save_log** {"p_day":"6e456326-92a3-45ec-a40f-25ab30e20b96","p_version":2,"p_experience":"Ölçüm cihazının kalibrasyon kaydına baktım.","p_learning":"Kalibrasyon süresi g… → null
+- `12:11:05` **internship_save_log** {"p_day":"7e14296b-f8d9-41ea-86e2-015ea65d443d","p_version":1,"p_experience":"Saha ziyaretinde baca gazı ölçümüne eşlik ettim.","p_learning":"Baca gazı ölçüm… → null
+- `12:11:05` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `12:11:05` **internship_save_log** {"p_day":"7e14296b-f8d9-41ea-86e2-015ea65d443d","p_version":2,"p_experience":"Saha ziyaretinde baca gazı ölçümüne eşlik ettim.","p_learning":"Baca gazı ölçüm… → null
+- `12:11:05` **internship_save_log** {"p_day":"6ebf5e0a-ff26-48a9-a311-ffd526521a87","p_version":1,"p_experience":"Aylık rapor taslağını hazırladım.","p_learning":"Rapor şablonu sabit, veri deği… → null
+- `12:11:05` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `12:11:05` **internship_save_log** {"p_day":"6ebf5e0a-ff26-48a9-a311-ffd526521a87","p_version":2,"p_experience":"Aylık rapor taslağını hazırladım.","p_learning":"Rapor şablonu sabit, veri deği… → null
+- `12:11:05` **internship_save_log** {"p_day":"a8c55fbc-0379-4abe-a4cf-86e548cf0871","p_version":1,"p_experience":"İstasyon bakım defterini güncelledim.","p_learning":"Bakım defteri imza istiyor… → null
+- `12:11:06` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `12:11:06` **internship_save_log** {"p_day":"a8c55fbc-0379-4abe-a4cf-86e548cf0871","p_version":2,"p_experience":"İstasyon bakım defterini güncelledim.","p_learning":"Bakım defteri imza istiyor… → null
+- `12:11:06` **table.group_assignments.select** {} → [{"id":"45e71428-169c-44fc-b055-e5f5ea417dca","group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","triplet_id":"c174b744-4295-4ac4-a6a6-5f3bad195c91","title":"…
+- `12:11:06` **submit_assignment** {"p_assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","p_note":"Tamamlandı.","p_reflection":"Fotoğraf çekemedim, ölçüm sözlüydü.","p_photos":[],"p_docume… → 5bf81166-faa5-4fa4-944a-a766b7da1900
+- _12:11:06_ BUG [rough] submit a task with no photo and no document — got accepted silently, submission id 5bf81166-faa5-4fa4-944a-a766b7da1900
+- `12:11:07` **storage.log-photos.upload** {"path":"0588262e-6301-4a16-abb8-82b9a963b2da/1f33b091-3224-4d46-beb9-2f49ec67aa7c/1789819866324.png","bytes":74} → 0588262e-6301-4a16-abb8-82b9a963b2da/1f33b091-3224-4d46-beb9-2f49ec67aa7c/1789819866324.png
+- `12:11:07` **submit_assignment** {"p_assignment_id":"1f33b091-3224-4d46-beb9-2f49ec67aa7c","p_note":"Fotoğraf ekte.","p_reflection":"Cihazı doğru kullanmayı öğrendim.","p_photos":[{"uri":"ht… → a807d63f-a6e8-4ca5-917b-4e12bad0ebf2
+- `12:11:08` **set_submission_sharing** {"p_submission_id":"a807d63f-a6e8-4ca5-917b-4e12bad0ebf2","p_share":false} → null
+- _12:11:08_ setSubmissionSharing(a807d63f-a6e8-4ca5-917b-4e12bad0ebf2, false) → null
+- `12:11:08` **storage.log-photos.upload** {"path":"0588262e-6301-4a16-abb8-82b9a963b2da/1591a485-21dd-429a-90aa-7cfd74bae804/1789819868007.png","bytes":74} → 0588262e-6301-4a16-abb8-82b9a963b2da/1591a485-21dd-429a-90aa-7cfd74bae804/1789819868007.png
+- `12:11:08` **storage.log-documents.upload** {"path":"0588262e-6301-4a16-abb8-82b9a963b2da/1591a485-21dd-429a-90aa-7cfd74bae804/1789819868172_olcum-kaydi.pdf","bytes":588} → 0588262e-6301-4a16-abb8-82b9a963b2da/1591a485-21dd-429a-90aa-7cfd74bae804/1789819868172_olcum-kaydi.pdf
+- `12:11:08` **submit_assignment** {"p_assignment_id":"1591a485-21dd-429a-90aa-7cfd74bae804","p_note":"Fotoğraf ve belge ekte.","p_reflection":"Belgeleme sırasını öğrendim.","p_photos":[{"uri"… → 8df9f4b9-80d7-4e38-b989-97bb314ff879
+- `12:11:08` **table.notifications.select** {} → [{"id":"1e167157-c417-4c03-b864-e5c9debe9bd3","user_id":"0588262e-6301-4a16-abb8-82b9a963b2da","title":"Badge Earned!","body":"You earned the \"first_task\" …
+- `12:11:08` **unread_message_count** {} → 0
+- `12:11:08` **sync_my_growth_awards** {} → {"awards":[{"label":"prepared","family":"journey","target":1,"groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","stageId":"journey_prepared","earnedAt":"2026-0…
+- _12:11:08_ Faz 4 bitti.

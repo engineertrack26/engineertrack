@@ -23,3 +23,40 @@
 - `11:40:31` **table.notifications.select** {} → []
 - `11:40:32` **get_competency_progress** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
 - _11:40:32_ Faz 2 bitti.
+- `17:26:18` **auth.signIn** {"email":"burak.sahin@sim.engineertrack.test"} → 99a265a1-eb47-4e4c-95d0-beee40653f71
+- _17:26:18_ Signed in (adaptation, per template): Burak already exists from phase 2, so this script does not sign up again.
+- _17:26:18_ In character: missing 2026-09-14, 2026-09-15, 2026-09-16 entirely — only opening 2026-09-17 and 2026-09-18 plus today.
+- `17:26:18` **internship_open_day** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_date":"2026-09-17","p_timezone":"Europe/Istanbul","p_reason":"Dosya teslim gününe yetiştirmeye çalı… → 20eb2581-a257-40f6-bcac-922b1f363a86
+- `17:26:18` **internship_open_day** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_date":"2026-09-18","p_timezone":"Europe/Istanbul","p_reason":"Dosya teslim gününe yetiştirmeye çalı… → 372f458c-6e69-4886-a027-ad850fc6bbab
+- `17:26:18` **internship_open_day** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_date":"2026-09-19","p_timezone":"Europe/Istanbul","p_reason":""} → f7ece159-bf67-4e2f-a63b-6a3d2d40110d
+- `17:26:18` **internship_week** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_from":"2026-09-13"} → [{"id":"20eb2581-a257-40f6-bcac-922b1f363a86","company":"Ege Çevre Danışmanlık","task_id":null,"version":1,"day_date":"2026-09-17","learning":"","timezone":"…
+- `17:26:18` **internship_save_log** {"p_day":"20eb2581-a257-40f6-bcac-922b1f363a86","p_version":1,"p_experience":"ÇED başvuru dosyasındaki eksiklik listesini kontrol ettim, iki kalem eksik çıkt… → null
+- `17:26:18` **internship_week** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_from":"2026-09-13"} → [{"id":"20eb2581-a257-40f6-bcac-922b1f363a86","company":"Ege Çevre Danışmanlık","task_id":null,"version":2,"day_date":"2026-09-17","learning":"Eksiklik yazıs…
+- `17:26:19` **internship_save_log** {"p_day":"20eb2581-a257-40f6-bcac-922b1f363a86","p_version":2,"p_experience":"ÇED başvuru dosyasındaki eksiklik listesini kontrol ettim, iki kalem eksik çıkt… → null
+- `17:26:19` **internship_save_log** {"p_day":"372f458c-6e69-4886-a027-ad850fc6bbab","p_version":1,"p_experience":"Firma ile saha ziyareti öncesi kontrol formunu hazırladık, ekipmanı listeledik.… → null
+- `17:26:19` **internship_week** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","p_from":"2026-09-13"} → [{"id":"20eb2581-a257-40f6-bcac-922b1f363a86","company":"Ege Çevre Danışmanlık","task_id":null,"version":3,"day_date":"2026-09-17","learning":"Eksiklik yazıs…
+- `17:26:19` **internship_save_log** {"p_day":"372f458c-6e69-4886-a027-ad850fc6bbab","p_version":2,"p_experience":"Firma ile saha ziyareti öncesi kontrol formunu hazırladık, ekipmanı listeledik.… → null
+- `17:26:19` **internship_save_log** {"p_day":"f7ece159-bf67-4e2f-a63b-6a3d2d40110d","p_version":1,"p_experience":"ÇED başvuru dosyasındaki eksiklik listesini kontrol ettim, iki kalem eksik çıkt… → null
+- _17:26:19_ journal 2026-09-19 left as a draft on purpose (the "drafts for three, submits two" trait) — today's journal stays unsent.
+- `17:26:19` **table.group_assignments.select** {} → [{"id":"45e71428-169c-44fc-b055-e5f5ea417dca","group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","triplet_id":"c174b744-4295-4ac4-a6a6-5f3bad195c91","title":"…
+- `17:26:19` **storage.log-photos.upload** {"path":"99a265a1-eb47-4e4c-95d0-beee40653f71/45e71428-169c-44fc-b055-e5f5ea417dca/1789838779393.png","bytes":74} → 99a265a1-eb47-4e4c-95d0-beee40653f71/45e71428-169c-44fc-b055-e5f5ea417dca/1789838779393.png
+- `17:26:19` **submit_assignment** {"p_assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","p_note":"Son ana kaldı ama yetiştirdim, fotoğrafı ekliyorum.","p_reflection":"Yaptım.","p_photos":… → a14dc85e-33c6-45b6-a992-bad2d27fc2cd
+- `17:26:19` **storage.log-photos.upload** {"path":"99a265a1-eb47-4e4c-95d0-beee40653f71/1f33b091-3224-4d46-beb9-2f49ec67aa7c/1789838779609.png","bytes":74} → 99a265a1-eb47-4e4c-95d0-beee40653f71/1f33b091-3224-4d46-beb9-2f49ec67aa7c/1789838779609.png
+- `17:26:19` **submit_assignment** {"p_assignment_id":"1f33b091-3224-4d46-beb9-2f49ec67aa7c","p_note":"Son ana kaldı ama yetiştirdim, fotoğrafı ekliyorum.","p_reflection":"Yaptım.","p_photos":… → 5822c00f-4168-4ede-8a6b-5413a3849171
+- `17:26:20` **storage.log-photos.upload** {"path":"99a265a1-eb47-4e4c-95d0-beee40653f71/1591a485-21dd-429a-90aa-7cfd74bae804/1789838779811.png","bytes":74} → 99a265a1-eb47-4e4c-95d0-beee40653f71/1591a485-21dd-429a-90aa-7cfd74bae804/1789838779811.png
+- `17:26:20` **submit_assignment** {"p_assignment_id":"1591a485-21dd-429a-90aa-7cfd74bae804","p_note":"Son ana kaldı ama yetiştirdim, fotoğrafı ekliyorum.","p_reflection":"Yaptım.","p_photos":… → 6eb16356-6a10-41dc-aaab-197d31372283
+- `17:26:20` **storage.log-photos.upload** {"path":"99a265a1-eb47-4e4c-95d0-beee40653f71/67247cb8-c6a4-442f-aa81-fcf6e96b7be7/1789838780103.png","bytes":74} → 99a265a1-eb47-4e4c-95d0-beee40653f71/67247cb8-c6a4-442f-aa81-fcf6e96b7be7/1789838780103.png
+- `17:26:20` **submit_assignment** {"p_assignment_id":"67247cb8-c6a4-442f-aa81-fcf6e96b7be7","p_note":"Son ana kaldı ama yetiştirdim, fotoğrafı ekliyorum.","p_reflection":"Yaptım.","p_photos":… → 872b07ab-bbaf-475c-9291-fcc03c2d55c7
+- `17:26:20` **storage.log-photos.upload** {"path":"99a265a1-eb47-4e4c-95d0-beee40653f71/34abb4e7-39b5-4365-8cb6-56786efe5bc5/1789838780303.png","bytes":74} → 99a265a1-eb47-4e4c-95d0-beee40653f71/34abb4e7-39b5-4365-8cb6-56786efe5bc5/1789838780303.png
+- `17:26:20` **submit_assignment** {"p_assignment_id":"34abb4e7-39b5-4365-8cb6-56786efe5bc5","p_note":"Son ana kaldı ama yetiştirdim, fotoğrafı ekliyorum.","p_reflection":"Yaptım.","p_photos":… → 747d9f10-d7fe-46fd-955f-89e16d60b0fb
+- _17:26:20_ BUG [rough] submit 5 task(s) with the same one-word reflection "Yaptım." (self level 2, one photo each, no document) — got accepted silently on every submission, identical text and all, with no minimum length or word-count enforced anywhere in the flow
+- `17:26:20` **unread_message_count** {} → 1
+- `17:26:20` **list_conversations** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640"} → [{"id":"46ff887c-1eb7-4d60-b8bf-763b401bfd97","kind":"member","title":"Elif Kaya","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","otherId":"5d9c97c7-b804-4…
+- `17:26:20` **list_messages** {"p_conversation_id":"46ff887c-1eb7-4d60-b8bf-763b401bfd97","p_before":null,"p_limit":30} → [{"id":"d0e388b7-8aeb-4469-8b4f-2d85e06768ba","body":"Burak, ikinci görevin kriterini anladın mı? Ben ölçüm tablosunu ekledim.","senderId":"5d9c97c7-b804-4a6…
+- _17:26:20_ Elif wrote: "Burak, ikinci görevin kriterini anladın mı? Ben ölçüm tablosunu ekledim."
+- `17:26:20` **send_message** {"p_conversation_id":"46ff887c-1eb7-4d60-b8bf-763b401bfd97","p_body":"Elif, açıkçası daha bakamadım, dosyalar son ana kaldı bende de :) Bu akşam beşini birde… → 9c83f994-81f9-4cfc-ac25-0501a0c56947
+- `17:26:20` **unread_message_count** {} → 0
+- _17:26:20_ unread message count before replying: 1, after: 0.
+- `17:26:20` **table.notifications.select** {} → [{"id":"6359870e-05a7-466d-8955-76a55d5d669b","user_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","title":"Badge Earned!","body":"You earned the \"first_task\" …
+- `17:26:21` **table.notifications.update** {} → null
+- _17:26:21_ Faz 4 bitti.
