@@ -27,6 +27,19 @@ test('weightedGap weights by tasks', () => {
   expect(weightedGap([{ gap: 1, tasks: 1 }, { gap: -1, tasks: 3 }])).toBe(-0.5);
 });
 
+test('CSV localizes catalog competencies only in Turkish without changing ratings or source rows', () => {
+  const rows = [
+    { competencyId: 'a', code: 'C1', name: 'Technical Documentation', tasks: 3, avgSelf: 2.3, avgMentor: 1.7, gap: -0.6, overRated: 2, underRated: 0 },
+    { competencyId: 'b', code: 'C2', name: 'Custom competency', tasks: 1, avgSelf: 1, avgMentor: 3, gap: 2, overRated: 0, underRated: 1 },
+  ];
+  const before = JSON.stringify(rows);
+  expect(selfVsMentorCsvRows(rows, 'tr-TR')).toEqual([
+    ['Teknik Dokümantasyon', 3, 2.3, 1.7, -0.6], ['Custom competency', 1, 1, 3, 2],
+  ]);
+  expect(selfVsMentorCsvRows(rows, 'de')).toEqual(selfVsMentorCsvRows(rows));
+  expect(JSON.stringify(rows)).toBe(before);
+});
+
 test('weightedGap is null with no rows', () => {
   expect(weightedGap([])).toBeNull();
 });

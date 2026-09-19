@@ -1,4 +1,6 @@
-import { mapTaskFeedback, mapLegacyFeedback, feedbackOutcome, filterFeedback, feedbackDate } from '../mentorFeedbackView';
+import { mapTaskFeedback, mapLegacyFeedback, feedbackOutcome, filterFeedback, feedbackDate, feedbackTitle } from '../mentorFeedbackView';
+import enTasks from '@/i18n/task-content/en.json';
+import trTasks from '@/i18n/task-content/tr.json';
 import en from '@/i18n/locales/en.json';
 import tr from '@/i18n/locales/tr.json';
 import de from '@/i18n/locales/de.json';
@@ -41,6 +43,36 @@ test('dates use the selected locale and unknown dates remain unknown', () => {
   expect(feedbackDate('2026-09-13', 'en-US')).toBe('Sep 13, 2026');
   expect(feedbackDate('', 'tr')).toBe('');
   expect(feedbackDate('invalid', 'tr')).toBe('');
+});
+
+test('ready-task titles display and search in Turkish without changing source records', () => {
+  const key = 'teamwork.1.1.1';
+  const item = mapTaskFeedback({ id: 'translated', status: 'approved', mentor_note: 'Keep my English note.',
+    group_assignments: { title: enTasks[key].task } });
+  const before = { ...item };
+  expect(feedbackTitle(item, 'tr-TR')).toBe(trTasks[key].task);
+  expect(filterFeedback([item], trTasks[key].task, 'approved', 'tr')).toEqual([item]);
+  expect(filterFeedback([item], enTasks[key].task, 'approved', 'tr')).toEqual([item]);
+  expect(filterFeedback([item], trTasks[key].task, 'revision', 'tr')).toEqual([]);
+  for (const language of ['en', 'de', 'it', 'el', 'ro', 'sr']) {
+    expect(feedbackTitle(item, language)).toBe(enTasks[key].task);
+  }
+  expect(item).toEqual(before);
+});
+
+test('custom task titles and legacy log titles are not translated', () => {
+  expect(feedbackTitle(mapTaskFeedback({ group_assignments: { title: 'My custom English task' } }), 'tr'))
+    .toBe('My custom English task');
+  const legacy = mapLegacyFeedback({ daily_logs: { title: enTasks['teamwork.1.1.1'].task } });
+  expect(feedbackTitle(legacy, 'tr')).toBe(legacy.logTitle);
+});
+
+test('history tabs, filters and empty states have Turkish copy', () => {
+  for (const key of ['taskFeedback', 'earlierFeedback', 'earlierFeedbackHint', 'statusApproved',
+    'statusRevision', 'noFeedbackYet', 'noFeedbackYetDesc'] as const) {
+    expect(tr.mentor[key].trim()).not.toBe('');
+    expect(tr.mentor[key]).not.toBe(en.mentor[key]);
+  }
 });
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s provides feedback history labels and interpolations', (_language, locale) => {

@@ -227,6 +227,25 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Turkish group subpages and competency targets
+
+- Owner reviewed the changes in Expo Go and confirmed no issues before requesting commit/push.
+- Completed the missing Turkish `advisor` labels used by student monitoring, group management, assignment selection/review/editing and target selection, including pluralized selection/send/draft results and safety/locked-field messages. Existing mentor-history and report changes retained.
+- Added display-only Turkish translations for all 48 seeded competency KPI statements. Group targets and task selection now render these through `kpiContent`; English remains the source, other languages retain English, and unknown/custom/revised statements remain unchanged. No database writes or changes to assignment/target behavior.
+- Verification: TypeScript passed; 6 targeted suites / 90 tests passed. Regression checks cover namespace completeness, placeholders, screen/card labels, all 48 seed statements, other-language fallback and custom-content preservation. Expo Go verification pending. No SQL required; concurrent `sim/` work left untouched.
+
+### Turkish advisor reports
+
+- Filled 33 missing Turkish report labels covering the title, summary metrics, competency/student completion, empty states, export headers, explanatory notes and export errors.
+- Localized catalog competency names in self-vs-mentor CSV rows using the selected language. Existing report calculations, stored names, custom competencies and non-Turkish catalog display remain unchanged.
+- Verification: TypeScript passed; 39 targeted report/self-assessment/mentor-history tests passed, including report translation coverage, interpolation placeholders and CSV data preservation. Expo Go verification pending. No SQL changes; concurrent `sim/` work left untouched.
+
+### Turkish mentor review history
+
+- Filled seven missing Turkish history labels: task/legacy tabs, legacy explanation, approval/revision filters and empty-state title/description. Checked the screen's referenced interface keys for missing Turkish values.
+- Added `feedbackTitle` to localize ready-catalog task titles at display time and included translated titles in search alongside original titles. Custom task titles, mentor notes, legacy log titles and stored records remain unchanged; non-Turkish languages retain the original task text.
+- Verification: TypeScript passed; 61 targeted feedback/catalog/review tests passed, including Turkish search, outcome filtering, source preservation and legacy handling. Expo Go verification pending. No SQL changes; concurrent `sim/` work left untouched.
+
 ### Turkish in-app notification content
 
 - Added missing Turkish assignment/reminder copy and relative-time labels. Extended locale completeness checks to `notifications`, `notificationUi` and `time`.

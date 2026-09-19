@@ -195,7 +195,7 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
         ]),
       );
       data.studentProgress.forEach((s) => {
-        selfVsMentorCsvRows(s.selfVsMentor).forEach((row) => lines.push(csvRow([s.name, ...row])));
+        selfVsMentorCsvRows(s.selfVsMentor, i18n.language).forEach((row) => lines.push(csvRow([s.name, ...row])));
       });
 
       // Attendance: the section a university asks for as proof. Totals per

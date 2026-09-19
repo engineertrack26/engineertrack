@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Act
 import { router, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { competencyContent } from '@/utils/competencyContent';
+import { kpiContent } from '@/utils/kpiContent';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { competencyService } from '@/services/competency';
@@ -203,7 +204,7 @@ function TargetsContent({ advisorId, groupId, fromGroup }: { advisorId: string; 
               </TouchableOpacity>)}
             </View>
             <Text style={ui.label}>{t('targetUi.levelContent', { level })}</Text>
-            {statements.length ? statements.map((kpi) => <Text key={kpi.id} style={ui.body}>• {kpi.statement}</Text>) :
+            {statements.length ? statements.map((kpi) => <Text key={kpi.id} style={ui.body}>• {kpiContent(kpi.statement, i18n.language)}</Text>) :
               <Text style={ui.secondary}>{t('targetUi.noDescription')}</Text>}
           </>}
         </View>;

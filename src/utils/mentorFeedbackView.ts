@@ -1,3 +1,5 @@
+import { taskContent } from './taskContent';
+
 // Two distinct histories, never merged into one shape: a task review has an
 // outcome and a note, a legacy log review has a 1-5 rating. Forcing them into
 // one interface is how you end up with a card that shows stars for a task
@@ -30,6 +32,10 @@ export interface LegacyFeedbackItem {
 }
 
 export type FeedbackItem = TaskFeedbackItem | LegacyFeedbackItem;
+
+export function feedbackTitle(item: FeedbackItem, locale: string): string {
+  return item.kind === 'task' ? taskContent(item.assignmentTitle, locale) : item.logTitle;
+}
 
 export function mapTaskFeedback(row: Record<string, unknown>): TaskFeedbackItem {
   const assignment = row.group_assignments as Record<string, unknown> | null;
@@ -84,6 +90,7 @@ export function filterFeedback<T extends FeedbackItem>(items: T[], query: string
   const search = query.trim().toLocaleLowerCase(locale);
   return items.filter((item) => (filter === 'all' || feedbackOutcome(item) === filter) &&
     [item.studentFirstName + ' ' + item.studentLastName,
+      feedbackTitle(item, locale),
       item.kind === 'task' ? item.assignmentTitle : item.logTitle,
       item.kind === 'task' ? item.note : item.comments,
       item.kind === 'legacy' ? item.revisionNotes : ''].some((value) => value?.toLocaleLowerCase(locale).includes(search)));

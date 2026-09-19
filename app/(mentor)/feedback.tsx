@@ -9,7 +9,7 @@ import { mentorService } from '@/services/mentor';
 import { colors, fonts } from '@/theme';
 import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
-import { mapTaskFeedback, mapLegacyFeedback, filterFeedback, feedbackDate, feedbackOutcome,
+import { mapTaskFeedback, mapLegacyFeedback, filterFeedback, feedbackDate, feedbackOutcome, feedbackTitle,
   type FeedbackItem, type FeedbackFilter } from '@/utils/mentorFeedbackView';
 
 export default function FeedbackScreen() {
@@ -106,7 +106,7 @@ function FeedbackContent({ mentorId }: { mentorId: string }) {
           </View>
           {outcome === 'approved' || outcome === 'revision' ? <Stamp kind={outcome} /> :
             <Text style={ui.secondary}>{t('feedbackUi.other')}</Text>}
-          <Text style={ui.cardTitle}>{item.kind === 'task' ? item.assignmentTitle : item.logTitle}</Text>
+          <Text style={ui.cardTitle}>{feedbackTitle(item, i18n.language)}</Text>
           {item.kind === 'legacy' && <>
             <Text style={ui.secondary}>{t('feedbackUi.logDate', { date: formatDate(item.logDate) })}</Text>
             <View style={styles.wrap} accessible accessibilityLabel={t('feedbackUi.rating', { rating: item.rating })}>

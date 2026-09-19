@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { competencyContent } from './competencyContent';
 
 /** The four-step supervision scale used across the internship journal: a task
  *  is one KPI, so a per-task rating is a per-KPI rating. See
@@ -35,10 +36,10 @@ export function gapTag(gap: number): 'high' | 'low' | null {
   return null;
 }
 
-export function selfVsMentorCsvRows(rows: SelfVsMentorRow[]): Array<Array<string | number>> {
+export function selfVsMentorCsvRows(rows: SelfVsMentorRow[], language = 'en'): Array<Array<string | number>> {
   return [...rows]
     .sort((a, b) => a.code.localeCompare(b.code))
-    .map((r) => [r.name, r.tasks, r.avgSelf, r.avgMentor, r.gap]);
+    .map((r) => [competencyContent(r.name, language), r.tasks, r.avgSelf, r.avgMentor, r.gap]);
 }
 
 /** Weighted mean of `gap` weighted by `tasks`, one decimal. Null when there

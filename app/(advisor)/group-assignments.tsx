@@ -7,6 +7,7 @@ import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
+import { kpiContent } from '@/utils/kpiContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -500,7 +501,7 @@ function GroupAssignmentsContent() {
             <Text style={styles.label}>{t('advisor.pickTriplet')}</Text>
             {tripletGroups.map((group) => (
               <View key={group.kpiId} style={styles.kpiGroup}>
-                <Text style={styles.kpiStatement}>{group.statement}</Text>
+                <Text style={styles.kpiStatement}>{kpiContent(group.statement, i18n.language)}</Text>
                 {group.items.map(({ triplet: tr, alreadyAssigned }) => {
                   const active = picked.has(tr.id);
                   return (
