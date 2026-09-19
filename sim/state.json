@@ -1,0 +1,100 @@
+{
+  "groupId": "861d35d8-5083-4146-a8eb-38b10b5a0640",
+  "joinCode": "58MMWL",
+  "advisorId": "f6f7070c-b697-4bbe-8b3b-0a65d579a132",
+  "targets": [
+    {
+      "competencyId": "9e89eb03-71d6-40d6-a7cf-406790579563",
+      "targetLevel": 2
+    },
+    {
+      "competencyId": "f2b0fc57-3c14-4c88-bb0d-f4eaf1c19122",
+      "targetLevel": 3
+    },
+    {
+      "competencyId": "a2979e3d-2c1b-49ab-8c98-a58dc45f7645",
+      "targetLevel": 2
+    },
+    {
+      "competencyId": "502fab02-105d-4709-9386-64cdca62694f",
+      "targetLevel": 3
+    },
+    {
+      "competencyId": "e51fccda-3b1e-4951-8f86-a97aa9f93ba5",
+      "targetLevel": 2
+    },
+    {
+      "competencyId": "7480333b-4cde-4388-882e-8227601d6faa",
+      "targetLevel": 3
+    }
+  ],
+  "assignments": [
+    {
+      "id": "45e71428-169c-44fc-b055-e5f5ea417dca",
+      "title": "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance.",
+      "competencyName": "Engineering Problem Solving",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "1f33b091-3224-4d46-beb9-2f49ec67aa7c",
+      "title": "Record measurements, outputs, test results, or observations in the required digital format, including values, units, dates, and reference conditions.",
+      "competencyName": "Technical Documentation",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "1591a485-21dd-429a-90aa-7cfd74bae804",
+      "title": "Send a direct message to a peer to coordinate a minor task handoff.",
+      "competencyName": "Professional Communication",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "67247cb8-c6a4-442f-aa81-fcf6e96b7be7",
+      "title": "Type a brief summary of a stand-up meeting in the team chat.",
+      "competencyName": "Digital Tool Proficiency",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "34abb4e7-39b5-4365-8cb6-56786efe5bc5",
+      "title": "Pick one routine task with an SOP. Follow it step by step and log each completed step in EngineerTrack as you go.",
+      "competencyName": "Responsibility & Ethics",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "df02d85e-1c8e-41f4-913b-91b14ab7cc65",
+      "title": "Upload, format, or merge the completed assigned portion into the team's designated drive. Upload the screen shot in the App.",
+      "competencyName": "Collaboration & Teamwork",
+      "level": 2,
+      "published": true
+    },
+    {
+      "id": "74b964d6-219f-4437-a0c6-0f3bace226f7",
+      "title": "Identify deviations by matching the virtual system's operational data displayed on the screen with standard reference values using a \"drag-and-drop\" method.",
+      "competencyName": "Engineering Problem Solving",
+      "level": 1,
+      "published": false
+    },
+    {
+      "id": "e769117c-3558-4c43-a137-68d98ff834ec",
+      "title": "By examining the encountered physical symptoms or error messages, select the correct technical terms from the in-app menu to identify the problem.",
+      "competencyName": "Engineering Problem Solving",
+      "level": 1,
+      "published": false
+    }
+  ],
+  "posts": {
+    "announcementId": "0e68368c-84b7-49eb-bb3a-d4d369d4d6c2",
+    "pollId": "2dfb0c63-76d2-4af7-b483-b98a19ccd744",
+    "pollOptionIds": [
+      "fd884954-2b7b-4088-b57e-d2f350b63182",
+      "0b729827-2294-4b3b-b023-02460fc43c5f",
+      "6862cc5b-21e9-495c-9441-02b46b97cfa3",
+      "9af360a2-2007-4b8d-aa5d-787678a425c0"
+    ],
+    "draftAnnouncementId": "13946c36-731b-48e6-a511-af585f314970"
+  }
+}
