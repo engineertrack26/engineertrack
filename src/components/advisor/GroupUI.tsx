@@ -32,10 +32,10 @@ export function GroupContextLabel({ groupId }: { groupId?: string }) {
 export function GroupRow({ title, detail, icon, onPress }: {
   title: string; detail?: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void;
 }) {
-  return <TouchableOpacity accessibilityRole="button" onPress={onPress} style={[ui.card, groupStyles.row]}>
-    <Ionicons name={icon} size={24} color={colors.primaryDark} />
+  return <TouchableOpacity accessibilityRole="button" onPress={onPress} style={[groupStyles.row, groupStyles.ledgerRow]}>
+    <Ionicons name={icon} size={20} color={colors.inkSoft} />
     <View style={groupStyles.grow}><Text style={ui.label}>{title}</Text>{!!detail && <Text style={ui.secondary}>{detail}</Text>}</View>
-    <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
+    <Ionicons name="chevron-forward" size={18} color={colors.ink} />
   </TouchableOpacity>;
 }
 
@@ -66,6 +66,8 @@ export function GroupModal({ title, onClose, busy = false, children, footer }: P
 export const groupStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   grow: { flex: 1, gap: 4 },
+  ledgerRow: { minHeight: 56, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider },
+  ledger: { borderTopWidth: 1, borderColor: colors.ruleStrong },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
   outline: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: colors.ink, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   linkText: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink, flexShrink: 1 },

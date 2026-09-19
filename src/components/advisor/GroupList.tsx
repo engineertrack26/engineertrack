@@ -45,7 +45,7 @@ export function GroupList({ advisorId, active }: { advisorId: string; active: bo
   return <>
     <FlatList
       data={filtered} keyExtractor={(g) => g.id}
-      contentContainerStyle={[ui.content, { flexGrow: 1 }]}
+      contentContainerStyle={[ui.content, { flexGrow: 1, gap: 0 }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} colors={[colors.primaryDark]} />}
       ListHeaderComponent={<View style={{ gap: 16 }}>
@@ -68,23 +68,20 @@ export function GroupList({ advisorId, active }: { advisorId: string; active: bo
           </TouchableOpacity>
         </View>
         {failed && <LoadFailedBanner onRetry={() => void load()} />}
+        <View style={styles.ledger} />
       </View>}
-      renderItem={({ item: g }) => <TouchableOpacity style={ui.card} accessibilityRole="button"
+      renderItem={({ item: g }) => <TouchableOpacity style={[styles.row, styles.ledgerRow]} accessibilityRole="button"
+        accessibilityLabel={[g.name, g.term, t('advisorGroups.openGroup')].filter(Boolean).join(', ')}
         onPress={() => router.push(groupCenterRoute(g.id))}>
-        <View style={styles.row}>
-          <Ionicons name="people-outline" size={28} color={colors.primaryDark} />
-          <View style={styles.grow}>
-            <Text style={ui.cardTitle}>{g.name}</Text>
-            {!!g.term && <Text style={ui.secondary}>{g.term}</Text>}
-          </View>
-          <Ionicons name="chevron-forward" size={24} color={colors.primaryDark} />
+        <View style={styles.grow}>
+          <Text style={ui.label}>{g.name}</Text>
+          <Text style={ui.secondary}>{[g.term, counts !== null ? t('advisorGroups.memberCount', { count: counts[g.id] ?? 0 }) : t('advisorGroups.countUnavailable'),
+            g.isArchived && t('advisorGroups.archived')].filter(Boolean).join(' · ')}</Text>
         </View>
-        <Text style={ui.secondary}>{counts !== null ? t('advisorGroups.memberCount', { count: counts[g.id] ?? 0 }) : t('advisorGroups.countUnavailable')}</Text>
-        {g.isArchived && <Text style={ui.secondary}>{t('advisorGroups.archived')}</Text>}
-        <Text style={styles.linkText}>{t('advisorGroups.openGroup')}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.ink} />
       </TouchableOpacity>}
       ListEmptyComponent={loading ? <ActivityIndicator size="large" color={colors.primaryDark} /> :
-        failed ? null : <View style={ui.card}>
+        failed ? null : <View style={[ui.card, { marginTop: 16 }]}>
           <Text style={ui.section}>{t(search.trim() ? 'advisorGroups.noMatches' : archived ? 'advisorGroups.noArchive' : 'advisorGroups.noActive')}</Text>
           <Text style={ui.secondary}>{t(search.trim() ? 'advisorGroups.searchHint' : archived ? 'advisorGroups.archiveHint' : 'advisorGroups.createHint')}</Text>
         </View>}

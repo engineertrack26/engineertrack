@@ -15,7 +15,7 @@ import { groupCenterRoute } from '@/utils/advisorGroups';
 import { sameTargets, toggleTarget, validTargets, type TargetSelection } from '@/utils/advisorTargets';
 import { ui } from '@/components/common/workflowStyles';
 import { groupStyles } from '@/components/advisor/GroupUI';
-import { LoadFailedBanner } from '@/components/common';
+import { LoadFailedBanner, LevelRail } from '@/components/common';
 
 const LEVELS = [1, 2, 3, 4];
 
@@ -181,22 +181,25 @@ function TargetsContent({ advisorId, groupId, fromGroup }: { advisorId: string; 
         const level = targets[item.id];
         const statements = kpis.filter((k) => k.competencyId === item.id && k.level === level)
           .sort((a, b) => a.kpiIndex - b.kpiIndex);
-        return <View style={[ui.card, selected && styles.selected]}>
+        return <View style={[ui.card, selected && ui.featured]}>
           <View style={ui.header}>
             <Text style={[ui.cardTitle, { flex: 1 }]}>{competencyContent(item.name, i18n.language)}</Text>
             <Switch value={selected} disabled={disabled} accessibilityLabel={competencyContent(item.name, i18n.language)}
-              onValueChange={() => edit(toggleTarget(targets, item.id))} trackColor={{ true: colors.primaryDark }} />
+              onValueChange={() => edit(toggleTarget(targets, item.id))} trackColor={{ true: colors.ink }} />
           </View>
           <Text style={ui.secondary}>{t(selected ? 'targetUi.included' : 'targetUi.excluded')}</Text>
           {selected && <>
-            <Text style={ui.label}>{t('advisor.targetLevel')}</Text>
+            <View style={[ui.header, { justifyContent: 'space-between' }]}>
+              <Text style={ui.label}>{t('advisor.targetLevel')}</Text>
+              <LevelRail current={0} target={level} label={t('advisor.targetLevelShort', { level })} />
+            </View>
             <View style={styles.wrap} accessibilityRole="radiogroup">
               {LEVELS.map((value) => <TouchableOpacity key={value} accessibilityRole="radio"
                 accessibilityLabel={t('advisor.targetLevelShort', { level: value })}
                 accessibilityState={{ checked: level === value, disabled }} disabled={disabled}
                 style={[styles.choice, level === value && styles.activeLevel]}
                 onPress={() => edit({ ...targets, [item.id]: value })}>
-                <Text style={[groupStyles.linkText, level === value && { color: '#fff' }]}>L{value}</Text>
+                <Text style={[groupStyles.linkText, level === value && { color: colors.textOnPrimary }]}>L{value}</Text>
               </TouchableOpacity>)}
             </View>
             <Text style={ui.label}>{t('targetUi.levelContent', { level })}</Text>
@@ -222,6 +225,6 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   choice: { minWidth: 48, minHeight: 48, borderWidth: 1, borderColor: colors.divider, borderRadius: 6, padding: 12, alignItems: 'center', justifyContent: 'center' },
   selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
-  activeLevel: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
-  footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, width: '100%', maxWidth: 720, alignSelf: 'center' },
+  activeLevel: { backgroundColor: colors.ink, borderColor: colors.ink },
+  footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.paper, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '@/store/authStore';
 import { useGroupStore } from '@/store/groupStore';
@@ -62,16 +63,20 @@ export function GroupCenter({ advisorId, groupId }: { advisorId: string; groupId
     {loading ? <ActivityIndicator size="large" color={colors.primaryDark} /> : <>
       {(failed || partial) && <LoadFailedBanner onRetry={() => void load()} />}
       {!group ? !failed && <Text style={ui.body}>{t('advisorGroups.unavailable')}</Text> : <>
-        <Text style={ui.title} accessibilityRole="header">{group.name}</Text>
-        {!!group.term && <Text style={ui.secondary}>{group.term}</Text>}
-        <Text style={ui.secondary}>{members !== null ? t('advisorGroups.memberCount', { count: members }) : t('advisorGroups.countUnavailable')}</Text>
-        <TouchableOpacity style={styles.outline} accessibilityRole="button" onPress={() => setShowInfo(true)}>
-          <Text style={styles.linkText}>{t('advisorGroups.groupInfo')}</Text>
-        </TouchableOpacity>
+        <View style={{ gap: 4 }}>
+          <Text style={ui.title} accessibilityRole="header">{group.name}</Text>
+          <View style={[styles.row, { flexWrap: 'wrap' }]}>
+            <Text style={[ui.secondary, styles.grow]}>{[group.term, members !== null ? t('advisorGroups.memberCount', { count: members }) : t('advisorGroups.countUnavailable')].filter(Boolean).join(' · ')}</Text>
+            <TouchableOpacity accessibilityRole="button" onPress={() => setShowInfo(true)} hitSlop={8} style={[styles.row, { gap: 2 }]}>
+              <Text style={[styles.linkText, { fontSize: 14 }]}>{t('advisorGroups.groupInfo')}</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
         {group.isArchived ? <View style={ui.note}>
           <Text style={ui.label}>{t('advisorGroups.archived')}</Text>
           <Text style={ui.secondary}>{t('advisorGroups.archivedHint')}</Text>
-        </View> : <View style={[ui.card, styles.selected]}>
+        </View> : <View style={[ui.card, ui.featured]}>
           <Text style={ui.section}>{t('advisorGroups.nextStep')}</Text>
           <Text style={ui.body}>{t(targets === 0 ? 'advisorGroups.targetsNext' : members === 0 ? 'advisorGroups.inviteNext' :
             drafts && drafts > 0 ? 'advisorGroups.draftsNext' : 'advisorGroups.tasksNext', { count: drafts ?? 0 })}</Text>
@@ -81,14 +86,14 @@ export function GroupCenter({ advisorId, groupId }: { advisorId: string; groupId
               drafts && drafts > 0 ? 'advisorGroups.reviewDrafts' : 'advisorGroups.assignments')}</Text>
           </TouchableOpacity>
         </View>}
-        <GroupRow title={t('advisorGroups.viewStudents')} detail={t('advisorGroups.membersHint')} icon="people-outline" onPress={() => open('student-monitor')} />
-        <GroupRow title={t('advisorGroups.assignments')} detail={drafts !== null ? t('advisorGroups.taskCounts', { draft: drafts, published: (assignments?.length ?? 0) - drafts }) : undefined}
-          icon="clipboard-outline" onPress={() => open('group-assignments')} />
-        <GroupRow title={t('advisorGroups.competencies')} detail={t('advisorGroups.targetsHint')} icon="flag-outline" onPress={() => open('group-competencies')} />
-        <GroupRow title={t('advisorGroups.reportsTitle')} icon="bar-chart-outline" onPress={() => open('reports')} />
-        <TouchableOpacity style={styles.outline} accessibilityRole="button" onPress={() => open('feed')}>
-          <Text style={styles.linkText}>{t('advisorGroups.openStream')}</Text>
-        </TouchableOpacity>
+        <View style={styles.ledger}>
+          <GroupRow title={t('advisorGroups.viewStudents')} detail={t('advisorGroups.membersHint')} icon="people-outline" onPress={() => open('student-monitor')} />
+          <GroupRow title={t('advisorGroups.assignments')} detail={drafts !== null ? t('advisorGroups.taskCounts', { draft: drafts, published: (assignments?.length ?? 0) - drafts }) : undefined}
+            icon="clipboard-outline" onPress={() => open('group-assignments')} />
+          <GroupRow title={t('advisorGroups.competencies')} detail={t('advisorGroups.targetsHint')} icon="flag-outline" onPress={() => open('group-competencies')} />
+          <GroupRow title={t('advisorGroups.reportsTitle')} icon="bar-chart-outline" onPress={() => open('reports')} />
+          <GroupRow title={t('advisorGroups.openStream')} icon="newspaper-outline" onPress={() => open('feed')} />
+        </View>
         {showInfo && <GroupInfo group={group} onClose={() => setShowInfo(false)} onArchived={(isArchived) => {
           setData((prev) => prev ? { ...prev, group: { ...prev.group, isArchived } } : prev);
           void load();
