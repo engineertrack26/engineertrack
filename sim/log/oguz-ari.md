@@ -11,3 +11,31 @@
 - `11:55:59` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
 - _11:55:59_ list_mentor_message_contacts → 2 contact(s); Deniz is listed.
 - _11:55:59_ Faz 3 bitti.
+- `17:47:43` **auth.signIn** {"email":"oguz.ari@sim.engineertrack.test"} → 240d04ee-ce99-49f4-885d-edf6f6ffcec5
+- `17:47:43` **internship_week** {"p_student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","p_from":"2026-09-13"} → [{"id":"53c91412-11a4-45ac-9665-9de8d419067a","company":"Boğaziçi Geri Dönüşüm Tesisleri","task_id":null,"version":3,"day_date":"2026-09-14","learning":"Bant…
+- _17:47:43_ absence day found: 2026-09-16 (id 884098a3-89bc-4132-84b1-e710a72e8b06) — journal: "Sağlık raporu nedeniyle bugün tesiste değildim, ayrıştırma hattına çıkamadım." / reason: "Sağlık raporu, ektedir.".
+- `17:47:43` **internship_review** {"p_days":[{"id":"884098a3-89bc-4132-84b1-e710a72e8b06","version":3}],"p_status":"excused","p_note":"Sağlık raporu görüldü."} → null
+- `17:47:43` **internship_review** {"p_days":[{"id":"53c91412-11a4-45ac-9665-9de8d419067a","version":3},{"id":"d354d22f-260c-40d1-b2ad-e3e868409cfd","version":3},{"id":"aa85e403-9e76-4b08-9258… → null
+- `17:47:43` **internship_week** {"p_student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","p_from":"2026-09-13"} → [{"id":"53c91412-11a4-45ac-9665-9de8d419067a","company":"Boğaziçi Geri Dönüşüm Tesisleri","task_id":null,"version":4,"day_date":"2026-09-14","learning":"Bant…
+- `17:47:43` **internship_note** {"p_day":"53c91412-11a4-45ac-9665-9de8d419067a","p_version":4,"p_note":"Öğrendiklerini bir cümleyle netleştir.","p_correction":true} → **ERROR** ID_FORBIDDEN
+- _17:47:43_ BUG [wrong] ask for a correction on one journal — got ID_FORBIDDEN
+- _17:47:43_ correction requested on 2026-09-14 (id 53c91412-11a4-45ac-9665-9de8d419067a).
+- `17:47:43` **internship_events** {"p_day":"53c91412-11a4-45ac-9665-9de8d419067a"} → [{"id":"18c932c6-c19b-4b22-a765-e311267d4de5","note":"Sahadaydı.","day_id":"53c91412-11a4-45ac-9665-9de8d419067a","actor_id":"240d04ee-ce99-49f4-885d-edf6f6f…
+- _17:47:43_ internship_events(53c91412-11a4-45ac-9665-9de8d419067a) → 3 event(s): attendance, log_submitted, created.
+- `17:47:43` **table.assignment_submissions.select** {} → [{"id":"e2513d5d-9777-47fe-9349-058c432b0bb9","assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","sta…
+- _17:47:43_ listPendingReviews → 3 row(s), all mine.
+- `17:47:43` **review_assignment** {"p_submission_id":"e2513d5d-9777-47fe-9349-058c432b0bb9","p_approved":true,"p_note":"Onay","p_level":null} → **ERROR** LEVEL_REQUIRED
+- _17:47:43_ expected refusal LEVEL_REQUIRED for: approve without a level
+- `17:47:44` **review_assignment** {"p_submission_id":"e2513d5d-9777-47fe-9349-058c432b0bb9","p_approved":true,"p_note":"Ölçüm kaydı düzenli, teşekkürler.","p_level":1} → null
+- `17:47:44` **review_assignment** {"p_submission_id":"2b2d39bc-1beb-4d16-9bad-5af510ca90cb","p_approved":true,"p_note":"Belge eksiksiz, onaylandı.","p_level":2} → null
+- `17:47:44` **review_assignment** {"p_submission_id":"ea2998e8-7943-42e1-984e-638d6506fba8","p_approved":true,"p_note":"Mesaj akışı net ve zamanında.","p_level":2} → null
+- `17:47:44` **competency_self_vs_mentor** {"p_student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299"} → [{"gap":0,"code":"communication","name":"Professional Communication","tasks":1,"avgSelf":2,"avgMentor":2,"overRated":0,"underRated":0,"competencyId":"a2979e3…
+- `17:47:44` **table.notifications.select** {} → [{"id":"66ef0e31-d39e-4889-9a09-7d25884f407a","user_id":"240d04ee-ce99-49f4-885d-edf6f6ffcec5","title":"Journal submitted","body":"Deniz Yıldırım submitted t…
+- _17:47:44_ Faz 5 bitti.
+- `17:51:23` **auth.signIn** {"email":"oguz.ari@sim.engineertrack.test"} → 240d04ee-ce99-49f4-885d-edf6f6ffcec5
+- _17:51:23_ Fixup run: completing the correction-request step after confirming ID_FORBIDDEN is advisor-only by design (see sim/phases/05-oguz-ari.cjs comments). Attendance and submission approvals from the first run are untouched.
+- `17:51:24` **internship_week** {"p_student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","p_from":"2026-09-13"} → [{"id":"53c91412-11a4-45ac-9665-9de8d419067a","company":"Boğaziçi Geri Dönüşüm Tesisleri","task_id":null,"version":4,"day_date":"2026-09-14","learning":"Bant…
+- `17:51:24` **internship_note** {"p_day":"53c91412-11a4-45ac-9665-9de8d419067a","p_version":4,"p_note":"Öğrendiklerini bir cümleyle netleştir.","p_correction":false} → null
+- `17:51:24` **internship_events** {"p_day":"53c91412-11a4-45ac-9665-9de8d419067a"} → [{"id":"a88f15f2-126c-4c60-952c-0db84f398d75","note":"Öğrendiklerini bir cümleyle netleştir.","day_id":"53c91412-11a4-45ac-9665-9de8d419067a","actor_id":"240…
+- _17:51:24_ internship_events(53c91412-11a4-45ac-9665-9de8d419067a) → 4 event(s): feedback, attendance, log_submitted, created.
+- _17:51:24_ Fixup bitti.

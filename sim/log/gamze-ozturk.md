@@ -11,3 +11,23 @@
 - `11:55:40` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
 - _11:55:40_ list_mentor_message_contacts → 2 contact(s); Mert is listed.
 - _11:55:40_ Faz 3 bitti. Mert kendini her konuda 3 (bağımsız) olarak değerlendiriyor ama ben katılmıyorum — inceleme aşamasında neden düşük puan verdiğimi yazacağım.
+- `17:46:09` **auth.signIn** {"email":"gamze.ozturk@sim.engineertrack.test"} → 02ab2d3e-1e39-456a-a4d1-74b3bd1caf0e
+- `17:46:09` **internship_week** {"p_student_id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b","p_from":"2026-09-13"} → [{"id":"d7b22bca-067b-42c7-9e21-f27310616066","company":"İzmir Atık Yönetimi A.Ş.","task_id":null,"version":3,"day_date":"2026-09-14","learning":"Tartı fişle…
+- `17:46:09` **internship_review** {"p_days":[{"id":"d7b22bca-067b-42c7-9e21-f27310616066","version":3},{"id":"ad2e9caa-92ef-4fa2-a5c0-83f1efdd359a","version":3},{"id":"b31dbd09-c940-4cdb-94ae… → null
+- `17:46:10` **table.assignment_submissions.select** {} → [{"id":"46b1836f-dede-439d-a659-0cfb8b173777","assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","student_id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b","sta…
+- _17:46:10_ listPendingReviews → 4 row(s), all mine.
+- _17:46:10_ Mert'in 4 teslimindeki self_level: [3,3,3,3] (karakteri: her konuda kendini 3/bağımsız değerlendiriyor).
+- `17:46:10` **review_assignment** {"p_submission_id":"46b1836f-dede-439d-a659-0cfb8b173777","p_approved":true,"p_note":"Bağımsız çalışabildiğini düşünmüyorum; adımların çoğunda yönlendirme ge… → null
+- `17:46:10` **review_assignment** {"p_submission_id":"f56c0896-f861-4109-a821-4b54fd418053","p_approved":true,"p_note":"Bağımsız çalışabildiğini düşünmüyorum; adımların çoğunda yönlendirme ge… → null
+- `17:46:10` **review_assignment** {"p_submission_id":"b2920c35-a1dc-4866-ac6b-e9aa2c3f089a","p_approved":true,"p_note":"Bağımsız çalışabildiğini düşünmüyorum; adımların çoğunda yönlendirme ge… → null
+- `17:46:10` **review_assignment** {"p_submission_id":"92ce0edd-4a01-4ba5-a48c-2b278fdd9e8b","p_approved":true,"p_note":"Bağımsız çalışabildiğini düşünmüyorum; adımların çoğunda yönlendirme ge… → null
+- `17:46:10` **competency_self_vs_mentor** {"p_student_id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b"} → [{"gap":-2,"code":"communication","name":"Professional Communication","tasks":1,"avgSelf":3,"avgMentor":1,"overRated":1,"underRated":0,"competencyId":"a2979e…
+- _17:46:10_ communication: gap -2 (avgSelf 3, avgMentor 1) — correctly negative.
+- _17:46:10_ communication: overRated 1 = tasks 1 — correct.
+- _17:46:10_ digital_tools: gap -2 (avgSelf 3, avgMentor 1) — correctly negative.
+- _17:46:10_ digital_tools: overRated 1 = tasks 1 — correct.
+- _17:46:10_ documentation: gap -2 (avgSelf 3, avgMentor 1) — correctly negative.
+- _17:46:10_ documentation: overRated 1 = tasks 1 — correct.
+- _17:46:10_ problem_solving: gap -2 (avgSelf 3, avgMentor 1) — correctly negative.
+- _17:46:10_ problem_solving: overRated 1 = tasks 1 — correct.
+- _17:46:10_ Faz 5 bitti.

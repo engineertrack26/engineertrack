@@ -469,23 +469,217 @@
       ]
     },
     "gamze-ozturk": {
-      "userId": "02ab2d3e-1e39-456a-a4d1-74b3bd1caf0e"
+      "userId": "02ab2d3e-1e39-456a-a4d1-74b3bd1caf0e",
+      "reviewed": [
+        {
+          "submissionId": "46b1836f-dede-439d-a659-0cfb8b173777",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "f56c0896-f861-4109-a821-4b54fd418053",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "b2920c35-a1dc-4866-ac6b-e9aa2c3f089a",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "92ce0edd-4a01-4ba5-a48c-2b278fdd9e8b",
+          "approved": true,
+          "level": 1
+        }
+      ]
     },
     "emre-aksoy": {
-      "userId": "ddfdf911-6584-4d3d-a024-c403897c6223"
+      "userId": "ddfdf911-6584-4d3d-a024-c403897c6223",
+      "reviewed": [
+        {
+          "submissionId": "5e96b892-a2d0-4b31-b1cb-80b0fa3e5d40",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "2ae17a8a-c027-4d95-a64c-372c8c1d31bf",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "e55a4cfd-ed92-4a84-b055-d3a8120c77e3",
+          "approved": true,
+          "level": 2
+        }
+      ],
+      "leftPending": "744a11f6-1ebf-4776-8aa0-5f4996e5f211"
     },
     "murat-koc": {
-      "userId": "6fcbba4f-c65a-43ec-a938-60a70808223b"
+      "userId": "6fcbba4f-c65a-43ec-a938-60a70808223b",
+      "reviewed": [
+        {
+          "submissionId": "5bf81166-faa5-4fa4-944a-a766b7da1900",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "a807d63f-a6e8-4ca5-917b-4e12bad0ebf2",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "8df9f4b9-80d7-4e38-b989-97bb314ff879",
+          "approved": true,
+          "level": 2
+        }
+      ],
+      "attendance": [
+        "164b0333-b025-41df-b4c6-5be93de0187a",
+        "326b3a33-9200-4fc7-8b0c-78bd4070fcdc",
+        "6e456326-92a3-45ec-a40f-25ab30e20b96",
+        "7e14296b-f8d9-41ea-86e2-015ea65d443d",
+        "6ebf5e0a-ff26-48a9-a311-ffd526521a87",
+        "a8c55fbc-0379-4abe-a4cf-86e548cf0871"
+      ]
     },
     "ayca-yildiz": {
-      "userId": "3a1e5820-0939-4b03-8060-cde6abcdc056"
+      "userId": "3a1e5820-0939-4b03-8060-cde6abcdc056",
+      "returned": "6eb16356-6a10-41dc-aaab-197d31372283",
+      "reviewed": [
+        {
+          "submissionId": "a14dc85e-33c6-45b6-a992-bad2d27fc2cd",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "5822c00f-4168-4ede-8a6b-5413a3849171",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "872b07ab-bbaf-475c-9291-fcc03c2d55c7",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "747d9f10-d7fe-46fd-955f-89e16d60b0fb",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "6eb16356-6a10-41dc-aaab-197d31372283",
+          "approved": false,
+          "level": null
+        }
+      ]
     },
     "oguz-ari": {
-      "userId": "240d04ee-ce99-49f4-885d-edf6f6ffcec5"
+      "userId": "240d04ee-ce99-49f4-885d-edf6f6ffcec5",
+      "correctionDay": {
+        "id": "53c91412-11a4-45ac-9665-9de8d419067a",
+        "date": "2026-09-14"
+      },
+      "reviewed": [
+        {
+          "submissionId": "e2513d5d-9777-47fe-9349-058c432b0bb9",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "2b2d39bc-1beb-4d16-9bad-5af510ca90cb",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "ea2998e8-7943-42e1-984e-638d6506fba8",
+          "approved": true,
+          "level": 2
+        }
+      ],
+      "attendance": [
+        {
+          "id": "884098a3-89bc-4132-84b1-e710a72e8b06",
+          "date": "2026-09-16",
+          "status": "excused"
+        },
+        {
+          "id": "53c91412-11a4-45ac-9665-9de8d419067a",
+          "date": "2026-09-14",
+          "status": "present"
+        },
+        {
+          "id": "d354d22f-260c-40d1-b2ad-e3e868409cfd",
+          "date": "2026-09-15",
+          "status": "present"
+        },
+        {
+          "id": "aa85e403-9e76-4b08-9258-7ca6d705f90e",
+          "date": "2026-09-17",
+          "status": "present"
+        },
+        {
+          "id": "29a84942-0806-489c-8e30-d17f17301850",
+          "date": "2026-09-18",
+          "status": "present"
+        },
+        {
+          "id": "82cca2f0-5a0f-4ab3-ba8a-fb502898c5f0",
+          "date": "2026-09-19",
+          "status": "present"
+        }
+      ]
     },
     "selin-kurt": {
       "conversationWithCan": "0d4c29ff-e610-4e2f-a245-41b5a7a1307d",
-      "userId": "104bbfa1-f672-46ed-9891-2c576c522fb7"
+      "userId": "104bbfa1-f672-46ed-9891-2c576c522fb7",
+      "reviewed": [
+        {
+          "submissionId": "57a19e94-8fc6-4a05-85d4-ae912c19cdd8",
+          "approved": true,
+          "level": 2
+        },
+        {
+          "submissionId": "9ad39666-cb85-4854-9ac0-c5f7c12887f7",
+          "approved": true,
+          "level": 1
+        },
+        {
+          "submissionId": "5483b096-3940-4ab7-bda5-992ed44e6e2c",
+          "approved": true,
+          "level": 3
+        },
+        {
+          "submissionId": "a937dc31-ee88-4012-a9f1-84886e3258d3",
+          "approved": true,
+          "level": 2
+        }
+      ],
+      "attendance": [
+        {
+          "dayId": "4ce13681-0251-4fb3-b0b1-8884697bd2d6",
+          "status": "present"
+        },
+        {
+          "dayId": "e1db8ca3-4d31-4686-a5df-92b7701792cf",
+          "status": "present"
+        },
+        {
+          "dayId": "4d311e3b-d9c7-4397-a08e-1af9f1337ba6",
+          "status": "partial"
+        },
+        {
+          "dayId": "46f5970f-ce21-40a8-8fb9-a24565823ab0",
+          "status": "present"
+        },
+        {
+          "dayId": "9039ace3-ab04-464f-87a1-edbd5eb887b2",
+          "status": "present"
+        },
+        {
+          "dayId": "b6c67dc3-a031-467d-a9cc-1ca57e25afc2",
+          "status": "present"
+        }
+      ]
     }
   }
 }

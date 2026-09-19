@@ -11,3 +11,23 @@
 - `11:55:49` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
 - _11:55:49_ list_mentor_message_contacts → 2 contact(s), my student included.
 - _11:55:49_ Faz 3 bitti.
+- `17:47:53` **auth.signIn** {"email":"murat.koc@sim.engineertrack.test"} → 6fcbba4f-c65a-43ec-a938-60a70808223b
+- `17:47:53` **internship_week** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","p_from":"2026-09-13"} → [{"id":"164b0333-b025-41df-b4c6-5be93de0187a","company":"Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi","task_id":null,"version":3,"day_date":"2026-09-14…
+- `17:47:53` **internship_review** {"p_days":[{"id":"164b0333-b025-41df-b4c6-5be93de0187a","version":3},{"id":"326b3a33-9200-4fc7-8b0c-78bd4070fcdc","version":3},{"id":"6e456326-92a3-45ec-a40f… → null
+- _17:47:53_ empty note accepted for: mark 6 days present
+- `17:47:54` **table.assignment_submissions.select** {} → [{"id":"5bf81166-faa5-4fa4-944a-a766b7da1900","assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","sta…
+- `17:47:54` **table.log_photos.select-by-submission** {} → []
+- `17:47:54` **table.log_documents.select-by-submission** {} → []
+- _17:47:54_ "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance. (revize)" (5bf81166-faa5-4fa4-944a-a766b7da1900) has zero photos and zero documents — no-evidence submission.
+- `17:47:54` **review_assignment** {"p_submission_id":"5bf81166-faa5-4fa4-944a-a766b7da1900","p_approved":true,"p_note":"","p_level":2} → null
+- _17:47:54_ empty note accepted for: approve "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance. (revize)"
+- _17:47:54_ BUG [rough] approve "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance. (revize)" with no evidence attached — got success — review_assignment approved a submission with zero photos and zero documents
+- `17:47:54` **table.log_photos.select-by-submission** {} → [{"id":"0d1770ae-f1ae-4c15-ba65-b17251e83a62"}]
+- `17:47:54` **table.log_documents.select-by-submission** {} → []
+- `17:47:54` **review_assignment** {"p_submission_id":"a807d63f-a6e8-4ca5-917b-4e12bad0ebf2","p_approved":true,"p_note":"","p_level":2} → null
+- _17:47:54_ empty note accepted for: approve "Record measurements, outputs, test results, or observations in the required digital format, including values, units, dates, and reference conditions."
+- `17:47:54` **table.log_photos.select-by-submission** {} → [{"id":"40656211-c7d9-48e6-a15f-8501dc88fa23"}]
+- `17:47:54` **table.log_documents.select-by-submission** {} → [{"id":"1f644d68-90e8-4096-91ab-06abb7414d21"}]
+- `17:47:54` **review_assignment** {"p_submission_id":"8df9f4b9-80d7-4e38-b989-97bb314ff879","p_approved":true,"p_note":"","p_level":2} → null
+- _17:47:54_ empty note accepted for: approve "Send a direct message to a peer to coordinate a minor task handoff."
+- _17:47:54_ Faz 5 bitti.

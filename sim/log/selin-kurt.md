@@ -15,3 +15,28 @@
 - _11:56:06_ open_conversation → "0d4c29ff-e610-4e2f-a245-41b5a7a1307d"
 - `11:56:06` **send_message** {"p_conversation_id":"0d4c29ff-e610-4e2f-a245-41b5a7a1307d","p_body":"Hoş geldin Can, sorularını buradan yazabilirsin."} → 346754ab-f669-4872-9125-02291fe8a8ab
 - _11:56:06_ Faz 3 bitti.
+- `17:46:43` **auth.signIn** {"email":"selin.kurt@sim.engineertrack.test"} → 104bbfa1-f672-46ed-9891-2c576c522fb7
+- `17:46:44` **internship_week** {"p_student_id":"cc0077d2-b310-4887-80da-ad807becd378","p_from":"2026-09-13"} → [{"id":"4ce13681-0251-4fb3-b0b1-8884697bd2d6","company":"DSİ 5. Bölge Su Kalitesi Laboratuvarı","task_id":null,"version":3,"day_date":"2026-09-14","learning"…
+- `17:46:44` **internship_review** {"p_days":[{"id":"4ce13681-0251-4fb3-b0b1-8884697bd2d6","version":3},{"id":"e1db8ca3-4d31-4686-a5df-92b7701792cf","version":3},{"id":"46f5970f-ce21-40a8-8fb9… → null
+- `17:46:44` **internship_review** {"p_days":[{"id":"4d311e3b-d9c7-4397-a08e-1af9f1337ba6","version":3}],"p_status":"partial","p_note":"Öğleden sonra laboratuvardan erken ayrıldı."} → null
+- `17:46:44` **internship_week** {"p_student_id":"cc0077d2-b310-4887-80da-ad807becd378","p_from":"2026-09-13"} → [{"id":"4ce13681-0251-4fb3-b0b1-8884697bd2d6","company":"DSİ 5. Bölge Su Kalitesi Laboratuvarı","task_id":null,"version":4,"day_date":"2026-09-14","learning"…
+- `17:46:44` **internship_note** {"p_day":"4ce13681-0251-4fb3-b0b1-8884697bd2d6","p_version":4,"p_note":"Gözlemlerin net yazılmış; bir dahaki sefere kullandığın cihazın kalibrasyon saatini d… → null
+- `17:46:44` **internship_events** {"p_day":"4ce13681-0251-4fb3-b0b1-8884697bd2d6"} → [{"id":"6ec072fc-ab03-411d-9d73-563f7366f9a4","note":"Gözlemlerin net yazılmış; bir dahaki sefere kullandığın cihazın kalibrasyon saatini de ekle.","day_id":…
+- `17:46:44` **table.assignment_submissions.select** {} → [{"id":"57a19e94-8fc6-4a05-85d4-ae912c19cdd8","assignment_id":"45e71428-169c-44fc-b055-e5f5ea417dca","student_id":"cc0077d2-b310-4887-80da-ad807becd378","sta…
+- _17:46:44_ listPendingReviews → 4 row(s), all mine.
+- `17:46:44` **review_assignment** {"p_submission_id":"57a19e94-8fc6-4a05-85d4-ae912c19cdd8","p_approved":true,"p_note":"Onay","p_level":null} → **ERROR** LEVEL_REQUIRED
+- _17:46:44_ expected refusal LEVEL_REQUIRED for: approve without a level
+- `17:46:44` **review_assignment** {"p_submission_id":"57a19e94-8fc6-4a05-85d4-ae912c19cdd8","p_approved":true,"p_note":"Numune hazırlama adımların düzenli, tebrikler. Bir sonrakinde kalibrasy… → null
+- `17:46:44` **review_assignment** {"p_submission_id":"9ad39666-cb85-4854-9ac0-c5f7c12887f7","p_approved":true,"p_note":"Sorduğun sorular çok yerinde; analiz sürecini iyi kavradığın belli oluy… → null
+- `17:46:44` **review_assignment** {"p_submission_id":"5483b096-3940-4ab7-bda5-992ed44e6e2c","p_approved":true,"p_note":"Rapor akışı net; küçük bir öneri: birim sembollerini SI standardına gör… → null
+- `17:46:45` **review_assignment** {"p_submission_id":"a937dc31-ee88-4012-a9f1-84886e3258d3","p_approved":true,"p_note":"Bu görevde bağımsız çalıştığın çok belli, eline sağlık.","p_level":2} → null
+- `17:46:45` **review_assignment** {"p_submission_id":"57a19e94-8fc6-4a05-85d4-ae912c19cdd8","p_approved":true,"p_note":"tekrar","p_level":2} → null
+- _17:46:45_ review_assignment on an already-approved submission (57a19e94-8fc6-4a05-85d4-ae912c19cdd8) succeeded — no ALREADY_APPROVED guard on review_assignment, only on submit_assignment; idempotent by design. Already filed as [wrong] by the controller from the template run, not re-filed here.
+- `17:46:45` **competency_self_vs_mentor** {"p_student_id":"cc0077d2-b310-4887-80da-ad807becd378"} → [{"gap":1,"code":"communication","name":"Professional Communication","tasks":1,"avgSelf":2,"avgMentor":3,"overRated":0,"underRated":1,"competencyId":"a2979e3…
+- `17:46:45` **table.notifications.select** {} → [{"id":"402976d2-9a5d-4b19-8938-7c19c4ef265f","user_id":"104bbfa1-f672-46ed-9891-2c576c522fb7","title":"New message","body":"Can Doğan: Teşekkürler Selin Han…
+- `17:46:45` **list_messages** {"p_conversation_id":"0d4c29ff-e610-4e2f-a245-41b5a7a1307d","p_before":null,"p_limit":30} → [{"id":"3c9f90c2-cb91-4bb2-b26f-500d08ff647a","body":"Teşekkürler Selin Hanım, hoş geldim mesajınız için. İlk haftamla ilgili birkaç sorum olacak, uygun oldu…
+- _17:46:45_ Can's latest message: "Teşekkürler Selin Hanım, hoş geldim mesajınız için. İlk haftamla ilgili birkaç sorum olacak, uygun olduğunuzda buradan yazabilir miyim?"
+- `17:46:45` **send_message** {"p_conversation_id":"0d4c29ff-e610-4e2f-a245-41b5a7a1307d","p_body":"Elbette Can, istediğin zaman buradan yazabilirsin. Bu haftaki dört görevini de inceledi… → d3dc4a94-0572-4659-900a-8f47847fe6c4
+- `17:46:45` **table.feed_comments.insert** {} → **ERROR** new row violates row-level security policy for table "feed_comments"
+- _17:46:45_ BUG [wrong] comment on the advisor's announcement — got UNKNOWN: new row violates row-level security policy for table "feed_comments"
+- _17:46:45_ Faz 5 bitti.
