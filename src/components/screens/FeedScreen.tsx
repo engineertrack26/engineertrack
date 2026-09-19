@@ -16,7 +16,7 @@ import { mapRpcError } from '@/utils/rpcErrors';
 import { upcomingTasks } from '@/utils/feedUpcoming';
 import { selectAdvisorGroup, groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { AdvisorBell } from '@/components/advisor/GroupUI';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { FeedPost } from '@/types/feed';
 import type { InternshipGroup } from '@/types/group';
 import type { UpcomingCandidate } from '@/utils/feedUpcoming';
@@ -284,7 +284,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
         accessibilityRole="button"
         onPress={() => router.push(groupCenterRoute(groupId))}
         style={{ paddingVertical: 12, minHeight: 48 }}>
-        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.primaryDark }}>
+        <Text style={{ fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primaryDark }}>
           {groups.find((g) => g.id === groupId)?.name} · {t('advisorGroups.groupCenter')}
         </Text>
       </TouchableOpacity>}
@@ -433,24 +433,24 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   titleRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  screenTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
+  screenTitle: { fontSize: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, flexGrow: 1 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, color: colors.text, maxWidth: 160 },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
-  chipBadge: { fontSize: 11, color: colors.textSecondary, backgroundColor: colors.divider, paddingHorizontal: 6, borderRadius: borderRadius.full },
+  chipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, maxWidth: 160 },
+  chipTextActive: { color: '#fff', fontWeight: '600', fontFamily: fonts.semibold },
+  chipBadge: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, backgroundColor: colors.divider, paddingHorizontal: 6, borderRadius: borderRadius.full },
   composeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   composeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary + '40' },
-  composeText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  composeText: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
   drafts: { marginBottom: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  draftsTitle: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
+  draftsTitle: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
   draftActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -spacing.xs, marginBottom: spacing.md },
   publishBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, backgroundColor: colors.primary },
-  publishText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  publishText: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: '#fff' },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: 60, paddingHorizontal: spacing.xl },
-  emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+  emptyText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   lightbox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
   lightboxImage: { width: '100%', height: '80%' },
 });

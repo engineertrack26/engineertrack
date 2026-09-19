@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 interface LeaderboardRowProps {
   rank: number;
@@ -77,12 +77,12 @@ const styles = StyleSheet.create({
   },
   rankBadgeText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
   rankText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.textSecondary,
   },
   avatarContainer: {
@@ -93,14 +93,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
   },
   currentUserName: {
     color: colors.primary,
   },
   levelText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   xpContainer: {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   xpText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.gamification.xp,
   },
 });

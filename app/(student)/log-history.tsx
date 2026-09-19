@@ -19,7 +19,7 @@ import { logService } from '@/services/logs';
 import { LogCard } from '@/components/cards';
 import { DailyLog, LogStatus } from '@/types/log';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { BackButton, Button, LoadFailedBanner } from '@/components/common';
 import { router } from 'expo-router';
 
@@ -219,11 +219,11 @@ export default function LogHistoryScreen() {
 
 const styles = StyleSheet.create({
   detailContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  detailTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
-  detailMeta: { fontSize: 14, lineHeight: 22, color: colors.textSecondary, marginTop: spacing.sm },
+  detailTitle: { fontSize: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  detailMeta: { fontSize: 14, fontFamily: fonts.regular, lineHeight: 22, color: colors.textSecondary, marginTop: spacing.sm },
   detailSection: { marginTop: spacing.lg },
-  detailLabel: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
-  detailBody: { fontSize: 16, lineHeight: 24, color: colors.text },
+  detailLabel: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text, marginBottom: spacing.sm },
+  detailBody: { fontSize: 16, fontFamily: fonts.regular, lineHeight: 24, color: colors.text },
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     color: colors.textSecondary,
   },
   filterTextActive: {
@@ -280,12 +280,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: spacing.md,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: spacing.xs,
     textAlign: 'center',

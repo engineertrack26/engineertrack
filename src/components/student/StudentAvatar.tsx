@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { STUDENT_AVATAR_IMAGES } from '@/constants/studentAvatars';
 import { avatarStage, type StudentAvatarId } from '@/utils/studentAvatar';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 /** Render only a server-provided level (or explicitly labelled preview level). */
 export function StudentAvatar({ avatarId, level, size = 160, markers = true }: {
@@ -31,5 +31,5 @@ const styles = StyleSheet.create({
   image: { position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 },
   markers: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   marker: { flex: 1, height: 4, borderRadius: 2 },
-  level: { color: colors.primaryDark, fontSize: 12, marginLeft: 3 },
+  level: { color: colors.primaryDark, fontSize: 12, fontFamily: fonts.regular, marginLeft: 3 },
 });

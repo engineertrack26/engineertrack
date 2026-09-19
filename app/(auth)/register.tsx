@@ -7,7 +7,7 @@ import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
 import type { UserRole, SupportedLanguage } from '@/types/user';
 import type { StudentAvatarId } from '@/utils/studentAvatar';
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
     marginBottom: 8,
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 18, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   form: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     color: colors.text,
     marginBottom: 8,
   },
@@ -340,18 +340,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inkBg,
   },
   roleIcon: {
-    fontSize: 24,
+    fontSize: 24, fontFamily: fonts.regular,
     marginBottom: 4,
   },
   roleText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     color: colors.textSecondary,
   },
   roleTextActive: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
   registerButton: {
     marginTop: 4,
@@ -372,18 +372,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   consentText: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     lineHeight: 23,
     color: colors.textSecondary,
   },
   consentLink: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
     marginTop: 2,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.error,
     marginTop: 4,
     marginLeft: 30,
@@ -395,14 +395,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   footerLink: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
   },
-  passwordHint: { fontSize: 14, lineHeight: 21, color: colors.textSecondary, marginTop: -8, marginBottom: 18 },
+  passwordHint: { fontSize: 14, fontFamily: fonts.regular, lineHeight: 21, color: colors.textSecondary, marginTop: -8, marginBottom: 18 },
   policyLink: { minHeight: 48, justifyContent: 'center' },
 });

@@ -13,7 +13,7 @@ import { LoadFailedBanner, Stamp, LevelRail } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
 import { ui } from '@/components/common/workflowStyles';
 import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { GrowthJourney } from '@/components/gamification/GrowthJourney';
 import { LEVELS } from '@/types/gamification';
 
@@ -189,16 +189,16 @@ const styles = StyleSheet.create({
   levelToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   levelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.rule },
   featured: { borderColor: colors.ink, borderWidth: 1.5 },
-  xp: { fontSize: 32, fontWeight: '700', color: colors.primaryDark },
+  xp: { fontSize: 32, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primaryDark },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.divider, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: colors.primaryDark },
   action: { minHeight: 52, flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, borderWidth: 1, borderColor: colors.primaryDark, borderRadius: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 48, maxWidth: '100%', padding: 12, justifyContent: 'center', borderRadius: 6, borderWidth: 1, borderColor: colors.divider },
-  link: { fontSize: 16, fontWeight: '600', color: colors.primaryDark },
+  link: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primaryDark },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barLabel: { width: 52, fontSize: 12, color: colors.textSecondary },
+  barLabel: { width: 52, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   barTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.divider, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
-  barValue: { width: 28, fontSize: 12, textAlign: 'right', color: colors.textSecondary },
+  barValue: { width: 28, fontSize: 12, fontFamily: fonts.regular, textAlign: 'right', color: colors.textSecondary },
 });

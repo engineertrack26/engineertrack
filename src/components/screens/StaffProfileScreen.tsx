@@ -19,7 +19,7 @@ import i18n from '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { supabase } from '@/services/supabase';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 const ROLE_BADGE = {
   mentor: { label: 'Mentor', color: colors.secondary },
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: spacing.lg,
   },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   initials: {
     fontSize: 40,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
   },
   avatarOverlay: {
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   avatarHint: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: spacing.sm,
   },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: spacing.xs,
   },
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 14,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   saveBtn: {
     backgroundColor: colors.primary,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
   saveText: {
     fontSize: 14,
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
 
   // Info rows
@@ -645,19 +645,19 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   infoInput: {
     fontSize: 16,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     borderBottomWidth: 1.5,
     borderBottomColor: colors.primary,
     paddingVertical: 4,
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
 
   // Settings
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   settingsLabel: {
     fontSize: 15,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   settingsRight: {
     flexDirection: 'row',
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   settingsValue: {
     fontSize: 14,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 
   // Change Password
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   changePasswordForm: {
     marginTop: spacing.md,
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   passwordInputField: {
     flex: 1,
     paddingVertical: spacing.sm,
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.text,
   },
   passwordSaveBtn: {
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
   },
   passwordSaveBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
 
@@ -766,6 +766,6 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 16,
     color: colors.error,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
 });

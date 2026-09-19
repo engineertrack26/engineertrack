@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 function Section({ title, body }: { title: string; body: string }) {
   return (
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
   },
   scrollBody: {
@@ -103,12 +103,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   version: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: 16,
   },
   intro: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     lineHeight: 25,
     color: colors.text,
     marginBottom: 8,
@@ -118,12 +118,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: 8,
   },
   sectionBody: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     lineHeight: 25,
     color: colors.text,
     marginBottom: 6,

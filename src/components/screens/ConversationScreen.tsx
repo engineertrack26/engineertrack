@@ -13,7 +13,7 @@ import { mapRpcError } from '@/utils/rpcErrors';
 import { dayGroups, senderName, conversationSubtitle } from '@/utils/messageHelpers';
 import { LoadFailedBanner } from '@/components/common';
 import { MessageBubble } from '@/components/messages';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { ConversationSummary, Message } from '@/types/messages';
 
 interface Props { role: 'student' | 'mentor' | 'advisor' }
@@ -221,13 +221,13 @@ export function ConversationScreen({ role }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  name: { fontSize: 16, fontWeight: '600', color: colors.text },
-  meta: { fontSize: 12, color: colors.textSecondary },
-  blockText: { fontSize: 14, fontWeight: '600', color: colors.error },
+  name: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  meta: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  blockText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.error },
   list: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  day: { alignSelf: 'center', fontSize: 11, color: colors.textSecondary, marginVertical: spacing.sm },
+  day: { alignSelf: 'center', fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginVertical: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.surface },
-  input: { flex: 1, maxHeight: 120, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.lg, paddingHorizontal: spacing.md, paddingVertical: 8 },
+  input: { flex: 1, maxHeight: 120, fontSize: 15, fontFamily: fonts.regular, color: colors.text, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.lg, paddingHorizontal: spacing.md, paddingVertical: 8 },
   blockedBar: { padding: spacing.md, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
-  blockedText: { fontSize: 13, color: colors.textSecondary },
+  blockedText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 });

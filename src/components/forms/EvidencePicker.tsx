@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { logService } from '@/services/logs';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
 
 // Evidence is meant to be the proof, not an album. Three photos and one
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
   },
   subsection: {
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   count: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 
   // Photos
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   captionInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.text,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   uploadingText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   failedInfo: {
@@ -501,16 +501,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   failedText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.error,
   },
   retryText: {
     fontSize: 12,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
   limitText: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
 
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 
   // Shared add button
@@ -549,6 +549,6 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 13,
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 });

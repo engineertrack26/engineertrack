@@ -4,13 +4,13 @@ import { fonts } from './fonts';
 export const typography: Record<string, TextStyle> = {
   h1: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 40,
     fontFamily: fonts.semibold,
   },
   h2: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: 32,
     fontFamily: fonts.semibold,
   },

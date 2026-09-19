@@ -38,7 +38,7 @@ import {
 } from '@/services/pushNotifications';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
 import { deferAuthWork, withAuthTimeout } from '@/utils/authStartup';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 // Show notifications when app is in the foreground.
 //
@@ -352,16 +352,16 @@ export default function RootLayout() {
         {!appReady && !isRecoveryRoute && <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.background,
           alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
           {startupFailed ? <>
-            <Text accessibilityRole="alert" style={{ fontSize: 18, color: colors.text, textAlign: 'center' }}>
+            <Text accessibilityRole="alert" style={{ fontSize: 18, fontFamily: fonts.regular, color: colors.text, textAlign: 'center' }}>
               {t('common.loadFailed')}
             </Text>
             <Pressable accessibilityRole="button" onPress={() => setStartupAttempt(value => value + 1)}
               style={{ minHeight: 48, padding: 16, borderRadius: 6, backgroundColor: colors.primaryDark }}>
-              <Text style={{ color: '#fff', fontSize: 16 }}>{t('common.retry')}</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontFamily: fonts.regular }}>{t('common.retry')}</Text>
             </Pressable>
           </> : <>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text accessibilityLiveRegion="polite" style={{ fontSize: 16, color: colors.textSecondary }}>{t('common.loading')}</Text>
+            <Text accessibilityLiveRegion="polite" style={{ fontSize: 16, fontFamily: fonts.regular, color: colors.textSecondary }}>{t('common.loading')}</Text>
           </>}
         </View>}
       </SafeAreaProvider>

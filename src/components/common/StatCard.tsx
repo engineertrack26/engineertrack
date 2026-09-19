@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 interface StatCardProps {
   title: string;
@@ -41,13 +41,13 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: 2,
   },
   title: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 });

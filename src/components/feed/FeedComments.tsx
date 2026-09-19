@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { feedService } from '@/services/feed';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { FeedComment } from '@/types/feed';
 
 interface Props {
@@ -125,16 +125,16 @@ export function FeedComments({ postId, userId, canModerate, onCountChange }: Pro
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  empty: { fontSize: 13, color: colors.textSecondary },
+  empty: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   failedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  retry: { fontSize: 13, fontWeight: '600', color: colors.primary },
+  retry: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   bubble: { flex: 1, backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.sm },
-  author: { fontSize: 12, fontWeight: '600', color: colors.text, marginBottom: 2 },
-  body: { fontSize: 14, color: colors.text },
+  author: { fontSize: 12, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text, marginBottom: 2 },
+  body: { fontSize: 14, fontFamily: fonts.regular, color: colors.text },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   input: {
-    flex: 1, fontSize: 14, color: colors.text, maxHeight: 100,
+    flex: 1, fontSize: 14, fontFamily: fonts.regular, color: colors.text, maxHeight: 100,
     borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm, paddingVertical: 6,
   },

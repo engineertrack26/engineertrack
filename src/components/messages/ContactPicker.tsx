@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadFailedBanner } from '@/components/common';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, fonts } from '@/theme';
 import type { MessageContact } from '@/types/messages';
 
 interface Props { visible: boolean; contacts: MessageContact[] | null; failed: boolean; onPick: (c: MessageContact) => void; onClose: () => void; onRetry: () => void; title?: string; hint?: string }
@@ -42,11 +42,11 @@ export function ContactPicker({ visible, contacts, failed, onPick, onClose, onRe
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
-  hint: { fontSize: 12, color: colors.textSecondary, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  title: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  hint: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   list: { paddingHorizontal: spacing.lg },
   row: { paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  name: { fontSize: 15, color: colors.text },
-  role: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  name: { fontSize: 15, fontFamily: fonts.regular, color: colors.text },
+  role: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
   empty: { textAlign: 'center', color: colors.textSecondary, marginTop: 40 },
 });

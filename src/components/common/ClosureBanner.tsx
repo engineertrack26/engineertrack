@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { ClosureStatus } from '@/types/closure';
 
 interface ClosureBannerProps {
@@ -37,6 +37,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  text: { flex: 1, fontSize: 13, color: colors.text },
-  link: { fontSize: 13, fontWeight: '700', color: colors.text, textDecorationLine: 'underline' },
+  text: { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.text },
+  link: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text, textDecorationLine: 'underline' },
 });

@@ -13,7 +13,7 @@ import { reviewInitials } from '@/utils/mentorReviews';
 import type { SupportedLanguage, User } from '@/types/user';
 import { ui } from '@/components/common/workflowStyles';
 import { ProfileSheet } from '@/components/mentor/ProfileSheet';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { StudentAvatarProfile } from '@/components/student/StudentAvatarProfile';
 
 type Mode = 'name' | 'language' | 'password' | 'photo' | null;
@@ -188,7 +188,7 @@ export function AccountProfile({ user, header, roleLabel, children }: {
           <View style={[ui.input, ui.header, { paddingVertical: 0 }]}>
             <TextInput value={passwords[index]} editable={!busy} secureTextEntry={!visible[index]} autoCapitalize="none" autoCorrect={false}
               textContentType={index === 0 ? 'password' : 'newPassword'} accessibilityLabel={t(key)}
-              onChangeText={value => setPasswords(values => values.map((old, i) => i === index ? value : old))} style={{ flex: 1, minHeight: 52, fontSize: 16, color: colors.text }} />
+              onChangeText={value => setPasswords(values => values.map((old, i) => i === index ? value : old))} style={{ flex: 1, minHeight: 52, fontSize: 16, fontFamily: fonts.regular, color: colors.text }} />
             <Pressable accessibilityRole="button" accessibilityLabel={t(visible[index] ? 'mentorProfile.hidePassword' : 'mentorProfile.showPassword') + ': ' + t(key)}
               onPress={() => setVisible(values => values.map((old, i) => i === index ? !old : old))} style={ui.iconButton}>
               <Ionicons name={visible[index] ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.textSecondary} />

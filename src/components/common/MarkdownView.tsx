@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { parseMarkdownBlocks } from '@/utils/markdownBlocks';
 import { ui } from './workflowStyles';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 interface MarkdownViewProps {
   markdown: string;
@@ -71,5 +71,5 @@ const styles = StyleSheet.create({
   tableScroll: { marginVertical: 4 },
   row: { flexDirection: 'row' },
   cell: { minWidth: 96, padding: 6, borderWidth: 1, borderColor: colors.divider },
-  headerCell: { fontWeight: '700' },
+  headerCell: { fontWeight: '600', fontFamily: fonts.semibold },
 });

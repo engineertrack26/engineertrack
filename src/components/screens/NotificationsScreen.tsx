@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   unreadCard: { borderColor: colors.ink, borderWidth: 1.5 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  status: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.textSecondary },
+  status: { flex: 1, fontSize: 14, fontFamily: fonts.regular, lineHeight: 21, color: colors.textSecondary },
   unreadText: { color: colors.ink, fontWeight: '600', fontFamily: fonts.semibold },
   cardTitle: { fontSize: 18, lineHeight: 26, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular, color: colors.textSecondary },

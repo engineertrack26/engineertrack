@@ -9,7 +9,7 @@ import { feedService } from '@/services/feed';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { isValidLink, attachmentsPayload, type AttachmentDraft } from '@/utils/feedAttachments';
 import { postableGroups, summarisePost, type PostOutcome, type TargetGroup } from '@/utils/feedTargets';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -533,41 +533,41 @@ export function FeedComposer({ visible, kind, groupId, groups, onClose, onPosted
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  title: { fontSize: 16, fontWeight: '600', color: colors.text },
+  title: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  postBtn: { fontSize: 16, fontWeight: '600', color: colors.primary },
-  draftBtn: { fontSize: 15, fontWeight: '500', color: colors.textSecondary },
+  postBtn: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  draftBtn: { fontSize: 15, fontWeight: '500', fontFamily: fonts.medium, color: colors.textSecondary },
   postBtnDisabled: { color: colors.textDisabled },
   content: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 
   // Post-to targets (chip styles mirror FeedScreen's group selector)
   targetsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  targetsLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  targetsLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '500', fontFamily: fonts.medium },
   targetChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
   targetChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  targetChipText: { fontSize: 13, color: colors.text, maxWidth: 160 },
-  targetChipTextActive: { color: '#fff', fontWeight: '600' },
-  body: { minHeight: 120, fontSize: 16, color: colors.text, textAlignVertical: 'top' },
-  counter: { fontSize: 12, color: colors.textSecondary, textAlign: 'right' },
+  targetChipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, maxWidth: 160 },
+  targetChipTextActive: { color: '#fff', fontWeight: '600', fontFamily: fonts.semibold },
+  body: { minHeight: 120, fontSize: 16, fontFamily: fonts.regular, color: colors.text, textAlignVertical: 'top' },
+  counter: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'right' },
   options: { gap: spacing.sm, marginTop: spacing.md },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  optionInput: { flex: 1, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  optionInput: { flex: 1, fontSize: 15, fontFamily: fonts.regular, color: colors.text, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   addOption: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
-  addOptionText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+  addOptionText: { fontSize: 14, color: colors.primary, fontWeight: '500', fontFamily: fonts.medium },
 
   // Attachments
   attachments: { gap: spacing.sm, marginTop: spacing.md },
   chip: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipBody: { flex: 1, gap: spacing.xs },
-  chipText: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  chipText: { fontSize: 13, color: colors.text, fontWeight: '500', fontFamily: fonts.medium },
   thumbWrap: { position: 'relative' },
   thumb: { width: 48, height: 48, borderRadius: borderRadius.sm },
   thumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: borderRadius.sm, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   failedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  failedText: { fontSize: 12, color: colors.error },
-  retryText: { fontSize: 12, color: colors.primary, fontWeight: '600' },
-  linkInput: { fontSize: 14, color: colors.text, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingVertical: spacing.xs },
+  failedText: { fontSize: 12, fontFamily: fonts.regular, color: colors.error },
+  retryText: { fontSize: 12, color: colors.primary, fontWeight: '600', fontFamily: fonts.semibold },
+  linkInput: { fontSize: 14, fontFamily: fonts.regular, color: colors.text, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingVertical: spacing.xs },
   addRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderWidth: 1.5, borderColor: colors.primary + '40', borderStyle: 'dashed', borderRadius: borderRadius.sm, backgroundColor: colors.primary + '06' },
-  addBtnText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
+  addBtnText: { fontSize: 13, color: colors.primary, fontWeight: '500', fontFamily: fonts.medium },
 });

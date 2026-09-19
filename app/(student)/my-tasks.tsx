@@ -10,7 +10,7 @@ import { groupService } from '@/services/group';
 import { StudentHeader, TaskCard, ui } from '@/components/student/StudentUI';
 import { ClosureBanner, LoadFailedBanner } from '@/components/common';
 import { TASK_STATES, TaskState, taskState, taskStateKey, filterTasks } from '@/utils/studentTasks';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function MyTasksScreen() {
   const { t, i18n } = useTranslation();
@@ -48,7 +48,7 @@ export default function MyTasksScreen() {
         {(['all', ...TASK_STATES] as const).map(state => <Pressable key={state} accessibilityRole="button"
           accessibilityState={{ selected: filter === state }} onPress={() => setFilter(state)}
           style={{ minHeight: 48, justifyContent: 'center', borderRadius: 6, paddingHorizontal: 16, borderWidth: 1, borderColor: filter === state ? colors.ink : colors.divider, backgroundColor: filter === state ? colors.ink : colors.paper }}>
-          <Text style={{ color: filter === state ? colors.textOnPrimary : colors.text, fontWeight: '600' }}>
+          <Text style={{ color: filter === state ? colors.textOnPrimary : colors.text, fontWeight: '600', fontFamily: fonts.semibold }}>
             {t(state === 'all' ? 'studentFlow.all' : taskStateKey(state))} {!loading && '(' + (state === 'all' ? items.length : items.filter(a => taskState(a) === state).length) + ')'}
           </Text>
         </Pressable>)}

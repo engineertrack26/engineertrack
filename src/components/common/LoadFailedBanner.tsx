@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 interface LoadFailedBannerProps {
   onRetry: () => void;
@@ -41,12 +41,12 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.text,
   },
   retry: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.error,
   },
 });

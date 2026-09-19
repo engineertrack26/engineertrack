@@ -1,7 +1,7 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DailyLog, LogStatus } from '@/types/log';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 
 interface LogCardProps {
   log: DailyLog;
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   badge: {
     flexDirection: 'row',
@@ -84,16 +84,16 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: 4,
   },
   content: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     lineHeight: 18,
   },
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   xpText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.gamification.xp,
   },
 });

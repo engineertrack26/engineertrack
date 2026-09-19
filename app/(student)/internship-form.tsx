@@ -9,7 +9,7 @@ import { LoadFailedBanner } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { ui } from '@/components/common/workflowStyles';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { internshipFields, requiredInternshipFields, readInternshipForm, parseInternshipDate,
   internshipDateString, validateInternshipForm, internshipPayload, sameInternshipForm, internshipReturnPath,
   type InternshipField, type InternshipForm } from '@/utils/internshipForm';
@@ -199,6 +199,6 @@ const styles = StyleSheet.create({
   back: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
   date: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   error: { borderColor: colors.error, borderWidth: 2 },
-  errorText: { color: colors.error, fontSize: 14, lineHeight: 21 },
+  errorText: { color: colors.error, fontSize: 14, fontFamily: fonts.regular, lineHeight: 21 },
   footer: { padding: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.divider, width: '100%', maxWidth: 720, alignSelf: 'center' },
 });

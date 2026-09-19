@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, borderRadius, spacing } from '@/theme';
+import { colors, borderRadius, spacing, fonts } from '@/theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   track: {
     width: '100%',

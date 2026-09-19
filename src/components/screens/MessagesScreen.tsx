@@ -12,7 +12,7 @@ import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { ClosureBanner, LoadFailedBanner } from '@/components/common';
 import { ConversationRow, conversationListStyles, ContactPicker } from '@/components/messages';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { ConversationSummary, MessageContact } from '@/types/messages';
 
 interface Props { role: 'student' | 'mentor' | 'advisor' }
@@ -229,14 +229,14 @@ export function MessagesScreen({ role }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  title: { fontSize: 24, fontWeight: '700', color: colors.text },
+  title: { fontSize: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   headerBtns: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   newBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  newText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+  newText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, flexGrow: 1 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { fontSize: 13, color: colors.text, maxWidth: 160 },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
+  chipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, maxWidth: 160 },
+  chipTextActive: { color: '#fff', fontWeight: '600', fontFamily: fonts.semibold },
 });

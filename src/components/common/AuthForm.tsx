@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, type TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 // Auth-only controls: avoid changing in-progress screens that use the shared Input/Button.
 export function AuthInput({ label, error, icon, isPassword, ...props }: TextInputProps & {
@@ -39,19 +39,19 @@ export function AuthButton({ title, onPress, loading = false, disabled = false, 
     style={[authStyles.button, variant === 'primary' && { backgroundColor: colors.primaryDark },
       (disabled || loading) && { opacity: 0.65 }, style]}>
     {loading && <ActivityIndicator color={variant === 'primary' ? '#fff' : colors.primaryDark} />}
-    <Text style={{ fontSize: 16, fontWeight: '600', textAlign: 'center', flexShrink: 1,
+    <Text style={{ fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, textAlign: 'center', flexShrink: 1,
       color: variant === 'primary' ? '#fff' : colors.primaryDark }}>{title}</Text>
   </TouchableOpacity>;
 }
 
 export const authStyles = StyleSheet.create({
   container: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingVertical: 24 },
-  label: { fontSize: 16, fontWeight: '600', color: colors.text },
+  label: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingLeft: 14,
     paddingRight: 4, borderWidth: 1, borderColor: colors.border, borderRadius: 6, backgroundColor: colors.surface },
-  input: { flex: 1, minWidth: 0, fontSize: 16, color: colors.text, paddingVertical: 14 },
+  input: { flex: 1, minWidth: 0, fontSize: 16, fontFamily: fonts.regular, color: colors.text, paddingVertical: 14 },
   eye: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  error: { fontSize: 14, lineHeight: 21, color: colors.error },
+  error: { fontSize: 14, fontFamily: fonts.regular, lineHeight: 21, color: colors.error },
   button: { minHeight: 52, paddingHorizontal: 18, paddingVertical: 14, borderRadius: 6,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
 });

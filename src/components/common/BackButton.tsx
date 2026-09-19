@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing } from '@/theme';
+import { colors, spacing, fonts } from '@/theme';
 
 type BackButtonProps = ({ href: Href; onPress?: never } | { href?: never; onPress: () => void }) & {
   disabled?: boolean;
@@ -29,5 +29,5 @@ export function BackButton({ href, onPress, disabled }: BackButtonProps) {
 const styles = StyleSheet.create({
   button: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center',
     minHeight: 48, minWidth: 48, gap: spacing.sm, paddingHorizontal: spacing.sm },
-  label: { color: colors.primary, fontSize: 16, fontWeight: '600', flexShrink: 1 },
+  label: { color: colors.primary, fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, flexShrink: 1 },
 });

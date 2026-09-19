@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import type { ErrorBoundaryProps } from 'expo-router';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { Button } from './Button';
 
 export function ErrorFallback({ error, retry }: ErrorBoundaryProps) {
@@ -39,13 +39,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: 16,
     textAlign: 'center',
   },
   description: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',

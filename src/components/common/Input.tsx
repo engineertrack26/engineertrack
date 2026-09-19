@@ -8,7 +8,7 @@ import {
   TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     color: colors.text,
     marginBottom: 6,
   },
@@ -103,11 +103,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     color: colors.text,
   },
   error: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.error,
     marginTop: 4,
     marginLeft: 2,

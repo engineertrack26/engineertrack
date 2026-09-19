@@ -13,7 +13,7 @@ import { ReviewHeader } from '@/components/mentor/ReviewUI';
 import { StudentDates, StudentIdentity } from '@/components/mentor/StudentIdentity';
 import { StudentDetail } from '@/components/mentor/StudentDetail';
 import { LinkStudentSheet } from '@/components/mentor/LinkStudentSheet';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function StudentListScreen() {
   const userId = useAuthStore(s => s.user?.id);
@@ -77,7 +77,7 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
           <Ionicons name="search-outline" size={22} color={colors.textSecondary} />
           <TextInput value={query} onChangeText={setQuery} placeholder={t('mentorStudents.search')}
             accessibilityLabel={t('mentorStudents.search')} placeholderTextColor={colors.textSecondary}
-            style={{ flex: 1, fontSize: 16, minHeight: 52, color: colors.text }} returnKeyType="search" />
+            style={{ flex: 1, fontSize: 16, fontFamily: fonts.regular, minHeight: 52, color: colors.text }} returnKeyType="search" />
           {!!query && <Pressable accessibilityRole="button" accessibilityLabel={t('mentorStudents.clearSearch')}
             onPress={() => setQuery('')} style={ui.iconButton}><Ionicons name="close" size={22} color={colors.textSecondary} /></Pressable>}
         </View>
@@ -92,7 +92,7 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
             accessibilityState={{ selected: pendingOnly === value, disabled: value && counts === null }}
             disabled={value && counts === null} onPress={() => setPendingOnly(value)}
             style={[ui.badge, { minHeight: 48, justifyContent: 'center', backgroundColor: pendingOnly === value ? colors.inkBg : colors.paper, borderWidth: 1, borderColor: pendingOnly === value ? colors.ink : colors.divider }]}>
-            <Text style={[ui.secondary, pendingOnly === value && { color: colors.primaryDark, fontWeight: '600' }]}>
+            <Text style={[ui.secondary, pendingOnly === value && { color: colors.primaryDark, fontWeight: '600', fontFamily: fonts.semibold }]}>
               {value ? t('mentorStudents.pendingFilter') : t('mentorStudents.all')} ({value ? counts === null ? '—' : pendingStudents : loading || failed ? '—' : students.length})
             </Text>
           </Pressable>)}

@@ -8,7 +8,7 @@ import { AuthButton as Button } from '@/components/common/AuthForm';
 import { SUPPORTED_LANGUAGES } from '@/utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import type { SupportedLanguage } from '@/types/user';
 
 export default function LanguageSelectScreen() {
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: 12,
   },
@@ -117,12 +117,12 @@ const styles = StyleSheet.create({
   langLabel: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
     color: colors.text,
   },
   langLabelActive: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
   doneButton: {
     marginTop: 8,

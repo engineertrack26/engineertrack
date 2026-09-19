@@ -7,7 +7,7 @@ import { AuthButton as Button } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function ConsentScreen() {
   const { t } = useTranslation();
@@ -111,12 +111,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     lineHeight: 24,
     color: colors.textSecondary,
   },
@@ -127,19 +127,19 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   version: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: 28,
     marginBottom: 6,
   },
   body: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     lineHeight: 25,
     color: colors.text,
   },

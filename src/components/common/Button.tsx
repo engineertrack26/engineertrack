@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 interface ButtonProps {
   title: string;
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#ffffff',
   },
   textOutline: {

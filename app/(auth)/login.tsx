@@ -6,7 +6,7 @@ import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
     marginBottom: 8,
   },
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 18, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   form: {
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 16,
     color: colors.primaryDark,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   footer: {
     flexDirection: 'row',
@@ -178,12 +178,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   footerLink: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.primary,
   },
   langButton: {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   langText: {
-    fontSize: 14,
+    fontSize: 14, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
 });

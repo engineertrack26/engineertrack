@@ -1,6 +1,6 @@
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { levelLabel, SUPERVISION_LEVELS, type SupervisionLevel } from '@/utils/selfAssessment';
 
 interface LevelPickerProps {
@@ -48,7 +48,7 @@ export function LevelPicker({ value, onChange, disabled, label }: LevelPickerPro
 
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
-  label: { fontSize: 16, fontWeight: '600', color: colors.text },
+  label: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     minHeight: 48,
@@ -62,6 +62,6 @@ const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
   chipDisabled: { opacity: 0.5 },
-  chipText: { fontSize: 14, fontWeight: '600', color: colors.primaryDark },
+  chipText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primaryDark },
   chipTextSelected: { color: colors.textOnPrimary },
 });

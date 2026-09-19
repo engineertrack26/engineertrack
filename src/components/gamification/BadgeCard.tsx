@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '@/types/gamification';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { useTranslation } from 'react-i18next';
 
 interface BadgeCardProps {
@@ -77,13 +77,13 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     textAlign: 'center',
     marginBottom: 2,
   },
   description: {
-    fontSize: 11,
+    fontSize: 11, fontFamily: fonts.regular,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 15,
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   tierText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     textTransform: 'uppercase',
   },
 });

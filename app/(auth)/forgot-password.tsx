@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
@@ -129,13 +129,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   description: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
@@ -153,13 +153,13 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   successText: {
-    fontSize: 16,
+    fontSize: 16, fontFamily: fonts.regular,
     lineHeight: 24,
     color: colors.textSecondary,
     textAlign: 'center',

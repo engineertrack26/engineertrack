@@ -13,7 +13,7 @@ import { ui } from '@/components/common/workflowStyles';
 import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
 import { attendanceDayRows, attendanceSummaryRows, csvRow, filterReportStudents } from '@/utils/advisorReportView';
 import { gapTag, selfVsMentorCsvRows, weightedAverage } from '@/utils/selfAssessment';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
 import type { AttendanceDayRow, GroupReportData } from '@/types/report';
 
@@ -418,8 +418,8 @@ const styles = StyleSheet.create({
   metrics: { flexDirection: 'row', gap: 12 },
   counts: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   count: { minWidth: 64, alignItems: 'center' },
-  countValue: { fontSize: 22, color: colors.text, fontWeight: '700' },
-  value: { fontSize: 30, color: colors.text, fontWeight: '700' },
+  countValue: { fontSize: 22, color: colors.text, fontWeight: '600', fontFamily: fonts.semibold },
+  value: { fontSize: 30, color: colors.text, fontWeight: '600', fontFamily: fonts.semibold },
   track: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.divider },
   fill: { height: 8, borderRadius: 4, backgroundColor: colors.primaryDark },
 });

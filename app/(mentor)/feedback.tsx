@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { mentorService } from '@/services/mentor';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { mapTaskFeedback, mapLegacyFeedback, filterFeedback, feedbackDate, feedbackOutcome,
@@ -130,8 +130,8 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   chip: { minHeight: 48, padding: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.divider, justifyContent: 'center', maxWidth: '100%' },
   selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },
-  link: { color: colors.primaryDark, fontSize: 16, fontWeight: '600' },
+  link: { color: colors.primaryDark, fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontSize: 18, color: colors.primaryDark, fontWeight: '700', textTransform: 'uppercase' },
+  initials: { fontSize: 18, color: colors.primaryDark, fontWeight: '600', fontFamily: fonts.semibold, textTransform: 'uppercase' },
   note: { padding: 16, borderRadius: 6, backgroundColor: colors.page, gap: 8 },
 });

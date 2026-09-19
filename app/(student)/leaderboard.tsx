@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { gamificationService } from '@/services/gamification';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { BackButton, LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { leaderboardName } from '@/utils/studentGrowth';
@@ -82,8 +82,8 @@ function RankingContent({ studentId }: { studentId: string }) {
 }
 const styles = StyleSheet.create({
   mine: { borderColor: colors.ink, borderWidth: 1.5 },
-  rank: { fontSize: 32, fontWeight: '600', color: colors.ink, fontVariant: ['tabular-nums'] },
+  rank: { fontSize: 32, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink, fontVariant: ['tabular-nums'] },
   position: { minWidth: 48, minHeight: 48, borderRadius: 6, padding: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.page },
-  positionText: { fontSize: 18, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
-  you: { fontSize: 14, color: colors.ink, fontWeight: '600' },
+  positionText: { fontSize: 18, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  you: { fontSize: 14, color: colors.ink, fontWeight: '600', fontFamily: fonts.semibold },
 });
