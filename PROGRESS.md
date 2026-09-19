@@ -227,6 +227,13 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Turkish in-app notification content
+
+- Added missing Turkish assignment/reminder copy and relative-time labels. Extended locale completeness checks to `notifications`, `notificationUi` and `time`.
+- Notifications previously displayed persisted title/body strings verbatim. Added display-only `notificationContent` for known English system templates (tasks, stream, direct-message titles/case openings, internship journal/attendance/corrections/closure, levels, badges and reminders), including ready-catalog task titles and known badge names. Both visible text and accessibility labels use the same localized result.
+- Preserved stored records, custom/unknown wording, message previews, feedback notes, announcement/poll content and non-Turkish display. No SQL migration, notification routing, read-state or delivery changes. Native push payload localization is outside this in-app fix; unrecognized historical templates intentionally remain unchanged.
+- Verification: TypeScript passed; full Jest suite passed (61 suites / 593 tests), including template matching, user-content preservation, locale fallback and immutability. Device verification pending. Concurrent `sim/` work remains untouched.
+
 ### Conversation composer keyboard visibility
 
 - The owner reported the message input disappearing beneath the keyboard after starting a conversation. The shared screen had no Android keyboard-avoidance behavior. Enabled Android `height` / iOS `padding` and moved avoidance around the entire safe-area screen so the header and keyboard frame share the screen origin.

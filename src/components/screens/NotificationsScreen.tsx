@@ -16,6 +16,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { routeForNotification } from '@/utils/notificationRoutes';
 import { notificationTimeAgo } from '@/utils/notificationTime';
+import { notificationContent } from '@/utils/notificationContent';
 import { BackButton } from '@/components/common';
 import { useNotificationStore } from '@/store/notificationStore';
 import { AppNotification } from '@/types/notification';
@@ -145,6 +146,7 @@ function NotificationsContent({ role, userId }: NotificationsScreenProps & { use
     const route = routeForNotification(item.type, item.data, role);
     const actionable = !!route || !item.isRead;
     const timestamp = notificationTimeAgo(item.createdAt, t, i18n.language);
+    const content = notificationContent(item, i18n.language);
     return (
       <TouchableOpacity
         style={[styles.card, !item.isRead && styles.unreadCard]}
@@ -155,7 +157,7 @@ function NotificationsContent({ role, userId }: NotificationsScreenProps & { use
           busy: openingId === item.id,
           disabled: !actionable || markingAll || openingId !== null || isLoading || isLoadingMore,
         }}
-        accessibilityLabel={[item.isRead ? t('notificationUi.read') : t('notificationUi.unread'), item.title, item.body, timestamp].filter(Boolean).join('. ')}
+        accessibilityLabel={[item.isRead ? t('notificationUi.read') : t('notificationUi.unread'), content.title, content.body, timestamp].filter(Boolean).join('. ')}
         accessibilityHint={actionable ? t(route ? 'notificationUi.openHint' : 'notificationUi.markHint') : undefined}
         activeOpacity={0.75}
       >
@@ -169,8 +171,8 @@ function NotificationsContent({ role, userId }: NotificationsScreenProps & { use
           {openingId === item.id ? <ActivityIndicator color={colors.primaryDark} /> :
             route ? <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} /> : null}
         </View>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        {!!item.body && <Text style={styles.body}>{item.body}</Text>}
+        <Text style={styles.cardTitle}>{content.title}</Text>
+        {!!content.body && <Text style={styles.body}>{content.body}</Text>}
         {!!timestamp && <Text style={styles.time}>{timestamp}</Text>}
       </TouchableOpacity>
     );

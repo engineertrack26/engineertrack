@@ -4,7 +4,7 @@ import { createInstance } from 'i18next';
 const en = JSON.parse(readFileSync('src/i18n/locales/en.json', 'utf8'));
 const tr = JSON.parse(readFileSync('src/i18n/locales/tr.json', 'utf8'));
 
-test.each(['student', 'tabs', 'messages', 'feed'])('Turkish %s labels do not rely on English fallback', section => {
+test.each(['student', 'tabs', 'messages', 'feed', 'notifications', 'notificationUi', 'time'])('Turkish %s labels do not rely on English fallback', section => {
   for (const [key, value] of Object.entries(en[section])) {
     expect(tr[section][key]).toEqual(expect.any(String));
     expect(tr[section][key].trim()).not.toBe('');

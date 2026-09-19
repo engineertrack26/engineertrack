@@ -495,6 +495,12 @@
     "publishConfirm": "Şimdi grupta yayınlansın mı? Öğrencilere bildirim gönderilecek.",
     "draftSaved": "Taslak olarak kaydedildi. Hazır olduğunda akışın üst kısmından yayınlayabilirsin."
   },
+  "time": {
+    "justNow": "Az önce",
+    "minutesAgo": "{{count}} dakika önce",
+    "hoursAgo": "{{count}} saat önce",
+    "daysAgo": "{{count}} gün önce"
+  },
   "notificationUi": {
     "unreadCount": "Okunmamış bildirim: {{count}}",
     "unread": "Okunmadı",
@@ -636,6 +642,8 @@
     "emptyHint": "Öğrencilerin yeni çalışmalar gönderdiğinde burada görünecek."
   },
   "notifications": {
+    "taskAssignedBody": "Yeni bir görev atandı: “{{title}}”.",
+    "tasksAssignedBody": "{{count}} yeni görev atandı.",
     "taskAssignedTitle": "Yeni görev atandı",
     "taskApprovedTitle": "Görevin onaylandı",
     "taskApprovedBody": "{{mentorName}}, “{{title}}” çalışmanı onayladı.",
@@ -955,6 +963,8 @@
     "averageRating": "Ortalama Puan"
   },
   "advisor": {
+    "reminderTitle": "Görev hatırlatması",
+    "reminderBody": "{{advisor}}, bir süredir görev göndermediğini fark etti. Lütfen görevlerini kontrol et.",
     "archived": "Arşivlendi",
     "dashboard": "Danışman Paneli",
     "studentMonitor": "Öğrenci Takibi",
