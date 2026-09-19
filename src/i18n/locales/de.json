@@ -309,6 +309,8 @@
     "heroBody": "Verwalten Sie Aufgaben, Studierende und Kompetenzziele im jeweiligen Gruppenbereich.",
     "openGroups": "Gruppen öffnen",
     "activeGroups": "Aktive Gruppen",
+    "groupCount": "{{count}} Gruppen",
+    "avgProgress": "Fortschritt {{percent}}%",
     "activeStudents": "Aktive Studierende",
     "progress": "Durchschnittlicher Kompetenzfortschritt",
     "progressHint": "Erreichung der Kompetenzziele, nicht der Anteil erledigter Aufgaben.",

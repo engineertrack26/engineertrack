@@ -309,6 +309,8 @@
     "heroBody": "Gestisci attività, studenti e obiettivi di competenza nello spazio di ciascun gruppo.",
     "openGroups": "Apri gruppi",
     "activeGroups": "Gruppi attivi",
+    "groupCount": "{{count}} gruppi",
+    "avgProgress": "progresso {{percent}}%",
     "activeStudents": "Studenti attivi",
     "progress": "Progresso medio delle competenze",
     "progressHint": "Raggiungimento degli obiettivi di competenza, non percentuale di attività completate.",

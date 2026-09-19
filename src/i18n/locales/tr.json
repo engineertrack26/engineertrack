@@ -338,6 +338,8 @@
     "heroBody": "Görevleri, öğrencileri ve yetkinlik hedeflerini grup merkezinden yönetin.",
     "openGroups": "Grupları aç",
     "activeGroups": "Aktif gruplar",
+    "groupCount": "{{count}} grup",
+    "avgProgress": "ortalama ilerleme %{{percent}}",
     "activeStudents": "Aktif öğrenciler",
     "progress": "Ortalama yetkinlik ilerlemesi",
     "progressHint": "Görev tamamlama oranı değil, öğrencilerin yetkinlik hedeflerine ulaşma düzeyidir.",

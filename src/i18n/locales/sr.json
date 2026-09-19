@@ -309,6 +309,8 @@
     "heroBody": "Upravljajte zadacima, studentima i ciljevima kompetencija u prostoru svake grupe.",
     "openGroups": "Otvori grupe",
     "activeGroups": "Aktivne grupe",
+    "groupCount": "{{count}} grupa",
+    "avgProgress": "napredak {{percent}}%",
     "activeStudents": "Aktivni studenti",
     "progress": "Prosečan napredak kompetencija",
     "progressHint": "Dostizanje ciljeva kompetencija, a ne procenat završenih zadataka.",

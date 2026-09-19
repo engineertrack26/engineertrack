@@ -309,6 +309,8 @@
     "heroBody": "Manage tasks, students and competency targets from each group’s workspace.",
     "openGroups": "Open groups",
     "activeGroups": "Active groups",
+    "groupCount": "{{count}} groups",
+    "avgProgress": "progress {{percent}}%",
     "activeStudents": "Active students",
     "progress": "Average competency progress",
     "progressHint": "Attainment against competency targets, not the percentage of tasks completed.",

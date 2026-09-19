@@ -309,6 +309,8 @@
     "heroBody": "Gestionează sarcinile, studenții și obiectivele de competență din spațiul fiecărui grup.",
     "openGroups": "Deschide grupurile",
     "activeGroups": "Grupuri active",
+    "groupCount": "{{count}} grupuri",
+    "avgProgress": "progres {{percent}}%",
     "activeStudents": "Studenți activi",
     "progress": "Progres mediu al competențelor",
     "progressHint": "Atingerea obiectivelor de competență, nu procentul sarcinilor finalizate.",
