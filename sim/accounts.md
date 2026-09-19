@@ -12,3 +12,4 @@ All under `@sim.engineertrack.test`. Group join code and student codes are fille
 | student | Deniz Yıldırım | deniz.yildirim@sim.engineertrack.test | Sim-Deniz-2026! | Boğaziçi Geri Dönüşüm Tesisleri | Absent one day (excused), opens a past day with a reason, likes but rarely posts. | T4CZYP | 58MMWL | 04 |
 | student | Mert Yılmaz | mert.yilmaz@sim.engineertrack.test | Sim-Mert-2026! | İzmir Atık Yönetimi A.Ş. | Over-confident: rates himself 3 (independent) on everything; the mentor disagrees. | S4KGPF | 58MMWL | 07 |
 | student | Can Doğan | can.dogan@sim.engineertrack.test | Sim-Can-2026! | DSİ 5. Bölge Su Kalitesi Laboratuvarı | Questioning: messages the advisor and the mentor, comments on every post, asks for a case thread. | D8ACRA | 58MMWL | 08 |
+| mentor | Hakan Demir | hakan.demir@sim.engineertrack.test | Sim-Hakan-2026! | Marmara Su ve Kanalizasyon İdaresi | Reviews promptly, approves with a two-line note. |  |  |  |

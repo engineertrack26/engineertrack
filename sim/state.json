@@ -133,5 +133,10 @@
       "studentCode": "D8ACRA",
       "membershipId": "e9cb22b8-14bc-45ec-9b32-57617f692e28"
     }
+  },
+  "mentors": {
+    "hakan-demir": {
+      "userId": "69b34767-16ec-4483-a869-badcd064dc2d"
+    }
   }
 }
