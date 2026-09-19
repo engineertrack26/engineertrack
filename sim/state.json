@@ -137,6 +137,25 @@
   "mentors": {
     "hakan-demir": {
       "userId": "69b34767-16ec-4483-a869-badcd064dc2d"
+    },
+    "gamze-ozturk": {
+      "userId": "02ab2d3e-1e39-456a-a4d1-74b3bd1caf0e"
+    },
+    "emre-aksoy": {
+      "userId": "ddfdf911-6584-4d3d-a024-c403897c6223"
+    },
+    "murat-koc": {
+      "userId": "6fcbba4f-c65a-43ec-a938-60a70808223b"
+    },
+    "ayca-yildiz": {
+      "userId": "3a1e5820-0939-4b03-8060-cde6abcdc056"
+    },
+    "oguz-ari": {
+      "userId": "240d04ee-ce99-49f4-885d-edf6f6ffcec5"
+    },
+    "selin-kurt": {
+      "conversationWithCan": "0d4c29ff-e610-4e2f-a245-41b5a7a1307d",
+      "userId": "104bbfa1-f672-46ed-9891-2c576c522fb7"
     }
   }
 }

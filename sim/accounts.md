@@ -13,3 +13,9 @@ All under `@sim.engineertrack.test`. Group join code and student codes are fille
 | student | Mert Yılmaz | mert.yilmaz@sim.engineertrack.test | Sim-Mert-2026! | İzmir Atık Yönetimi A.Ş. | Over-confident: rates himself 3 (independent) on everything; the mentor disagrees. | S4KGPF | 58MMWL | 07 |
 | student | Can Doğan | can.dogan@sim.engineertrack.test | Sim-Can-2026! | DSİ 5. Bölge Su Kalitesi Laboratuvarı | Questioning: messages the advisor and the mentor, comments on every post, asks for a case thread. | D8ACRA | 58MMWL | 08 |
 | mentor | Hakan Demir | hakan.demir@sim.engineertrack.test | Sim-Hakan-2026! | Marmara Su ve Kanalizasyon İdaresi | Reviews promptly, approves with a two-line note. |  |  |  |
+| mentor | Gamze Öztürk | gamze.ozturk@sim.engineertrack.test | Sim-Gamze-2026! | İzmir Atık Yönetimi A.Ş. | Rates lower than the student, writes why. |  |  |  |
+| mentor | Emre Aksoy | emre.aksoy@sim.engineertrack.test | Sim-Emre-2026! | Karadeniz ÇED ve Çevre Hizmetleri | Slow: leaves one submission pending until the closure attempt. |  |  |  |
+| mentor | Murat Koç | murat.koc@sim.engineertrack.test | Sim-Murat-2026! | Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi | Approves everything, never writes a note. |  |  |  |
+| mentor | Ayça Yıldız | ayca.yildiz@sim.engineertrack.test | Sim-Ayça-2026! | Ege Çevre Danışmanlık | Strict: sends work back once with a precise reason. |  |  |  |
+| mentor | Oğuz Arı | oguz.ari@sim.engineertrack.test | Sim-Oğuz-2026! | Boğaziçi Geri Dönüşüm Tesisleri | Records the absence as excused, asks for a correction on one journal. |  |  |  |
+| mentor | Selin Kurt | selin.kurt@sim.engineertrack.test | Sim-Selin-2026! | DSİ 5. Bölge Su Kalitesi Laboratuvarı | Replies to everything, marks one day partial with a note. |  |  |  |
