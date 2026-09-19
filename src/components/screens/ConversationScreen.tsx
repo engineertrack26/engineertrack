@@ -164,6 +164,7 @@ export function ConversationScreen({ role }: Props) {
 
   if (!user) return null;
   return (
+    <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={8}><Ionicons name="chevron-back" size={26} color={colors.text} /></TouchableOpacity>
@@ -181,10 +182,13 @@ export function ConversationScreen({ role }: Props) {
           </TouchableOpacity>
         )}
       </View>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.conversationBody}>
         {loadFailed && <View style={{ paddingHorizontal: spacing.lg }}><LoadFailedBanner onRetry={load} /></View>}
-        {loading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} /> : (
+        {loading ? <ActivityIndicator size="large" color={colors.primary} style={styles.messageList} /> : (
           <FlatList
+            style={styles.messageList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             data={flatReversed}
             inverted
             keyExtractor={(x) => x.key}
@@ -213,20 +217,23 @@ export function ConversationScreen({ role }: Props) {
             </TouchableOpacity>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  conversationBody: { flex: 1, minHeight: 0 },
+  messageList: { flex: 1, minHeight: 0 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.divider },
   name: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   meta: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   blockText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.error },
   list: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   day: { alignSelf: 'center', fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginVertical: spacing.sm },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.paper },
+  inputRow: { flexShrink: 0, flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.paper },
   input: { flex: 1, maxHeight: 120, fontSize: 15, fontFamily: fonts.regular, color: colors.text, borderWidth: 1, borderColor: colors.ruleStrong, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 44 },
   blockedBar: { padding: spacing.md, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
   blockedText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },

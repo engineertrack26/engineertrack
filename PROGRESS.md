@@ -227,6 +227,12 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Conversation composer keyboard visibility
+
+- The owner reported the message input disappearing beneath the keyboard after starting a conversation. The shared screen had no Android keyboard-avoidance behavior. Enabled Android `height` / iOS `padding` and moved avoidance around the entire safe-area screen so the header and keyboard frame share the screen origin.
+- Made the list/loading area flexible with zero minimum height, kept the composer from shrinking, and added handled keyboard taps / drag-to-dismiss to the message list. Student, mentor and advisor use this same screen. No message service, permission, SQL or native configuration changes.
+- Verification: TypeScript passed; 12 targeted layout/helper tests passed. Layout tests are source-level guards, not a native keyboard simulation. The owner tested in Expo Go and confirmed the message input now works correctly with the keyboard. Exhaustive cross-device/iOS coverage was not claimed. Concurrent `sim/` work was left untouched.
+
 ### Official EngineerTrack logo integration
 
 - Expo Go follow-up: the owner still saw the previous icon during launch. Changed `expo.icon` to a newly named generated asset (`engineertrack-app-icon.png`) to avoid reuse of the old asset URL. The owner subsequently confirmed the launch logo is now correct and reported no issue. Native release-build verification remains separate.
