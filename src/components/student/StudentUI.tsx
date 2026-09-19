@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ui } from '@/components/common/workflowStyles';
 import { Stamp } from '@/components/common/Stamp';
@@ -12,11 +13,12 @@ import type { MyAssignment } from '@/types/assignment';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
 
-export function StudentHeader({ title }: { title: string }) {
+export function StudentHeader({ title, leading }: { title: string; leading?: ReactNode }) {
   const router = useRouter();
   const { t } = useTranslation();
   const count = useNotificationStore(s => s.unreadCount);
   return <View style={ui.header}>
+    {leading}
     <Text accessibilityRole="header" style={[ui.title, { flex: 1 }]}>{title}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={t('studentFlow.notifications', { count })}
       onPress={() => router.push('/(student)/notifications')} style={ui.iconButton}>

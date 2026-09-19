@@ -16,6 +16,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { sortTasks, isActionable } from '@/utils/studentTasks';
 import { LoadFailedBanner, Stamp } from '@/components/common';
 import { StudentHeader, JobCard, ui } from '@/components/student/StudentUI';
+import { StudentHeaderAvatar } from '@/components/student/StudentHeaderAvatar';
 import { colors, fonts } from '@/theme';
 import type { CompetencyProgress } from '@/types/competency';
 import type { MyAssignment } from '@/types/assignment';
@@ -207,7 +208,7 @@ export default function StudentDashboard() {
   return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={ui.content}
       refreshControl={<RefreshControl refreshing={tasks.refreshing && !tasks.loading} onRefresh={refresh} />}>
-      <StudentHeader title={t('studentFlow.greeting', { name: user?.firstName || '' })} />
+      <StudentHeader title={t('studentFlow.greeting', { name: user?.firstName || '' })} leading={<StudentHeaderAvatar />} />
       <Text style={[ui.secondary, { marginTop: -12 }]}>{dayLine}</Text>
 
       <View style={{ gap: 0 }}>
