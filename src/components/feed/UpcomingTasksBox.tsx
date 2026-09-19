@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { taskContent } from '@/utils/taskContent';
 import { Ionicons } from '@expo/vector-icons';
 import { taskDueDate } from '@/utils/studentTasks';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { UpcomingCandidate } from '@/utils/feedUpcoming';
 
 interface Props {
@@ -42,8 +42,8 @@ export function UpcomingTasksBox({ tasks, onOpen }: Props) {
 const styles = StyleSheet.create({
   box: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md, gap: spacing.xs, borderWidth: 1, borderColor: colors.primary + '30' },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  title: { fontSize: 14, fontWeight: '600', color: colors.text },
+  title: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
-  taskTitle: { fontSize: 14, color: colors.text },
-  due: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  taskTitle: { fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+  due: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
 });

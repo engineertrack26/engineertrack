@@ -186,7 +186,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
             <Text accessibilityRole="alert" style={ui.body}>{t('mentorFlow.reviewChanged')}</Text>
             <Pressable accessibilityRole="button" onPress={refreshChanged}><Text style={ui.link}>{t('common.retry')}</Text></Pressable>
           </View>}
-          <View style={[ui.card, { backgroundColor: '#eaf2fe', borderColor: '#cadcf7' }]}>
+          <View style={[ui.card, { backgroundColor: colors.inkBg, borderColor: colors.ruleStrong }]}>
             <Text style={ui.label}>{t('mentorFlow.criterion')}</Text>
             <Text style={ui.body}>{taskContent(item.assignment.criterion, i18n.language, 'criterion')}</Text>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}>
@@ -220,7 +220,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
             <Text style={ui.body}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('assessment.notRated', 'Not rated')}</Text>
             <LevelPicker label={t('assessment.mentorQuestion', 'How did the student do this task?')} value={level}
               onChange={(v) => { setLevel(v); setLevelError(false); }} />
-            {levelError && <Text style={[ui.body, { color: '#c00' }]}>{t('errors.levelRequired', 'Choose the level you observed before approving.')}</Text>}
+            {levelError && <Text style={[ui.body, { color: colors.error }]}>{t('errors.levelRequired', 'Choose the level you observed before approving.')}</Text>}
           </View>}
           {canReview && <Pressable accessibilityRole="button" disabled={!!submitting} onPress={() => openSheet('note')}>
             <Text style={ui.link}>{t('mentorFlow.optionalNote')}</Text>
@@ -228,12 +228,12 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
           </Pressable>}
         </>}
     </ScrollView>
-    {canReview && <View style={{ backgroundColor: '#fff', borderTopWidth: 1, borderColor: colors.divider }}>
+    {canReview && <View style={{ backgroundColor: colors.paper, borderTopWidth: 1, borderColor: colors.divider }}>
       <View style={[ui.content, { paddingVertical: 12, gap: 8 }]}>
         <View style={{ flexDirection: width < 360 || fontScale > 1.3 ? 'column' : 'row', gap: 12 }}>
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!submitting }} disabled={!!submitting}
-            onPress={() => openSheet('revision')} style={[ui.primary, { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#854600' }, !!submitting && { opacity: 0.6 }]}>
-            <Text style={[ui.primaryText, { color: '#854600' }]}>{t('mentorFlow.requestRevision')}</Text>
+            onPress={() => openSheet('revision')} style={[ui.primary, { flex: 1, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.warnText }, !!submitting && { opacity: 0.6 }]}>
+            <Text style={[ui.primaryText, { color: colors.warnText }]}>{t('mentorFlow.requestRevision')}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!submitting || level === null, busy: submitting === 'approve' }} disabled={!!submitting || level === null}
             onPress={() => decide(true)} style={[ui.primary, { flex: 1 }, (!!submitting || level === null) && { opacity: 0.6 }]}>

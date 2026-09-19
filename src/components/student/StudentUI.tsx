@@ -26,12 +26,18 @@ export function StudentHeader({ title }: { title: string }) {
   </View>;
 }
 
+/** The logbook's stamp for anything a mentor has touched; a quiet badge
+ *  for a task nobody has acted on yet. */
 export function TaskStatus({ task }: { task: MyAssignment }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const state = taskState(task);
-  const ink = state === 'revise' ? '#854600' : state === 'done' ? '#1b6b3a' : '#1557b0';
-  const backgroundColor = state === 'revise' ? '#fff2d5' : state === 'done' ? '#e7f4eb' : '#eaf2fe';
-  return <Text style={[ui.badge, { color: ink, backgroundColor }]}>{t(taskStateKey(state))}</Text>;
+  if (state === 'done') {
+    const reviewed = task.submission?.reviewedAt;
+    return <Stamp kind="approved" date={reviewed ? new Date(reviewed).toLocaleDateString(i18n.language) : undefined} />;
+  }
+  if (state === 'revise') return <Stamp kind="revision" />;
+  if (state === 'waiting') return <Stamp kind="pending" />;
+  return <Text style={[ui.badge, { color: colors.inkSoft, backgroundColor: colors.inkBg }]}>{t(taskStateKey(state))}</Text>;
 }
 
 /** The dashboard's "next task" card only -- TaskCard (below) keeps its plain

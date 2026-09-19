@@ -164,7 +164,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
   </View>;
   const choice = (label: string, checked: boolean, onPress: () => void) => <Pressable key={label} accessibilityRole="radio"
     accessibilityState={{ checked, disabled: busy }} disabled={busy} onPress={onPress}
-    style={[ui.card, { padding: 12, minHeight: 48 }, checked && { backgroundColor: '#eaf2fe', borderColor: colors.primaryDark }]}>
+    style={[ui.card, { padding: 12, minHeight: 48 }, checked && { backgroundColor: colors.inkBg, borderColor: colors.ink }]}>
     <Text style={ui.body}>{checked ? '● ' : '○ '}{label}</Text>
   </Pressable>;
   const saveLog = (day: InternshipDay, submit: boolean) => {
@@ -207,7 +207,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
           accessibilityState={{ selected: showHistory === history, disabled: busy || loading }} disabled={busy || loading}
           onPress={() => { setShowHistory(history); setShowSummary(false); setFrom(dayWeek(today)[0]); setSuccess(false); scrollRef.current?.scrollTo({ y: 0, animated: true }); }}
           style={{ flex: 1, minHeight: 48, padding: 12, borderRadius: 10, justifyContent: 'center', backgroundColor: showHistory === history ? colors.primaryDark : colors.surface }}>
-          <Text style={[ui.label, { textAlign: 'center', color: showHistory === history ? '#fff' : colors.primaryDark }]}>{t(history ? 'days.historyTab' : 'days.today')}</Text>
+          <Text style={[ui.label, { textAlign: 'center', color: showHistory === history ? colors.textOnPrimary : colors.primaryDark }]}>{t(history ? 'days.historyTab' : 'days.today')}</Text>
         </Pressable>)}
       </View>}
       {role === 'student' && showHistory && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

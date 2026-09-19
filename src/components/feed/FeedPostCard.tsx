@@ -10,7 +10,8 @@ import { pollPercentages, withLike } from '@/utils/feedMetrics';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { taskDueDate } from '@/utils/studentTasks';
 import { isValidLink } from '@/utils/feedAttachments';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
+import { Stamp } from '@/components/common/Stamp';
 import type { FeedPost } from '@/types/feed';
 import { FeedComments } from './FeedComments';
 
@@ -165,11 +166,13 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
       {/* Body by kind */}
       {post.kind === 'task' && post.task && (
         <View style={styles.section}>
-          {!!post.task.competencyName && (
-            <Text style={styles.competency}>
-              {competencyContent(post.task.competencyName, i18n.language)}{post.task.level ? ` · L${post.task.level}` : ''}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+            <Text style={[styles.competency, { flex: 1 }]}>
+              {post.task.competencyName
+                ? `${competencyContent(post.task.competencyName, i18n.language)}${post.task.level ? ` · L${post.task.level}` : ''}` : ''}
             </Text>
-          )}
+            <Stamp kind="approved" />
+          </View>
           <Text style={styles.title}>{taskContent(post.task.title, i18n.language)}</Text>
           {!!post.task.note && <Text style={styles.body}>{post.task.note}</Text>}
           {post.task.photos.length > 0 && (
@@ -300,27 +303,27 @@ const styles = StyleSheet.create({
   cardHighlighted: { borderWidth: 2, borderColor: colors.primary },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary + '20', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 13, fontWeight: '700', color: colors.primary },
-  author: { fontSize: 14, fontWeight: '600', color: colors.text },
-  subtle: { fontSize: 12, color: colors.textSecondary },
+  avatarText: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  author: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  subtle: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  draftBadge: { fontSize: 10, fontWeight: '700', color: colors.warning, textTransform: 'uppercase', letterSpacing: 0.5, borderWidth: 1, borderColor: colors.warning, borderRadius: borderRadius.sm, paddingHorizontal: 5, paddingVertical: 1 },
+  draftBadge: { fontSize: 10, fontWeight: '600', fontFamily: fonts.semibold, color: colors.warning, textTransform: 'uppercase', letterSpacing: 0.5, borderWidth: 1, borderColor: colors.warning, borderRadius: borderRadius.sm, paddingHorizontal: 5, paddingVertical: 1 },
   section: { gap: spacing.xs },
-  competency: { fontSize: 12, fontWeight: '600', color: colors.primary },
-  title: { fontSize: 15, fontWeight: '600', color: colors.text },
-  body: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  competency: { fontSize: 12, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  title: { fontSize: 15, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  body: { fontSize: 14, fontFamily: fonts.regular, color: colors.text, lineHeight: 20 },
   photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   photo: { width: 96, height: 96, borderRadius: borderRadius.sm },
   docRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
-  docName: { flex: 1, fontSize: 13, color: colors.primary, fontWeight: '500' },
+  docName: { flex: 1, fontSize: 13, color: colors.primary, fontWeight: '500', fontFamily: fonts.medium },
   docNameInert: { color: colors.textSecondary },
   option: { position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   optionMine: { borderColor: colors.primary },
   optionFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.primary + '18' },
-  optionLabel: { fontSize: 14, color: colors.text },
-  optionLabelMine: { fontWeight: '600', color: colors.primary },
-  optionPct: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  optionLabel: { fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+  optionLabelMine: { fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  optionPct: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.textSecondary },
   footer: { flexDirection: 'row', gap: spacing.lg, paddingTop: spacing.xs },
   footerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footerText: { fontSize: 13, color: colors.textSecondary },
+  footerText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 });

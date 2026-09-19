@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { assignmentService } from '@/services/assignments';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { GroupAssignment } from '@/types/assignment';
 
 // The database column is DATE and the rest of the app passes these around as
@@ -494,15 +494,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   competencyLine: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     letterSpacing: 0.3,
     color: colors.textSecondary,
     textTransform: 'uppercase',
@@ -510,7 +507,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
   },
   cardHeaderRow: {
@@ -530,20 +527,20 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   subtle: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 2,
   },
   draftBadge: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
     color: colors.status.draft,
     marginTop: spacing.xs,
   },
   label: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
@@ -554,7 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.text,
     backgroundColor: colors.background,
     marginBottom: spacing.sm,
@@ -583,7 +580,7 @@ const styles = StyleSheet.create({
     color: colors.textDisabled,
   },
   warning: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.warning,
     marginTop: spacing.xs,
   },
@@ -594,7 +591,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   lockedHint: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: -spacing.xs,
     marginBottom: spacing.sm,
@@ -615,7 +612,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.textSecondary,
   },
   primaryBtn: {
@@ -628,7 +625,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
   editSaveBtn: {
@@ -650,11 +647,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   dateValue: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.text,
   },
   datePlaceholder: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   iosPickerBox: {
@@ -672,7 +669,7 @@ const styles = StyleSheet.create({
   },
   iosPickerDoneText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
 
@@ -688,12 +685,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
   linkText: {
     fontSize: 12,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
   },
   addBtn: {
     flexDirection: 'row',
@@ -714,6 +711,6 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 13,
     color: colors.primary,
-    fontWeight: '500',
+    fontWeight: '500', fontFamily: fonts.medium,
   },
 });

@@ -18,7 +18,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
 import { reviewedAssignmentsMatch } from '@/utils/assignmentPreparation';
-import { colors, spacing, borderRadius } from '@/theme';
+import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
@@ -528,7 +528,7 @@ function GroupAssignmentsContent() {
                           alreadyAssigned
                             ? colors.textDisabled
                             : active
-                              ? '#fff'
+                              ? colors.textOnPrimary
                               : colors.textSecondary
                         }
                         style={styles.tripletCheck}
@@ -661,12 +661,12 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: spacing.md,
   },
   hint: {
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
@@ -680,14 +680,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   label: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
@@ -695,7 +692,7 @@ const styles = StyleSheet.create({
   // Draft tray / sent list headings.
   sectionHeading: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
@@ -723,7 +720,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.textSecondary,
   },
   chipTextActive: {
@@ -751,7 +748,7 @@ const styles = StyleSheet.create({
   },
   levelText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.textSecondary,
   },
   levelTextActive: {
@@ -764,7 +761,7 @@ const styles = StyleSheet.create({
   },
   kpiStatement: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: spacing.xs,
   },
@@ -793,7 +790,7 @@ const styles = StyleSheet.create({
   },
   tripletText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13, fontFamily: fonts.regular,
     color: colors.text,
   },
   tripletTextActive: {
@@ -811,17 +808,17 @@ const styles = StyleSheet.create({
   },
   clearLink: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: ADVISOR_COLOR,
   },
   selectedCount: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: colors.text,
     marginBottom: 2,
   },
   selectedHint: {
-    fontSize: 12,
+    fontSize: 12, fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginBottom: spacing.md,
   },
@@ -841,11 +838,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   dateValue: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.text,
   },
   datePlaceholder: {
-    fontSize: 15,
+    fontSize: 15, fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   iosPickerBox: {
@@ -863,7 +860,7 @@ const styles = StyleSheet.create({
   },
   iosPickerDoneText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
 
@@ -879,7 +876,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600', fontFamily: fonts.semibold,
     color: '#fff',
   },
 });

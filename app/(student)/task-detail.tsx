@@ -246,7 +246,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             <Text style={ui.link}>{t('tabs.tasks')}</Text>
           </Pressable>
           {actionable && saveState !== 'idle' && <Text accessibilityLiveRegion="polite"
-            style={[ui.secondary, { color: saveState === 'error' ? colors.error : saveState === 'saved' ? '#1b6b3a' : colors.textSecondary }]}>
+            style={[ui.secondary, { color: saveState === 'error' ? colors.error : saveState === 'saved' ? colors.stamp : colors.textSecondary }]}>
             {t('studentFlow.draft' + saveState[0].toUpperCase() + saveState.slice(1))}
           </Text>}
         </View>
@@ -337,7 +337,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
           </Pressable>}
         </>}
       </ScrollView>
-      {!loading && !failed && actionable && <View style={{ borderTopWidth: 1, borderColor: colors.divider, backgroundColor: '#fff' }}>
+      {!loading && !failed && actionable && <View style={{ borderTopWidth: 1, borderColor: colors.divider, backgroundColor: colors.paper }}>
         <View style={[ui.content, { paddingVertical: 12, gap: 8 }]}>
           <View style={levelError ? { borderWidth: 1, borderColor: colors.error, borderRadius: 12, padding: 8 } : undefined}>
             <LevelPicker label={t('assessment.selfQuestion', 'How did you do this task?')}

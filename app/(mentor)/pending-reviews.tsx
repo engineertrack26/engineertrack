@@ -70,7 +70,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
           placeholderTextColor={colors.textSecondary} accessibilityLabel={t('mentorFlow.search')} returnKeyType="search" />
         <View style={[ui.header, { flexWrap: 'wrap', justifyContent: 'space-between' }]}>
-          <Text style={[ui.badge, { backgroundColor: colors.primaryDark, color: '#fff' }]}>{t('mentorFlow.pending')} {!loading && '(' + visible.length + ')'}</Text>
+          <Text style={[ui.badge, { backgroundColor: colors.ink, color: colors.textOnPrimary }]}>{t('mentorFlow.pending')} {!loading && '(' + visible.length + ')'}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.sort') + ': ' + t('mentorFlow.' + order)}
             onPress={() => setOrder(order === 'oldest' ? 'newest' : 'oldest')} style={ui.header}>
             <Text style={ui.link}>{t('mentorFlow.' + order)}</Text>
