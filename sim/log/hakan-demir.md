@@ -10,3 +10,14 @@
 - `11:53:36` **table.assignment_submissions.select** {} → []
 - `11:53:36` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
 - _11:53:36_ Faz 3 bitti.
+- `11:58:14` **auth.signIn** {"email":"hakan.demir@sim.engineertrack.test"} → 69b34767-16ec-4483-a869-badcd064dc2d
+- _11:58:14_ Elif'in mentoru Ayça olarak görünüyor — kodla yeniden bağlanıyorum (ikinci mentor devralma hatasının sonucu).
+- `11:58:14` **link_student_by_code** {"p_code":"8N2TXF","p_role":"mentor"} → [{"student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","student_name":"Elif Kaya"}]
+- _11:58:14_ link_student_by_code (re-link) → [{"student_id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","student_name":"Elif Kaya"}]
+- `11:58:14` **internship_people** {} → [{"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","name":"Elif Kaya","company":"Marmara Su ve Kanalizasyon İdaresi","endDate":"2026-09-19","mentorId":"69b34767-1…
+- _11:58:14_ internship_people → [{"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","name":"Elif Kaya","company":"Marmara Su ve Kanalizasyon İdaresi","endDate":"2026-09-19","mentorId":"69b34767-16ec-4483-a869-badcd064dc2d","startDate":"2026-09-13"}]
+- `11:58:14` **table.student_profiles.select-mentor-id** {} → {"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","mentor_id":"69b34767-16ec-4483-a869-badcd064dc2d"}
+- _11:58:14_ student_profiles.mentor_id for Elif → {"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","mentor_id":"69b34767-16ec-4483-a869-badcd064dc2d"} (me.userId = 69b34767-16ec-4483-a869-badcd064dc2d)
+- `11:58:14` **list_mentor_message_contacts** {} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Sta…
+- _11:58:14_ [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Staj — Güz 2026"},{"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","name":"Elif Kaya","role":"student","groupId":"861d35d8-5083-4146-a8eb-38b10b5a0640","groupName":"ÇEV 400 Staj — Güz 2026"}]
+- _11:58:14_ Faz 3b bitti.
