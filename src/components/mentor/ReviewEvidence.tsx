@@ -44,7 +44,7 @@ export function ReviewEvidence({ photos = [], documents = [], onRetry }: {
     </View>}
     {documents.map((doc, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={doc.fileName}
       disabled={openingDoc !== null} accessibilityState={{ disabled: openingDoc !== null, busy: openingDoc === index }}
-      onPress={() => openDocument(doc, index)} style={[ui.card, ui.header, { padding: 16 }]}>
+      onPress={() => openDocument(doc, index)} style={[ui.header, { paddingVertical: 10, borderBottomWidth: 1, borderColor: colors.divider }]}>
       <Ionicons name="document-text-outline" size={26} color={colors.primaryDark} />
       <View style={{ flex: 1, gap: 4 }}><Text style={ui.label}>{doc.fileName}</Text>
         <Text style={ui.secondary}>{doc.fileSize >= 1048576 ? t('common.fileSizeMB', { size: (doc.fileSize / 1048576).toFixed(1) }) : t('common.fileSizeKB', { size: Math.max(1, Math.round(doc.fileSize / 1024)) })}</Text>

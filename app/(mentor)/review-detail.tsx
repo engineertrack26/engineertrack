@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, BackHandler, Linking, Pressable, ScrollView, 
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
 import { useAuthStore } from '@/store/authStore';
@@ -171,6 +172,11 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
   }
 
   const due = taskDueDate(item?.assignment.dueDate, i18n.language);
+  const facts = item ? [
+    item.assignment.competencyName && { label: t('dash.competency', 'Competency'),
+      value: `${competencyContent(item.assignment.competencyName, i18n.language)}${item.assignment.level ? ' · L' + item.assignment.level : ''}` },
+    due && { label: t('mentor.taskDueDate'), value: due },
+  ].filter((f): f is { label: string; value: string } => !!f) : [];
   const canReview = !!item && !loading && !failed && !changed;
   return <SafeAreaView style={ui.safe}>
     <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled">
@@ -178,21 +184,29 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
       {loading ? <ActivityIndicator size="large" color={colors.primary} /> : failed ? <LoadFailedBanner onRetry={load} /> :
         !item ? <View style={ui.card}><Text style={ui.body}>{t('mentorFlow.unavailable')}</Text></View> : <>
           <ReviewIdentity name={name} submittedAt={item.submittedAt} />
-          <Text accessibilityRole="header" style={ui.title}>{taskContent(item.assignment.title, i18n.language)}</Text>
-          <ReviewStatus />
-          {!!item.assignment.competencyName && <Text style={ui.secondary}>{competencyContent(item.assignment.competencyName, i18n.language)}{item.assignment.level ? ' · L' + item.assignment.level : ''}</Text>}
-          {!!due && <Text style={ui.secondary}>{t('mentor.taskDueDate')}: {due}</Text>}
+          <View style={{ gap: 10 }}>
+            <Text accessibilityRole="header" style={ui.title}>{taskContent(item.assignment.title, i18n.language)}</Text>
+            <ReviewStatus />
+          </View>
+          {facts.length > 0 && <View style={{ gap: 6, paddingBottom: 12, borderBottomWidth: 1, borderColor: colors.rule }}>
+            {facts.map((f) => <View key={f.label} style={{ flexDirection: 'row', gap: 12 }}>
+              <Text style={[ui.secondary, { width: 96 }]}>{f.label}</Text>
+              <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21, fontVariant: ['tabular-nums'] }]}>{f.value}</Text>
+            </View>)}
+          </View>}
           {changed && <View style={ui.note}>
             <Text accessibilityRole="alert" style={ui.body}>{t('mentorFlow.reviewChanged')}</Text>
             <Pressable accessibilityRole="button" onPress={refreshChanged}><Text style={ui.link}>{t('common.retry')}</Text></Pressable>
           </View>}
-          <View style={[ui.card, { backgroundColor: colors.inkBg, borderColor: colors.ruleStrong }]}>
-            <Text style={ui.label}>{t('mentorFlow.criterion')}</Text>
+          <View style={{ gap: 8 }}>
+            <Text style={ui.section}>{t('mentorFlow.criterion')}</Text>
             <Text style={ui.body}>{taskContent(item.assignment.criterion, i18n.language, 'criterion')}</Text>
-            <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}>
-              <Text style={ui.link}>{t('studentFlow.instructions')} {instructions ? '⌃' : '⌄'}</Text>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 }}>
+              <Text style={[ui.link, { paddingVertical: 0 }]}>{t('studentFlow.instructions')}</Text>
+              <Ionicons name={instructions ? 'chevron-up' : 'chevron-down'} size={18} color={colors.ink} />
             </Pressable>
-            {instructions && <>
+            {instructions && <View style={{ gap: 8, paddingLeft: 12, borderLeftWidth: 2, borderColor: colors.rule }}>
               <Text style={ui.label}>{t('mentor.taskObjective')}</Text>
               <Text style={ui.body}>{taskContent(item.assignment.objective, i18n.language, 'objective')}</Text>
               {!!item.assignment.description && <Text style={ui.body}>{item.assignment.description}</Text>}
@@ -202,22 +216,30 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
                 </Pressable>
                 {!item.assignment.documentUrl && <Text style={ui.secondary}>{t('mentor.taskDocumentUnavailable')}</Text>}
               </>}
-            </>}
+            </View>}
           </View>
-          <View style={ui.card}>
-            <Text style={ui.label}>{t('mentorFlow.whatDid')}</Text>
-            <Text style={ui.body}>{item.studentNote || t('mentorFlow.notProvided')}</Text>
-            <Text style={ui.label}>{t('mentorFlow.whatLearned')}</Text>
-            <Text style={ui.body}>{item.reflection || t('mentorFlow.notProvided')}</Text>
+          <View style={[ui.card, { gap: 14 }]}>
+            <View style={{ gap: 4 }}>
+              <Text style={ui.section}>{t('mentorFlow.whatDid')}</Text>
+              <Text selectable style={ui.body}>{item.studentNote || t('mentorFlow.notProvided')}</Text>
+            </View>
+            <View style={{ borderTopWidth: 1, borderColor: colors.rule }} />
+            <View style={{ gap: 4 }}>
+              <Text style={ui.section}>{t('mentorFlow.whatLearned')}</Text>
+              <Text selectable style={ui.body}>{item.reflection || t('mentorFlow.notProvided')}</Text>
+            </View>
           </View>
           <ReviewEvidence photos={item.photos} documents={item.documents} onRetry={load} />
           {!!item.mentorNote && <View style={ui.note}>
             <Text style={ui.label}>{t('mentorFlow.previousNote')}</Text>
             <Text style={ui.body}>{item.mentorNote}</Text>
           </View>}
-          {canReview && <View style={ui.card}>
-            <Text style={ui.label}>{t('assessment.studentSaid', "Student's own rating")}</Text>
-            <Text style={ui.body}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('assessment.notRated', 'Not rated')}</Text>
+          {canReview && <View style={[ui.card, ui.featured]}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Text style={[ui.secondary, { width: 96 }]}>{t('assessment.studentSaid', "Student's own rating")}</Text>
+              <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21 }]}>{typeof item.selfLevel === 'number' ? levelLabel(item.selfLevel, t) : t('assessment.notRated', 'Not rated')}</Text>
+            </View>
+            <View style={{ borderTopWidth: 1, borderColor: colors.rule }} />
             <LevelPicker label={t('assessment.mentorQuestion', 'How did the student do this task?')} value={level}
               onChange={(v) => { setLevel(v); setLevelError(false); }} />
             {levelError && <Text style={[ui.body, { color: colors.error }]}>{t('errors.levelRequired', 'Choose the level you observed before approving.')}</Text>}
