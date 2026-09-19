@@ -524,6 +524,7 @@
     "welcome": "Ciao",
     "intro": "Segui qui il lavoro dei tuoi studenti.",
     "waiting": "{{count}} in attesa di revisione",
+    "studentsCount": "{{count}} studenti",
     "nextReview": "Prossima revisione",
     "oldestHint": "La consegna in attesa da più tempo",
     "allPending": "Vedi tutte le attività in attesa ({{count}})",

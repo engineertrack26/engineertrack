@@ -524,6 +524,7 @@
     "welcome": "Bună",
     "intro": "Urmărește aici lucrările elevilor tăi.",
     "waiting": "{{count}} așteaptă evaluarea",
+    "studentsCount": "{{count}} studenți",
     "nextReview": "Următoarea evaluare",
     "oldestHint": "Lucrarea care așteaptă de cel mai mult timp",
     "allPending": "Vezi toate lucrările în așteptare ({{count}})",

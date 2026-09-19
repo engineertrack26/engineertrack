@@ -524,6 +524,7 @@
     "welcome": "Zdravo",
     "intro": "Ovde prati rad svojih učenika.",
     "waiting": "{{count}} čeka pregled",
+    "studentsCount": "{{count}} studenata",
     "nextReview": "Sledeći pregled",
     "oldestHint": "Rad koji najduže čeka pregled",
     "allPending": "Prikaži sve na čekanju ({{count}})",

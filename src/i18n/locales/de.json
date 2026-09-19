@@ -524,6 +524,7 @@
     "welcome": "Hallo",
     "intro": "Verfolge hier die Arbeiten deiner Lernenden.",
     "waiting": "{{count}} zur Prüfung offen",
+    "studentsCount": "{{count}} Studierende",
     "nextReview": "Nächste Prüfung",
     "oldestHint": "Die am längsten wartende Einreichung",
     "allPending": "Alle offenen anzeigen ({{count}})",
