@@ -96,5 +96,12 @@
       "9af360a2-2007-4b8d-aa5d-787678a425c0"
     ],
     "draftAnnouncementId": "13946c36-731b-48e6-a511-af585f314970"
+  },
+  "students": {
+    "elif-kaya": {
+      "userId": "5d9c97c7-b804-4a65-890d-7eb65270f2ca",
+      "studentCode": "8N2TXF",
+      "membershipId": "8ab6c2ab-d348-45c5-bf8d-e276434be086"
+    }
   }
 }
