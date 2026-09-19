@@ -1,15 +1,16 @@
 import { View, Text, Pressable } from 'react-native';
 import { ui } from '@/components/common/workflowStyles';
+import { Stamp } from '@/components/common/Stamp';
 export { ui } from '@/components/common/workflowStyles';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { taskContent } from '@/utils/taskContent';
-import { competencyContent } from '@/utils/competencyContent';
 import { useNotificationStore } from '@/store/notificationStore';
 import { colors } from '@/theme';
 import { taskState, taskStateKey, taskDueDate } from '@/utils/studentTasks';
 import type { MyAssignment } from '@/types/assignment';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 
 export function StudentHeader({ title }: { title: string }) {
   const router = useRouter();
@@ -34,31 +35,44 @@ export function TaskStatus({ task }: { task: MyAssignment }) {
 }
 
 /** The dashboard's "next task" card only -- TaskCard (below) keeps its plain
- *  look everywhere else (my-tasks, upcoming). Styled as the logbook's job
- *  card: a dashed rule separates the task's facts from the one action. */
+ *  look everywhere else (my-tasks, upcoming). Laid out like a logbook's job
+ *  card: a header line naming what it is (with the revision stamp when the
+ *  task came back), the title, a two-column fact table with aligned labels,
+ *  a rule, then the one action. The mentor's note is shown only when the
+ *  task was sent back -- that is the one time it changes what the student
+ *  does next. */
 export function JobCard({ task }: { task: MyAssignment }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const due = taskDueDate(task.dueDate, i18n.language);
   const open = () => router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
-  const meta = task.competencyName ? `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}` : undefined;
-  const spokenLabel = [taskContent(task.title, i18n.language), meta, due && `${t('student.taskDueDate')}: ${due}`,
-    task.submission?.mentorNote, t('studentFlow.continueTask')].filter(Boolean).join('. ');
+  const sentBack = task.submission?.status === 'needs_revision';
+  const competency = task.competencyName ? `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}` : undefined;
+  const facts = [
+    competency && { label: t('dash.competency', 'Competency'), value: competency },
+    due && { label: t('student.taskDueDate'), value: due },
+  ].filter((f): f is { label: string; value: string } => !!f);
+  const spokenLabel = [t('studentFlow.nextTask'), sentBack && t('stamp.revision', 'Revision'), taskContent(task.title, i18n.language),
+    ...facts.map((f) => `${f.label}: ${f.value}`), sentBack && task.submission?.mentorNote,
+    t('studentFlow.continueTask')].filter(Boolean).join('. ');
   return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel}
-    onPress={open} style={({ pressed }) => [ui.card, ui.featured, pressed && { opacity: 0.8 }]}>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <Text style={{ fontSize: 12, fontWeight: '500', color: colors.inkSoft, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-        {t('dash.jobCard', 'JOB CARD')}
-      </Text>
-      {!!due && <Text style={[ui.secondary, { fontVariant: ['tabular-nums'] }]}>{due}</Text>}
+    onPress={open} style={[ui.card, ui.featured]}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 24 }}>
+      <Text style={ui.section}>{t('studentFlow.nextTask')}</Text>
+      {sentBack && <Stamp kind="revision" />}
     </View>
     <Text style={ui.cardTitle}>{taskContent(task.title, i18n.language)}</Text>
-    {!!meta && <Text style={ui.secondary}>{meta}</Text>}
-    {task.submission?.mentorNote && <View style={ui.note}>
+    {facts.length > 0 && <View style={{ gap: 6 }}>
+      {facts.map((f) => <View key={f.label} style={{ flexDirection: 'row', gap: 12 }}>
+        <Text style={[ui.secondary, { width: 96 }]}>{f.label}</Text>
+        <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21, fontVariant: ['tabular-nums'] }]}>{f.value}</Text>
+      </View>)}
+    </View>}
+    {sentBack && !!task.submission?.mentorNote && <View style={ui.note}>
       <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
       <Text style={ui.body}>{task.submission.mentorNote}</Text>
     </View>}
-    <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: colors.ruleStrong }} />
+    <View style={{ borderTopWidth: 1, borderColor: colors.rule }} />
     <View style={ui.primary}>
       <Text style={ui.primaryText}>{t('studentFlow.continueTask')}</Text>
       <Ionicons name="arrow-forward" size={20} color="#fff" />
@@ -75,7 +89,7 @@ export function TaskCard({ task, prominent = false }: { task: MyAssignment; prom
     due && `${t('student.taskDueDate')}: ${due}`, prominent && task.submission?.mentorNote,
     t(prominent ? 'studentFlow.continueTask' : 'studentFlow.viewTask')].filter(Boolean).join('. ');
   return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel}
-    onPress={open} style={({ pressed }) => [ui.card, prominent && ui.featured, pressed && { opacity: 0.8 }]}>
+    onPress={open} style={[ui.card, prominent && ui.featured]}>
     <TaskStatus task={task} />
     <Text style={ui.cardTitle}>{taskContent(task.title, i18n.language)}</Text>
     {!!task.competencyName && <Text style={ui.secondary}>{competencyContent(task.competencyName, i18n.language)}</Text>}
