@@ -669,6 +669,7 @@
     "thisWeek": "Bu hafta",
     "checkedIn": "Stajdayım",
     "checkIn": "Giriş yap",
+    "competency": "Yetkinlik",
     "myDays": "Staj günlerim",
     "atTarget": "{{count}} / {{total}} hedefte"
   },

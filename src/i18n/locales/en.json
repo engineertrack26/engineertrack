@@ -615,6 +615,7 @@
     "thisWeek": "This week",
     "checkedIn": "At the internship",
     "checkIn": "Check in",
+    "competency": "Competency",
     "myDays": "My internship days",
     "atTarget": "{{count}} of {{total}} at target"
   },
