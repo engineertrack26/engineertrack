@@ -225,6 +225,26 @@
 
 ---
 
+## Codex Delivery Notes - 2026-09-19
+
+### Turkish ready-task content and competency names
+
+- **Delivered and pushed:** `0048870` on `feature/competency-framework`.
+- Added Turkish display translations for all 480 ready tasks (1,440 fields: learning objective, task, assessment criterion) and the six competency names. English remains the canonical source; languages other than Turkish currently display English catalog content.
+- Bundled English/Turkish catalogs in `src/i18n/task-content/`, with display helpers `taskContent` and `competencyContent`. Unknown/custom text falls back to its original value; opening and saving an unchanged translated field preserves the original English source.
+- Integrated display translations into student, mentor and advisor task views, selection/review flows, stream cards, internship task references, competency displays and relevant search paths. No database migration or SQL action is required.
+- Initial translation used an external service with the owner's explicit consent, sending only English ready-catalog text. Reviewed corrections are recorded in `docs/task-content-tr-corrections.json`; generation/review scripts and maintenance guidance are documented in `docs/task-content-localization.md`. The app does not call a translation service at runtime.
+- **Scope limits:** KPI statements and previously stored notification bodies were not translated in this delivery. Device acceptance of every translated screen was not performed by Codex.
+- **Verification:** TypeScript passed; full Jest suite passed (57 suites / 558 tests); staged diff checks passed. Concurrent design work in three shared files was preserved outside this commit and subsequently committed separately by Claude (see Session 27).
+
+### Selected avatar beside the student dashboard greeting
+
+- **Delivered and pushed:** `3f7d641` on `feature/competency-framework`.
+- Added `StudentHeaderAvatar` to the left of the student dashboard greeting through an optional `StudentHeader.leading` slot. Other headers remain unchanged.
+- Reuses the profile's `StudentAvatar` renderer at 56 px without level markers, using the saved character and server-provided level from `my_student_avatar()`.
+- Reloads when the dashboard regains focus so profile changes appear on return. Guards against stale requests/account changes; shows a loading indicator or neutral person icon when no avatar is available.
+- **Verification:** TypeScript passed; existing avatar service/helper tests passed (2 suites / 46 tests); diff checks passed. Device visual verification was left to the owner in Expo Go. No SQL change, build or export was needed.
+
 ## Session Log
 
 | Date | Session | Work Done |
