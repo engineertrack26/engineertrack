@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, fonts } from '@/theme';
+import { colors, spacing, fonts } from '@/theme';
 import type { TFunction } from 'i18next';
 import type { ConversationSummary } from '@/types/messages';
 import { conversationSubtitle } from '@/utils/messageHelpers';
@@ -40,20 +40,20 @@ export function ConversationRow({ item, me, onPress, locale }: { item: Conversat
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.inkBg, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   name: { flex: 1, fontSize: 15, fontFamily: fonts.regular, color: colors.text },
-  nameUnread: { fontWeight: '600', fontFamily: fonts.semibold },
-  when: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  nameUnread: { fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
+  when: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   meta: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   preview: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
   previewUnread: { color: colors.text, fontWeight: '500', fontFamily: fonts.medium },
-  badge: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '600', fontFamily: fonts.semibold },
+  badge: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  badgeText: { color: colors.textOnPrimary, fontSize: 12, fontWeight: '600', fontFamily: fonts.semibold, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', marginTop: 60, gap: spacing.sm },
   emptyText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary },
-  note: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.sm, marginBottom: spacing.sm },
+  note: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, paddingVertical: spacing.sm, marginBottom: spacing.xs },
 });
 export const conversationListStyles = styles;

@@ -284,7 +284,7 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
         accessibilityRole="button"
         onPress={() => router.push(groupCenterRoute(groupId))}
         style={{ paddingVertical: 12, minHeight: 48 }}>
-        <Text style={{ fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primaryDark }}>
+        <Text style={{ fontSize: 14, fontFamily: fonts.medium, color: colors.ink }}>
           {groups.find((g) => g.id === groupId)?.name} · {t('advisorGroups.groupCenter')}
         </Text>
       </TouchableOpacity>}
@@ -317,11 +317,11 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
       {role === 'advisor' && groupId && (
         <View style={styles.composeRow}>
           <TouchableOpacity style={styles.composeBtn} onPress={() => setComposer('announcement')} activeOpacity={0.7}>
-            <Ionicons name="megaphone-outline" size={18} color={colors.primary} />
+            <Ionicons name="megaphone-outline" size={18} color={colors.ink} />
             <Text style={styles.composeText}>{t('feed.writeAnnouncement')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.composeBtn} onPress={() => setComposer('poll')} activeOpacity={0.7}>
-            <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
+            <Ionicons name="stats-chart-outline" size={18} color={colors.ink} />
             <Text style={styles.composeText}>{t('feed.createPoll')}</Text>
           </TouchableOpacity>
         </View>
@@ -433,22 +433,22 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   titleRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  screenTitle: { fontSize: 24, fontWeight: '600', fontFamily: fonts.semibold, color: colors.text },
+  screenTitle: { fontSize: 26, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, flexGrow: 1 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: borderRadius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.divider },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, minHeight: 40, borderRadius: borderRadius.md, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.divider },
+  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
   chipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, maxWidth: 160 },
-  chipTextActive: { color: '#fff', fontWeight: '600', fontFamily: fonts.semibold },
-  chipBadge: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, backgroundColor: colors.divider, paddingHorizontal: 6, borderRadius: borderRadius.full },
+  chipTextActive: { color: colors.textOnPrimary, fontWeight: '600', fontFamily: fonts.semibold },
+  chipBadge: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, backgroundColor: colors.page, paddingHorizontal: 6, borderRadius: borderRadius.xs },
   composeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  composeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary + '40' },
-  composeText: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.primary },
+  composeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: 44, paddingVertical: spacing.sm, borderRadius: borderRadius.md, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.ink },
+  composeText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
   drafts: { marginBottom: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  draftsTitle: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
+  draftsTitle: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.inkSoft, marginBottom: spacing.sm },
   draftActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: -spacing.xs, marginBottom: spacing.md },
-  publishBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, backgroundColor: colors.primary },
-  publishText: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: '#fff' },
+  publishBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44, paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, backgroundColor: colors.ink },
+  publishText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.textOnPrimary },
   empty: { alignItems: 'center', gap: spacing.sm, marginTop: 60, paddingHorizontal: spacing.xl },
   emptyText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   lightbox: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },

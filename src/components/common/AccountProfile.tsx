@@ -118,11 +118,13 @@ export function AccountProfile({ user, header, roleLabel, children }: {
       }); } },
     ]);
   };
+  // Ledger rows: label + current value, a rule beneath, the chevron in ink.
   const row = (label: string, icon: keyof typeof Ionicons.glyphMap, onPress: () => void, value?: string) =>
-    <Pressable accessibilityRole="button" disabled={busy} onPress={onPress} style={[ui.header, { minHeight: 64, padding: 16 }]}>
-      <Ionicons name={icon} size={24} color={colors.textSecondary} />
-      <View style={{ flex: 1, gap: 4 }}><Text style={ui.body}>{label}</Text>{!!value && <Text style={ui.secondary}>{value}</Text>}</View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+    <Pressable accessibilityRole="button" disabled={busy} onPress={onPress}
+      style={[ui.header, { minHeight: 56, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider }]}>
+      <Ionicons name={icon} size={22} color={colors.inkSoft} />
+      <View style={{ flex: 1, gap: 2 }}><Text style={ui.label}>{label}</Text>{!!value && <Text style={ui.secondary}>{value}</Text>}</View>
+      <Ionicons name="chevron-forward" size={18} color={colors.ink} />
     </Pressable>;
 
   return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
@@ -153,13 +155,18 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         </Pressable>
       </View>
       {!!children && <View pointerEvents={busy ? 'none' : 'auto'} style={{ gap: 20 }}>{children}</View>}
-      <Text accessibilityRole="header" style={ui.section}>{t('mentorProfile.preferences')}</Text>
-      <View style={[ui.card, { padding: 0 }]}>{row(t('mentorProfile.language'), 'globe-outline', () => open('language'), PROFILE_LANGUAGES.find(item => item.code === user.language)?.label || user.language)}</View>
-      <Text accessibilityRole="header" style={ui.section}>{t('mentorProfile.security')}</Text>
-      <View style={[ui.card, { padding: 0, gap: 0 }]}>
-        {row(t('mentorProfile.password'), 'lock-closed-outline', () => open('password'))}
-        <View style={{ height: 1, backgroundColor: colors.divider, marginHorizontal: 16 }} />
-        {row(t('legal.privacy.title'), 'shield-checkmark-outline', () => router.push('/(auth)/privacy-policy'))}
+      <View>
+        <Text accessibilityRole="header" style={[ui.section, { paddingBottom: 6 }]}>{t('mentorProfile.preferences')}</Text>
+        <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }}>
+          {row(t('mentorProfile.language'), 'globe-outline', () => open('language'), PROFILE_LANGUAGES.find(item => item.code === user.language)?.label || user.language)}
+        </View>
+      </View>
+      <View>
+        <Text accessibilityRole="header" style={[ui.section, { paddingBottom: 6 }]}>{t('mentorProfile.security')}</Text>
+        <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }}>
+          {row(t('mentorProfile.password'), 'lock-closed-outline', () => open('password'))}
+          {row(t('legal.privacy.title'), 'shield-checkmark-outline', () => router.push('/(auth)/privacy-policy'))}
+        </View>
       </View>
       <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={signOut}
         style={[ui.primary, { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.error }]}>
@@ -197,7 +204,7 @@ export function AccountProfile({ user, header, roleLabel, children }: {
         </View>)}
         <Text style={ui.secondary}>{t('mentorProfile.passwordLength')}</Text>
       </>}
-      {mode === 'photo' && <View style={ui.card}>
+      {mode === 'photo' && <View style={{ borderTopWidth: 1, borderColor: colors.ruleStrong }}>
         {row(t('mentorProfile.camera'), 'camera-outline', () => photo('camera'))}
         {row(t('mentorProfile.gallery'), 'images-outline', () => photo('gallery'))}
       </View>}

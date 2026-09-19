@@ -209,7 +209,7 @@ export function ConversationScreen({ role }: Props) {
           <View style={styles.inputRow}>
             <TextInput style={styles.input} placeholder={t('messages.placeholder', 'Write a message…')} placeholderTextColor={colors.textSecondary} value={text} onChangeText={(v) => setText(v.slice(0, BODY_MAX))} multiline editable={!sending} />
             <TouchableOpacity onPress={send} disabled={sending || !text.trim()} hitSlop={8} accessibilityLabel={t('messages.send', 'Send')}>
-              {sending ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="send" size={22} color={text.trim() ? colors.primary : colors.textDisabled} />}
+              {sending ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="send" size={22} color={text.trim() ? colors.ink : colors.textDisabled} />}
             </TouchableOpacity>
           </View>
         )}
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
   blockText: { fontSize: 14, fontWeight: '600', fontFamily: fonts.semibold, color: colors.error },
   list: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   day: { alignSelf: 'center', fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginVertical: spacing.sm },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.surface },
-  input: { flex: 1, maxHeight: 120, fontSize: 15, fontFamily: fonts.regular, color: colors.text, borderWidth: 1, borderColor: colors.divider, borderRadius: borderRadius.lg, paddingHorizontal: spacing.md, paddingVertical: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.divider, backgroundColor: colors.paper },
+  input: { flex: 1, maxHeight: 120, fontSize: 15, fontFamily: fonts.regular, color: colors.text, borderWidth: 1, borderColor: colors.ruleStrong, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: 10, minHeight: 44 },
   blockedBar: { padding: spacing.md, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.divider },
   blockedText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 });
