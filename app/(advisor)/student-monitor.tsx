@@ -9,6 +9,8 @@ import { advisorService } from '@/services/advisor';
 import { groupService } from '@/services/group';
 import { messageService } from '@/services/messages';
 import { closureService } from '@/services/closure';
+import { getAdvisorStudentAvatars, type StudentAvatarState } from '@/services/studentAvatar';
+import { StudentAvatar } from '@/components/student/StudentAvatar';
 import { groupCenterRoute, groupWorkspaceRoute } from '@/utils/advisorGroups';
 import { mapMonitorStudent, filterMonitorStudents, type StudentMonitorItem } from '@/utils/advisorStudentMonitor';
 import { mapRpcError } from '@/utils/rpcErrors';
@@ -35,6 +37,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
     { pathname: '/(advisor)/groups' as const, params: { groupId: '' } } : '/(advisor)/dashboard' as const;
   const [group, setGroup] = useState<InternshipGroup | null>(null);
   const [rows, setRows] = useState<MonitorRow[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, StudentAvatarState>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,7 +59,12 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
 
   const load = useCallback(async () => {
     const request = ++sequence.current;
-    const current = () => request === sequence.current && useAuthStore.getState().user?.id === advisorId;
+    const current = () => mounted.current && request === sequence.current && useAuthStore.getState().user?.id === advisorId;
+    setAvatars({});
+    // Optional cosmetic data must not prevent student monitoring if setup/network fails.
+    void getAdvisorStudentAvatars(groupId).then((result) => {
+      if (current()) setAvatars(result);
+    }).catch(() => { if (current()) setAvatars({}); });
     try {
       if (groupId) {
         const groups = await groupService.listMyGroups(advisorId);
@@ -266,9 +274,11 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
         </View> : null}
       renderItem={({ item }) => <View style={ui.card}>
         <View style={ui.header}>
-          <View style={styles.avatar} accessible={false}><Text style={styles.initials}>
+          {avatars[item.id]?.avatarId ? <View style={{ width: 48, height: 48, flexShrink: 0 }}>
+            <StudentAvatar avatarId={avatars[item.id].avatarId!} level={avatars[item.id].level} size={48} markers={false} />
+          </View> : <View style={styles.avatar} accessible={false}><Text style={styles.initials}>
             {(item.firstName[0] || '') + (item.lastName[0] || '') || '?'}
-          </Text></View>
+          </Text></View>}
           <View style={{ flex: 1, gap: 6 }}>
             <Text style={ui.cardTitle}>{item.firstName} {item.lastName}</Text>
             {!!item.email && <Text selectable style={ui.secondary}>{item.email}</Text>}

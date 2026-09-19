@@ -2,6 +2,17 @@ import { supabase } from './supabase';
 import { isStudentAvatarId, type StudentAvatarId } from '@/utils/studentAvatar';
 
 export interface StudentAvatarState { avatarId: StudentAvatarId | null; level: number }
+export async function getAdvisorStudentAvatars(groupId?: string): Promise<Record<string, StudentAvatarState>> {
+  const { data, error } = await supabase.rpc('advisor_student_avatars', { p_group_id: groupId ?? null });
+  if (error) throw error;
+  if (!Array.isArray(data)) throw new Error('Invalid advisor avatar response');
+  const result: Record<string, StudentAvatarState> = Object.create(null);
+  for (const row of data) {
+    if (!row || typeof row.studentId !== 'string' || !row.studentId) throw new Error('Invalid student ID');
+    result[row.studentId] = parseStudentAvatar(row);
+  }
+  return result;
+}
 export function parseStudentAvatar(data: unknown): StudentAvatarState {
   if (!data || typeof data !== 'object') throw new Error('Invalid avatar response');
   const row = data as Record<string, unknown>;

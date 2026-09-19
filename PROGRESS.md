@@ -227,6 +227,12 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Advisor student-monitor avatars
+
+- Student Monitor now displays the selected student character beside the name using the shared 48px avatar renderer without level markers. The appearance uses the server-calculated level; absent selections or unavailable avatar data retain initials. Both group and overview entry points load a single batch, refresh on focus, and discard stale/account-switched results.
+- Added `docs/advisor-student-avatars-migration.sql`: read-only RPC restricted to authenticated advisors and active student memberships in their own groups. Avatar preference table privileges remain unchanged; no XP/profile writes. Owner applied the SQL successfully in Supabase and confirmed avatars appear in Expo Go.
+- Verification: TypeScript passed; 4 targeted suites / 67 tests passed, including response validation, selected-group scope, fallback/source guards and static SQL authorization checks. Live negative authorization tests remain pending. Owner requested commit/push after device verification; concurrent simulation work untouched.
+
 ### Turkish group subpages and competency targets
 
 - Owner reviewed the changes in Expo Go and confirmed no issues before requesting commit/push.

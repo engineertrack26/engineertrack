@@ -1,10 +1,38 @@
 import { supabase } from '../supabase';
 import { authService } from '../auth';
-import { avatarErrorKey, getStudentAvatar, parseStudentAvatar, setStudentAvatar } from '../studentAvatar';
+import { avatarErrorKey, getAdvisorStudentAvatars, getStudentAvatar, parseStudentAvatar, setStudentAvatar } from '../studentAvatar';
 import { avatarCopy } from '@/i18n/avatarCopy';
 jest.mock('../supabase', () => ({ supabase: { rpc: jest.fn(), auth: { signUp: jest.fn() } } }));
 
 beforeEach(() => { jest.clearAllMocks(); });
+
+test('advisor avatar batch uses group scope and server level without per-student requests', async () => {
+  jest.mocked(supabase.rpc).mockResolvedValue({ data: [
+    { studentId: 'a', avatarId: '09', level: 6 }, { studentId: 'b', avatarId: '02', level: 10 },
+  ], error: null } as never);
+  expect(await getAdvisorStudentAvatars('group')).toEqual({ a: { avatarId: '09', level: 6 }, b: { avatarId: '02', level: 10 } });
+  expect(supabase.rpc).toHaveBeenCalledTimes(1);
+  expect(supabase.rpc).toHaveBeenCalledWith('advisor_student_avatars', { p_group_id: 'group' });
+});
+
+test('advisor overview uses server-authorized scope and accepts no selections', async () => {
+  jest.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
+  expect(await getAdvisorStudentAvatars()).toEqual({});
+  expect(supabase.rpc).toHaveBeenCalledWith('advisor_student_avatars', { p_group_id: null });
+});
+
+test.each([null, {}, [{ studentId: '', avatarId: '01', level: 1 }],
+  [{ studentId: 'a', avatarId: '99', level: 1 }], [{ studentId: 'a', avatarId: '01', level: 11 }]])(
+  'advisor avatars reject malformed responses %p', async (data) => {
+    jest.mocked(supabase.rpc).mockResolvedValue({ data, error: null } as never);
+    await expect(getAdvisorStudentAvatars()).rejects.toThrow();
+  },
+);
+
+test('advisor avatar errors remain failures rather than fabricated avatar choices', async () => {
+  jest.mocked(supabase.rpc).mockResolvedValue({ data: null, error: { code: '42501' } } as never);
+  await expect(getAdvisorStudentAvatars()).rejects.toEqual({ code: '42501' });
+});
 test('reads only current account with no target ID parameter', async () => {
   jest.mocked(supabase.rpc).mockResolvedValue({ data: { avatarId: null, level: 1 }, error: null } as never);
   expect(await getStudentAvatar()).toEqual({ avatarId: null, level: 1 });
