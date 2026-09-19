@@ -6,6 +6,9 @@ export type StampKind = 'approved' | 'revision' | 'pending' | 'closed';
 
 interface StampProps {
   kind: StampKind;
+  /** Replaces the kind's default wording (e.g. an attendance status
+   *  wearing the approved or revision tone). */
+  label?: string;
   who?: string;
   date?: string;
   size?: 'sm' | 'lg';
@@ -26,11 +29,11 @@ const LABEL_KEY: Record<StampKind, [string, string]> = {
   closed: ['stamp.closed', 'Internship closed'],
 };
 
-export function Stamp({ kind, who, date, size = 'sm', style }: StampProps) {
+export function Stamp({ kind, label: labelOverride, who, date, size = 'sm', style }: StampProps) {
   const { t } = useTranslation();
   const tone = TONE[kind];
   const [key, fallback] = LABEL_KEY[kind];
-  const label = t(key, fallback);
+  const label = labelOverride ?? t(key, fallback);
   const lg = size === 'lg';
   const fontSize = lg ? 15 : 11.5;
   const metaFontSize = lg ? 13 : 11;

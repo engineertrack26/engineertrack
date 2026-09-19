@@ -17,6 +17,8 @@ import { internshipDateString, parseInternshipDate } from '@/utils/internshipFor
 import { AuthButton } from '@/components/common/AuthForm';
 import { BackButton } from '@/components/common/BackButton';
 import { ClosureBanner } from '@/components/common/ClosureBanner';
+import { Stamp } from '@/components/common/Stamp';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileSheet } from '@/components/mentor/ProfileSheet';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
@@ -165,7 +167,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
   const choice = (label: string, checked: boolean, onPress: () => void) => <Pressable key={label} accessibilityRole="radio"
     accessibilityState={{ checked, disabled: busy }} disabled={busy} onPress={onPress}
     style={[ui.card, { padding: 12, minHeight: 48 }, checked && { backgroundColor: colors.inkBg, borderColor: colors.ink }]}>
-    <Text style={ui.body}>{checked ? '● ' : '○ '}{label}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><Ionicons name={checked ? 'radio-button-on' : 'radio-button-off'} size={20} color={checked ? colors.ink : colors.textSecondary} /><Text style={[ui.body, { flex: 1 }]}>{label}</Text></View>
   </Pressable>;
   const saveLog = (day: InternshipDay, submit: boolean) => {
     const validation = logFormError(form, submit, day.log_status === 'submitted');
@@ -196,17 +198,22 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
         <ScrollView style={role === 'advisor' ? { maxHeight: 200 } : undefined} nestedScrollEnabled={role === 'advisor'} scrollEnabled={role === 'advisor'}>
           {people.filter(p => p.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b) => (queue[b.id] || 0) - (queue[a.id] || 0)).map(p =>
             <Pressable key={p.id} accessibilityRole={role === 'mentor' ? 'button' : 'radio'} accessibilityState={role === 'advisor' ? { checked: studentId === p.id } : { disabled: busy || loading }} disabled={busy || loading}
-              onPress={() => { setStudentId(p.id); setSelected([]); setShowHistory(false); setSuccess(false); }} style={role === 'mentor' ? [ui.card, { marginVertical: 6 }] : { paddingVertical: 14 }}>
-              <Text style={ui.label}>{role === 'advisor' ? (studentId === p.id ? '● ' : '○ ') : ''}{p.name}</Text>
-              {role === 'mentor' && <Text style={ui.secondary}>{t('days.waitingCount', { count: queue[p.id] || 0 })}</Text>}
+              onPress={() => { setStudentId(p.id); setSelected([]); setShowHistory(false); setSuccess(false); }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[ui.label, role === 'advisor' && studentId === p.id && { color: colors.ink }]}>{p.name}</Text>
+                {role === 'mentor' && <Text style={ui.secondary}>{t('days.waitingCount', { count: queue[p.id] || 0 })}</Text>}
+              </View>
+              {role === 'advisor' ? <Ionicons name={studentId === p.id ? 'radio-button-on' : 'radio-button-off'} size={20} color={studentId === p.id ? colors.ink : colors.textSecondary} />
+                : <Ionicons name="chevron-forward" size={18} color={colors.ink} />}
             </Pressable>)}
         </ScrollView>
       </View>}
-      {role === 'student' && <View accessibilityRole="tablist" style={{ flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
+      {role === 'student' && <View accessibilityRole="tablist" style={{ flexDirection: 'row', padding: 4, gap: 4, borderRadius: 6, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.divider }}>
         {[false, true].map(history => <Pressable key={String(history)} accessibilityRole="tab"
           accessibilityState={{ selected: showHistory === history, disabled: busy || loading }} disabled={busy || loading}
           onPress={() => { setShowHistory(history); setShowSummary(false); setFrom(dayWeek(today)[0]); setSuccess(false); scrollRef.current?.scrollTo({ y: 0, animated: true }); }}
-          style={{ flex: 1, minHeight: 48, padding: 12, borderRadius: 10, justifyContent: 'center', backgroundColor: showHistory === history ? colors.primaryDark : colors.surface }}>
+          style={{ flex: 1, minHeight: 44, padding: 10, borderRadius: 4, justifyContent: 'center', backgroundColor: showHistory === history ? colors.ink : colors.paper }}>
           <Text style={[ui.label, { textAlign: 'center', color: showHistory === history ? colors.textOnPrimary : colors.primaryDark }]}>{t(history ? 'days.historyTab' : 'days.today')}</Text>
         </Pressable>)}
       </View>}
@@ -254,14 +261,17 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
           const eligible = date >= person.startDate && date <= person.endDate && date <= today;
           return <View key={date} style={ui.card}>
             {role === 'student' && !showHistory && <Text style={ui.label}>{t('days.today')}</Text>}
-            <Text style={ui.section}>{dateLabel(date)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Text style={ui.section}>{dateLabel(date)}</Text>
+              {day && <Stamp kind={day.attendance === 'pending' ? 'pending' : day.attendance === 'absent' ? 'revision' : 'approved'}
+                label={t('days.' + day.attendance)} />}
+            </View>
             {day ? <>
-              <Text style={ui.body}>{t('days.attendance')}: {t('days.' + day.attendance)}</Text>
-              <Text style={ui.body}>{t('days.log')}: {t('days.' + day.log_status)}</Text>
+              <Text style={ui.secondary}>{t('days.log')}: {t('days.' + day.log_status)}</Text>
               {day.correction_requested && <Text style={[ui.label, { color: colors.error }]}>{t('days.correctionOpen')}</Text>}
               {role === 'mentor' && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected.includes(day.id) }} disabled={busy}
                 onPress={() => setSelected(old => old.includes(day.id) ? old.filter(id => id !== day.id) : [...old, day.id])} style={{ minHeight: 48, justifyContent: 'center' }}>
-                <Text style={ui.link}>{selected.includes(day.id) ? '☑ ' : '☐ '}{t('days.select')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Ionicons name={selected.includes(day.id) ? 'checkbox' : 'square-outline'} size={22} color={colors.ink} /><Text style={ui.link}>{t('days.select')}</Text></View>
               </Pressable>}
               {(role !== 'mentor' || day.log_status === 'submitted' || showHistory || day.correction_requested) &&
                 <AuthButton title={t(role === 'student' ? (day.log_status === 'draft' ? 'days.writeLog' : 'days.openLog') : role === 'mentor' && day.log_status === 'submitted' ? 'days.readLog' : 'days.details')}
@@ -281,7 +291,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
         {role === 'student' && showHistory && <View style={ui.card}>
           <Pressable accessibilityRole="button" accessibilityState={{ expanded: showSummary }} onPress={() => setShowSummary(!showSummary)}
             style={{ minHeight: 48, justifyContent: 'center' }}>
-            <Text style={ui.link}>{t('days.attendanceSummary')} {showSummary ? '−' : '+'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Text style={ui.link}>{t('days.attendanceSummary')}</Text><Ionicons name={showSummary ? 'chevron-up' : 'chevron-down'} size={18} color={colors.ink} /></View>
           </Pressable>
           {showSummary && <>
             <Text style={ui.label}>{person.company}</Text>
@@ -294,7 +304,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
         </View>}
       </>}
     </ScrollView>
-    {role === 'mentor' && selected.length > 0 && !loading && !error && <View style={{ padding: 16, gap: 4, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
+    {role === 'mentor' && selected.length > 0 && !loading && !error && <View style={{ padding: 16, gap: 4, backgroundColor: colors.paper, borderTopWidth: 1, borderColor: colors.divider }}>
       <AuthButton title={t('days.approveCount', { count: selected.length })} disabled={busy}
         onPress={() => openReview(days.filter(d => selected.includes(d.id)))} />
       <AuthButton title={t('days.otherStatus')} variant="ghost" disabled={busy}

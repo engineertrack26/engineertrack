@@ -36,7 +36,7 @@ export function AuthButton({ title, onPress, loading = false, disabled = false, 
 }) {
   return <TouchableOpacity onPress={onPress} disabled={disabled || loading} accessibilityRole="button"
     accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }}
-    style={[authStyles.button, variant === 'primary' && { backgroundColor: colors.primaryDark },
+    style={[authStyles.button, variant === 'primary' ? { backgroundColor: colors.ink } : { borderWidth: 1, borderColor: colors.ink, backgroundColor: colors.paper },
       (disabled || loading) && { opacity: 0.65 }, style]}>
     {loading && <ActivityIndicator color={variant === 'primary' ? '#fff' : colors.primaryDark} />}
     <Text style={{ fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, textAlign: 'center', flexShrink: 1,
