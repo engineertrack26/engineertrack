@@ -665,14 +665,12 @@
     "dayLine": "Stajının {{day}}. günü · {{company}}",
     "dayLineEnded": "Staj süresi sona erdi · {{company}}",
     "mentor": "Mentor",
-    "jobCard": "İŞ KARTI",
     "evidenceHint": "Kanıt: en az bir fotoğraf",
     "thisWeek": "Bu hafta",
     "checkedIn": "Stajdayım",
-    "checkInToday": "Bugün stajdayım",
+    "checkIn": "Giriş yap",
     "myDays": "Staj günlerim",
-    "weekEmpty": "Bu hafta henüz bir kayıt yok.",
-    "targetHint": "hedef: kesikli"
+    "atTarget": "{{count}} / {{total}} hedefte"
   },
   "stamp": {
     "approved": "Onaylandı",

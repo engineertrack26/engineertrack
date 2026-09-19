@@ -611,14 +611,12 @@
     "dayLine": "Day {{day}} of your internship · {{company}}",
     "dayLineEnded": "Internship period ended · {{company}}",
     "mentor": "Mentor",
-    "jobCard": "JOB CARD",
     "evidenceHint": "Evidence: at least one photo",
     "thisWeek": "This week",
     "checkedIn": "At the internship",
-    "checkInToday": "I'm at the internship today",
+    "checkIn": "Check in",
     "myDays": "My internship days",
-    "weekEmpty": "Nothing recorded this week yet.",
-    "targetHint": "target: dashed"
+    "atTarget": "{{count}} of {{total}} at target"
   },
   "stamp": {
     "approved": "Approved",

@@ -9,7 +9,7 @@ import { useGamificationStore } from '@/store/gamificationStore';
 import { studentGrowthViewService } from '@/services/studentGrowthView';
 import { groupService } from '@/services/group';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
-import { LoadFailedBanner, Stamp } from '@/components/common';
+import { LoadFailedBanner, Stamp, LevelRail } from '@/components/common';
 import { StudentHeader } from '@/components/student/StudentUI';
 import { ui } from '@/components/common/workflowStyles';
 import { growthBadges, growthLevel, growthReason } from '@/utils/studentGrowth';
@@ -144,6 +144,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
               const row = selfVsMentor?.find((r) => r.competencyId === p.competencyId);
               return <View key={p.competencyId} style={ui.card}>
                 <Text style={ui.cardTitle}>{p.name}</Text>
+                <LevelRail current={p.currentLevel} target={p.targetLevel} label={`${p.name} ${p.currentLevel}/${p.targetLevel}`} />
                 <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
                   ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
                 <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>
