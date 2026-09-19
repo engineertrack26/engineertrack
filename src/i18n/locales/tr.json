@@ -561,6 +561,7 @@
     "welcome": "Merhaba",
     "intro": "Öğrencilerinin çalışmalarını buradan takip et.",
     "waiting": "{{count}} çalışma bekliyor",
+    "studentsCount": "{{count}} öğrenci",
     "nextReview": "Sıradaki inceleme",
     "oldestHint": "En uzun süredir bekleyen çalışma",
     "allPending": "Tüm bekleyenleri gör ({{count}})",

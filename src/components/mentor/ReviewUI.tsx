@@ -16,12 +16,12 @@ export function ReviewBack({ label, onPress, disabled = false }: { label: string
   </Pressable>;
 }
 
-export function ReviewHeader({ brand = false }: { brand?: boolean }) {
+export function ReviewHeader({ brand = false, title }: { brand?: boolean; title?: string }) {
   const { t } = useTranslation();
   const router = useRouter();
   const count = useNotificationStore(s => s.unreadCount);
   return <View style={ui.header}>
-    <Text accessibilityRole="header" style={[ui.title, { flex: 1 }, brand && { color: colors.primaryDark, fontSize: 22 }]}>{brand ? 'EngineerTrack' : t('mentorFlow.title')}</Text>
+    <Text accessibilityRole="header" style={[ui.title, { flex: 1 }, brand && { color: colors.primaryDark, fontSize: 22 }]}>{title ?? (brand ? 'EngineerTrack' : t('mentorFlow.title'))}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={t('studentFlow.notifications', { count })}
       onPress={() => router.push('/(mentor)/notifications')} style={ui.iconButton}>
       <Ionicons name="notifications-outline" size={25} color={colors.text} />

@@ -513,6 +513,7 @@
     "welcome": "Hello",
     "intro": "Follow your students’ work from here.",
     "waiting": "{{count}} awaiting review",
+    "studentsCount": "{{count}} students",
     "nextReview": "Next review",
     "oldestHint": "The submission waiting the longest",
     "allPending": "See all pending ({{count}})",
