@@ -40,3 +40,4 @@
 - `17:46:45` **table.feed_comments.insert** {} → **ERROR** new row violates row-level security policy for table "feed_comments"
 - _17:46:45_ BUG [wrong] comment on the advisor's announcement — got UNKNOWN: new row violates row-level security policy for table "feed_comments"
 - _17:46:45_ Faz 5 bitti.
+- _controller note_ The feed_comments RLS refusal above is by design: mentors are outside the group stream (2026-09-11 stream spec); the bug entry was removed from sim/bugs.md as a plan mistake.
