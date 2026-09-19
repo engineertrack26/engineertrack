@@ -30,4 +30,13 @@ assert.ok(line.includes('submit_assignment') && line.includes('→'));
 const bugText = formatBug({ who: 'elif-kaya', did: 'submit', expected: 'ok', got: 'ERR', code: 'X', severity: 'wrong' });
 assert.ok(bugText.startsWith('- **[wrong]**'));
 fs.mkdirSync(path.join(__dirname, 'log'), { recursive: true });
+
+const people = require('./people.cjs');
+assert.equal(people.STUDENTS.length, 7);
+assert.equal(people.MENTORS.length, 7);
+assert.ok(people.STUDENTS.every((s) => s.email.endsWith('@sim.engineertrack.test')));
+assert.ok(people.STUDENTS.every((s) => people.mentorOf(s.slug).studentSlug === s.slug));
+assert.equal(new Set([people.ADVISOR, ...people.STUDENTS, ...people.MENTORS].map((p) => p.email)).size, 15);
+assert.equal(people.bySlug('elif-kaya').company, 'Marmara Su ve Kanalizasyon İdaresi');
+
 console.log('selftest ok');
