@@ -1,0 +1,40 @@
+# can-dogan
+
+- `11:42:52` **auth.signUp** {"email":"can.dogan@sim.engineertrack.test","role":"student"} → cc0077d2-b310-4887-80da-ad807becd378
+- `11:42:53` **my_student_avatar** {} → {"level":1,"avatarId":"08"}
+- `11:42:53` **table.student_profiles.update** {} → null
+- `11:42:53` **table.student_profiles.insert** {} → {"id":"cc0077d2-b310-4887-80da-ad807becd378","university":"Ankara Üniversitesi","department":"Çevre Mühendisliği","student_id":"21045678","mentor_id":null,"a…
+- `11:42:53` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:42:53_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (array — RETURNS TABLE)
+- `11:42:53` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:42:53_ join_group_by_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (array; row is {id, name, term, advisor_name} — the GROUP's id, no membershipId field)
+- `11:42:53` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:42:53_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:42:53` **table.group_memberships.select-own** {} → {"id":"e9cb22b8-14bc-45ec-9b32-57617f692e28","joined_at":"2026-09-19T11:42:53.603462+00:00"}
+- `11:42:53` **get_my_student_code** {} → []
+- _11:42:53_ get_my_student_code → [] (array; empty when no code exists yet)
+- `11:42:53` **table.student_codes.insert** {} → {"id":"4e2ea2af-ed20-44cb-a62c-49ee077f5e89","student_id":"cc0077d2-b310-4887-80da-ad807becd378","code":"D8ACRA","is_active":true,"created_at":"2026-09-19T11…
+- `11:42:53` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:42:53_ Akışta 8 gönderi: announcement, assignment, assignment, assignment, assignment, assignment, assignment, poll (6 görev kartı + duyuru + anket beklenir)
+- `11:42:53` **table.feed_comments.insert** {} → null
+- `11:42:53` **table.feed_comments.insert** {} → null
+- `11:42:53` **table.feed_comments.insert** {} → null
+- `11:42:54` **table.feed_comments.insert** {} → null
+- `11:42:54` **table.feed_comments.insert** {} → null
+- `11:42:54` **table.feed_comments.insert** {} → null
+- `11:42:54` **table.feed_comments.insert** {} → null
+- `11:42:54` **table.feed_comments.insert** {} → null
+- _11:42:54_ 8 gönderinin hepsine ayrı bir soru yorumu bırakıldı.
+- `11:42:54` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"fd884954-2b7b-4088-b57e-d2f350b63182"} → null
+- `11:42:54` **table.feed_likes.insert** {} → null
+- `11:42:54` **table.group_memberships.select** {} → **ERROR** Could not find a relationship between 'group_memberships' and 'profiles_public' in the schema cache
+- _11:42:54_ BUG [wrong] list the group's active memberships (ground truth for the contacts check) — got UNKNOWN: Could not find a relationship between 'group_memberships' and 'profiles_public' in the schema cache
+- `11:42:54` **list_message_contacts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640"} → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor"},{"id":"ca663073-8043-41c8-80ee-97e3e4f19c78","name":"Ayşe Çelik","role":…
+- _11:42:54_ list_message_contacts → [{"id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132","name":"Selin Aydın","role":"advisor"},{"id":"ca663073-8043-41c8-80ee-97e3e4f19c78","name":"Ayşe Çelik","role":"student"},{"id":"99a265a1-eb47-4e4c-95d0-beee40653f71","name":"Burak Şahin","role":"student"},{"id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","name":"Deniz Yıldırım","role":"student"},{"id":"5d9c97c7-b804-4a65-890d-7eb65270f2ca","name":"Elif Kaya","role":"student"},{"id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b","name":"Mert Yılmaz","role":"student"},{"id":"0588262e-6301-4a16-abb8-82b9a963b2da","name":"Zeynep Arslan","role":"student"}]
+- _11:42:54_ Mesaj kişileri: Selin Aydın (advisor), Ayşe Çelik (student), Burak Şahin (student), Deniz Yıldırım (student), Elif Kaya (student), Mert Yılmaz (student), Zeynep Arslan (student).
+- _11:42:54_ Danışman mesaj kişilerinde mevcut (beklenen).
+- _11:42:54_ Gruba şu ana kadar katılmış 0 sınıf arkadaşımın hepsi mesaj kişilerinde mevcut (beklenen).
+- _11:42:54_ Mentörüm henüz bağlanmadığı için mesaj kişilerinde görünmüyor (beklenen).
+- `11:42:54` **table.notifications.select** {} → []
+- `11:42:54` **get_competency_progress** {"p_student_id":"cc0077d2-b310-4887-80da-ad807becd378"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:42:54_ Faz 2 bitti.

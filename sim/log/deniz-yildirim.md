@@ -1,0 +1,27 @@
+# deniz-yildirim
+
+- `11:41:22` **auth.signUp** {"email":"deniz.yildirim@sim.engineertrack.test","role":"student"} → bd3a9ee1-832a-43d9-8888-bfb26b79f299
+- `11:41:22` **my_student_avatar** {} → {"level":1,"avatarId":"04"}
+- `11:41:22` **table.student_profiles.update** {} → null
+- `11:41:22` **table.student_profiles.insert** {} → {"id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","university":"Boğaziçi Üniversitesi","department":"Çevre Mühendisliği","student_id":"21045678","mentor_id":null,…
+- _11:41:22_ inverted-period upsert (end 2026-09-13 before start 2026-09-19) → accepted silently: {"id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","university":"Boğaziçi Üniversitesi","department":"Çevre Mühendisliği","student_id":"21045678","mentor_id":null,"advisor_id":null,"internship_start_date":"2026-09-19","internship_end_date":"2026-09-13","company_name":"Boğaziçi Geri Dönüşüm Tesisleri","total_xp":0,"current_level":1,"current_streak":0,"longest_streak":0,"faculty":"Mühendislik Fakültesi","department_branch":"","company_address":"Kemerburgaz, İstanbul","company_sector":"Katı atık geri dönüşüm"}
+- _11:41:22_ BUG [rough] fill the internship form with internship_end_date before internship_start_date — got accepted silently — row written with start=2026-09-19, end=2026-09-13; a later internship_open_day call would raise ID_SETUP per docs/internship-days-migration.sql (sp.internship_end_date < sp.internship_start_date), but nothing at write time stops it
+- `11:41:22` **table.student_profiles.update** {} → {"id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","university":"Boğaziçi Üniversitesi","department":"Çevre Mühendisliği","student_id":"21045678","mentor_id":null,…
+- `11:41:22` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:41:22_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- `11:41:22` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:41:22_ join_group_by_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- `11:41:22` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:41:22_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:41:22` **table.group_memberships.select-own** {} → {"id":"2a7859bd-8a63-46ec-93a3-2fd15414e0b1","joined_at":"2026-09-19T11:41:22.851158+00:00"}
+- `11:41:22` **get_my_student_code** {} → []
+- `11:41:22` **table.student_codes.insert** {} → {"id":"c50dffd6-eed4-4083-b09f-796f62e23cf5","student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299","code":"T4CZYP","is_active":true,"created_at":"2026-09-19T11…
+- `11:41:23` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:41:23_ Akışta 8 gönderi: announcement, assignment, assignment, assignment, assignment, assignment, assignment, poll (6 görev kartı + duyuru + anket beklenir)
+- `11:41:23` **table.feed_likes.insert** {} → null
+- `11:41:23` **table.feed_likes.insert** {} → null
+- `11:41:23` **table.feed_likes.delete** {} → null
+- `11:41:23` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"fd884954-2b7b-4088-b57e-d2f350b63182"} → null
+- `11:41:23` **table.notifications.select** {} → []
+- `11:41:23` **get_competency_progress** {"p_student_id":"bd3a9ee1-832a-43d9-8888-bfb26b79f299"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:41:23_ Faz 2 bitti. Inverted-period form was accepted silently — filed [rough].

@@ -6,3 +6,9 @@ All under `@sim.engineertrack.test`. Group join code and student codes are fille
 |---|---|---|---|---|---|---|---|---|
 | advisor | Doç. Dr. Selin Aydın | selin.aydin@sim.engineertrack.test | Sim-Selin-2026! |  | Runs the group carefully: sets targets first, publishes six tasks, announces, polls, follows up, closes. |  | 58MMWL |  |
 | student | Elif Kaya | elif.kaya@sim.engineertrack.test | Sim-Elif-2026! | Marmara Su ve Kanalizasyon İdaresi | Meticulous: journal every day, evidence on every task, rates herself honestly. | 8N2TXF | 58MMWL | 02 |
+| student | Burak Şahin | burak.sahin@sim.engineertrack.test | Sim-Burak-2026! | Ege Çevre Danışmanlık | Late: submits at the last moment, misses one day's journal, gets a revision and resubmits. | JKPDHG | 58MMWL | 05 |
+| student | Ayşe Çelik | ayse.celik@sim.engineertrack.test | Sim-Ayşe-2026! | Karadeniz ÇED ve Çevre Hizmetleri | Quiet: does the work, never messages, never comments; her mentor leaves one submission pending. | HHRVB8 | 58MMWL | 01 |
+| student | Zeynep Arslan | zeynep.arslan@sim.engineertrack.test | Sim-Zeynep-2026! | Ankara Büyükşehir Belediyesi Çevre Koruma Dairesi | Terse: short notes, forgets evidence once, turns stream sharing off on one task, tries to join the group twice. | J96G4U | 58MMWL | 03 |
+| student | Deniz Yıldırım | deniz.yildirim@sim.engineertrack.test | Sim-Deniz-2026! | Boğaziçi Geri Dönüşüm Tesisleri | Absent one day (excused), opens a past day with a reason, likes but rarely posts. | T4CZYP | 58MMWL | 04 |
+| student | Mert Yılmaz | mert.yilmaz@sim.engineertrack.test | Sim-Mert-2026! | İzmir Atık Yönetimi A.Ş. | Over-confident: rates himself 3 (independent) on everything; the mentor disagrees. | S4KGPF | 58MMWL | 07 |
+| student | Can Doğan | can.dogan@sim.engineertrack.test | Sim-Can-2026! | DSİ 5. Bölge Su Kalitesi Laboratuvarı | Questioning: messages the advisor and the mentor, comments on every post, asks for a case thread. | D8ACRA | 58MMWL | 08 |

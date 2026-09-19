@@ -1,0 +1,22 @@
+# ayse-celik
+
+- `11:40:44` **auth.signUp** {"email":"ayse.celik@sim.engineertrack.test","role":"student"} → ca663073-8043-41c8-80ee-97e3e4f19c78
+- `11:40:44` **my_student_avatar** {} → {"level":1,"avatarId":"01"}
+- `11:40:44` **table.student_profiles.update** {} → null
+- `11:40:44` **table.student_profiles.insert** {} → {"id":"ca663073-8043-41c8-80ee-97e3e4f19c78","university":"Karadeniz Teknik Üniversitesi","department":"Çevre Mühendisliği","student_id":"21034567","mentor_i…
+- `11:40:44` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:45_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (array — RETURNS TABLE)
+- `11:40:45` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:45_ join_group_by_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (also an array; row is {id, name, term, advisor_name} — the GROUP's id, no membershipId field)
+- `11:40:45` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:40:45_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:40:45` **table.group_memberships.select-own** {} → {"id":"21b8b9a3-6803-4395-adfb-6b36fa7b43b3","joined_at":"2026-09-19T11:40:45.201575+00:00"}
+- `11:40:45` **get_my_student_code** {} → []
+- _11:40:45_ get_my_student_code → [] (array; empty when no code exists yet)
+- `11:40:45` **table.student_codes.insert** {} → {"id":"7e5283bf-f51b-4c83-8292-4703d0ad8b92","student_id":"ca663073-8043-41c8-80ee-97e3e4f19c78","code":"HHRVB8","is_active":true,"created_at":"2026-09-19T11…
+- `11:40:45` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:40:45_ Akışta 8 gönderi: announcement, assignment, assignment, assignment, assignment, assignment, assignment, poll (6 görev kartı + duyuru + anket beklenir). Sessizce okudu, beğenmedi, yorum yapmadı.
+- `11:40:45` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"fd884954-2b7b-4088-b57e-d2f350b63182"} → null
+- `11:40:45` **table.notifications.select** {} → []
+- `11:40:45` **get_competency_progress** {"p_student_id":"ca663073-8043-41c8-80ee-97e3e4f19c78"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:40:45_ Faz 2 bitti. Sessiz karakter: beğeni, yorum ve mesaj yok.

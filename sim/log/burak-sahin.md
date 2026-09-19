@@ -1,0 +1,25 @@
+# burak-sahin
+
+- _11:40:25_ Son anda yetişiyor: sign-up öncesi 4 sn bekleme (karakter gereği, en son katılan o).
+- `11:40:30` **auth.signUp** {"email":"burak.sahin@sim.engineertrack.test","role":"student"} → 99a265a1-eb47-4e4c-95d0-beee40653f71
+- `11:40:30` **my_student_avatar** {} → {"level":1,"avatarId":"05"}
+- `11:40:31` **table.student_profiles.update** {} → null
+- `11:40:31` **table.student_profiles.insert** {} → {"id":"99a265a1-eb47-4e4c-95d0-beee40653f71","university":"Ege Üniversitesi","department":"Çevre Mühendisliği","student_id":"21023456 ","mentor_id":null,"adv…
+- `11:40:31` **table.student_profiles.select-own** {} → {"student_id":"21023456 "}
+- _11:40:31_ student_id gönderildi: '21023456 ' (sonda boşluk) → geri okunan: '21023456 '
+- _11:40:31_ BUG [rough] submit student_id '21023456 ' (trailing space) and read student_profiles back — got stored verbatim as '21023456 '
+- `11:40:31` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:31_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (array — RETURNS TABLE)
+- `11:40:31` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:31_ join_group_by_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (also an array; row is {id, name, term, advisor_name} — the GROUP's id, no membershipId field)
+- `11:40:31` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:40:31_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:40:31` **table.group_memberships.select-own** {} → {"id":"7464e81d-8287-436b-88c0-263172948a31","joined_at":"2026-09-19T11:40:31.561857+00:00"}
+- `11:40:31` **get_my_student_code** {} → []
+- _11:40:31_ get_my_student_code → [] (array; empty when no code exists yet)
+- `11:40:31` **table.student_codes.insert** {} → {"id":"bee6f139-5a2a-4f08-a37a-7372c2e170bb","student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71","code":"JKPDHG","is_active":true,"created_at":"2026-09-19T11…
+- `11:40:31` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:40:31_ Akışta 8 gönderi: announcement, assignment, assignment, assignment, assignment, assignment, assignment, poll (6 görev kartı + duyuru + anket beklenir). Ankete oy vermiyor, hiçbir şeyi beğenmiyor — yetişmeye çalışıyor.
+- `11:40:31` **table.notifications.select** {} → []
+- `11:40:32` **get_competency_progress** {"p_student_id":"99a265a1-eb47-4e4c-95d0-beee40653f71"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:40:32_ Faz 2 bitti.

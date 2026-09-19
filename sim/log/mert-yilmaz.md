@@ -1,0 +1,32 @@
+# mert-yilmaz
+
+- `11:42:20` **auth.signUp** {"email":"mert.yilmaz@sim.engineertrack.test","role":"student"} → c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b
+- `11:42:20` **my_student_avatar** {} → {"level":1,"avatarId":"07"}
+- `11:42:20` **table.student_profiles.update** {} → null
+- `11:42:20` **table.student_profiles.insert** {} → {"id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b","university":"Dokuz Eylül Üniversitesi","department":"Çevre Mühendisliği","student_id":"21056789","mentor_id":nu…
+- `11:42:20` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:42:20_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (array — RETURNS TABLE)
+- `11:42:20` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:42:20_ join_group_by_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}] (also an array; row is {id, name, term, advisor_name} — the GROUP's id, no membershipId field)
+- `11:42:21` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:42:21_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:42:21` **table.group_memberships.select-own** {} → {"id":"80cdaad2-c045-4db0-87e0-c422447f9ebb","joined_at":"2026-09-19T11:42:21.088166+00:00"}
+- `11:42:21` **get_my_student_code** {} → []
+- _11:42:21_ get_my_student_code → [] (array; empty when no code exists yet)
+- `11:42:21` **table.student_codes.insert** {} → {"id":"956138ee-2cfb-4624-aaa6-ea20b9d1e078","student_id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b","code":"S4KGPF","is_active":true,"created_at":"2026-09-19T11…
+- `11:42:21` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:42:21_ Akışta 8 gönderi: announcement, assignment, assignment, assignment, assignment, assignment, assignment, poll (6 görev kartı + duyuru + anket beklenir)
+- _11:42:21_ Oy vermeden önce anket: totalVotes=4, myOptionId=null
+- `11:42:21` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"fd884954-2b7b-4088-b57e-d2f350b63182"} → null
+- _11:42:21_ İlk oy: fd884954-2b7b-4088-b57e-d2f350b63182. Emin ama fikrini değiştiriyor.
+- `11:42:21` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"0b729827-2294-4b3b-b023-02460fc43c5f"} → null
+- _11:42:21_ Oy değiştirildi: 0b729827-2294-4b3b-b023-02460fc43c5f.
+- `11:42:21` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:42:21_ Oy değiştirdikten sonra anket: {"options":[{"id":"fd884954-2b7b-4088-b57e-d2f350b63182","label":"Atıksu arıtma prosesleri","votes":4,"position":0},{"id":"0b729827-2294-4b3b-b023-02460fc43c5f","label":"ÇED mevzuatı","votes":1,"position":1},{"id":"6862cc5b-21e9-495c-9441-02b46b97cfa3","label":"Saha ölçüm teknikleri","votes":0,"position":2},{"id":"9af360a2-2007-4b8d-aa5d-787678a425c0","label":"Rapor yazımı","votes":0,"position":3}],"myOptionId":"0b729827-2294-4b3b-b023-02460fc43c5f","totalVotes":5}
+- _11:42:21_ myOptionId doğru şekilde yeni seçeneği gösteriyor.
+- _11:42:21_ Toplamlar tutarlı: options toplamı = totalVotes = 5.
+- `11:42:21` **table.feed_comments.insert** {} → null
+- `11:42:21` **table.feed_likes.insert** {} → null
+- `11:42:21` **table.notifications.select** {} → []
+- `11:42:21` **get_competency_progress** {"p_student_id":"c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:42:21_ Faz 2 bitti. Emin: kendini her konuda 3 (bağımsız) olarak değerlendirecek — mentor katılmayacak.

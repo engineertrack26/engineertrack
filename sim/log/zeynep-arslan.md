@@ -1,0 +1,28 @@
+# zeynep-arslan
+
+- `11:40:54` **auth.signUp** {"email":"zeynep.arslan@sim.engineertrack.test","role":"student"} → 0588262e-6301-4a16-abb8-82b9a963b2da
+- `11:40:54` **my_student_avatar** {} → {"level":1,"avatarId":"03"}
+- `11:40:54` **table.student_profiles.update** {} → null
+- `11:40:54` **table.student_profiles.insert** {} → {"id":"0588262e-6301-4a16-abb8-82b9a963b2da","university":"Gazi Üniversitesi","department":"Çevre Mühendisliği","student_id":"21045678","mentor_id":null,"adv…
+- `11:40:54` **validate_group_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:54_ validate_group_code → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- `11:40:55` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:55_ join → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- `11:40:55` **join_group_by_code** {"p_code":"ZZZZZZ"} → **ERROR** INVALID_CODE
+- _11:40:55_ expected refusal INVALID_CODE for: join with a wrong code
+- `11:40:55` **table.group_memberships.select-own** {} → {"id":"62f28890-4359-4166-ad11-f668c04295bd","joined_at":"2026-09-19T11:40:55.194303+00:00","left_at":null}
+- _11:40:55_ membership before repeat join: 62f28890-4359-4166-ad11-f668c04295bd
+- `11:40:55` **join_group_by_code** {"p_code":"58MMWL"} → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- _11:40:55_ ikinci join → [{"id":"861d35d8-5083-4146-a8eb-38b10b5a0640","name":"ÇEV 400 Staj — Güz 2026","term":"Güz 2026","advisor_name":"Selin Aydın"}]
+- `11:40:55` **table.group_memberships.select-own** {} → [{"id":"62f28890-4359-4166-ad11-f668c04295bd","joined_at":"2026-09-19T11:40:55.194303+00:00","left_at":null}]
+- _11:40:55_ Aynı üyelik. Sorun yok.
+- `11:40:55` **get_my_student_code** {} → []
+- `11:40:55` **table.student_codes.insert** {} → {"id":"32a05fd8-3dfc-4eb4-a820-825563fae625","student_id":"0588262e-6301-4a16-abb8-82b9a963b2da","code":"J96G4U","is_active":true,"created_at":"2026-09-19T11…
+- `11:40:55` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":20} → [{"id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","body":"Bu hafta hangi konuda kısa bir çevrimiçi oturum isterdiniz?","kind":"poll","poll":{"options":[{"id":"fd…
+- _11:40:55_ Akış: 8 gönderi.
+- `11:40:55` **vote_feed_poll** {"p_post_id":"2dfb0c63-76d2-4af7-b483-b98a19ccd744","p_option_id":"fd884954-2b7b-4088-b57e-d2f350b63182"} → null
+- `11:40:55` **table.feed_likes.insert** {} → null
+- `11:40:55` **table.feed_comments.insert** {} → null
+- `11:40:55` **table.notifications.select** {} → []
+- `11:40:55` **get_competency_progress** {"p_student_id":"0588262e-6301-4a16-abb8-82b9a963b2da"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
+- _11:40:55_ Bitti.

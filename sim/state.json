@@ -102,6 +102,36 @@
       "userId": "5d9c97c7-b804-4a65-890d-7eb65270f2ca",
       "studentCode": "8N2TXF",
       "membershipId": "8ab6c2ab-d348-45c5-bf8d-e276434be086"
+    },
+    "burak-sahin": {
+      "userId": "99a265a1-eb47-4e4c-95d0-beee40653f71",
+      "studentCode": "JKPDHG",
+      "membershipId": "7464e81d-8287-436b-88c0-263172948a31"
+    },
+    "ayse-celik": {
+      "userId": "ca663073-8043-41c8-80ee-97e3e4f19c78",
+      "studentCode": "HHRVB8",
+      "membershipId": "21b8b9a3-6803-4395-adfb-6b36fa7b43b3"
+    },
+    "zeynep-arslan": {
+      "userId": "0588262e-6301-4a16-abb8-82b9a963b2da",
+      "studentCode": "J96G4U",
+      "membershipId": "62f28890-4359-4166-ad11-f668c04295bd"
+    },
+    "deniz-yildirim": {
+      "userId": "bd3a9ee1-832a-43d9-8888-bfb26b79f299",
+      "studentCode": "T4CZYP",
+      "membershipId": "2a7859bd-8a63-46ec-93a3-2fd15414e0b1"
+    },
+    "mert-yilmaz": {
+      "userId": "c7ad72a5-5cbd-40e0-8ac3-daeb3bea7d2b",
+      "studentCode": "S4KGPF",
+      "membershipId": "80cdaad2-c045-4db0-87e0-c422447f9ebb"
+    },
+    "can-dogan": {
+      "userId": "cc0077d2-b310-4887-80da-ad807becd378",
+      "studentCode": "D8ACRA",
+      "membershipId": "e9cb22b8-14bc-45ec-9b32-57617f692e28"
     }
   }
 }
