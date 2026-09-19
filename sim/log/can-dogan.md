@@ -38,3 +38,4 @@
 - `11:42:54` **table.notifications.select** {} → []
 - `11:42:54` **get_competency_progress** {"p_student_id":"cc0077d2-b310-4887-80da-ad807becd378"} → [{"competency_id":"9e89eb03-71d6-40d6-a7cf-406790579563","competency_code":"problem_solving","competency_name":"Engineering Problem Solving","current_level":…
 - _11:42:54_ Faz 2 bitti.
+- _correction_ The "0 sınıf arkadaşımın hepsi mesaj kişilerinde mevcut" line above is a false positive: group_memberships could not be read because the sim toolkit's groupMembers() used an embed the app never uses (toolkit defect, fixed in sim/actor.cjs). list_message_contacts three lines earlier is the real evidence: advisor + six classmates listed.

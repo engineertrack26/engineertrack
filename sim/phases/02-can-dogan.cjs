@@ -105,7 +105,6 @@ function questionFor(post) {
   // Contacts check: advisor must be listed, classmates who already joined
   // must be listed, my mentor cannot be (no mentor linked to anyone yet).
   const members = await me.attempt('list the group\'s active memberships (ground truth for the contacts check)', () => me.groupMembers(s.groupId));
-  const memberIds = (members || []).map((m) => m.student_id).filter((id) => id && id !== me.userId);
   const contacts = await me.attempt('read my message contacts', () => me.listMessageContacts(s.groupId));
   me.note(`list_message_contacts → ${JSON.stringify(contacts)}`);
   const contactIds = new Set((contacts || []).map((c) => c.id));
@@ -117,12 +116,19 @@ function questionFor(post) {
   } else {
     me.note('Danışman mesaj kişilerinde mevcut (beklenen).');
   }
-  const missingClassmates = memberIds.filter((id) => !contactIds.has(id));
-  if (missingClassmates.length) {
-    me.bug({ did: 'find already-joined classmates in list_message_contacts', expected: `all active co-members present (${JSON.stringify(memberIds)})`, got: JSON.stringify(contacts), severity: 'wrong' });
+
+  if (members === undefined) {
+    me.note('Sınıf arkadaşı kontrolü yapılamadı: group_memberships okunamadı (araç seti hatası, düzeltildi).');
   } else {
-    me.note(`Gruba şu ana kadar katılmış ${memberIds.length} sınıf arkadaşımın hepsi mesaj kişilerinde mevcut (beklenen).`);
+    const memberIds = (members || []).map((m) => m.student_id).filter((id) => id && id !== me.userId);
+    const missingClassmates = memberIds.filter((id) => !contactIds.has(id));
+    if (missingClassmates.length) {
+      me.bug({ did: 'find already-joined classmates in list_message_contacts', expected: `all active co-members present (${JSON.stringify(memberIds)})`, got: JSON.stringify(contacts), severity: 'wrong' });
+    } else {
+      me.note(`Gruba şu ana kadar katılmış ${memberIds.length} sınıf arkadaşımın hepsi mesaj kişilerinde mevcut (beklenen).`);
+    }
   }
+
   const mentorContacts = (contacts || []).filter((c) => c.role === 'mentor');
   if (mentorContacts.length) {
     me.bug({ did: 'check no mentor appears in list_message_contacts yet (none linked)', expected: 'no mentor contact', got: JSON.stringify(mentorContacts), severity: 'wrong' });

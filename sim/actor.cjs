@@ -195,6 +195,6 @@ class Actor {
   markNotificationRead(id) { return this.table('notifications', 'update', (q) => q.update({ is_read: true }).eq('id', id)); }
   createNotification(userId, title, body, type, data = {}) { return this.table('notifications', 'insert', (q) => q.insert({ user_id: userId, title, body, type, data })); }
   myProfile() { return this.table('profiles', 'select', (q) => q.select('*').eq('id', this.userId).single()); }
-  groupMembers(groupId) { return this.table('group_memberships', 'select', (q) => q.select('*, profiles_public(*)').eq('group_id', groupId).is('left_at', null)); }
+  groupMembers(groupId) { return this.table('group_memberships', 'select', (q) => q.select('id, joined_at, student_id, student:profiles!group_memberships_student_id_fkey(id, first_name, last_name, email, avatar_url)').eq('group_id', groupId).is('left_at', null)); }
 }
 module.exports = { Actor, RpcError, parseCode, loadEnv, todayIso, daysAgoIso, slugify, sleep, TZ, CONSENT_VERSION };
