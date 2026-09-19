@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Platform, Text, TextInput, TouchableOpacity, 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTranslation } from 'react-i18next';
+import { taskContent, taskContentEdit } from '@/utils/taskContent';
 import { GroupContextLabel, GroupModal, groupStyles } from './GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { assignmentService } from '@/services/assignments';
@@ -138,10 +139,10 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     <Text style={ui.secondary}>{t('taskFlow.reviewHint')}</Text>
     {failed && <View style={ui.note}><Text accessibilityRole="alert" style={ui.body}>{t('taskFlow.retryHint')}</Text></View>}
     {tasks.map((task, index) => <View key={task.id} style={ui.card}>
-      <Text style={ui.cardTitle}>{index + 1}. {task.title}</Text>
+      <Text style={ui.cardTitle}>{index + 1}. {taskContent(task.title, i18n.language)}</Text>
       {(['objective', 'criterion'] as const).map((field) => <View key={field}>
         <Text style={ui.label}>{t(field === 'objective' ? 'advisor.assignmentObjective' : 'advisor.assignmentCriterion')}</Text>
-        <Text style={ui.body}>{task[field]}</Text>
+        <Text style={ui.body}>{taskContent(task[field], i18n.language, field)}</Text>
       </View>)}
       {!!task.description && <Text style={ui.body}>{task.description}</Text>}
       {!!task.document && <Text style={ui.secondary}>{task.document.name}</Text>}
@@ -153,9 +154,13 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         {(['title', 'description', 'objective', 'criterion'] as const).map((field) => {
           const label = t({ title: 'taskFlow.taskTitle', description: 'advisor.assignmentDescription',
             objective: 'advisor.assignmentObjective', criterion: 'advisor.assignmentCriterion' }[field]);
+          const contentField = field === 'title' ? 'task' : field;
+          const original = triplets.find(tr => tr.id === task.tripletId);
           return <View key={field} style={{ gap: 6 }}><Text style={ui.label}>{label}</Text>
             <TextInput accessibilityLabel={label} multiline style={ui.input} editable={!busy}
-              value={task[field] || ''} onChangeText={(value) => change(task.id, { [field]: value })} />
+              value={contentField === 'description' ? task.description || '' : taskContent(task[field] || '', i18n.language, contentField)}
+              onChangeText={(value) => change(task.id, { [field]: contentField === 'description' ? value
+                : taskContentEdit(original?.[contentField] || '', value, i18n.language, contentField) })} />
           </View>;
         })}
         <TouchableOpacity style={groupStyles.outline} accessibilityRole="button" disabled={busy}

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { feedService } from '@/services/feed';
@@ -165,10 +167,10 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
         <View style={styles.section}>
           {!!post.task.competencyName && (
             <Text style={styles.competency}>
-              {post.task.competencyName}{post.task.level ? ` · L${post.task.level}` : ''}
+              {competencyContent(post.task.competencyName, i18n.language)}{post.task.level ? ` · L${post.task.level}` : ''}
             </Text>
           )}
-          <Text style={styles.title}>{post.task.title}</Text>
+          <Text style={styles.title}>{taskContent(post.task.title, i18n.language)}</Text>
           {!!post.task.note && <Text style={styles.body}>{post.task.note}</Text>}
           {post.task.photos.length > 0 && (
             <View style={styles.photoRow}>
@@ -231,10 +233,10 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
         <View style={styles.section}>
           {!!post.assignment.competencyName && (
             <Text style={styles.competency}>
-              {post.assignment.competencyName}{post.assignment.level ? ` · L${post.assignment.level}` : ''}
+              {competencyContent(post.assignment.competencyName, i18n.language)}{post.assignment.level ? ` · L${post.assignment.level}` : ''}
             </Text>
           )}
-          <Text style={styles.title}>{post.assignment.title}</Text>
+          <Text style={styles.title}>{taskContent(post.assignment.title, i18n.language)}</Text>
           {!!due && (
             <Text style={styles.subtle}>{t('student.taskDueDate')}: {due}</Text>
           )}

@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
 import { Ionicons } from '@expo/vector-icons';
 import { taskDueDate } from '@/utils/studentTasks';
 import { colors, spacing, borderRadius } from '@/theme';
@@ -27,7 +28,7 @@ export function UpcomingTasksBox({ tasks, onOpen }: Props) {
         return (
           <TouchableOpacity key={task.id} style={styles.row} onPress={() => onOpen(task)} activeOpacity={0.7}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
+              <Text style={styles.taskTitle} numberOfLines={1}>{taskContent(task.title, i18n.language)}</Text>
               {!!due && <Text style={styles.due}>{t('student.taskDueDate')}: {due}</Text>}
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textDisabled} />

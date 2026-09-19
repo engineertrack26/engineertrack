@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
@@ -90,13 +91,13 @@ function ReviewQueue({ userId }: { userId?: string }) {
       </View> : null}
       renderItem={({ item }) => <View style={ui.card}>
         <ReviewIdentity name={names[item.studentId] || ''} submittedAt={item.submittedAt} />
-        <Text style={ui.cardTitle}>{item.assignment.title}</Text>
+        <Text style={ui.cardTitle}>{taskContent(item.assignment.title, i18n.language)}</Text>
         <ReviewStatus />
         <View style={ui.header}>
           <Ionicons name="attach-outline" size={20} color={colors.textSecondary} />
           <Text style={[ui.secondary, { flex: 1 }]}>{t('mentorFlow.attachments', { photos: item.photos?.length || 0, documents: item.documents?.length || 0 })}</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.inspect') + ': ' + (names[item.studentId] || t('mentorFlow.unknownStudent')) + ', ' + item.assignment.title}
+        <Pressable accessibilityRole="button" accessibilityLabel={t('mentorFlow.inspect') + ': ' + (names[item.studentId] || t('mentorFlow.unknownStudent')) + ', ' + taskContent(item.assignment.title, i18n.language)}
           onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })} style={ui.primary}>
           <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />

@@ -3,6 +3,8 @@ import { ActivityIndicator, Alert, BackHandler, Linking, Pressable, ScrollView, 
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { useAuthStore } from '@/store/authStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { mentorReviewService } from '@/services/mentorReviews';
@@ -176,9 +178,9 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
       {loading ? <ActivityIndicator size="large" color={colors.primary} /> : failed ? <LoadFailedBanner onRetry={load} /> :
         !item ? <View style={ui.card}><Text style={ui.body}>{t('mentorFlow.unavailable')}</Text></View> : <>
           <ReviewIdentity name={name} submittedAt={item.submittedAt} />
-          <Text accessibilityRole="header" style={ui.title}>{item.assignment.title}</Text>
+          <Text accessibilityRole="header" style={ui.title}>{taskContent(item.assignment.title, i18n.language)}</Text>
           <ReviewStatus />
-          {!!item.assignment.competencyName && <Text style={ui.secondary}>{item.assignment.competencyName}{item.assignment.level ? ' · L' + item.assignment.level : ''}</Text>}
+          {!!item.assignment.competencyName && <Text style={ui.secondary}>{competencyContent(item.assignment.competencyName, i18n.language)}{item.assignment.level ? ' · L' + item.assignment.level : ''}</Text>}
           {!!due && <Text style={ui.secondary}>{t('mentor.taskDueDate')}: {due}</Text>}
           {changed && <View style={ui.note}>
             <Text accessibilityRole="alert" style={ui.body}>{t('mentorFlow.reviewChanged')}</Text>
@@ -186,13 +188,13 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
           </View>}
           <View style={[ui.card, { backgroundColor: '#eaf2fe', borderColor: '#cadcf7' }]}>
             <Text style={ui.label}>{t('mentorFlow.criterion')}</Text>
-            <Text style={ui.body}>{item.assignment.criterion}</Text>
+            <Text style={ui.body}>{taskContent(item.assignment.criterion, i18n.language, 'criterion')}</Text>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}>
               <Text style={ui.link}>{t('studentFlow.instructions')} {instructions ? '⌃' : '⌄'}</Text>
             </Pressable>
             {instructions && <>
               <Text style={ui.label}>{t('mentor.taskObjective')}</Text>
-              <Text style={ui.body}>{item.assignment.objective}</Text>
+              <Text style={ui.body}>{taskContent(item.assignment.objective, i18n.language, 'objective')}</Text>
               {!!item.assignment.description && <Text style={ui.body}>{item.assignment.description}</Text>}
               {!!(item.assignment.documentPath || item.assignment.documentName) && <>
                 <Pressable accessibilityRole="button" accessibilityState={{ disabled: openingBrief, busy: openingBrief }} disabled={openingBrief} onPress={openBrief}>
@@ -242,7 +244,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
         <Text style={[ui.secondary, { textAlign: 'center' }]}>{t('mentorFlow.decisionHint')}</Text>
       </View>
     </View>}
-    <ReviewNoteSheet mode={sheet} context={name + ' · ' + (item?.assignment.title || '')}
+    <ReviewNoteSheet mode={sheet} context={name + ' · ' + taskContent(item?.assignment.title || '', i18n.language)}
       value={sheet === 'revision' ? reason : approvalNote} error={noteError} busy={!!submitting}
       onChange={value => { setNoteError(null); if (sheet === 'revision') setReason(value); else setApprovalNote(value); }}
       onClose={() => { if (!busy.current) { setSheet(null); setNoteError(null); } }}

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { competencyContent } from '@/utils/competencyContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
@@ -143,8 +144,8 @@ function GrowthContent({ studentId }: { studentId: string }) {
             {progress.map((p) => {
               const row = selfVsMentor?.find((r) => r.competencyId === p.competencyId);
               return <View key={p.competencyId} style={ui.card}>
-                <Text style={ui.cardTitle}>{p.name}</Text>
-                <LevelRail current={p.currentLevel} target={p.targetLevel} label={`${p.name} ${p.currentLevel}/${p.targetLevel}`} />
+                <Text style={ui.cardTitle}>{competencyContent(p.name, i18n.language)}</Text>
+                <LevelRail current={p.currentLevel} target={p.targetLevel} label={`${competencyContent(p.name, i18n.language)} ${p.currentLevel}/${p.targetLevel}`} />
                 <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
                   ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
                 <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>

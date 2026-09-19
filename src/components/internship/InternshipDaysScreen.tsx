@@ -3,6 +3,8 @@ import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollVie
 import * as DocumentPicker from 'expo-document-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { getCalendars } from 'expo-localization';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
@@ -345,7 +347,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
           {!!sheet.day.task_title && <Text style={ui.secondary}>{sheet.day.task_title}</Text>}
           <ScrollView style={{maxHeight:180}} nestedScrollEnabled>
             {choice(t('days.noTask'),form.taskId===null,()=>setForm({...form,taskId:null}))}
-            {tasks.map(task=>choice(task.title+' · '+task.competency,form.taskId===task.id,()=>setForm({...form,taskId:task.id})))}
+            {tasks.map(task=>choice(taskContent(task.title,i18n.language)+' · '+competencyContent(task.competency,i18n.language),form.taskId===task.id,()=>setForm({...form,taskId:task.id})))}
           </ScrollView>
           <Text style={ui.secondary}>{t('days.fileHint')}</Text>
           {form.attachment && <>
@@ -362,7 +364,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
             <Text style={ui.label}>{t('days.learning')}</Text><Text style={ui.body}>{sheet.day.learning}</Text>
             <Text style={ui.label}>{t('days.selfAssessment')}</Text><Text style={ui.body}>{t('days.support'+sheet.day.support_level)}</Text>
             {!!sheet.day.next_step && <><Text style={ui.label}>{t('days.nextStep')}</Text><Text style={ui.body}>{sheet.day.next_step}</Text></>}
-            {!!sheet.day.task_title && <Text style={ui.body}>{sheet.day.task_title} · {sheet.day.competency_name}</Text>}
+            {!!sheet.day.task_title && <Text style={ui.body}>{taskContent(sheet.day.task_title,i18n.language)} · {competencyContent(sheet.day.competency_name,i18n.language)}</Text>}
             {sheet.day.attachment && <AuthButton title={sheet.day.attachment.name} variant="ghost" disabled={busy} onPress={()=>void openFile(sheet.day.attachment!.path)} />}
           </> : <Text style={ui.secondary}>{t('days.draftPrivate')}</Text>}
           {field(t('days.feedback'),note,setNote)}

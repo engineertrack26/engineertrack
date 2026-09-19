@@ -3,6 +3,8 @@ import { ActivityIndicator, Alert, BackHandler, Image, KeyboardAvoidingView, Lin
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { assignmentService } from '@/services/assignments';
@@ -251,10 +253,10 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
         <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: userId, groupId: task?.groupId } })} />
         {loading ? <ActivityIndicator size="large" color={colors.primary} /> : failed ? <LoadFailedBanner onRetry={load} /> : !task ?
           <Text style={ui.body}>{t('errors.assignmentNotFound')}</Text> : <>
-          <Text accessibilityRole="header" style={ui.title}>{task.title}</Text>
+          <Text accessibilityRole="header" style={ui.title}>{taskContent(task.title, i18n.language)}</Text>
           <TaskStatus task={task} />
           {!!due && <Text style={ui.secondary}>{t('student.taskDueDate')}: {due}</Text>}
-          {!!task.competencyName && <Text style={ui.secondary}>{task.competencyName}{task.level ? ' · L' + task.level : ''}</Text>}
+          {!!task.competencyName && <Text style={ui.secondary}>{competencyContent(task.competencyName, i18n.language)}{task.level ? ' · L' + task.level : ''}</Text>}
           {!!task.submission?.mentorNote && <View style={ui.note}>
             <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
             <Text style={ui.body}>{task.submission.mentorNote}</Text>
@@ -268,12 +270,12 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
           </View>}
           <View style={ui.card}>
             <Text style={ui.label}>{t('student.taskCriterion')}</Text>
-            <Text style={ui.body}>{task.criterion}</Text>
+            <Text style={ui.body}>{taskContent(task.criterion, i18n.language, 'criterion')}</Text>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: instructions }} onPress={() => setInstructions(!instructions)}>
               <Text style={ui.link}>{t('studentFlow.instructions')} {instructions ? '⌃' : '⌄'}</Text>
             </Pressable>
             {instructions && <>
-              <Text style={ui.label}>{t('student.taskObjective')}</Text><Text style={ui.body}>{task.objective}</Text>
+              <Text style={ui.label}>{t('student.taskObjective')}</Text><Text style={ui.body}>{taskContent(task.objective, i18n.language, 'objective')}</Text>
               {!!task.description && <Text style={ui.body}>{task.description}</Text>}
               {!!task.documentPath && <Pressable accessibilityRole="button" onPress={() => openDocument(task.documentUrl)}>
                 <Text style={ui.link}>{task.documentName || t('student.taskDocument')} ↗</Text>

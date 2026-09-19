@@ -1,4 +1,6 @@
 import type { MyAssignment } from '@/types/assignment';
+import { taskContent } from './taskContent';
+import { competencyContent } from './competencyContent';
 
 export type TaskState = 'revise' | 'todo' | 'waiting' | 'done';
 export const TASK_STATES: TaskState[] = ['revise', 'todo', 'waiting', 'done'];
@@ -18,7 +20,7 @@ export function sortTasks(items: MyAssignment[]): MyAssignment[] {
 export function filterTasks(items: MyAssignment[], state: TaskState | 'all', query: string, locale: string) {
   const needle = query.trim().toLocaleLowerCase(locale);
   return sortTasks(items).filter(a => (state === 'all' || taskState(a) === state) &&
-    `${a.title} ${a.competencyName || ''}`.toLocaleLowerCase(locale).includes(needle));
+    `${taskContent(a.title, locale)} ${a.title} ${competencyContent(a.competencyName, locale)} ${a.competencyName || ''}`.toLocaleLowerCase(locale).includes(needle));
 }
 
 /** DATE values are calendar dates, not UTC instants. */

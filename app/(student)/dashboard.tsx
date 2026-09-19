@@ -2,6 +2,8 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -137,8 +139,8 @@ function buildOtherRows(
       row: {
         key: task.id,
         weekday: eventDate.toLocaleDateString(lang, { weekday: 'short' }),
-        title: task.title,
-        subtitle: task.competencyName,
+        title: taskContent(task.title, lang),
+        subtitle: competencyContent(task.competencyName, lang),
         right,
       },
     });
@@ -283,11 +285,11 @@ export default function StudentDashboard() {
           {progress.map((c) => <View key={c.competencyId}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={ui.body}>{c.name}</Text>
+              <Text style={ui.body}>{competencyContent(c.name, i18n.language)}</Text>
               <Text style={ui.secondary}>{c.currentLevel} / {c.targetLevel}</Text>
             </View>
             <LevelRail current={c.currentLevel} target={c.targetLevel}
-              label={`${c.name} ${c.currentLevel}/${c.targetLevel}`} />
+              label={`${competencyContent(c.name, i18n.language)} ${c.currentLevel}/${c.targetLevel}`} />
           </View>)}
           <Text style={ui.secondary}>{totalXp} XP · {t('gamification.level')} {currentLevel}</Text>
         </>}

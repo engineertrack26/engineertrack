@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Alert, Switch, TextInput, BackHandler } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { competencyContent } from '@/utils/competencyContent';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { competencyService } from '@/services/competency';
@@ -143,7 +144,7 @@ function TargetsContent({ advisorId, groupId, fromGroup }: { advisorId: string; 
   }
 
   const filtered = competencies.filter((c) => (!selectedOnly || c.id in targets) &&
-    (c.name + ' ' + c.code).toLocaleLowerCase(i18n.language).includes(search.trim().toLocaleLowerCase(i18n.language)));
+    (competencyContent(c.name, i18n.language) + ' ' + c.name + ' ' + c.code).toLocaleLowerCase(i18n.language).includes(search.trim().toLocaleLowerCase(i18n.language)));
   const disabled = saving || loading || refreshing || failed || unavailable;
   const canSave = !disabled && dirty && validTargets(targets);
   return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right', 'bottom']}>
@@ -182,8 +183,8 @@ function TargetsContent({ advisorId, groupId, fromGroup }: { advisorId: string; 
           .sort((a, b) => a.kpiIndex - b.kpiIndex);
         return <View style={[ui.card, selected && styles.selected]}>
           <View style={ui.header}>
-            <Text style={[ui.cardTitle, { flex: 1 }]}>{item.name}</Text>
-            <Switch value={selected} disabled={disabled} accessibilityLabel={item.name}
+            <Text style={[ui.cardTitle, { flex: 1 }]}>{competencyContent(item.name, i18n.language)}</Text>
+            <Switch value={selected} disabled={disabled} accessibilityLabel={competencyContent(item.name, i18n.language)}
               onValueChange={() => edit(toggleTarget(targets, item.id))} trackColor={{ true: colors.primaryDark }} />
           </View>
           <Text style={ui.secondary}>{t(selected ? 'targetUi.included' : 'targetUi.excluded')}</Text>

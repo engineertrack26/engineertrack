@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -339,7 +341,7 @@ function GroupAssignmentsContent() {
   const sentAssignments = assignments.filter((a) => !!a.publishedAt);
   const selectedDrafts = drafts.filter((a) => selectedDraftIds.includes(a.id));
   const visibleAssignments = (tab === 'drafts' ? drafts : sentAssignments).filter((a) =>
-    [a.title, a.description, a.competencyName].some((value) =>
+    [taskContent(a.title, i18n.language), a.title, a.description, competencyContent(a.competencyName, i18n.language), a.competencyName].some((value) =>
       value?.toLocaleLowerCase(i18n.language).includes(search.trim().toLocaleLowerCase(i18n.language))));
   function closeSelection() {
     if (!picked.size) { setAdding(false); return; }
@@ -458,7 +460,7 @@ function GroupAssignmentsContent() {
                 onPress={() => chooseCompetency(c.id)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.name}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{competencyContent(c.name, i18n.language)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -538,7 +540,7 @@ function GroupAssignmentsContent() {
                           alreadyAssigned && styles.tripletTextAssigned,
                         ]}
                       >
-                        {tr.task}
+                        {taskContent(tr.task, i18n.language)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -621,9 +623,9 @@ function GroupAssignmentsContent() {
         <GroupContextLabel groupId={groupId} />
         <Text style={ui.body}>{t('taskFlow.summary', { tasks: selectedDrafts.length, students: members.length })}</Text>
         {selectedDrafts.map((a) => <View key={a.id} style={ui.card}>
-          <Text style={ui.cardTitle}>{a.title}</Text>
-          <Text style={ui.label}>{t('advisor.assignmentObjective')}</Text><Text style={ui.body}>{a.objective}</Text>
-          <Text style={ui.label}>{t('advisor.assignmentCriterion')}</Text><Text style={ui.body}>{a.criterion}</Text>
+          <Text style={ui.cardTitle}>{taskContent(a.title, i18n.language)}</Text>
+          <Text style={ui.label}>{t('advisor.assignmentObjective')}</Text><Text style={ui.body}>{taskContent(a.objective, i18n.language, 'objective')}</Text>
+          <Text style={ui.label}>{t('advisor.assignmentCriterion')}</Text><Text style={ui.body}>{taskContent(a.criterion, i18n.language, 'criterion')}</Text>
           {!!a.description && <Text style={ui.body}>{a.description}</Text>}
           {!!a.documentName && <Text style={ui.secondary}>{a.documentName}</Text>}
           <Text style={ui.secondary}>{t('advisor.assignmentDueDate')}: {a.dueDate

@@ -4,6 +4,8 @@ export { ui } from '@/components/common/workflowStyles';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import { useNotificationStore } from '@/store/notificationStore';
 import { colors } from '@/theme';
 import { taskState, taskStateKey, taskDueDate } from '@/utils/studentTasks';
@@ -39,8 +41,8 @@ export function JobCard({ task }: { task: MyAssignment }) {
   const router = useRouter();
   const due = taskDueDate(task.dueDate, i18n.language);
   const open = () => router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
-  const meta = task.competencyName ? `${task.competencyName}${task.level ? ' · L' + task.level : ''}` : undefined;
-  const spokenLabel = [task.title, meta, due && `${t('student.taskDueDate')}: ${due}`,
+  const meta = task.competencyName ? `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}` : undefined;
+  const spokenLabel = [taskContent(task.title, i18n.language), meta, due && `${t('student.taskDueDate')}: ${due}`,
     task.submission?.mentorNote, t('studentFlow.continueTask')].filter(Boolean).join('. ');
   return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel}
     onPress={open} style={({ pressed }) => [ui.card, ui.featured, pressed && { opacity: 0.8 }]}>
@@ -50,7 +52,7 @@ export function JobCard({ task }: { task: MyAssignment }) {
       </Text>
       {!!due && <Text style={[ui.secondary, { fontVariant: ['tabular-nums'] }]}>{due}</Text>}
     </View>
-    <Text style={ui.cardTitle}>{task.title}</Text>
+    <Text style={ui.cardTitle}>{taskContent(task.title, i18n.language)}</Text>
     {!!meta && <Text style={ui.secondary}>{meta}</Text>}
     {task.submission?.mentorNote && <View style={ui.note}>
       <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
@@ -69,14 +71,14 @@ export function TaskCard({ task, prominent = false }: { task: MyAssignment; prom
   const router = useRouter();
   const due = taskDueDate(task.dueDate, i18n.language);
   const open = () => router.push({ pathname: '/(student)/task-detail', params: { id: task.id } });
-  const spokenLabel = [task.title, t(taskStateKey(taskState(task))), task.competencyName,
+  const spokenLabel = [taskContent(task.title, i18n.language), t(taskStateKey(taskState(task))), competencyContent(task.competencyName, i18n.language),
     due && `${t('student.taskDueDate')}: ${due}`, prominent && task.submission?.mentorNote,
     t(prominent ? 'studentFlow.continueTask' : 'studentFlow.viewTask')].filter(Boolean).join('. ');
   return <Pressable accessibilityRole="button" accessibilityLabel={spokenLabel}
     onPress={open} style={({ pressed }) => [ui.card, prominent && ui.featured, pressed && { opacity: 0.8 }]}>
     <TaskStatus task={task} />
-    <Text style={ui.cardTitle}>{task.title}</Text>
-    {!!task.competencyName && <Text style={ui.secondary}>{task.competencyName}</Text>}
+    <Text style={ui.cardTitle}>{taskContent(task.title, i18n.language)}</Text>
+    {!!task.competencyName && <Text style={ui.secondary}>{competencyContent(task.competencyName, i18n.language)}</Text>}
     {!!due && <Text style={ui.secondary}>{t('student.taskDueDate')}: {due}</Text>}
     {prominent && task.submission?.mentorNote && <View style={ui.note}>
       <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>

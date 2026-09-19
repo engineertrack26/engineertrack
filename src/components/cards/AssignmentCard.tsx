@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { taskContent, taskContentEdit } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -140,7 +142,7 @@ export function AssignmentCard({
   function confirmWithdraw() {
     Alert.alert(
       t('advisor.withdrawAssignment'),
-      t('advisor.withdrawConfirm', { title: a.title }),
+      t('advisor.withdrawConfirm', { title: taskContent(a.title, i18n.language) }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('advisor.withdrawAssignment'), style: 'destructive', onPress: handleWithdraw },
@@ -233,7 +235,7 @@ export function AssignmentCard({
         <View style={styles.cardTitleFlex}>
           {!!a.competencyName && (
             <Text style={styles.competencyLine}>
-              {a.competencyName}{a.level ? ` · L${a.level}` : ''}
+              {competencyContent(a.competencyName, i18n.language)}{a.level ? ` · L${a.level}` : ''}
             </Text>
           )}
           {/* Edited where it is read, not copied into a labelled box lower
@@ -243,13 +245,13 @@ export function AssignmentCard({
           {isEditing ? (
             <TextInput
               style={[styles.cardTitle, styles.inlineInput]}
-              value={editTitle}
-              onChangeText={setEditTitle}
+              value={taskContent(editTitle, i18n.language)}
+              onChangeText={value => setEditTitle(taskContentEdit(a.title, value, i18n.language))}
               placeholderTextColor={colors.textDisabled}
               multiline
             />
           ) : (
-            <Text style={styles.cardTitle}>{a.title}</Text>
+            <Text style={styles.cardTitle}>{taskContent(a.title, i18n.language)}</Text>
           )}
         </View>
         <View style={styles.cardActions}>
@@ -343,8 +345,8 @@ export function AssignmentCard({
               styles.multilineInput,
               !canEditTerms && styles.inputDisabled,
             ]}
-            value={editObjective}
-            onChangeText={setEditObjective}
+            value={taskContent(editObjective, i18n.language, 'objective')}
+            onChangeText={value => setEditObjective(taskContentEdit(a.objective, value, i18n.language, 'objective'))}
             editable={canEditTerms}
             multiline
           />
@@ -356,8 +358,8 @@ export function AssignmentCard({
               styles.multilineInput,
               !canEditTerms && styles.inputDisabled,
             ]}
-            value={editCriterion}
-            onChangeText={setEditCriterion}
+            value={taskContent(editCriterion, i18n.language, 'criterion')}
+            onChangeText={value => setEditCriterion(taskContentEdit(a.criterion, value, i18n.language, 'criterion'))}
             editable={canEditTerms}
             multiline
           />

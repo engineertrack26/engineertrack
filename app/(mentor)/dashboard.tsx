@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View, u
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { taskContent } from '@/utils/taskContent';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
@@ -100,10 +101,10 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
             <Text style={[ui.badge, { color: colors.primaryDark, backgroundColor: '#eaf2fe' }]}>{t('mentorHome.waiting', { count: queue!.items.length })}</Text>
             <Text accessibilityRole="header" style={ui.section}>{t('mentorHome.nextReview')}</Text>
             <ReviewIdentity name={queue!.names[next.studentId] || ''} submittedAt={next.submittedAt} />
-            <Text style={ui.cardTitle}>{next.assignment.title}</Text>
+            <Text style={ui.cardTitle}>{taskContent(next.assignment.title, i18n.language)}</Text>
             <Text style={ui.secondary}>{t('mentorHome.oldestHint')}</Text>
             <Pressable accessibilityRole="button" style={ui.primary}
-              accessibilityLabel={t('mentorFlow.inspect') + ': ' + next.assignment.title}
+              accessibilityLabel={t('mentorFlow.inspect') + ': ' + taskContent(next.assignment.title, i18n.language)}
               onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: next.id, studentId: '', assignmentId: '' } })}>
               <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
               <Ionicons name="arrow-forward" size={20} color="#fff" />

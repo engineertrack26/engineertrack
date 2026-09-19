@@ -1,4 +1,5 @@
 import type { AssignmentSubmission, GroupAssignment } from '@/types/assignment';
+import { taskContent } from './taskContent';
 
 export type PendingReview = AssignmentSubmission & { assignment: GroupAssignment };
 export type ReviewSort = 'oldest' | 'newest';
@@ -16,7 +17,7 @@ export function filterReviews(items: PendingReview[], names: Record<string, stri
   order: ReviewSort, locale: string, assignmentId?: string, studentId?: string): PendingReview[] {
   const needle = query.trim().toLocaleLowerCase(locale);
   return items.filter(item => (!assignmentId || item.assignmentId === assignmentId) && (!studentId || item.studentId === studentId) &&
-    `${names[item.studentId] || ''} ${item.assignment.title}`.toLocaleLowerCase(locale).includes(needle))
+    `${names[item.studentId] || ''} ${taskContent(item.assignment.title, locale)} ${item.assignment.title}`.toLocaleLowerCase(locale).includes(needle))
     .sort((a, b) => {
       const time = (Date.parse(a.submittedAt) || 0) - (Date.parse(b.submittedAt) || 0);
       return (order === 'oldest' ? time : -time) || a.id.localeCompare(b.id);

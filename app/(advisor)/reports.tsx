@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, 
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { competencyContent } from '@/utils/competencyContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
@@ -152,7 +153,7 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
       );
       data.competencyBreakdown.forEach((c) => {
         lines.push(
-          csvRow([c.competencyName, c.targetLevel, c.studentsAtTarget, data.studentCount]),
+          csvRow([competencyContent(c.competencyName, i18n.language), c.targetLevel, c.studentsAtTarget, data.studentCount]),
         );
       });
       lines.push('');
@@ -314,10 +315,10 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
             {!data.competencyBreakdown.length ? <Text style={ui.body}>{t(data.studentCount === 0
               ? 'advisor.noCompetencyDataNoStudents' : 'advisor.noCompetencyData')}</Text> :
               data.competencyBreakdown.map((competency) => <View key={competency.competencyId} style={ui.card}>
-                <Text style={ui.cardTitle}>{competency.competencyName}</Text>
+                <Text style={ui.cardTitle}>{competencyContent(competency.competencyName, i18n.language)}</Text>
                 <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: competency.targetLevel })}</Text>
                 <Text style={ui.label}>{t('advisor.studentsAtTarget', { atTarget: competency.studentsAtTarget, total: data.studentCount })}</Text>
-                <ReportProgress label={competency.competencyName} percent={data.studentCount
+                <ReportProgress label={competencyContent(competency.competencyName, i18n.language)} percent={data.studentCount
                   ? competency.studentsAtTarget / data.studentCount * 100 : 0} />
               </View>)}
           </>}
