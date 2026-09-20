@@ -146,8 +146,9 @@ function GrowthContent({ studentId }: { studentId: string }) {
               return <View key={p.competencyId} style={ui.card}>
                 <Text style={ui.cardTitle}>{competencyContent(p.name, i18n.language)}</Text>
                 <LevelRail current={p.currentLevel} target={p.targetLevel} label={`${competencyContent(p.name, i18n.language)} ${p.currentLevel}/${p.targetLevel}`} />
-                <Text style={ui.body}>{t(p.currentLevel === 0 ? 'student.competencyNotStarted' : p.currentLevel >= p.targetLevel
-                  ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
+                <Text style={ui.body}>{p.currentLevel === 0
+                  ? (row ? t('student.competencyInProgress', 'Working towards level 1') : t('student.competencyNotStarted'))
+                  : t(p.currentLevel >= p.targetLevel ? 'student.competencyComplete' : 'student.competencyLevel', { current: p.currentLevel, target: p.targetLevel })}</Text>
                 <Text style={ui.secondary}>{t('advisor.targetLevelShort', { level: p.targetLevel })}</Text>
                 {!!row && <View style={{ gap: 6, marginTop: 8 }}>
                   <View style={styles.barRow}>

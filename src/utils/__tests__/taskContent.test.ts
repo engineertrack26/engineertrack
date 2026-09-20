@@ -51,6 +51,12 @@ describe('complete Turkish task catalogue', () => {
     }
     expect(taskContent(example.criterion, 'tr', 'task')).toBe(example.criterion);
   });
+  test('a trailing parenthesised tag keeps the translation and the tag', () => {
+    expect(taskContent(example.task + ' (revize)', 'tr')).toBe(translated[entries[0][0]].task + ' (revize)');
+    expect(taskContent(example.task + '(v2)', 'tr')).toBe(translated[entries[0][0]].task + ' (v2)');
+    expect(taskContent(example.task + ' (revize)', 'en')).toBe(example.task + ' (revize)');
+    expect(taskContent('Custom (revize)', 'tr')).toBe('Custom (revize)');
+  });
   test('missing translations fall back field by field to English', () => {
     const translate = createTaskContentTranslator({ one: example }, { one: { task: 'Görev' } });
     expect(translate(example.task, 'tr')).toBe('Görev');

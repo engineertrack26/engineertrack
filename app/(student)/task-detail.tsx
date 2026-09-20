@@ -24,6 +24,9 @@ import { colors } from '@/theme';
 import type { MyAssignment } from '@/types/assignment';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+/** Simulation finding #10: the server refuses shorter reflections (REFLECTION_TOO_SHORT). */
+const REFLECTION_MIN = 20;
+
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const userId = useAuthStore(s => s.user?.id);
@@ -179,9 +182,13 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
 
   async function submit() {
     if (!task || !userId || !id || busy.current || !actionable || restoreFailed) return;
-    if (!currentDraft.current.reflection.trim()) {
+    if (currentDraft.current.reflection.trim().length < REFLECTION_MIN) {
       setReflectionError(true);
       reflectionInput.current?.focus();
+      return;
+    }
+    if (!currentDraft.current.photos.length && !currentDraft.current.documents.length) {
+      Alert.alert(t('common.error'), t('errors.evidenceRequired', 'Add at least one photo or document before submitting.'));
       return;
     }
     if (currentDraft.current.selfLevel === null) {
@@ -273,7 +280,7 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
             </View>)}
             {!!gapNote && <Text style={ui.secondary}>{gapNote}</Text>}
           </View>}
-          {!!task.submission?.mentorNote && <View style={ui.note}>
+          {!!task.submission?.mentorNote && task.submission.status !== 'submitted' && <View style={ui.note}>
             <Text style={ui.label}>{t('studentFlow.mentorNote')}</Text>
             <Text style={ui.body}>{task.submission.mentorNote}</Text>
           </View>}
@@ -311,7 +318,8 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
               editable={!submitting && !restoreFailed} accessibilityLabel={t('student.whatILearned') + ', ' + t('common.required')}
               style={[ui.input, { minHeight: 112, textAlignVertical: 'top', borderColor: reflectionError ? colors.error : colors.textDisabled }]} /> :
               <Text style={ui.body}>{draft.reflection || '—'}</Text>}
-            {reflectionError && <Text accessibilityRole="alert" style={{ color: colors.error }}>{t('errors.reflectionRequired')}</Text>}
+            {actionable && <Text style={[ui.secondary, { fontVariant: ['tabular-nums'] }]}>{draft.reflection.trim().length} / {REFLECTION_MIN}</Text>}
+            {reflectionError && <Text accessibilityRole="alert" style={{ color: colors.error }}>{t(draft.reflection.trim() ? 'errors.reflectionTooShort' : 'errors.reflectionRequired')}</Text>}
           </View>
           <View style={{ gap: 12 }}>
             <Text style={ui.section}>{t('studentFlow.evidence')}</Text>

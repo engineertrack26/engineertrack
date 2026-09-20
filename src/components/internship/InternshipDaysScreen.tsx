@@ -105,6 +105,9 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
   const summary = daySummary(days);
   const dates = dayWeek(from);
   const dateLabel = (value: string) => parseInternshipDate(value)?.toLocaleDateString(i18n.language, { weekday: 'short', day: 'numeric', month: 'short' }) || value;
+  // Simulation finding #17: the period header showed raw ISO next to localized day labels.
+  const periodLabel = (start: string, end: string) =>
+    `${parseInternshipDate(start)?.toLocaleDateString(i18n.language) || start} – ${parseInternshipDate(end)?.toLocaleDateString(i18n.language) || end}`;
   const timestamp = (value: string, timeZone?: string) => new Date(value).toLocaleString(i18n.language, { timeZone });
   const run = async (work: () => Promise<unknown>) => {
     if (lock.current || !currentAccount()) return;
@@ -243,7 +246,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
       {!loading && !error && people.length === 0 && <Text style={ui.body}>{t('days.noStudents')}</Text>}
       {!!person && !loading && !error && <>
         {!(role === 'student' && showHistory) && <Text style={ui.label}>{role === 'student' ? person.company : `${person.name} · ${person.company}`}</Text>}
-        {(role === 'advisor' || (role === 'mentor' && showHistory)) && <Text style={ui.secondary}>{person.startDate} — {person.endDate}</Text>}
+        {(role === 'advisor' || (role === 'mentor' && showHistory)) && <Text style={ui.secondary}>{periodLabel(person.startDate, person.endDate)}</Text>}
         {!person.mentorId && <Text style={ui.body}>{t('days.setup')}</Text>}
         {(role === 'advisor' || (role === 'mentor' && showHistory)) && <View style={ui.card}>
           <Text style={ui.label}>{t('days.weekSummary')}</Text>
@@ -295,7 +298,7 @@ function DayWorkspace({ ownerId, role }: { ownerId: string; role: Role }) {
           </Pressable>
           {showSummary && <>
             <Text style={ui.label}>{person.company}</Text>
-            <Text style={ui.secondary}>{person.startDate} — {person.endDate}</Text>
+            <Text style={ui.secondary}>{periodLabel(person.startDate, person.endDate)}</Text>
             <Text style={ui.label}>{t('days.weekSummary')}</Text>
             <Text style={ui.body}>{t('days.summary', summary)}</Text>
             {totals && <><Text style={ui.label}>{t('days.totalSummary')}</Text><Text style={ui.body}>{t('days.summary', totals)}</Text></>}

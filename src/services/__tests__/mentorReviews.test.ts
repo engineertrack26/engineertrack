@@ -31,12 +31,13 @@ describe('mentor review operations', () => {
     await mentorReviewService.submit(item, false, '  Add units  ', notification);
     expect(list).toHaveBeenCalledWith({ submissionId: 's1', signUrls: false });
     expect(review).toHaveBeenCalledWith('s1', false, 'Add units', undefined);
-    expect(notify).toHaveBeenCalledWith('u1', notification.title, notification.body, 'task_revision_requested', { assignmentId: 'a1' });
+    // The RPC notifies in-transaction; the client no longer inserts a notification.
+    expect(notify).not.toHaveBeenCalled();
   });
   it('allows approval without a note', async () => {
     await mentorReviewService.submit(item, true, '', notification);
     expect(review).toHaveBeenCalledWith('s1', true, '', undefined);
-    expect(notify.mock.calls[0][3]).toBe('task_approved');
+    expect(notify).not.toHaveBeenCalled();
   });
   it('rejects a submission that was already reviewed or left the mentor scope', async () => {
     list.mockResolvedValue([]);

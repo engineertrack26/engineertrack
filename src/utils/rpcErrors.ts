@@ -53,6 +53,9 @@ const ERROR_KEYS: Record<string, string> = {
   REPORT_FORBIDDEN: 'errors.reportForbidden',
   NO_REPORT: 'errors.noReport',
   STUDENT_NOT_IN_GROUP: 'errors.studentNotInGroup',
+  MENTOR_ALREADY_LINKED: 'errors.mentorAlreadyLinked',
+  EVIDENCE_REQUIRED: 'errors.evidenceRequired',
+  REFLECTION_TOO_SHORT: 'errors.reflectionTooShort',
 };
 
 /**

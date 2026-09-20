@@ -69,21 +69,27 @@ function isoDate(d: Date): string {
 interface DayCell {
   iso: string;
   weekday: string;
+  /** A day row exists (checked in live, or declared with a reason). */
+  recorded: boolean;
   checkInAt: string | null;
+  attendance: InternshipDay['attendance'] | null;
   isToday: boolean;
 }
 
-/** Monday to Friday, plus a weekend day only when a check-in exists for it. */
-function buildDayCells(checkins: InternshipDay[], monday: Date, todayIso: string, lang: string): DayCell[] {
+/** Monday to Friday, plus a weekend day only when a record exists for it.
+ *  Simulation finding #13: the strip used to mark only live check-ins, so a
+ *  week declared with reasons and marked present by the mentor showed one ✓
+ *  next to a days screen showing six. A record is a record. */
+function buildDayCells(days: InternshipDay[], monday: Date, todayIso: string, lang: string): DayCell[] {
   const cells: DayCell[] = [];
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
     const iso = isoDate(date);
-    const day = checkins.find((d) => d.day_date === iso);
-    const checkInAt = day?.check_in_at ?? null;
-    if (i >= 5 && !checkInAt) continue;
-    cells.push({ iso, weekday: date.toLocaleDateString(lang, { weekday: 'short' }), checkInAt, isToday: iso === todayIso });
+    const day = days.find((d) => d.day_date === iso);
+    if (i >= 5 && !day) continue;
+    cells.push({ iso, weekday: date.toLocaleDateString(lang, { weekday: 'short' }), recorded: !!day,
+      checkInAt: day?.check_in_at ?? null, attendance: day?.attendance ?? null, isToday: iso === todayIso });
   }
   return cells;
 }
@@ -222,11 +228,13 @@ export default function StudentDashboard() {
         </View>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {dayCells.map((cell) => {
-            const checkedIn = !!cell.checkInAt;
+            const checkedIn = cell.recorded;
+            const absent = cell.attendance === 'absent';
             const time = cell.checkInAt ? new Date(cell.checkInAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) : '';
-            const a11y = `${cell.weekday}: ${checkedIn ? t('dash.checkedIn', 'At the internship') + ' ' + time
+            const a11y = `${cell.weekday}: ${checkedIn ? (cell.attendance && cell.attendance !== 'pending' ? t('days.' + cell.attendance) : t('dash.checkedIn', 'At the internship')) + (time ? ' ' + time : '')
               : cell.isToday ? t('dash.checkIn', 'Check in') : '—'}`;
             const prompt = cell.isToday && !checkedIn;
+            const markColor = absent ? colors.warnText : cell.attendance === 'pending' ? colors.textSecondary : colors.stamp;
             // Three fixed lines per cell (day / mark / time) so the days line
             // up across the strip whatever each cell has to show.
             const cellStyle = {
@@ -237,7 +245,7 @@ export default function StudentDashboard() {
             const inner = <>
               <Text style={{ fontSize: 12, lineHeight: 16, color: prompt ? colors.textOnPrimary : colors.textSecondary, fontFamily: fonts.regular }}>{cell.weekday}</Text>
               {checkedIn
-                ? <Text style={{ fontSize: 16, lineHeight: 24, color: colors.stamp, fontFamily: fonts.semibold }}>✓</Text>
+                ? <Text style={{ fontSize: 16, lineHeight: 24, color: markColor, fontFamily: fonts.semibold }}>{absent ? '✗' : '✓'}</Text>
                 : prompt
                   ? <Text style={{ fontSize: 13, lineHeight: 24, color: colors.textOnPrimary, fontFamily: fonts.medium }}>{t('dash.checkIn', 'Check in')}</Text>
                   : <Text style={{ fontSize: 16, lineHeight: 24, color: colors.ruleStrong, fontFamily: fonts.regular }}>·</Text>}
