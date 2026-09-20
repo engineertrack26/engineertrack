@@ -148,6 +148,39 @@
       ],
       "conversations": {
         "classmate": "46ff887c-1eb7-4d60-b8bf-763b401bfd97"
+      },
+      "followUp": {
+        "pairs": [
+          {
+            "title": "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance. (revize)",
+            "selfLevel": 1,
+            "mentorLevel": 2,
+            "mentorNote": "tekrar"
+          },
+          {
+            "title": "Record measurements, outputs, test results, or observations in the required digital format, including values, units, dates, and reference conditions.",
+            "selfLevel": 2,
+            "mentorLevel": 3,
+            "mentorNote": "Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de yaz."
+          },
+          {
+            "title": "Send a direct message to a peer to coordinate a minor task handoff.",
+            "selfLevel": 2,
+            "mentorLevel": 2,
+            "mentorNote": "Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de yaz."
+          },
+          {
+            "title": "Type a brief summary of a stand-up meeting in the team chat.",
+            "selfLevel": 2,
+            "mentorLevel": 2,
+            "mentorNote": "Ölçüm tablosu eksiksiz, fotoğraf net.\nBir sonraki görevde birimleri de yaz."
+          }
+        ],
+        "myRank": null,
+        "boardSize": 7,
+        "approvedNotifCount": 0,
+        "streamCards": 19,
+        "selfVsMentorRows": 4
       }
     },
     "burak-sahin": {
@@ -242,7 +275,16 @@
           "submissionId": "744a11f6-1ebf-4776-8aa0-5f4996e5f211"
         }
       ],
-      "conversations": {}
+      "conversations": {},
+      "followUp": {
+        "approvedTitles": [
+          "Set a logical workflow diagram by dragging and dropping the complex diagnostic steps as troubleshooting roadmap provided under mentor guidance. (revize)",
+          "Record measurements, outputs, test results, or observations in the required digital format, including values, units, dates, and reference conditions.",
+          "Send a direct message to a peer to coordinate a minor task handoff."
+        ],
+        "taskCardsFound": 3,
+        "approvalNotifs": 0
+      }
     },
     "zeynep-arslan": {
       "userId": "0588262e-6301-4a16-abb8-82b9a963b2da",
@@ -288,7 +330,11 @@
           "submissionId": "8df9f4b9-80d7-4e38-b989-97bb314ff879"
         }
       ],
-      "conversations": {}
+      "conversations": {},
+      "followUp": {
+        "sharingOnWorked": true,
+        "sharingOffWorked": true
+      }
     },
     "deniz-yildirim": {
       "userId": "bd3a9ee1-832a-43d9-8888-bfb26b79f299",
@@ -336,6 +382,12 @@
       ],
       "conversations": {
         "classmate": "6798b8e0-1978-4e84-a976-bb0661006141"
+      },
+      "followUp": {
+        "correctionDayResaved": true,
+        "excusedConfirmed": true,
+        "streamCards": 3,
+        "expectedCards": 3
       }
     },
     "mert-yilmaz": {
@@ -386,7 +438,12 @@
           "submissionId": "92ce0edd-4a01-4ba5-a48c-2b278fdd9e8b"
         }
       ],
-      "conversations": {}
+      "conversations": {},
+      "followUp": {
+        "reviewedCount": 4,
+        "comparisonRows": 4,
+        "streamCards": 4
+      }
     },
     "can-dogan": {
       "userId": "cc0077d2-b310-4887-80da-ad807becd378",
@@ -439,6 +496,13 @@
       "conversations": {
         "advisor": "f3c980cd-fd0f-4a84-9dbb-7ab0fafda114",
         "mentor": "0d4c29ff-e610-4e2f-a245-41b5a7a1307d"
+      },
+      "followUp": {
+        "likedClassmateCard": true,
+        "mentorConv": "0d4c29ff-e610-4e2f-a245-41b5a7a1307d",
+        "advisorConv": "f3c980cd-fd0f-4a84-9dbb-7ab0fafda114",
+        "classmateCardId": "e0bf5b5e-0ffb-45f0-ba29-6b6713bece7c",
+        "streamPaginationNote": "listFeedPosts default page (20) missed cards past page 1 in phase 6; confirmed via full pagination in phase 6b."
       }
     }
   },
