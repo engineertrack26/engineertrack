@@ -1,12 +1,12 @@
 # Untrusted-user probe
 
-Run: 2026-09-20T19:48:22.835Z
+Run: 2026-09-20T20:05:47.557Z
 
 ## anon (no session) — direct table reads
 | table | rows | note |
-| profiles | 0 |  |
+| profiles | — | refused: permission denied for function is_mentor_of |
 | profiles_public | 0 |  |
-| student_profiles | 0 |  |
+| student_profiles | — | refused: permission denied for function is_mentor_of |
 | student_codes | 0 |  |
 | internship_groups | 0 |  |
 | group_memberships | 0 |  |
@@ -33,57 +33,60 @@ Run: 2026-09-20T19:48:22.835Z
 | internship_days | — | refused: permission denied for table internship_days |
 | internship_day_events | — | refused: permission denied for table internship_day_events |
 | internship_closures | 0 |  |
-| xp_transactions | 0 |  |
-| earned_badges | 0 |  |
-| daily_logs | 0 |  |
-| mentor_feedbacks | 0 |  |
-| log_photos | 0 |  |
-| log_documents | 0 |  |
-| polls | 0 |  |
+| xp_transactions | — | refused: permission denied for function is_mentor_of |
+| earned_badges | — | refused: permission denied for function is_mentor_of |
+| daily_logs | — | refused: permission denied for function is_mentor_of |
+| mentor_feedbacks | — | refused: permission denied for function is_mentor_of |
+| log_photos | — | refused: permission denied for function is_mentor_of |
+| log_documents | — | refused: permission denied for function is_mentor_of |
+| polls | — | refused: permission denied for function is_mentor_of |
 
 ## anon (no session) — RPCs with ids they do not own
 | rpc | outcome |
-| list_feed_posts | refused: NOT_AUTHENTICATED |
+| list_feed_posts | refused: permission denied for function list_feed_posts |
 | internship_group_attendance | refused: permission denied for function internship_group_attendance |
 | internship_week | refused: permission denied for function internship_week |
 | internship_people | refused: permission denied for function internship_people |
-| get_competency_progress | refused: NOT_AUTHENTICATED |
-| competency_self_vs_mentor | refused: NOT_AUTHENTICATED |
-| get_internship_report | refused: NOT_AUTHENTICATED |
-| internship_closure_status | refused: NOT_AUTHENTICATED |
-| list_conversations | refused: NOT_AUTHENTICATED |
-| list_messages | refused: NOT_AUTHENTICATED |
-| open_conversation | refused: NOT_AUTHENTICATED |
-| open_case | refused: NOT_AUTHENTICATED |
-| list_message_contacts | refused: NOT_AUTHENTICATED |
-| group_assignment_counts | succeeded, empty |
-| list_feed_pending | refused: NOT_AUTHENTICATED |
-| get_my_group_leaderboard | refused: NOT_AUTHENTICATED |
-| validate_group_code | refused: NOT_AUTHENTICATED |
-| link_student_by_code | refused: NOT_AUTHENTICATED |
-| review_assignment | refused: NOT_AUTHENTICATED |
-| set_submission_sharing | refused: NOT_AUTHENTICATED |
-| close_internship | refused: NOT_AUTHENTICATED |
-| publish_assignments | refused: NOT_AUTHENTICATED |
-| create_feed_post | refused: NOT_AUTHENTICATED |
-| vote_feed_poll | refused: NOT_AUTHENTICATED |
-| record_consent | refused: NOT_AUTHENTICATED |
-| can_message | refused: Could not find the function public.can_message(p_a, p_b, p_group_id) in the schema cache |
-| internship_closed | succeeded, empty |
+| get_competency_progress | refused: permission denied for function get_competency_progress |
+| competency_self_vs_mentor | refused: permission denied for function competency_self_vs_mentor |
+| get_internship_report | refused: permission denied for function get_internship_report |
+| internship_closure_status | refused: permission denied for function internship_closure_status |
+| list_conversations | refused: permission denied for function list_conversations |
+| list_messages | refused: permission denied for function list_messages |
+| open_conversation | refused: permission denied for function open_conversation |
+| open_case | refused: permission denied for function open_case |
+| list_message_contacts | refused: permission denied for function list_message_contacts |
+| group_assignment_counts | refused: permission denied for function group_assignment_counts |
+| list_feed_pending | refused: permission denied for function list_feed_pending |
+| get_my_group_leaderboard | refused: permission denied for function get_my_group_leaderboard |
+| validate_group_code | refused: permission denied for function validate_group_code |
+| link_student_by_code | refused: permission denied for function link_student_by_code |
+| review_assignment | refused: permission denied for function review_assignment |
+| set_submission_sharing | refused: permission denied for function set_submission_sharing |
+| close_internship | refused: permission denied for function close_internship |
+| publish_assignments | refused: permission denied for function publish_assignments |
+| create_feed_post | refused: permission denied for function create_feed_post |
+| vote_feed_poll | refused: permission denied for function vote_feed_poll |
+| record_consent | refused: permission denied for function record_consent |
+| can_message | refused: permission denied for function can_message |
+| internship_closed | refused: permission denied for function internship_closed |
 | internship_notify | refused: permission denied for function internship_notify |
-| build_internship_report | refused: ID_FORBIDDEN |
-| conversation_other | refused: Could not find the function public.conversation_other(p_conversation_id, p_user_id) in … |
+| build_internship_report | refused: permission denied for function build_internship_report |
+| conversation_other | refused: permission denied for function conversation_other |
+| is_mentor_of | refused: permission denied for function is_mentor_of |
+| owns_group | refused: permission denied for function owns_group |
+| shares_group_with | refused: permission denied for function shares_group_with |
 
 ## anon (no session) — storage
 | bucket | list | download known path | upload into another user's folder |
-| log-photos | 0 entries | refused: {} | refused: new row violates row-level security policy |
-| log-documents | 0 entries | n/a | refused: new row violates row-level security policy |
-| assignment-docs | refused: Bad Gateway | n/a | refused: new row violates row-level security policy |
-| feed-attachments | 0 entries | n/a | refused: new row violates row-level security policy |
-| avatars | 1 entries **LISTS** | n/a | refused: new row violates row-level security policy |
-| internship-day-files | 0 entries | n/a | refused: mime type text/plain is not supported |
+| log-photos | refused: permission denied for function is_mentor_of | refused: {} | refused: mime type text/plain is not supported |
+| log-documents | refused: permission denied for function is_mentor_of | n/a | refused: permission denied for function owns_group |
+| assignment-docs | refused: permission denied for function is_mentor_of | n/a | refused: permission denied for function owns_group |
+| feed-attachments | refused: permission denied for function is_mentor_of | n/a | refused: permission denied for function owns_group |
+| avatars | refused: permission denied for function is_mentor_of | n/a | refused: mime type text/plain is not supported |
+| internship-day-files | refused: permission denied for function is_mentor_of | n/a | refused: mime type text/plain is not supported |
 
-Outsider account: outsider.1789933767074@sim.engineertrack.test (student, no group, no mentor; delete afterwards)
+Outsider account: outsider.1789934754185@sim.engineertrack.test (student, no group, no mentor; delete afterwards)
 ## outsider (signed in, no group) — direct table reads
 | table | rows | note |
 | profiles | 1 |  |
@@ -150,19 +153,22 @@ Outsider account: outsider.1789933767074@sim.engineertrack.test (student, no gro
 | create_feed_post | refused: NOT_GROUP_OWNER |
 | vote_feed_poll | refused: NOT_IN_GROUP |
 | record_consent | succeeded, empty |
-| can_message | refused: Could not find the function public.can_message(p_a, p_b, p_group_id) in the schema cache |
+| can_message | refused: permission denied for function can_message |
 | internship_closed | refused: permission denied for function internship_closed |
 | internship_notify | refused: permission denied for function internship_notify |
 | build_internship_report | refused: permission denied for function build_internship_report |
-| conversation_other | refused: Could not find the function public.conversation_other(p_conversation_id, p_user_id) in … |
+| conversation_other | refused: permission denied for function conversation_other |
+| is_mentor_of | succeeded, empty |
+| owns_group | succeeded, empty |
+| shares_group_with | succeeded, empty |
 
 ## outsider (signed in, no group) — storage
 | bucket | list | download known path | upload into another user's folder |
-| log-photos | 0 entries | refused: {} | refused: new row violates row-level security policy |
+| log-photos | 0 entries | refused: {} | refused: mime type text/plain is not supported |
 | log-documents | 0 entries | n/a | refused: new row violates row-level security policy |
 | assignment-docs | 0 entries | n/a | refused: new row violates row-level security policy |
 | feed-attachments | 0 entries | n/a | refused: new row violates row-level security policy |
-| avatars | 1 entries **LISTS** | n/a | refused: new row violates row-level security policy |
+| avatars | 0 entries | n/a | refused: mime type text/plain is not supported |
 | internship-day-files | 0 entries | n/a | refused: mime type text/plain is not supported |
 
 ## Notes

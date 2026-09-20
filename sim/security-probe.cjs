@@ -78,11 +78,14 @@ async function probeRpcs(client, label, s) {
     ['vote_feed_poll', { p_post_id: s.posts.pollId, p_option_id: s.posts.pollOptionIds[0] }],
     ['record_consent', { p_version: '1.0' }],
     // internal helpers that must not be callable from PostgREST at all
-    ['can_message', { p_group_id: s.groupId, p_a: elif, p_b: elif }],
+    ['can_message', { p_group_id: s.groupId, p_user: elif, p_other: s.students['burak-sahin'].userId }],
     ['internship_closed', { p_student_id: elif, p_group_id: s.groupId }],
     ['internship_notify', { p_user: elif, p_type: 'general', p_title: 'x', p_body: 'x', p_data: {} }],
     ['build_internship_report', { p_student_id: elif, p_group_id: s.groupId }],
-    ['conversation_other', { p_conversation_id: s.students['deniz-yildirim'].conversations.classmate, p_user_id: elif }],
+    ['conversation_other', { p_conversation_id: s.students['deniz-yildirim'].conversations.classmate, p_user: elif }],
+    ['is_mentor_of', { student_uuid: elif }],
+    ['owns_group', { p_group_id: s.groupId }],
+    ['shares_group_with', { target: elif }],
   ];
   out(`## ${label} — RPCs with ids they do not own`, '');
   out('| rpc | outcome |', '|---|---|');

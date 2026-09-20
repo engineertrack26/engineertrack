@@ -35,18 +35,26 @@ Remediation: `docs/security-hardening-2026-09-20.sql` (idempotent, self-verifyin
 
 ## Findings
 
-**S1 — internal helpers callable by the anon role (medium).** Supabase's
-default privileges grant `EXECUTE` on every new function to `anon` and
-`authenticated`. The project's `REVOKE … FROM PUBLIC, authenticated` on
-internal helpers therefore left `anon` with an explicit grant: a caller with
-no session could execute `internship_closed(student, group)` (a boolean
-oracle: needs two uuids, answers whether that internship is closed),
-`build_internship_report` (guarded inside → `ID_FORBIDDEN`) and
-`group_assignment_counts` (returned empty). No data was disclosed in the probe,
-but the surface should not exist: nothing in the app calls PostgREST without a
-session. Fix: revoke `EXECUTE` from `anon` on every non-trigger function in
-`public` and change the default privileges so future functions are not granted
-to `anon` either. Verified by the hardening file's final block.
+**S1 — every RPC and relationship helper callable by the anon role (medium).**
+Function creation grants `EXECUTE` to `PUBLIC`, and Supabase's default
+privileges add an explicit grant to `anon`; the project's `REVOKE … FROM
+PUBLIC, authenticated` on internal helpers therefore still left `anon` able to
+call them. Inventory #4 before the fix: **66 functions**, among them the
+relationship oracles `can_message(group, a, b)`, `is_mentor_of(student)`,
+`owns_group(group)`, `shares_group_with(user)` — these answer from their
+parameters, not from the caller, so anyone with two uuids and no session could
+ask whether A may message B or whether X mentors Y — plus `internship_closed`,
+`build_internship_report` (guarded inside) and every business RPC (each of
+which refused with `NOT_AUTHENTICATED`). No data was disclosed in the probe,
+but the oracle surface is real. Fix: for every non-trigger function in
+`public`, keep `authenticated`'s access as an explicit grant where it existed,
+then revoke from `PUBLIC` and `anon`; change the default privileges so future
+functions are not granted to either. After the fix, inventory #4 is empty and
+the anon probe gets `permission denied` even from the RLS policies that call
+those helpers (the policies still run for signed-in users, whose grants were
+preserved — the outsider's reads and refusals are unchanged).
+Note: the first probe run reported `can_message`/`conversation_other` as "not
+found" — wrong parameter names in the probe, corrected.
 
 **S2 — buckets without size limits (low).** Only `internship-day-files` had a
 10 MB cap and a MIME list. `log-photos`, `log-documents`, `assignment-docs`,
@@ -98,3 +106,15 @@ carry RLS and no client write grants (inventory #1/#3).
 3. Re-run `node sim/security-probe.cjs`; `sim/SECURITY-PROBE.md` must show no
    `**` markers (the run creates one more outsider account — delete it).
 4. Walk the dashboard checklist.
+
+## Result (2026-09-20)
+
+Inventory: #1 no table without RLS; #4 66 anon-executable functions (before);
+#7 five buckets without limits; #8 `avatars_read` `SELECT` for `{public}`.
+Hardening applied: `PASS`. Second probe run: anon — every table `permission
+denied` or 0 rows, every RPC and helper `permission denied`, every bucket
+refused; outsider — own rows only, all foreign-id RPCs refused, 0 entries in
+every bucket, uploads refused by policy or MIME. The only `SUCCEEDED` line left
+is `validate_group_code` for a signed-in student with a valid code (by design).
+Two throwaway outsider accounts exist from the two runs
+(`outsider.1789933767074@…`, `outsider.1789934754185@…`) — delete with the probe account.
