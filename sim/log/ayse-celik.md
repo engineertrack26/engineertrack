@@ -83,3 +83,24 @@
 - _18:02:16_ BUG [wrong] find a task_approved notification for my approved submissions — got 3 notification(s), types: level_up, internship_attendance, badge_earned
 - `18:02:16` **list_conversations** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640"} → []
 - _18:02:16_ Faz 6 bitti. Sessiz karakter: sadece ortak kuyruk çalıştırıldı, mesaj/yorum/beğeni yok.
+- `13:22:31` **auth.signIn** {"email":"ayse.celik@sim.engineertrack.test"} → ca663073-8043-41c8-80ee-97e3e4f19c78
+- `13:22:31` **table.group_assignments.select** {} → [{"id":"45e71428-169c-44fc-b055-e5f5ea417dca","group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","triplet_id":"c174b744-4295-4ac4-a6a6-5f3bad195c91","title":"…
+- `13:22:31` **submit_assignment** {"p_assignment_id":"34abb4e7-39b5-4365-8cb6-56786efe5bc5","p_note":"Deneme (kapanış sonrası).","p_reflection":"Kapanış sonrası bir yansıma denemesi.","p_phot… → **ERROR** INTERNSHIP_CLOSED
+- _13:22:31_ expected refusal INTERNSHIP_CLOSED for: submit an unsubmitted task after closure
+- `13:22:32` **internship_week** {"p_student_id":"ca663073-8043-41c8-80ee-97e3e4f19c78","p_from":"2026-09-14"} → [{"id":"c85b207f-e85b-485e-8750-9d6c5f9bf89d","company":"Karadeniz ÇED ve Çevre Hizmetleri","task_id":null,"version":4,"day_date":"2026-09-14","learning":"Ka…
+- `13:22:32` **internship_save_log** {"p_day":"9411af3b-a7d9-4679-9015-2dced936d22b","p_version":4,"p_experience":"Kapanış sonrası deneme kaydı.","p_learning":"Kapanış sonrası deneme kaydı.","p_… → **ERROR** INTERNSHIP_CLOSED
+- _13:22:32_ expected refusal INTERNSHIP_CLOSED for: save my journal for 2026-09-19 after closure
+- `13:22:32` **open_conversation** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_other_id":"f6f7070c-b697-4bbe-8b3b-0a65d579a132"} → **ERROR** INTERNSHIP_CLOSED
+- _13:22:32_ expected refusal INTERNSHIP_CLOSED for: open a conversation with the advisor after closure
+- `13:22:32` **get_internship_report** {"p_student_id":"ca663073-8043-41c8-80ee-97e3e4f19c78","p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640"} → # Internship report ÔÇö Ayşe Çelik
+
+| | |
+|---|---|
+| Workplace | Karadeniz ÇED ve Çevre Hizmetleri |
+| Mentor | Emre Aksoy |
+| Advisor | Selin Aydın |
+| Gro…
+- _13:22:32_ my report is readable (2519 chars); first lines: ["# Internship report ÔÇö Ayşe Çelik","","| | |","|---|---|","| Workplace | Karadeniz ÇED ve Çevre Hizmetleri |"]
+- `13:22:32` **list_feed_posts** {"p_group_id":"861d35d8-5083-4146-a8eb-38b10b5a0640","p_before":null,"p_limit":50} → [{"id":"9b5fd58d-f567-4d00-9efa-df5dcef8f746","body":null,"kind":"task","poll":null,"task":{"note":"Görevi cuma tamamladım; emisyon ölçüm raporunun saha ekin…
+- `13:22:32` **table.feed_likes.insert** {} → null
+- _13:22:32_ Faz 7c bitti — kapanış sonrası yalnızca okuma ve beğeni açık.

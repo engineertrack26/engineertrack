@@ -284,6 +284,13 @@
         ],
         "taskCardsFound": 3,
         "approvalNotifs": 0
+      },
+      "postClosure": {
+        "probedUnsubmittedTask": true,
+        "probedDay": "2026-09-19",
+        "conversationOpened": false,
+        "reportReadable": true,
+        "streamReadable": true
       }
     },
     "zeynep-arslan": {
@@ -574,9 +581,14 @@
           "submissionId": "e55a4cfd-ed92-4a84-b055-d3a8120c77e3",
           "approved": true,
           "level": 2
+        },
+        {
+          "submissionId": "744a11f6-1ebf-4776-8aa0-5f4996e5f211",
+          "approved": true,
+          "level": 2,
+          "late": true
         }
-      ],
-      "leftPending": "744a11f6-1ebf-4776-8aa0-5f4996e5f211"
+      ]
     },
     "murat-koc": {
       "userId": "6fcbba4f-c65a-43ec-a938-60a70808223b",
@@ -744,6 +756,17 @@
           "status": "present"
         }
       ]
+    }
+  },
+  "closed": {
+    "studentSlug": "ayse-celik",
+    "closure": {
+      "closureId": "3db2cfa3-b753-42b8-a43b-1f0741319db1",
+      "reportVersion": 1
+    },
+    "closedAgain": {
+      "closureId": "3db2cfa3-b753-42b8-a43b-1f0741319db1",
+      "reportVersion": 2
     }
   }
 }
