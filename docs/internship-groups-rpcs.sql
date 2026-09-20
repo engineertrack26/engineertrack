@@ -127,7 +127,10 @@ DECLARE
   raw_code     TEXT;
   student_uuid UUID;
   code_active  BOOLEAN;
+  code_created TIMESTAMPTZ;
   caller_role  TEXT;
+  current_mentor UUID;
+  linked_at    TIMESTAMPTZ;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'NOT_AUTHENTICATED';
@@ -145,8 +148,8 @@ BEGIN
     RAISE EXCEPTION 'INVALID_CODE_FORMAT';
   END IF;
 
-  SELECT sc.student_id, sc.is_active
-  INTO student_uuid, code_active
+  SELECT sc.student_id, sc.is_active, sc.created_at
+  INTO student_uuid, code_active, code_created
   FROM student_codes sc
   WHERE sc.code = raw_code
   ORDER BY sc.is_active DESC, sc.created_at DESC
@@ -160,7 +163,20 @@ BEGIN
     RAISE EXCEPTION 'EXPIRED_CODE';
   END IF;
 
-  UPDATE student_profiles sp SET mentor_id = auth.uid() WHERE sp.id = student_uuid;
+  -- Simulation finding #1 (2026-09-20): a second mentor using the student's
+  -- code silently took the student over. A student has one mentor. The only
+  -- consent for a change is a code the student generated AFTER the current
+  -- link (generateCode deactivates the old one): an older code, used by
+  -- someone else, is refused. The same mentor may always re-link.
+  SELECT sp.mentor_id, sp.mentor_linked_at INTO current_mentor, linked_at
+  FROM student_profiles sp WHERE sp.id = student_uuid;
+  IF current_mentor IS NOT NULL AND current_mentor <> auth.uid()
+     AND EXISTS (SELECT 1 FROM profiles m WHERE m.id = current_mentor AND m.role = 'mentor')
+     AND code_created <= coalesce(linked_at, code_created) THEN
+    RAISE EXCEPTION 'MENTOR_ALREADY_LINKED';
+  END IF;
+
+  UPDATE student_profiles sp SET mentor_id = auth.uid(), mentor_linked_at = now() WHERE sp.id = student_uuid;
 
   RETURN QUERY
     SELECT p.id, trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, ''))
@@ -169,6 +185,23 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION link_student_by_code(TEXT, TEXT) TO authenticated;
+
+-- The link timestamp the guard above compares codes against. Existing links
+-- are stamped now, so they are protected from today and a fresh code still
+-- lets the student change mentor.
+ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS mentor_linked_at TIMESTAMPTZ;
+UPDATE student_profiles SET mentor_linked_at = now() WHERE mentor_id IS NOT NULL AND mentor_linked_at IS NULL;
+
+-- Simulation finding #8: the internship form accepted an end date before the
+-- start date. The client validates too; this is the rule that cannot be bypassed.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'student_profiles_internship_dates_check') THEN
+    ALTER TABLE student_profiles ADD CONSTRAINT student_profiles_internship_dates_check
+      CHECK (internship_start_date IS NULL OR internship_end_date IS NULL OR internship_end_date >= internship_start_date) NOT VALID;
+    ALTER TABLE student_profiles VALIDATE CONSTRAINT student_profiles_internship_dates_check;
+  END IF;
+END $$;
 
 -- ============================================
 -- 4. The student's own code — no composite parts any more

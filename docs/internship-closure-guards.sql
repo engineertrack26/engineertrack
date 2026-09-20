@@ -58,6 +58,22 @@ BEGIN
     RAISE EXCEPTION 'REFLECTION_REQUIRED';
   END IF;
 
+  -- Simulation finding #10 (2026-09-20): "Yaptım." was accepted five times. A
+  -- reflection is the student's voice on the work; twenty characters is the
+  -- floor the owner chose, and the form shows the same counter.
+  IF char_length(btrim(p_reflection)) < 20 THEN
+    RAISE EXCEPTION 'REFLECTION_TOO_SHORT';
+  END IF;
+
+  -- Simulation finding #9: a submission with no photo and no document went
+  -- through and was approved. The form says "evidence: at least one photo";
+  -- the rule the owner chose is at least one photo OR one document.
+  IF jsonb_typeof(coalesce(p_photos, '[]'::jsonb)) IS DISTINCT FROM 'array'
+     OR jsonb_typeof(coalesce(p_documents, '[]'::jsonb)) IS DISTINCT FROM 'array'
+     OR jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) + jsonb_array_length(coalesce(p_documents, '[]'::jsonb)) = 0 THEN
+    RAISE EXCEPTION 'EVIDENCE_REQUIRED';
+  END IF;
+
   -- The student's own rating on the supervision scale (spec decision 1). Required.
   IF p_self_level IS NULL OR p_self_level NOT BETWEEN 0 AND 3 THEN
     RAISE EXCEPTION 'SELF_LEVEL_REQUIRED';
@@ -132,6 +148,9 @@ BEGIN
         reflection = EXCLUDED.reflection,
         self_level = EXCLUDED.self_level,
         mentor_level = NULL,
+        -- Simulation finding #16: the revision note stayed on the resubmitted
+        -- row and the "waiting" card kept telling the student to fix it.
+        mentor_note = NULL,
         submitted_at = now(),
         reviewed_at = NULL,
         reviewed_by = NULL
@@ -372,13 +391,17 @@ DECLARE
   the_kpi     UUID;
   the_group   UUID;
   the_comp    UUID;
+  the_status  TEXT;
+  the_title   TEXT;
+  the_assignment UUID;
+  mentor_name TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'NOT_AUTHENTICATED';
   END IF;
 
-  SELECT s.student_id, t.kpi_id, a.group_id, k.competency_id
-  INTO the_student, the_kpi, the_group, the_comp
+  SELECT s.student_id, t.kpi_id, a.group_id, k.competency_id, s.status, a.title, a.id
+  INTO the_student, the_kpi, the_group, the_comp, the_status, the_title, the_assignment
   FROM assignment_submissions s
   JOIN group_assignments a ON a.id = s.assignment_id
   JOIN kpi_triplets t      ON t.id = a.triplet_id
@@ -397,6 +420,14 @@ BEGIN
   -- The workplace mentor evaluates. The advisor assigns and watches.
   IF NOT is_mentor_of(the_student) THEN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
+  END IF;
+
+  -- Simulation finding #3: a second approval silently overwrote the mentor's
+  -- level and note after the student and advisor could already see them.
+  -- Approval is final (CLAUDE.md); the one way back is the withdrawal below
+  -- (p_approved = false), which the comments explain.
+  IF p_approved AND the_status = 'approved' THEN
+    RAISE EXCEPTION 'ALREADY_APPROVED';
   END IF;
 
   -- Both guards below are gated on p_approved, and the gate is the fix for a
@@ -487,6 +518,22 @@ BEGIN
     DELETE FROM kpi_observations o
     WHERE o.assignment_submission_id = p_submission_id;
   END IF;
+
+  -- Simulation finding #11: the decision's notification used to be inserted
+  -- by the mentor's app after this RPC returned, so any other client or a
+  -- crash in between left the student unnotified. Same title/body shape the
+  -- client used (notificationContent() localises it), written here, in the
+  -- same transaction as the decision.
+  SELECT trim(coalesce(pp.first_name, '') || ' ' || coalesce(pp.last_name, ''))
+  INTO mentor_name FROM profiles_public pp WHERE pp.id = auth.uid();
+  INSERT INTO notifications (user_id, title, body, type, data)
+  VALUES (the_student,
+          CASE WHEN p_approved THEN 'Task Approved!' ELSE 'Revision Requested' END,
+          left(coalesce(nullif(mentor_name, ''), 'Your mentor')
+               || CASE WHEN p_approved THEN ' approved your task "' ELSE ' requested revisions on your task "' END
+               || coalesce(the_title, '') || '".', 200),
+          CASE WHEN p_approved THEN 'task_approved' ELSE 'task_revision_requested' END,
+          jsonb_build_object('assignmentId', the_assignment));
 END;
 $$;
 GRANT EXECUTE ON FUNCTION review_assignment(UUID, BOOLEAN, TEXT, SMALLINT) TO authenticated;
@@ -660,9 +707,12 @@ BEGIN
       PERFORM internship_notify(v_student,'internship_attendance','Attendance decided',
         v_count||' day(s) marked '||p_status||' ('||to_char(v_first,'YYYY-MM-DD')||' to '||to_char(v_last,'YYYY-MM-DD')||')',
         jsonb_build_object('studentId',v_student,'status',p_status,'count',v_count));
-      v_count := 0; v_closed := 0; v_first := NULL;
+      v_count := 0; v_closed := 0; v_first := NULL; v_last := NULL;
     END IF;
-    v_student := d.student_id; v_count := v_count+1; v_last := d.day_date; v_first := coalesce(v_first,d.day_date);
+    -- Simulation finding #5: the loop runs in uuid order, so first/last were
+    -- whichever days happened to sort first and last -- "17 to 14 Sep".
+    v_student := d.student_id; v_count := v_count+1;
+    v_first := LEAST(coalesce(v_first,d.day_date),d.day_date); v_last := GREATEST(coalesce(v_last,d.day_date),d.day_date);
     IF d.correction_requested THEN v_closed := v_closed+1; SELECT group_id INTO v_group FROM internship_placements WHERE id=d.placement_id; END IF;
   END LOOP;
   IF v_student IS NOT NULL THEN
@@ -803,7 +853,9 @@ BEGIN
   END IF;
   IF v_c.kind IN ('member', 'mentor') THEN
     v_other := conversation_other(p_conversation_id, auth.uid());
-    IF EXISTS (SELECT 1 FROM conversation_blocks WHERE conversation_id = p_conversation_id AND blocker_id = v_other) THEN
+    -- Simulation finding #2: only the other party's block was honoured, so the
+    -- blocker could keep sending. A block is a closed door in both directions.
+    IF EXISTS (SELECT 1 FROM conversation_blocks WHERE conversation_id = p_conversation_id AND blocker_id IN (v_other, auth.uid())) THEN
       RAISE EXCEPTION 'BLOCKED';
     END IF;
   END IF;

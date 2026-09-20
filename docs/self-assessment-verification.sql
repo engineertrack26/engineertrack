@@ -1,3 +1,4 @@
+-- NOTE 2026-09-20: submit_assignment now requires evidence and a 20-char reflection (simulation fixes); fixtures updated.
 -- ============================================================
 -- Self-assessment verification. Run in the Supabase SQL editor, one part
 -- per submission. Anonymous dollar-quoting only.
@@ -150,7 +151,7 @@ BEGIN
 
   -- B1
   BEGIN
-    PERFORM submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb);
+    PERFORM submit_assignment(asg, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb);
     log := log || 'B1 submit without a self level' || E'\t' || 'FAIL: accepted' || E'\n';
   EXCEPTION WHEN OTHERS THEN
     log := log || 'B1 submit without a self level' || E'\t'
@@ -159,7 +160,7 @@ BEGIN
 
   -- B2
   BEGIN
-    sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 1::smallint);
+    sub := submit_assignment(asg, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 1::smallint);
     SELECT s.self_level, s.mentor_level INTO v_self, v_mentor FROM assignment_submissions s WHERE s.id = sub;
     log := log || 'B2 submit with self level 1' || E'\t'
         || CASE WHEN v_self = 1 AND v_mentor IS NULL THEN 'self_level=1, mentor_level NULL'
@@ -215,7 +216,7 @@ BEGIN
   -- competency row's gap is exactly 0.0.
   BEGIN
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-    PERFORM submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+    PERFORM submit_assignment(asg, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
     PERFORM review_assignment(sub, true, 'ok now', 2::smallint);
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
@@ -244,7 +245,7 @@ BEGIN
       log := log || 'B7 a second task, self 3 / mentor 1' || E'\t' || 'SKIP: the KPI has fewer than two triplets' || E'\n';
     ELSE
       PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-      sub2 := submit_assignment(asg2, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 3::smallint);
+      sub2 := submit_assignment(asg2, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 3::smallint);
       PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
       PERFORM review_assignment(sub2, true, 'ok', 1::smallint);
       PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
@@ -407,7 +408,7 @@ BEGIN
   RETURNING id INTO asg;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+  sub := submit_assignment(asg, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
   PERFORM review_assignment(sub, true, 'ok', 2::smallint);
 

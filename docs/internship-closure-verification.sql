@@ -1,3 +1,4 @@
+-- NOTE 2026-09-20: submit_assignment now requires evidence and a 20-char reflection (simulation fixes); fixtures updated.
 -- ============================================================
 -- Internship closure verification. Run in the Supabase SQL editor, one part
 -- per submission. Anonymous dollar-quoting only.
@@ -222,7 +223,7 @@ BEGIN
   -- One task left 'submitted' on purpose -- B1 needs a pending review to refuse.
   -- The reflection is the fixture's private marker so B2 can assert its absence.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  sub_a := submit_assignment(asg_a, 'note', 'PRIVATE_REFLECTION_MARKER', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+  sub_a := submit_assignment(asg_a, 'note', 'PRIVATE_REFLECTION_MARKER', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
 
   -- The member conversation must exist BEFORE closure -- send_message (B5) is
   -- what the guard blocks, not open_conversation, and open_conversation
@@ -281,7 +282,7 @@ BEGIN
   BEGIN
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
     BEGIN
-      PERFORM submit_assignment(asg_b, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+      PERFORM submit_assignment(asg_b, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
       log := log || 'B3 submit another task' || E'\t' || 'FAIL: accepted' || E'\n';
     EXCEPTION WHEN OTHERS THEN
       log := log || 'B3 submit another task' || E'\t'
@@ -394,7 +395,7 @@ BEGIN
     SELECT count(*) INTO m FROM notifications WHERE type = 'internship_reopened'
       AND data->>'studentId' = stu::text AND data->>'groupId' = grp::text;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-    sub_b := submit_assignment(asg_b, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+    sub_b := submit_assignment(asg_b, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
     -- Clear the pending review this submission just created, so B11 can close again.
     PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
     PERFORM review_assignment(sub_b, true, 'approved', 2::smallint);
@@ -500,7 +501,7 @@ BEGIN
   RETURNING id INTO asg;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', stu, 'role', 'authenticated')::text, true);
-  sub := submit_assignment(asg, 'note', 'reflection', '[]'::jsonb, '[]'::jsonb, 2::smallint);
+  sub := submit_assignment(asg, 'note', 'a reflection long enough for the floor', '[{"uri":"probe.png","caption":null}]'::jsonb, '[]'::jsonb, 2::smallint);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', mentor, 'role', 'authenticated')::text, true);
   PERFORM review_assignment(sub, true, 'ok', 2::smallint);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);

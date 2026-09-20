@@ -399,11 +399,17 @@ BEGIN
           count(*) FILTER (WHERE d.correction_requested) AS corrections,
           count(*) FILTER (WHERE d.log_status='submitted') AS submitted_logs,
           count(d.id) AS recorded,
-          -- one placement may carry many days: sum each placement's range once
+          -- Simulation finding #12 (2026-09-20): some workplaces work Saturdays.
+          -- A recorded weekend day is a working day for that student, so it
+          -- joins the expected count; "unrecorded" then stays the weekdays
+          -- with no record. One placement may carry many days: sum each
+          -- placement's range once.
           (SELECT coalesce(sum(internship_weekdays(x.start_date,x.end_date)),0)::int FROM internship_placements x
-             WHERE x.student_id=pl.student_id AND x.group_id=p_group_id) AS expected_days,
+             WHERE x.student_id=pl.student_id AND x.group_id=p_group_id)
+          + count(d.id) FILTER (WHERE extract(isodow FROM d.day_date) >= 6)::int AS expected_days,
           (SELECT coalesce(sum(internship_weekdays(x.start_date,LEAST(x.end_date,(now() AT TIME ZONE x.timezone)::date))),0)::int
-             FROM internship_placements x WHERE x.student_id=pl.student_id AND x.group_id=p_group_id) AS expected_so_far
+             FROM internship_placements x WHERE x.student_id=pl.student_id AND x.group_id=p_group_id)
+          + count(d.id) FILTER (WHERE extract(isodow FROM d.day_date) >= 6)::int AS expected_so_far
         FROM internship_placements pl LEFT JOIN internship_days d ON d.placement_id=pl.id
         JOIN profiles p ON p.id=pl.student_id LEFT JOIN profiles mp ON mp.id=pl.mentor_id
         WHERE pl.group_id=p_group_id GROUP BY pl.student_id,p.first_name,p.last_name) s),

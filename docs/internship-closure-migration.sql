@@ -36,7 +36,7 @@ REVOKE EXECUTE ON FUNCTION internship_closed(UUID, UUID) FROM PUBLIC, authentica
 -- The four supervision-scale words, shared with the client copy.
 CREATE OR REPLACE FUNCTION closure_level_word(p_level SMALLINT)
 RETURNS TEXT LANGUAGE sql IMMUTABLE AS $$
-  SELECT CASE p_level WHEN 0 THEN 'observed' WHEN 1 THEN 'heavy support' WHEN 2 THEN 'partial support' WHEN 3 THEN 'independent' ELSE '—' END;
+  SELECT CASE p_level WHEN 0 THEN 'observed' WHEN 1 THEN 'heavy support' WHEN 2 THEN 'partial support' WHEN 3 THEN 'independent' ELSE chr(8212) END;
 $$;
 
 -- The "reached level" rule, reproduced exactly from get_competency_progress
@@ -78,6 +78,10 @@ REVOKE EXECUTE ON FUNCTION closure_reached_level(UUID, UUID) FROM PUBLIC, authen
 
 -- The report. Counts and levels only -- never reflection, notes, journal or
 -- message text. Read-only; close_internship stores what it returns.
+-- NOTE 2026-09-20 (simulation finding #4): the deployed copy of this function
+-- carried mojibake ("ÔÇö") because the Unicode dashes were pasted into the SQL
+-- editor through a CP437 console. Every non-ASCII literal below is now built
+-- with chr() so the file survives any paste. Re-apply this file.
 CREATE OR REPLACE FUNCTION build_internship_report(p_student_id UUID, p_group_id UUID)
 RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public AS $$
 DECLARE
@@ -96,14 +100,14 @@ BEGIN
   -- Free text (names, company, group, term) can legally contain "|" and would
   -- otherwise break the Markdown table it sits in -- replace, same as r.title
   -- below, never strip, so a stray pipe reads as a slash instead of vanishing.
-  v_md := '# Internship report — ' || replace(coalesce(v_student, ''), '|', '/') || E'\n\n'
+  v_md := '# Internship report ' || chr(8212) || ' ' || replace(coalesce(v_student, ''), '|', '/') || E'\n\n'
        || '| | |' || E'\n' || '|---|---|' || E'\n'
-       || '| Workplace | ' || replace(coalesce(v_company, '—'), '|', '/') || ' |' || E'\n'
-       || '| Mentor | ' || replace(coalesce(nullif(v_mentor, ''), '—'), '|', '/') || ' |' || E'\n'
-       || '| Advisor | ' || replace(coalesce(v_advisor, '—'), '|', '/') || ' |' || E'\n'
-       || '| Group | ' || replace(coalesce(v_group, '—'), '|', '/') || coalesce(' (' || replace(nullif(v_term, ''), '|', '/') || ')', '') || ' |' || E'\n'
-       || '| Internship dates | ' || coalesce(v_start::text, '—') || ' – ' || coalesce(v_end::text, '—') || ' |' || E'\n'
-       || '| Closed | ' || to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC by ' || replace(coalesce(v_advisor, '—'), '|', '/') || ' |' || E'\n'
+       || '| Workplace | ' || replace(coalesce(v_company, chr(8212)), '|', '/') || ' |' || E'\n'
+       || '| Mentor | ' || replace(coalesce(nullif(v_mentor, ''), chr(8212)), '|', '/') || ' |' || E'\n'
+       || '| Advisor | ' || replace(coalesce(v_advisor, chr(8212)), '|', '/') || ' |' || E'\n'
+       || '| Group | ' || replace(coalesce(v_group, chr(8212)), '|', '/') || coalesce(' (' || replace(nullif(v_term, ''), '|', '/') || ')', '') || ' |' || E'\n'
+       || '| Internship dates | ' || coalesce(v_start::text, chr(8212)) || ' ' || chr(8211) || ' ' || coalesce(v_end::text, chr(8212)) || ' |' || E'\n'
+       || '| Closed | ' || to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC by ' || replace(coalesce(v_advisor, chr(8212)), '|', '/') || ' |' || E'\n'
        || '| Report version | ' || v_version || ' |' || E'\n\n';
 
   -- Competencies: the group's targets, the student's level (closure_reached_level,
@@ -124,8 +128,8 @@ BEGIN
     WHERE gt.group_id = p_group_id ORDER BY c.display_order
   LOOP
     v_md := v_md || '| ' || r.name || ' | ' || r.target_level || ' | ' || r.reached || ' | ' || r.observations || ' | '
-         || coalesce(r.avg_self::text, '—') || ' | ' || coalesce(r.avg_mentor::text, '—') || ' | '
-         || coalesce(round(r.avg_mentor - r.avg_self, 1)::text, '—') || ' |' || E'\n';
+         || coalesce(r.avg_self::text, chr(8212)) || ' | ' || coalesce(r.avg_mentor::text, chr(8212)) || ' | '
+         || coalesce(round(r.avg_mentor - r.avg_self, 1)::text, chr(8212)) || ' |' || E'\n';
   END LOOP;
 
   -- Tasks: every published assignment of the group.
@@ -139,7 +143,7 @@ BEGIN
       -- but the column itself is nullable (the schema allows an approved row
       -- with a NULL reviewed_at, and fixtures create such rows) -- coalesce
       -- so that case can never NULL the whole report and fail the INSERT.
-      CASE WHEN s.status = 'approved' THEN coalesce(to_char(s.reviewed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), '—') ELSE '—' END AS approved_on
+      CASE WHEN s.status = 'approved' THEN coalesce(to_char(s.reviewed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD'), chr(8212)) ELSE chr(8212) END AS approved_on
     FROM group_assignments a
     JOIN kpi_triplets t ON t.id = a.triplet_id JOIN competency_kpis k ON k.id = t.kpi_id JOIN competencies c ON c.id = k.competency_id
     LEFT JOIN assignment_submissions s ON s.assignment_id = a.id AND s.student_id = p_student_id
@@ -176,8 +180,8 @@ BEGIN
           INTO v_j_total, v_j0, v_j1, v_j2, v_j3
           FROM internship_days d JOIN internship_placements p ON p.id = d.placement_id WHERE d.student_id = p_student_id AND p.group_id = p_group_id;
         v_md := v_md || E'\n' || '## Journal' || E'\n\n'
-             || 'Submitted journals: ' || coalesce(v_j_total, 0) || ' · Support levels: observed ' || coalesce(v_j0, 0) || ' · heavy ' || coalesce(v_j1, 0)
-             || ' · partial ' || coalesce(v_j2, 0) || ' · independent ' || coalesce(v_j3, 0) || E'\n';
+             || 'Submitted journals: ' || coalesce(v_j_total, 0) || ' ' || chr(183) || ' Support levels: observed ' || coalesce(v_j0, 0) || ' ' || chr(183) || ' heavy ' || coalesce(v_j1, 0)
+             || ' ' || chr(183) || ' partial ' || coalesce(v_j2, 0) || ' ' || chr(183) || ' independent ' || coalesce(v_j3, 0) || E'\n';
       END IF;
     END IF;
   -- internship_group_attendance requires the caller to be the group's
