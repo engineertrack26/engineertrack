@@ -154,16 +154,19 @@ BEGIN
   SELECT n2.body INTO v_body FROM notifications n2 WHERE n2.user_id = zeynep AND type = 'task_approved' AND (data->>'assignmentId')::uuid = asg ORDER BY created_at DESC LIMIT 1;
   log := log || 'B7c' || E'\t' || CASE WHEN v_body LIKE 'Murat Koç approved your task "%".' THEN 'PASS' ELSE 'FAIL: ' || coalesce(v_body, 'no task_approved notification') END || E'\n';
 
-  -- B8 (#5): Hakan re-decides two of Elif's days (with a note); the notification range is min..max
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', hakan, 'role', 'authenticated')::text, true);
-  PERFORM internship_review(
-    (SELECT jsonb_agg(jsonb_build_object('id', d.id, 'version', d.version) ORDER BY d.day_date DESC)
-       FROM (SELECT id, version, day_date FROM internship_days WHERE student_id = elif ORDER BY day_date LIMIT 3) d),
-    'present', 'aralık kontrolü');
-  SELECT n.body INTO v_body FROM notifications n WHERE n.user_id = elif AND n.type = 'internship_attendance' ORDER BY n.created_at DESC LIMIT 1;
-  x := substring(v_body from '\((\d{4}-\d{2}-\d{2}) to');
-  rep := substring(v_body from 'to (\d{4}-\d{2}-\d{2})\)');
-  log := log || 'B8' || E'\t' || CASE WHEN x IS NOT NULL AND rep IS NOT NULL AND x::date <= rep::date THEN 'PASS' ELSE 'FAIL: ' || coalesce(v_body, 'no notification') END || E'\n';
+  -- B8 (#5): Murat re-decides three of Zeynep's days (with a note), passed newest-first;
+  -- the notification range must still read min..max. (Zeynep/Murat: B3 handed Elif to Ayça above.)
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', murat, 'role', 'authenticated')::text, true);
+  BEGIN
+    PERFORM internship_review(
+      (SELECT jsonb_agg(jsonb_build_object('id', d.id, 'version', d.version) ORDER BY d.day_date DESC)
+         FROM (SELECT id, version, day_date FROM internship_days WHERE student_id = zeynep ORDER BY day_date LIMIT 3) d),
+      'present', 'aralık kontrolü');
+    SELECT n.body INTO v_body FROM notifications n WHERE n.user_id = zeynep AND n.type = 'internship_attendance' ORDER BY n.created_at DESC LIMIT 1;
+    x := substring(v_body from '\((\d{4}-\d{2}-\d{2}) to');
+    rep := substring(v_body from 'to (\d{4}-\d{2}-\d{2})\)');
+    log := log || 'B8' || E'\t' || CASE WHEN x IS NOT NULL AND rep IS NOT NULL AND x::date <= rep::date THEN 'PASS' ELSE 'FAIL: ' || coalesce(v_body, 'no notification') END || E'\n';
+  EXCEPTION WHEN OTHERS THEN log := log || 'B8' || E'\t' || 'FAIL: ' || SQLERRM || E'\n'; END;
 
   -- B9 (#4): Ayşe's report reads with real dashes and no mojibake
   PERFORM set_config('request.jwt.claims', json_build_object('sub', adv, 'role', 'authenticated')::text, true);
