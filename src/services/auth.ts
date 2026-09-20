@@ -69,6 +69,15 @@ export const authService = {
   },
 
   async signOut() {
+    // Clear the push token WHILE the session still exists. It used to be
+    // cleared after SIGNED_OUT, as anon, where the profiles policy silently
+    // matched no row (and, since the 2026-09-20 hardening, is refused).
+    const { data } = await supabase.auth.getSession();
+    const uid = data.session?.user.id;
+    if (uid) {
+      const { error: tokenError } = await supabase.from('profiles').update({ expo_push_token: null }).eq('id', uid);
+      if (tokenError) console.warn('Push token not cleared before sign-out:', tokenError.message);
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },

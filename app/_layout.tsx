@@ -34,7 +34,6 @@ import { getNotifications } from '@/services/expoNotifications';
 import {
   registerForPushNotifications,
   saveTokenToProfile,
-  removeToken,
 } from '@/services/pushNotifications';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
 import { deferAuthWork, withAuthTimeout } from '@/utils/authStartup';
@@ -239,10 +238,10 @@ export default function RootLayout() {
       if (event === 'INITIAL_SESSION') return; // handled by initAuth
       if (event === 'SIGNED_OUT') {
         const request = ++revision;
-        const uid = useAuthStore.getState().user?.id;
         clearStores();
         ready(request);
-        if (uid) schedule(() => { void removeToken(uid).catch(() => {}); });
+        // The push token is cleared inside authService.signOut, while the
+        // session still exists; after SIGNED_OUT every request runs as anon.
         return;
       }
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {

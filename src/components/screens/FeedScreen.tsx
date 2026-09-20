@@ -99,6 +99,9 @@ export function FeedScreen({ role, initialGroupId }: FeedScreenProps) {
       setHasMore(page.length === FEED_PAGE_SIZE);
     } catch (err) {
       if (req !== request.current) return;
+      // A load that lands after sign-out runs as anon and is refused; that is
+      // not a failure the (now absent) user needs to see.
+      if (!useAuthStore.getState().user) return;
       console.error('Feed load error:', err);
       setLoadFailed(true);
     } finally {

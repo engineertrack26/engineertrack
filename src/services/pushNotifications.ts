@@ -80,20 +80,6 @@ export async function saveTokenToProfile(
 }
 
 /**
- * Clear the push token from the user's profile (on logout).
- */
-export async function removeToken(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ expo_push_token: null })
-    .eq('id', userId);
-
-  if (error) {
-    console.error('Failed to remove push token:', error.message);
-  }
-}
-
-/**
  * Send a push notification to a single user via Expo Push API.
  */
 export async function sendPushNotification(
@@ -172,7 +158,6 @@ export async function sendPushToMultiple(
 export const pushNotificationService = {
   registerForPushNotifications,
   saveTokenToProfile,
-  removeToken,
   sendPushNotification,
   sendPushToMultiple,
 };
