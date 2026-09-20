@@ -1,7 +1,7 @@
 -- docs/simulation-fixes-verification.sql
 -- Verifies the 2026-09-20 fixes for the usage-simulation findings (sim/bugs.md
--- #1 #2 #3 #4 #5 #8 #9 #10 #11 #12 #16). Apply order, one file per message:
---   1. docs/internship-groups-rpcs.sql        (#1 MENTOR_ALREADY_LINKED, mentor_linked_at, #8 dates CHECK)
+-- #1 #2 #3 #4 #5 #7 #8 #9 #10 #11 #12 #16). Apply order, one file per message:
+--   1. docs/internship-groups-rpcs.sql        (#1 MENTOR_ALREADY_LINKED, mentor_linked_at, #7 trim trigger, #8 dates CHECK)
 --   2. docs/internship-closure-guards.sql     (#2 two-way block, #3 ALREADY_APPROVED on re-approval,
 --                                              #5 min/max range, #9 EVIDENCE_REQUIRED, #10 REFLECTION_TOO_SHORT,
 --                                              #11 in-transaction decision notification, #16 mentor_note cleared)
@@ -44,7 +44,10 @@ BEGIN
   def := pg_get_functiondef('internship_group_attendance(uuid)'::regprocedure);
   IF def NOT LIKE '%isodow FROM d.day_date) >= 6%' THEN RAISE EXCEPTION 'FAIL A9: internship_group_attendance ignores recorded weekend days'; END IF;
 
-  RAISE NOTICE 'PASS: Part A — 9 structural assertions held';
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_student_profiles_trim') THEN RAISE EXCEPTION 'FAIL A10: trg_student_profiles_trim missing'; END IF;
+  IF EXISTS (SELECT 1 FROM student_profiles WHERE student_id IS DISTINCT FROM btrim(student_id)) THEN RAISE EXCEPTION 'FAIL A10: untrimmed student_id rows remain'; END IF;
+
+  RAISE NOTICE 'PASS: Part A — 10 structural assertions held';
 END $$;
 
 -- ============================================================================

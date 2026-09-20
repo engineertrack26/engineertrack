@@ -192,6 +192,27 @@ GRANT EXECUTE ON FUNCTION link_student_by_code(TEXT, TEXT) TO authenticated;
 ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS mentor_linked_at TIMESTAMPTZ;
 UPDATE student_profiles SET mentor_linked_at = now() WHERE mentor_id IS NOT NULL AND mentor_linked_at IS NULL;
 
+-- Simulation finding #7: a student number with a trailing space was stored
+-- verbatim. The form trims; a direct write did not. Trim on the way in.
+CREATE OR REPLACE FUNCTION student_profiles_trim_text()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.university := nullif(btrim(NEW.university), '');
+  NEW.faculty := nullif(btrim(NEW.faculty), '');
+  NEW.department := nullif(btrim(NEW.department), '');
+  NEW.department_branch := nullif(btrim(NEW.department_branch), '');
+  NEW.student_id := nullif(btrim(NEW.student_id), '');
+  NEW.company_name := nullif(btrim(NEW.company_name), '');
+  NEW.company_address := nullif(btrim(NEW.company_address), '');
+  NEW.company_sector := nullif(btrim(NEW.company_sector), '');
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_student_profiles_trim ON student_profiles;
+CREATE TRIGGER trg_student_profiles_trim BEFORE INSERT OR UPDATE ON student_profiles
+  FOR EACH ROW EXECUTE FUNCTION student_profiles_trim_text();
+UPDATE student_profiles SET student_id = btrim(student_id) WHERE student_id IS DISTINCT FROM btrim(student_id);
+
 -- Simulation finding #8: the internship form accepted an end date before the
 -- start date. The client validates too; this is the rule that cannot be bypassed.
 DO $$
