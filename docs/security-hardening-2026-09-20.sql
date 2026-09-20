@@ -12,17 +12,28 @@ DO $$
 DECLARE f record;
 BEGIN
   FOR f IN
-    SELECT p.oid::regprocedure AS sig
+    SELECT p.oid::regprocedure AS sig,
+           has_function_privilege('authenticated', p.oid, 'EXECUTE') AS auth_ok,
+           -- an explicit grant to authenticated (not inherited from PUBLIC)
+           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                   WHERE a.grantee = 'authenticated'::regrole AND a.privilege_type = 'EXECUTE') AS auth_explicit
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.prorettype <> 'trigger'::regtype
       AND has_function_privilege('anon', p.oid, 'EXECUTE')
   LOOP
-    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM anon', f.sig);
+    -- Functions creation grants EXECUTE to PUBLIC, which anon inherits. Keep
+    -- authenticated where it could already call the function (explicitly), then
+    -- close PUBLIC and anon. Internal helpers that were already REVOKEd from
+    -- authenticated stay closed to it.
+    IF f.auth_ok AND NOT f.auth_explicit THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', f.sig);
+    END IF;
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon', f.sig);
   END LOOP;
 END $$;
--- And stop the default from re-granting it to functions created later.
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
+-- And stop the defaults from re-granting it to functions created later.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon;
 
 -- Finding S2: five buckets had no size limit (only internship-day-files did).
 -- Photo buckets also get a MIME allowlist; document buckets keep any type
