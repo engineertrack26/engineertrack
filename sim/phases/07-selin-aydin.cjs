@@ -12,10 +12,6 @@
 //     So the second call is NOT run through expectRefusal — it is called
 //     directly and compared to the first id; same id → noted, no bug; a
 //     different id (a second case row) → filed as [wrong].
-//  2. `deleteComment` targets Can's comment on the PUBLISHED announcement
-//     (s.posts.announcementId), per the brief — the draft is published
-//     first in this same step so the announcement has had time to collect
-//     comments from earlier phases.
 const { Actor } = require('../actor.cjs');
 const { ADVISOR, STUDENTS } = require('../people.cjs');
 const state = require('../lib/state.cjs');
@@ -59,7 +55,7 @@ const step = process.argv[2] || 'a'; // 'a' = up to the refused closure, 'b' = a
     const comments = await me.attempt('read comments on the announcement', () => me.listComments(s.posts.announcementId));
     const canComment = (comments || []).find((c) => c.author_id === s.students['can-dogan'].userId);
     if (canComment) {
-      // Adaptation #2: advisor moderation deletes comments directly
+      // Advisor moderation deletes comments directly
       // (docs/group-feed-migration.sql feed_comments_delete's advisor
       // branch). If refused, that is a [wrong] finding — moderation broken.
       await me.attempt('moderate: delete one comment', () => me.deleteComment(canComment.id));
