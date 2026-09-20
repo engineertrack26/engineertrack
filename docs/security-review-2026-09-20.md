@@ -83,9 +83,13 @@ carry RLS and no client write grants (inventory #1/#3).
 - Authentication › Sign In / Providers › Email: **Confirm email** is off (it let
   the simulation register accounts). Decide for the pilot: on means real students
   must verify; off means anyone can register with any address.
-- Authentication › Attack Protection: enable **CAPTCHA** (hCaptcha/Turnstile —
-  needs `expo` captcha wiring on the register/login screens) and **Leaked
-  password protection**; review rate limits (sign-ups, token refreshes, e-mails).
+- Authentication › Attack Protection: enable **Leaked password protection**
+  (client ready: `src/utils/authErrors.ts` maps `weak_password` and the other
+  GoTrue codes to locale copy on register/login/forgot-password — the raw
+  English `error.message` is no longer shown) and **CAPTCHA** (hCaptcha/Turnstile —
+  needs client wiring first: `captchaToken` on sign-up/sign-in/reset, a WebView
+  challenge; note the probe and sim sign-ups stop working once it is on);
+  review rate limits (sign-ups, token refreshes, e-mails).
 - Authentication › Sessions: JWT expiry (default 1 h) and refresh-token
   rotation on; consider a session time-box for the pilot.
 - Authentication › URL configuration: only the app's deep-link scheme in the

@@ -148,7 +148,11 @@
     "checkEmail": "Check your email",
     "resetSent": "If an account exists for {{email}}, a reset link will be sent. Check your spam folder too.",
     "changeEmail": "Use a different email",
-    "invalidEmail": "Enter a valid email address."
+    "invalidEmail": "Enter a valid email address.",
+    "weakPassword": "This password is too weak or has appeared in a known data breach. Choose a different one.",
+    "emailTaken": "An account with this email already exists. Sign in instead.",
+    "emailNotConfirmed": "Confirm your email address first. Check your inbox for the link.",
+    "rateLimit": "Too many attempts. Wait a moment and try again."
   },
   "growthUi": {
     "photoBonus": "Task photo bonus",

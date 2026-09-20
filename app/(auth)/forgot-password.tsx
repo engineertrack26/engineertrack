@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
+import { authErrorKey } from '@/utils/authErrors';
 import { colors, fonts } from '@/theme';
 
 export default function ForgotPasswordScreen() {
@@ -39,8 +40,8 @@ export default function ForgotPasswordScreen() {
     try {
       await authService.resetPassword(email.trim(), redirectTo);
       setEmailSent(true);
-    } catch (err: any) {
-      Alert.alert(t('common.error'), err.message || t('common.error'));
+    } catch (err) {
+      Alert.alert(t('common.error'), t(authErrorKey(err)));
     } finally {
       setIsSubmitting(false);
     }

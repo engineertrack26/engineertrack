@@ -177,7 +177,11 @@
     "checkEmail": "E-postanızı kontrol edin",
     "resetSent": "{{email}} adresiyle bir hesap varsa sıfırlama bağlantısı gönderilecektir. Spam klasörünü de kontrol edin.",
     "changeEmail": "Farklı e-posta kullan",
-    "invalidEmail": "Geçerli bir e-posta adresi girin."
+    "invalidEmail": "Geçerli bir e-posta adresi girin.",
+    "weakPassword": "Bu şifre çok zayıf ya da bilinen bir veri sızıntısında yer alıyor. Farklı bir şifre seç.",
+    "emailTaken": "Bu e-posta ile bir hesap zaten var. Giriş yapmayı dene.",
+    "emailNotConfirmed": "Önce e-posta adresini doğrula. Bağlantı için gelen kutunu kontrol et.",
+    "rateLimit": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene."
   },
   "growthUi": {
     "photoBonus": "Görev fotoğrafı bonusu",

@@ -7,6 +7,7 @@ import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthBrand } from '@/components/common/AuthBrand';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
+import { authErrorKey } from '@/utils/authErrors';
 import { useAuthStore } from '@/store/authStore';
 import { colors, fonts } from '@/theme';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
@@ -102,8 +103,8 @@ export default function RegisterScreen() {
         );
         router.replace('/(auth)/login');
       }
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || t('common.error'));
+    } catch (error) {
+      Alert.alert(t('common.error'), t(authErrorKey(error)));
     } finally {
       setIsSubmitting(false);
     }

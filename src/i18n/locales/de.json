@@ -148,7 +148,11 @@
     "checkEmail": "Prüfen Sie Ihre E-Mails",
     "resetSent": "Wenn ein Konto für {{email}} existiert, wird ein Link gesendet. Prüfen Sie auch den Spam-Ordner.",
     "changeEmail": "Andere E-Mail verwenden",
-    "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein."
+    "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "weakPassword": "Dieses Passwort ist zu schwach oder in einem bekannten Datenleck aufgetaucht. Wähle ein anderes.",
+    "emailTaken": "Mit dieser E-Mail existiert bereits ein Konto. Melde dich stattdessen an.",
+    "emailNotConfirmed": "Bestätige zuerst deine E-Mail-Adresse. Den Link findest du in deinem Posteingang.",
+    "rateLimit": "Zu viele Versuche. Warte kurz und versuche es erneut."
   },
   "growthUi": {
     "photoBonus": "Aufgabenfoto-Bonus",

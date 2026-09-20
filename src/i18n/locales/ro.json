@@ -148,7 +148,11 @@
     "checkEmail": "Verifică e-mailul",
     "resetSent": "Dacă există un cont pentru {{email}}, va fi trimis un link. Verifică și folderul spam.",
     "changeEmail": "Folosește alt e-mail",
-    "invalidEmail": "Introdu o adresă de e-mail validă."
+    "invalidEmail": "Introdu o adresă de e-mail validă.",
+    "weakPassword": "Această parolă este prea slabă sau a apărut într-o scurgere de date cunoscută. Alege alta.",
+    "emailTaken": "Există deja un cont cu acest e-mail. Autentifică-te în schimb.",
+    "emailNotConfirmed": "Confirmă mai întâi adresa de e-mail. Caută linkul în inbox.",
+    "rateLimit": "Prea multe încercări. Așteaptă puțin și încearcă din nou."
   },
   "growthUi": {
     "photoBonus": "Bonus foto pentru sarcină",

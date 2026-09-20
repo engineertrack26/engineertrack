@@ -6,6 +6,7 @@ import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthBrand } from '@/components/common/AuthBrand';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
+import { authErrorKey } from '@/utils/authErrors';
 import { useAuthStore } from '@/store/authStore';
 import { colors, fonts } from '@/theme';
 
@@ -45,8 +46,8 @@ export default function LoginScreen() {
         setUser(profile);
         router.replace('/');
       }
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || t('auth.invalidCredentials'));
+    } catch (error) {
+      Alert.alert(t('common.error'), t(authErrorKey(error)));
     } finally {
       setIsSubmitting(false);
     }

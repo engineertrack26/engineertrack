@@ -148,7 +148,11 @@
     "checkEmail": "Controlla la tua email",
     "resetSent": "Se esiste un account per {{email}}, verrà inviato un link. Controlla anche la cartella spam.",
     "changeEmail": "Usa un’altra email",
-    "invalidEmail": "Inserisci un indirizzo email valido."
+    "invalidEmail": "Inserisci un indirizzo email valido.",
+    "weakPassword": "Questa password è troppo debole o è comparsa in una violazione di dati nota. Scegline un'altra.",
+    "emailTaken": "Esiste già un account con questa email. Accedi invece.",
+    "emailNotConfirmed": "Conferma prima il tuo indirizzo email. Controlla la posta in arrivo per il link.",
+    "rateLimit": "Troppi tentativi. Attendi un momento e riprova."
   },
   "growthUi": {
     "photoBonus": "Bonus foto del compito",
