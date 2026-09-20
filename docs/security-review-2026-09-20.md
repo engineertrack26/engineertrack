@@ -83,10 +83,14 @@ carry RLS and no client write grants (inventory #1/#3).
 - Authentication › Sign In / Providers › Email: **Confirm email** is off (it let
   the simulation register accounts). Decide for the pilot: on means real students
   must verify; off means anyone can register with any address.
-- Authentication › Attack Protection: enable **Leaked password protection**
-  (client ready: `src/utils/authErrors.ts` maps `weak_password` and the other
-  GoTrue codes to locale copy on register/login/forgot-password — the raw
-  English `error.message` is no longer shown) and **CAPTCHA** (hCaptcha/Turnstile —
+- Authentication › Attack Protection: **Leaked password protection** is a
+  paid-plan toggle, so the app does the same check itself
+  (`src/services/pwnedPasswords.ts`: HIBP range API, k-anonymity — five hex
+  characters of the SHA-1 leave the phone, fail-open on network trouble) on
+  sign-up, password reset and the profile's change-password; `src/utils/authErrors.ts`
+  maps `weak_password` and the other GoTrue codes to locale copy on
+  register/login/forgot-password (the raw English `error.message` is no longer
+  shown). Still enable **CAPTCHA** (hCaptcha/Turnstile —
   needs client wiring first: `captchaToken` on sign-up/sign-in/reset, a WebView
   challenge; note the probe and sim sign-ups stop working once it is on);
   review rate limits (sign-ups, token refreshes, e-mails).

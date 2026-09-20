@@ -8,6 +8,7 @@ import { AuthBrand } from '@/components/common/AuthBrand';
 import { AuthInput as Input, AuthButton as Button, authStyles } from '@/components/common/AuthForm';
 import { authService } from '@/services/auth';
 import { authErrorKey } from '@/utils/authErrors';
+import { isPasswordPwned } from '@/services/pwnedPasswords';
 import { useAuthStore } from '@/store/authStore';
 import { colors, fonts } from '@/theme';
 import { PRIVACY_POLICY_VERSION } from '@/utils/constants';
@@ -79,6 +80,10 @@ export default function RegisterScreen() {
 
     setIsSubmitting(true);
     try {
+      if (await isPasswordPwned(password)) {
+        setErrors({ password: t('authUi.weakPassword') });
+        return;
+      }
       const currentLang = i18n.language as SupportedLanguage;
       const { session, user } = await authService.signUp({
         email: email.trim(),

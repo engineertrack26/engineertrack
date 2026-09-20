@@ -462,7 +462,7 @@
     "passwordLength": "New password must have at least 6 characters.",
     "passwordMismatch": "New passwords do not match.",
     "wrongPassword": "Current password is incorrect.",
-    "weakPassword": "Password does not meet the server security requirements. Choose a stronger password.",
+    "weakPassword": "This password is too weak or has appeared in a known data breach. Choose a different one.",
     "samePassword": "New password must differ from the old one.",
     "rateLimit": "Too many attempts. Wait a little and try again.",
     "failed": "Could not complete the operation. Check your connection and try again.",

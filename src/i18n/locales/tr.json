@@ -551,7 +551,7 @@
     "passwordLength": "Yeni şifre en az 6 karakter olmalı.",
     "passwordMismatch": "Yeni şifreler eşleşmiyor.",
     "wrongPassword": "Geçerli şifre doğru değil.",
-    "weakPassword": "Şifre sunucunun güvenlik koşullarını karşılamıyor. Daha güçlü bir şifre seç.",
+    "weakPassword": "Bu şifre çok zayıf ya da bilinen bir veri sızıntısında yer alıyor. Farklı bir şifre seç.",
     "samePassword": "Yeni şifre eskisinden farklı olmalı.",
     "rateLimit": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.",
     "failed": "İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.",

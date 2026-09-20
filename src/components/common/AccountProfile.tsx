@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { mentorProfileService } from '@/services/mentorProfile';
+import { isPasswordPwned } from '@/services/pwnedPasswords';
 import { PROFILE_LANGUAGES, passwordFormError, profileError } from '@/utils/mentorProfile';
 import { reviewInitials } from '@/utils/mentorReviews';
 import type { SupportedLanguage, User } from '@/types/user';
@@ -91,7 +92,10 @@ export function AccountProfile({ user, header, roleLabel, children }: {
     } else if (mode === 'password') {
       const validation = passwordFormError(passwords[0], passwords[1], passwords[2]);
       if (validation) { setError(validation); return; }
-      void run(() => mentorProfileService.changePassword(user.id, user.email, passwords[0], passwords[1], passwords[2]), 'mentorProfile.passwordSaved');
+      void run(async () => {
+        if (await isPasswordPwned(passwords[1])) throw { code: 'weak_password' };
+        await mentorProfileService.changePassword(user.id, user.email, passwords[0], passwords[1], passwords[2]);
+      }, 'mentorProfile.passwordSaved');
     }
   };
   const photo = (source: 'camera' | 'gallery') => {

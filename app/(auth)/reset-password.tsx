@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ScreenWrapper } from '@/components/common/ScreenWrapper';
 import { AuthInput, AuthButton, authStyles } from '@/components/common/AuthForm';
 import { openPasswordRecovery } from '@/services/passwordRecovery';
+import { isPasswordPwned } from '@/services/pwnedPasswords';
 import { recoveryPasswordError } from '@/utils/passwordRecovery';
 import { ui } from '@/components/common/workflowStyles';
 import { colors } from '@/theme';
@@ -53,6 +54,10 @@ export default function ResetPasswordScreen() {
     saving.current = true; setBusy(true); setError('');
     const request = revision.current;
     try {
+      if (await isPasswordPwned(password)) {
+        if (request === revision.current) setError('authUi.weakPassword');
+        return;
+      }
       await recovery.current.save(password, confirmation);
       if (request !== revision.current) return;
       recovery.current = null; setPassword(''); setConfirmation(''); setState('done');
