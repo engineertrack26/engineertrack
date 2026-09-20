@@ -112,8 +112,9 @@ BEGIN
   END;
   PERFORM block_conversation(conv, false);
 
-  -- B5 (#3): Hakan re-approves an approved submission → ALREADY_APPROVED; withdrawal still allowed
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', hakan, 'role', 'authenticated')::text, true);
+  -- B5 (#3): re-approving an approved submission → ALREADY_APPROVED (withdrawal stays allowed).
+  -- Elif's mentor inside this transaction is Ayça since B3, so she is the one who could approve.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', ayca, 'role', 'authenticated')::text, true);
   BEGIN
     PERFORM review_assignment(approved_sub, true, 'tekrar', 3::smallint);
     log := log || 'B5' || E'\t' || 'FAIL: re-approval succeeded' || E'\n';
