@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const FILE = path.join(__dirname, '..', 'state.json');
 function read() { return JSON.parse(fs.readFileSync(FILE, 'utf8')); }
-/** Re-reads, applies patch(state), writes. Parallel writers each patch one key, so last-write-wins on the whole file is avoided. */
+/** Re-reads, applies patch(state), writes. Retries only cover a torn read (JSON parse); two writers that read the same snapshot can still lose a patch — keep parallel writers to distinct keys and check state.json after a parallel phase. */
 function merge(patch) {
   for (let i = 0; i < 5; i++) {
     try { const s = read(); patch(s); fs.writeFileSync(FILE, JSON.stringify(s, null, 2)); return s; }

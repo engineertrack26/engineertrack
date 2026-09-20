@@ -4,10 +4,11 @@ const ROOT = __dirname;
 const LOG_DIR = path.join(ROOT, 'log');
 const BUGS = path.join(ROOT, 'bugs.md');
 const ACCOUNTS = path.join(ROOT, 'accounts.md');
+const WIDTH = Number(process.env.SIM_LOG_WIDTH) || 600;
 
 function short(v) {
   const s = typeof v === 'string' ? v : JSON.stringify(v);
-  return s === undefined ? '' : s.length > 160 ? s.slice(0, 157) + '…' : s;
+  return s === undefined ? '' : s.length > WIDTH ? s.slice(0, WIDTH - 3) + '…' : s;
 }
 function formatLogLine({ at, who, name, args, ok, result, error }) {
   const head = `- \`${at.slice(11, 19)}\` **${name}** ${short(args)}`;

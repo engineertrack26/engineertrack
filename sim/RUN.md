@@ -14,7 +14,7 @@ GO — sign-up returned a session; profile row exists (role=student, language=tr
 | 3 — mentors link | 7 | ≈50 | INVALID_CODE ×7 (made-up link code) | 1 (#1) |
 | 4 — students' week | 7 | ≈304 | REFLECTION_REQUIRED ×1, SELF_LEVEL_REQUIRED ×1, CANNOT_OPEN_CASE ×1 | 3 (#2, #9 submit-time, #10) |
 | 5 — mentors decide | 7 | ≈99 | LEVEL_REQUIRED ×3 | 2 (#3, #9 review-time — same merged entry as phase 4) |
-| 6 — students follow up | 7 | ≈114 | — (none of the tracked stable codes; three phase-6 bugs.md lines and one duplicate-notification entry were removed as script errors, see "Removed as non-findings") | 1 (#11) |
+| 6 — students follow up | 7 | ≈114 | — (none of the tracked stable codes; 11 phase-6 lines removed as script errors — Mert's `overRated` ×4 (a count, not a boolean), Elif's leaderboard id mismatch ×1, Can's first-page-only stream reads ×5, plus one duplicate notification entry — and four per-person `task_approved` entries merged into #11) | 1 (#11) |
 | 7 — advisor reports and closes | 3 (advisor, Emre, Ayşe) | ≈52 | PENDING_REVIEWS ×1, ALREADY_CLOSED ×1, REASON_REQUIRED ×1, INTERNSHIP_CLOSED ×3 | 0 |
 | 8 — audit | 15 | ≈387 | ROLE_NOT_ALLOWED ×14, REPORT_FORBIDDEN ×15, ID_FORBIDDEN ×15, SELF_ASSESSMENT_FORBIDDEN ×7, NOT_IN_GROUP ×7 | 8 (#4, #5, #12–#17) |
 
