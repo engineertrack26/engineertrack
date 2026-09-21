@@ -105,6 +105,10 @@ carry RLS and no client write grants (inventory #1/#3).
   Functions exist; the SQL editor runs as `postgres`).
 - Storage: after the hardening file, buckets show limits; `avatars` stays public.
 - Rotate the GitHub token from the earlier chat session.
+- Crash reporting (2026-09-21): Sentry project `engineertrack26/react-native`,
+  EU ingest; DSN in `.env` and in EAS production/preview as
+  `EXPO_PUBLIC_SENTRY_DSN`; `app.json` plugin carries org/project. Source maps
+  need `SENTRY_AUTH_TOKEN` (secret) in EAS before the first production build.
 - Delete the throwaway accounts: `probe.1789816896565@sim.engineertrack.test`
   and the probe's `outsider.<stamp>@sim.engineertrack.test` (see
   `sim/SECURITY-PROBE.md`).

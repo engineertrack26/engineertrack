@@ -35,7 +35,14 @@
       "expo-secure-store",
       "expo-font",
       "expo-router",
-      "@sentry/react-native",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "engineertrack26",
+          "project": "react-native",
+          "url": "https://sentry.io/"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-splash-screen",
