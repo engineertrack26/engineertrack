@@ -5,6 +5,7 @@ import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ui } from '@/components/common/workflowStyles';
 import { feedService } from '@/services/feed';
 import { pollPercentages, withLike } from '@/utils/feedMetrics';
 import { mapRpcError } from '@/utils/rpcErrors';
@@ -152,12 +153,14 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
           </View>
         </View>
         {post.kind === 'task' && isMine && (
-          <TouchableOpacity onPress={removeTask} hitSlop={8}>
+          <TouchableOpacity onPress={removeTask} hitSlop={12} style={ui.iconButton}
+            accessibilityRole="button" accessibilityLabel={t('feed.removeFromFeed')}>
             <Ionicons name="eye-off-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
         {canModerate && (
-          <TouchableOpacity onPress={removePost} hitSlop={8}>
+          <TouchableOpacity onPress={removePost} hitSlop={12} style={ui.iconButton}
+            accessibilityRole="button" accessibilityLabel={t('feed.removePost')}>
             <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
@@ -275,11 +278,13 @@ export function FeedPostCard({ post, userId, role, canModerate, highlighted, onC
           the trash in the header is how a draft is deleted (remove_feed_post). */}
       {!post.draft && (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.footerBtn} onPress={toggleLike} hitSlop={8}>
+          <TouchableOpacity style={styles.footerBtn} onPress={toggleLike} hitSlop={12}
+            accessibilityRole="button" accessibilityState={{ selected: post.likedByMe }} accessibilityLabel={t('feed.like')}>
             <Ionicons name={post.likedByMe ? 'heart' : 'heart-outline'} size={20} color={post.likedByMe ? colors.error : colors.textSecondary} />
             <Text style={styles.footerText}>{t('feed.likeCount', { count: post.likeCount })}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.footerBtn} onPress={() => setShowComments((v) => !v)} hitSlop={8}>
+          <TouchableOpacity style={styles.footerBtn} onPress={() => setShowComments((v) => !v)} hitSlop={12}
+            accessibilityRole="button" accessibilityState={{ expanded: showComments }} accessibilityLabel={t('feed.comments')}>
             <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.footerText}>{t('feed.commentCount', { count: post.commentCount })}</Text>
           </TouchableOpacity>
@@ -324,6 +329,6 @@ const styles = StyleSheet.create({
   optionLabelMine: { fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
   optionPct: { fontSize: 13, fontWeight: '600', fontFamily: fonts.semibold, color: colors.textSecondary },
   footer: { flexDirection: 'row', gap: spacing.lg, paddingTop: spacing.xs },
-  footerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  footerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   footerText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 });

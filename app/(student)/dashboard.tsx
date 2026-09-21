@@ -298,10 +298,12 @@ export default function StudentDashboard() {
       </Pressable>}
 
       <View style={{ flexDirection: 'row', gap: 18 }}>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/leaderboard')}>
+        <Pressable accessibilityRole="button" hitSlop={12} style={{ minHeight: 44, justifyContent: 'center' }}
+          onPress={() => router.push('/(student)/leaderboard')}>
           <Text style={[ui.link, { fontSize: 14 }]}>{t('tabs.ranking')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/(student)/log-history')}>
+        <Pressable accessibilityRole="button" hitSlop={12} style={{ minHeight: 44, justifyContent: 'center' }}
+          onPress={() => router.push('/(student)/log-history')}>
           <Text style={[ui.link, { fontSize: 14 }]}>{t('studentFlow.archive')}</Text>
         </Pressable>
       </View>
