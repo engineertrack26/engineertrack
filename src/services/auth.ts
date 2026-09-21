@@ -20,6 +20,10 @@ interface SignInParams {
   password: string;
 }
 
+function isRowMissing(error: unknown): boolean {
+  return !!error && typeof error === 'object' && 'code' in error && (error as { code: unknown }).code === 'PGRST116';
+}
+
 export const authService = {
   async signUp({ email, password, firstName, lastName, role, language, consentVersion, avatarId }: SignUpParams) {
     const metadata: Record<string, unknown> = {
@@ -101,19 +105,20 @@ export const authService = {
     return profile;
   },
 
+  // The profile row is created by a trigger on auth.users, so right after
+  // sign-up (and on a fresh device before the trigger has committed) the
+  // first read can find no row: PGRST116 from .single(). Only that is worth
+  // waiting for. Any other failure — no network, RLS refusal — is thrown at
+  // once instead of being retried eight times over two seconds.
   async getProfileWithRetry(userId: string, retries = 8, delayMs = 250) {
-    let lastError: unknown = null;
-    for (let i = 0; i < retries; i += 1) {
+    for (let i = 0; ; i += 1) {
       try {
         return await this.getProfile(userId);
       } catch (error) {
-        lastError = error;
-        if (i < retries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
+        if (!isRowMissing(error) || i >= retries - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
-    throw lastError;
   },
 
   async getStudentProfile(userId: string) {

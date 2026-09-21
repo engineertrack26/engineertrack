@@ -24,19 +24,35 @@ function mapKpi(row: Record<string, unknown>): CompetencyKpi {
   };
 }
 
+type Framework = { competencies: Competency[]; kpis: CompetencyKpi[] };
+
+async function fetchFramework(): Promise<Framework> {
+  const [{ data: cs, error: cErr }, { data: ks, error: kErr }] = await Promise.all([
+    supabase.from('competencies').select('*').order('display_order'),
+    supabase.from('competency_kpis').select('*').order('level').order('kpi_index'),
+  ]);
+  if (cErr) throw cErr;
+  if (kErr) throw kErr;
+  return {
+    competencies: (cs || []).map((r) => mapCompetency(r as Record<string, unknown>)),
+    kpis: (ks || []).map((r) => mapKpi(r as Record<string, unknown>)),
+  };
+}
+
+// The framework (6 competencies × 8 KPIs) is read-only seed data, identical
+// for every user, so it is fetched once per app run and shared by every
+// screen that focuses. A failed fetch is not kept: the next call tries again.
+let frameworkCache: Promise<Framework> | null = null;
+
 export const competencyService = {
-  async listFramework(): Promise<{ competencies: Competency[]; kpis: CompetencyKpi[] }> {
-    const [{ data: cs, error: cErr }, { data: ks, error: kErr }] = await Promise.all([
-      supabase.from('competencies').select('*').order('display_order'),
-      supabase.from('competency_kpis').select('*').order('level').order('kpi_index'),
-    ]);
-    if (cErr) throw cErr;
-    if (kErr) throw kErr;
-    return {
-      competencies: (cs || []).map((r) => mapCompetency(r as Record<string, unknown>)),
-      kpis: (ks || []).map((r) => mapKpi(r as Record<string, unknown>)),
-    };
+  listFramework(): Promise<Framework> {
+    if (!frameworkCache) {
+      frameworkCache = fetchFramework().catch((error) => { frameworkCache = null; throw error; });
+    }
+    return frameworkCache;
   },
+  /** Tests and a future "framework updated" path. */
+  resetFrameworkCache() { frameworkCache = null; },
 
   async getGroupTargets(groupId: string): Promise<GroupCompetencyTarget[]> {
     const { data, error } = await supabase
