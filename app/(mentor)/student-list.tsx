@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,6 +45,13 @@ function StudentList({ userId, query, setQuery, pendingOnly, setPendingOnly }: {
   const [linking, setLinking] = useState(false);
   const [success, setSuccess] = useState('');
   const generation = useRef(0);
+  // `link=1` (from the dashboard's no-student card) opens the link sheet once.
+  const { link } = useLocalSearchParams<{ link?: string }>();
+  useEffect(() => {
+    if (link !== '1') return;
+    setSuccess(''); setLinking(true);
+    router.setParams({ link: '' });
+  }, [link, router]);
   const load = useCallback(async () => {
     const request = ++generation.current;
     const current = () => request === generation.current && useAuthStore.getState().user?.id === userId;

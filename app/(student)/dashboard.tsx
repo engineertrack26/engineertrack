@@ -273,7 +273,14 @@ export default function StudentDashboard() {
       {tasks.loading ? <ActivityIndicator size="large" color={colors.primary} /> :
         next ? <JobCard task={next} /> : !tasks.failed && <View style={ui.card}>
           <Text style={ui.section}>{t(tasks.hasGroup ? 'studentFlow.allCaughtUp' : 'student.noGroupTasks')}</Text>
-          <Text style={ui.secondary}>{t('studentFlow.checkTasks')}</Text>
+          <Text style={ui.secondary}>{t(tasks.hasGroup ? 'studentFlow.checkTasks' : 'student.groupCodeHint')}</Text>
+          {/* The join form lives on the profile; a student who has no group
+              yet must not have to find it. `join=1` opens it on arrival. */}
+          {!tasks.hasGroup && <Pressable accessibilityRole="button" style={ui.primary}
+            onPress={() => router.push({ pathname: '/(student)/profile', params: { join: '1' } })}>
+            <Text style={ui.primaryText}>{t('student.joinGroup')}</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </Pressable>}
         </View>}
 
       {profileFailed && <LoadFailedBanner onRetry={loadProfile} />}

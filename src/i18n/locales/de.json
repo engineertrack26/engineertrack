@@ -497,6 +497,7 @@
     "viewDetail": "Details anzeigen",
     "empty": "Noch keine Lernenden",
     "emptyHint": "Verknüpfe die erste Person mit ihrem Code.",
+    "linkHint": "Bitte deinen Studierenden um den Code aus seinem Profil und gib ihn hier ein.",
     "noResults": "Keine Lernenden gefunden",
     "searchHint": "Ändere die Suche oder den Filter.",
     "listHint": "Praktikums- und Arbeitsinformationen stehen in den Details.",

@@ -497,6 +497,7 @@
     "viewDetail": "Prikaži detalje učenika",
     "empty": "Još nema učenika",
     "emptyHint": "Poveži prvog učenika pomoću njegovog koda.",
+    "linkHint": "Zatraži od studenta kôd sa njegovog profila i unesi ga ovde.",
     "noResults": "Nema pronađenih učenika",
     "searchHint": "Promeni pretragu ili filter.",
     "listHint": "Podaci o praksi i radovima su u detaljima učenika.",

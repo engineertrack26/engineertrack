@@ -497,6 +497,7 @@
     "viewDetail": "Vedi dettagli studente",
     "empty": "Ancora nessuno studente",
     "emptyHint": "Collega il primo studente usando il suo codice.",
+    "linkHint": "Chiedi allo studente il codice nel suo profilo e inseriscilo qui.",
     "noResults": "Nessuno studente trovato",
     "searchHint": "Modifica la ricerca o il filtro.",
     "listHint": "Informazioni su tirocinio e consegne nei dettagli studente.",

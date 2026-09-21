@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -44,6 +44,14 @@ export function StudentProfileSections({ userId }: { userId: string }) {
   const [deletable, setDeletable] = useState<number | null>(null);
   const generation = useRef(0);
   const active = useRef(true);
+  // `join=1` (from the dashboard's no-group card) opens the join form once;
+  // the param is cleared so a later visit to the tab does not reopen it.
+  const { join } = useLocalSearchParams<{ join?: string }>();
+  useEffect(() => {
+    if (join !== '1') return;
+    setCodeInput(''); setError(null); setSuccess(null); setJoining(true);
+    router.setParams({ join: '' });
+  }, [join, router]);
   const lock = useRef(false);
   const current = () => active.current && useAuthStore.getState().user?.id === userId;
   const load = useCallback(async () => {

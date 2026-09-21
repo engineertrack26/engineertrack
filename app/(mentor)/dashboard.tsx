@@ -126,6 +126,16 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
               <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
               <Ionicons name="arrow-forward" size={20} color="#fff" />
             </Pressable>
+          </> : stats?.assignedCount === 0 ? <>
+            {/* No student linked yet: the empty queue is not the news, the
+                missing link is. Opens the link sheet on the student list. */}
+            <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.emptyHint')}</Text>
+            <Text style={ui.secondary}>{t('mentorStudents.linkHint')}</Text>
+            <Pressable accessibilityRole="button" style={ui.primary}
+              onPress={() => router.push({ pathname: '/(mentor)/student-list', params: { studentId: '', link: '1' } })}>
+              <Text style={ui.primaryText}>{t('mentorStudents.link')}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </Pressable>
           </> : <>
             <Text accessibilityRole="header" style={ui.section}>{t('mentor.noPendingReviews')}</Text>
             <Text style={ui.secondary}>{t('mentorHome.emptyHint')}</Text>

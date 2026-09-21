@@ -497,6 +497,7 @@
     "viewDetail": "Vezi detaliile elevului",
     "empty": "Încă nu există elevi",
     "emptyHint": "Asociază primul elev folosind codul său.",
+    "linkHint": "Cere-i studentului codul din profilul lui și introdu-l aici.",
     "noResults": "Niciun elev găsit",
     "searchHint": "Modifică căutarea sau filtrul.",
     "listHint": "Informațiile despre stagiu și lucrări sunt în detaliile elevului.",
