@@ -1,4 +1,5 @@
 import type { SupportedLanguage } from '@/types/user';
+import { PASSWORD_MIN_LENGTH } from '@/utils/passwordPolicy';
 
 export const PROFILE_LANGUAGES: { code: SupportedLanguage; label: string }[] = [
   { code: 'tr', label: 'Türkçe' }, { code: 'en', label: 'English' },
@@ -7,7 +8,7 @@ export const PROFILE_LANGUAGES: { code: SupportedLanguage; label: string }[] = [
 ];
 export function passwordFormError(current: string, next: string, confirm: string): string | null {
   if (!current) return 'mentorProfile.currentRequired';
-  if (next.length < 6) return 'mentorProfile.passwordLength';
+  if (next.length < PASSWORD_MIN_LENGTH) return 'mentorProfile.passwordLength';
   if (next !== confirm) return 'mentorProfile.passwordMismatch';
   return null;
 }

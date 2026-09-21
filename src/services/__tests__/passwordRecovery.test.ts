@@ -26,7 +26,7 @@ test.each([url.replace('type=recovery', 'type=signup'), url.replace('refresh_tok
 });
 test('validates passwords without trimming or weakening the existing minimum', () => {
   expect(recoveryPasswordError('12345', '12345')).toBe('authUi.passwordHint');
-  expect(recoveryPasswordError('123456', '654321')).toBe('auth.passwordMismatch');
+  expect(recoveryPasswordError('12345678', '87654321')).toBe('auth.passwordMismatch');
   expect(recoveryPasswordError(' secret ', ' secret ')).toBeNull();
 });
 test('captures a warm-start link until the recovery screen mounts', () => {
@@ -42,7 +42,7 @@ test('uses an isolated nonpersistent client and verifies the user before saving'
   expect(getUser).toHaveBeenCalledTimes(2);
   expect(updateUser).toHaveBeenCalledWith({ password: 'new-secret' });
   expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
-  await expect(recovery.save('another', 'another')).rejects.toThrow('recoveryUi.invalid');
+  await expect(recovery.save('another-1', 'another-1')).rejects.toThrow('recoveryUi.invalid');
   expect(updateUser).toHaveBeenCalledTimes(1);
 });
 test('invalid links never create a client', async () => {

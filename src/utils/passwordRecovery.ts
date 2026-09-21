@@ -1,3 +1,5 @@
+import { PASSWORD_MIN_LENGTH } from '@/utils/passwordPolicy';
+
 export function recoveryTokens(url: string) {
   try {
     const parsed = new URL(url);
@@ -13,7 +15,7 @@ export function recoveryTokens(url: string) {
 }
 
 export function recoveryPasswordError(password: string, confirmation: string) {
-  if (password.length < 6) return 'authUi.passwordHint';
+  if (password.length < PASSWORD_MIN_LENGTH) return 'authUi.passwordHint';
   if (password !== confirmation) return 'auth.passwordMismatch';
   return null;
 }

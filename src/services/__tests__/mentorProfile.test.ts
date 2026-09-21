@@ -18,7 +18,7 @@ describe('mentor password changes', () => {
     logout.mockResolvedValue({ error: null });
   });
   it('rejects invalid forms before making auth requests', async () => {
-    await expect(mentorProfileService.changePassword('u1', 'a@example.com', '', 'abcdef', 'abcdef')).rejects.toThrow('mentorProfile.currentRequired');
+    await expect(mentorProfileService.changePassword('u1', 'a@example.com', '', 'abcdefgh', 'abcdefgh')).rejects.toThrow('mentorProfile.currentRequired');
     expect(createClient).not.toHaveBeenCalled();
     expect(supabase.auth.getSession).not.toHaveBeenCalled();
   });
@@ -33,22 +33,22 @@ describe('mentor password changes', () => {
   });
   it('does not update with the wrong current password', async () => {
     login.mockResolvedValue({ data: { user: null }, error: { code: 'invalid_credentials' } });
-    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'wrong', 'abcdef', 'abcdef')).rejects.toEqual({ code: 'invalid_credentials' });
+    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'wrong', 'abcdefgh', 'abcdefgh')).rejects.toEqual({ code: 'invalid_credentials' });
     expect(update).not.toHaveBeenCalled();
   });
   it('rejects another account returned by reauthentication', async () => {
     login.mockResolvedValue({ data: { user: { id: 'u2' } }, error: null });
-    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdef', 'abcdef')).rejects.toThrow('Account mismatch');
+    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdefgh', 'abcdefgh')).rejects.toThrow('Account mismatch');
     expect(update).not.toHaveBeenCalled();
   });
   it('does not update if the main app switches account during reauthentication', async () => {
     jest.mocked(supabase.auth.getSession).mockResolvedValueOnce(session('u1') as never).mockResolvedValueOnce(session('u2') as never);
-    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdef', 'abcdef')).rejects.toThrow('Session changed');
+    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdefgh', 'abcdefgh')).rejects.toThrow('Session changed');
     expect(update).not.toHaveBeenCalled();
   });
   it('propagates password policy errors and still clears the temporary session', async () => {
     update.mockResolvedValue({ error: { code: 'weak_password' } });
-    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdef', 'abcdef')).rejects.toEqual({ code: 'weak_password' });
+    await expect(mentorProfileService.changePassword('u1', 'a@example.com', 'old', 'abcdefgh', 'abcdefgh')).rejects.toEqual({ code: 'weak_password' });
     expect(logout).toHaveBeenCalledWith({ scope: 'local' });
   });
 });

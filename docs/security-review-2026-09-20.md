@@ -90,7 +90,10 @@ carry RLS and no client write grants (inventory #1/#3).
   sign-up, password reset and the profile's change-password; `src/utils/authErrors.ts`
   maps `weak_password` and the other GoTrue codes to locale copy on
   register/login/forgot-password (the raw English `error.message` is no longer
-  shown). Still enable **CAPTCHA** (hCaptcha/Turnstile —
+  shown). Set **Minimum password length** to **8** (free) — the client's
+  `PASSWORD_MIN_LENGTH` (`src/utils/passwordPolicy.ts`) is 8 and the two must
+  match; no character-class requirement (NIST SP 800-63B: length plus a breach
+  check). Still enable **CAPTCHA** (hCaptcha/Turnstile —
   needs client wiring first: `captchaToken` on sign-up/sign-in/reset, a WebView
   challenge; note the probe and sim sign-ups stop working once it is on);
   review rate limits (sign-ups, token refreshes, e-mails).

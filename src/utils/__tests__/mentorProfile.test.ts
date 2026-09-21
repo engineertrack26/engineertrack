@@ -4,10 +4,11 @@ import { passwordFormError, PROFILE_LANGUAGES, profileError } from '../mentorPro
 
 describe('mentor profile validation', () => {
   it('requires the current password and matching new passwords without trimming secrets', () => {
-    expect(passwordFormError('', 'abcdef', 'abcdef')).toBe('mentorProfile.currentRequired');
+    expect(passwordFormError('', 'abcdefgh', 'abcdefgh')).toBe('mentorProfile.currentRequired');
     expect(passwordFormError('old', 'short', 'short')).toBe('mentorProfile.passwordLength');
-    expect(passwordFormError('old', 'abcdef', 'abcdef ')).toBe('mentorProfile.passwordMismatch');
-    expect(passwordFormError('old', ' abcdef ', ' abcdef ')).toBeNull();
+    expect(passwordFormError('old', 'abcdefg', 'abcdefg')).toBe('mentorProfile.passwordLength'); // 7 < PASSWORD_MIN_LENGTH
+    expect(passwordFormError('old', 'abcdefgh', 'abcdefgh ')).toBe('mentorProfile.passwordMismatch');
+    expect(passwordFormError('old', ' abcdefgh ', ' abcdefgh ')).toBeNull();
   });
   it('uses readable error keys rather than leaking raw auth or storage errors', () => {
     expect(profileError({ code: 'invalid_credentials' })).toBe('mentorProfile.wrongPassword');
