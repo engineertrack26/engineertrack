@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth';
 import { ui } from '@/components/common/workflowStyles';
 import { colors, fonts } from '@/theme';
+import { showToast } from '@/components/common/Toast';
 import { internshipFields, requiredInternshipFields, readInternshipForm, parseInternshipDate,
   internshipDateString, validateInternshipForm, internshipPayload, sameInternshipForm, internshipReturnPath,
   type InternshipField, type InternshipForm } from '@/utils/internshipForm';
@@ -115,7 +116,7 @@ function InternshipContent({ userId, returnTo }: { userId: string; returnTo?: st
       await authService.upsertStudentProfile(userId, internshipPayload(form));
       if (useAuthStore.getState().user?.id !== userId) return;
       allowExit.current = true; dirtyRef.current = false;
-      Alert.alert(t('common.done'), t('student.internshipInfoSaved'));
+      showToast(t('student.internshipInfoSaved'));
       router.replace(destination);
     } catch {
       if (useAuthStore.getState().user?.id === userId)

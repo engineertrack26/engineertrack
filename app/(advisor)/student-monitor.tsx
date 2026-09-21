@@ -21,6 +21,7 @@ import { ui } from '@/components/common/workflowStyles';
 import { colors, fonts } from '@/theme';
 import type { GroupMember, InternshipGroup } from '@/types/group';
 import type { ClosureStatus } from '@/types/closure';
+import { showToast } from '@/components/common/Toast';
 
 type MonitorRow = StudentMonitorItem & { member?: GroupMember; email?: string };
 
@@ -138,7 +139,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
       // A failed refresh must not bring the removed membership back on screen.
       sequence.current += 1;
       setRows((previous) => previous.filter((row) => row.member?.membershipId !== member.membershipId));
-      Alert.alert(t('common.done'), t('advisor.removeStudentDone'));
+      showToast(t('advisor.removeStudentDone'));
       await load();
     } catch (err) {
       if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
@@ -166,7 +167,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
       await closureService.close(member.id, groupId);
       if (!mounted.current || useAuthStore.getState().user?.id !== advisorId) return;
       await load();
-      Alert.alert(t('common.done'), t('closure.closedOn', { date: new Date().toLocaleDateString(i18n.language) }));
+      showToast(t('closure.closedOn', { date: new Date().toLocaleDateString(i18n.language) }));
     } catch (err) {
       if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
         const { key } = mapRpcError(err instanceof Error ? err.message : '');
@@ -196,7 +197,7 @@ function StudentMonitorContent({ advisorId, groupId, fromGroup }: { advisorId: s
       if (!mounted.current || useAuthStore.getState().user?.id !== advisorId) return;
       setReopenTarget(null);
       await load();
-      Alert.alert(t('common.done'), t('closure.reopened'));
+      showToast(t('closure.reopened'));
     } catch (err) {
       if (mounted.current && useAuthStore.getState().user?.id === advisorId) {
         const { key } = mapRpcError(err instanceof Error ? err.message : '');

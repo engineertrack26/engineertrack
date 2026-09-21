@@ -20,6 +20,7 @@ import { ReviewBack, ReviewIdentity, ReviewStatus } from '@/components/mentor/Re
 import { ReviewNoteSheet } from '@/components/mentor/ReviewNoteSheet';
 import { ReviewEvidence } from '@/components/mentor/ReviewEvidence';
 import { colors } from '@/theme';
+import { showToast } from '@/components/common/Toast';
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -134,7 +135,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
       setSheet(null);
       setApprovalNote('');
       setReason('');
-      Alert.alert(t('common.done'), t(approved ? 'mentor.taskApproved' : 'mentor.taskRevisionRequested'));
+      showToast(t(approved ? 'mentor.taskApproved' : 'mentor.taskRevisionRequested'));
       router.replace({ pathname: '/(mentor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
     } catch (error) {
       if (request !== generation.current) return;

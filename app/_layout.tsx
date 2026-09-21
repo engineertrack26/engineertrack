@@ -35,6 +35,7 @@ import {
   saveTokenToProfile,
 } from '@/services/pushNotifications';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
+import { ToastHost } from '@/components/common/Toast';
 import { deferAuthWork, withAuthTimeout } from '@/utils/authStartup';
 import { colors, fonts } from '@/theme';
 
@@ -347,6 +348,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="auto" />
         <Slot />
+        <ToastHost />
         {!appReady && !isRecoveryRoute && <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.background,
           alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
           {startupFailed ? <>

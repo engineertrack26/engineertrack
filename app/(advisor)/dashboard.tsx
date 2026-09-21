@@ -13,6 +13,7 @@ import { ui } from '@/components/common/workflowStyles';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { groupCenterRoute } from '@/utils/advisorGroups';
 import { colors, fonts } from '@/theme';
+import { showToast } from '@/components/common/Toast';
 
 type DashboardData = Awaited<ReturnType<typeof advisorDashboardViewService.load>>;
 
@@ -81,7 +82,7 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
       delivered.current.add(studentId);
       if (useAuthStore.getState().user?.id !== advisorId) return;
       setSent(new Set(delivered.current));
-      Alert.alert(t('common.done'), t('advisorHome.reminderSent', { name }));
+      showToast(t('advisorHome.reminderSent', { name }));
     } catch {
       if (useAuthStore.getState().user?.id === advisorId)
         Alert.alert(t('common.error'), t('advisorHome.reminderFailed'));

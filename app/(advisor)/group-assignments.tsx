@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { showToast } from '@/components/common/Toast';
 import { fromLocalIsoDate, toLocalIsoDate } from '@/utils/localDate';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
@@ -293,9 +294,9 @@ function GroupAssignmentsContent() {
           ),
         );
 
-        Alert.alert(t('common.done'), t('advisor.assignmentsSent', { count }));
+        showToast(t('advisor.assignmentsSent', { count }));
       } else {
-        Alert.alert(t('common.done'), t('advisor.assignmentsNoneSent'));
+        showToast(t('advisor.assignmentsNoneSent'));
       }
       await loadData();
       setSelectedDraftIds([]);
