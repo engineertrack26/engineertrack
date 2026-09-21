@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { supabase } from '@/services/supabase';
 import { competencyService } from '@/services/competency';
+import { logService } from '@/services/logs';
 import { internshipDayService } from '@/services/internshipDays';
 import { useStudentTasks } from '@/hooks/useStudentTasks';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
@@ -134,6 +135,7 @@ export default function StudentDashboard() {
   const [progress, setProgress] = useState<CompetencyProgress[] | null>(null);
   const [weekCheckins, setWeekCheckins] = useState<InternshipDay[]>([]);
   const [profileFailed, setProfileFailed] = useState(false);
+  const [hasArchive, setHasArchive] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const requestId = useRef(0);
   const loadProfile = useCallback(async () => {
@@ -142,14 +144,17 @@ export default function StudentDashboard() {
     setStatsLoading(true);
     try {
       if (!user) return;
-      const [{ data: profile, error }, progressRows] = await Promise.all([
+      const [{ data: profile, error }, progressRows, archived] = await Promise.all([
         supabase.from('student_profiles')
           .select('university, department, company_name, student_id, internship_start_date, internship_end_date, total_xp, current_level, current_streak, longest_streak')
           .eq('id', user.id).maybeSingle(),
         competencyService.getProgress(user.id),
+        // Optional: a failed count only hides the archive link.
+        logService.hasLogs(user.id).catch(() => false),
       ]);
       if (request !== requestId.current) return;
       if (error) throw error;
+      setHasArchive(archived);
       if (!profile || !profile.university || !profile.department || !profile.company_name ||
           !profile.student_id || !profile.internship_start_date || !profile.internship_end_date) {
         router.replace('/(student)/internship-form?return=dashboard');
@@ -296,10 +301,10 @@ export default function StudentDashboard() {
           onPress={() => router.push('/(student)/leaderboard')}>
           <Text style={[ui.link, { fontSize: 14 }]}>{t('tabs.ranking')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" hitSlop={12} style={{ minHeight: 44, justifyContent: 'center' }}
+        {hasArchive && <Pressable accessibilityRole="button" hitSlop={12} style={{ minHeight: 44, justifyContent: 'center' }}
           onPress={() => router.push('/(student)/log-history')}>
           <Text style={[ui.link, { fontSize: 14 }]}>{t('studentFlow.archive')}</Text>
-        </Pressable>
+        </Pressable>}
       </View>
     </ScrollView>
   </SafeAreaView>;

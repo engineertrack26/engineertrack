@@ -20,6 +20,16 @@ export const logService = {
     if (error) throw error;
     return data;
   },
+  /** Whether the student has any log from the retired daily-log era. The
+   *  dashboard shows its Archive link only then; a pilot student never has one. */
+  async hasLogs(studentId: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('daily_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', studentId);
+    if (error) throw error;
+    return (count ?? 0) > 0;
+  },
   /** POST a photo to the log-photos bucket and return its public URL.
    *
    *  The storage policy keys on (storage.foldername(name))[1] = auth.uid()::text
