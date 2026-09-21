@@ -152,7 +152,8 @@
     "weakPassword": "Această parolă este prea slabă sau a apărut într-o scurgere de date cunoscută. Alege alta.",
     "emailTaken": "Există deja un cont cu acest e-mail. Autentifică-te în schimb.",
     "emailNotConfirmed": "Confirmă mai întâi adresa de e-mail. Caută linkul în inbox.",
-    "rateLimit": "Prea multe încercări. Așteaptă puțin și încearcă din nou."
+    "rateLimit": "Prea multe încercări. Așteaptă puțin și încearcă din nou.",
+    "confirmThenSignIn": "Apasă pe linkul din e-mailul pe care ți l-am trimis, apoi autentifică-te."
   },
   "growthUi": {
     "photoBonus": "Bonus foto pentru sarcină",

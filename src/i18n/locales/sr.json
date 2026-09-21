@@ -152,7 +152,8 @@
     "weakPassword": "Ova lozinka je preslaba ili se pojavila u poznatom curenju podataka. Izaberi drugu.",
     "emailTaken": "Nalog sa ovom e-poštom već postoji. Prijavi se umesto toga.",
     "emailNotConfirmed": "Prvo potvrdi svoju e-adresu. Potraži link u prijemnom sandučetu.",
-    "rateLimit": "Previše pokušaja. Sačekaj malo i pokušaj ponovo."
+    "rateLimit": "Previše pokušaja. Sačekaj malo i pokušaj ponovo.",
+    "confirmThenSignIn": "Dodirni link u e-poruci koju smo ti poslali, a zatim se prijavi."
   },
   "growthUi": {
     "photoBonus": "Bonus za fotografiju zadatka",

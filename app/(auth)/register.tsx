@@ -104,7 +104,7 @@ export default function RegisterScreen() {
       } else {
         Alert.alert(
           t('auth.registerSuccess'),
-          t('auth.registerSuccess'),
+          t('authUi.confirmThenSignIn', 'Tap the link in the email we sent you, then sign in.'),
         );
         router.replace('/(auth)/login');
       }

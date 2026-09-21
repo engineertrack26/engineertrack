@@ -152,7 +152,8 @@
     "weakPassword": "Dieses Passwort ist zu schwach oder in einem bekannten Datenleck aufgetaucht. Wähle ein anderes.",
     "emailTaken": "Mit dieser E-Mail existiert bereits ein Konto. Melde dich stattdessen an.",
     "emailNotConfirmed": "Bestätige zuerst deine E-Mail-Adresse. Den Link findest du in deinem Posteingang.",
-    "rateLimit": "Zu viele Versuche. Warte kurz und versuche es erneut."
+    "rateLimit": "Zu viele Versuche. Warte kurz und versuche es erneut.",
+    "confirmThenSignIn": "Tippe auf den Link in der E-Mail, die wir dir geschickt haben, und melde dich dann an."
   },
   "growthUi": {
     "photoBonus": "Aufgabenfoto-Bonus",

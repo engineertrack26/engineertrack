@@ -152,7 +152,8 @@
     "weakPassword": "Questa password è troppo debole o è comparsa in una violazione di dati nota. Scegline un'altra.",
     "emailTaken": "Esiste già un account con questa email. Accedi invece.",
     "emailNotConfirmed": "Conferma prima il tuo indirizzo email. Controlla la posta in arrivo per il link.",
-    "rateLimit": "Troppi tentativi. Attendi un momento e riprova."
+    "rateLimit": "Troppi tentativi. Attendi un momento e riprova.",
+    "confirmThenSignIn": "Tocca il link nell'email che ti abbiamo inviato, poi accedi."
   },
   "growthUi": {
     "photoBonus": "Bonus foto del compito",

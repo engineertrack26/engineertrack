@@ -152,7 +152,8 @@
     "weakPassword": "This password is too weak or has appeared in a known data breach. Choose a different one.",
     "emailTaken": "An account with this email already exists. Sign in instead.",
     "emailNotConfirmed": "Confirm your email address first. Check your inbox for the link.",
-    "rateLimit": "Too many attempts. Wait a moment and try again."
+    "rateLimit": "Too many attempts. Wait a moment and try again.",
+    "confirmThenSignIn": "Tap the link in the email we sent you, then sign in."
   },
   "growthUi": {
     "photoBonus": "Task photo bonus",

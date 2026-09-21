@@ -181,7 +181,8 @@
     "weakPassword": "Bu şifre çok zayıf ya da bilinen bir veri sızıntısında yer alıyor. Farklı bir şifre seç.",
     "emailTaken": "Bu e-posta ile bir hesap zaten var. Giriş yapmayı dene.",
     "emailNotConfirmed": "Önce e-posta adresini doğrula. Bağlantı için gelen kutunu kontrol et.",
-    "rateLimit": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene."
+    "rateLimit": "Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.",
+    "confirmThenSignIn": "Sana gönderdiğimiz e-postadaki bağlantıya dokun, sonra giriş yap."
   },
   "growthUi": {
     "photoBonus": "Görev fotoğrafı bonusu",
