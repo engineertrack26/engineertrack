@@ -146,7 +146,7 @@ function InternshipContent({ userId, returnTo }: { userId: string; returnTo?: st
             <Text style={ui.secondary}>{t(section.hint)}</Text>
             {section.fields.map((field) => {
               const dateField = field === 'internship_start_date' || field === 'internship_end_date';
-              const required = requiredInternshipFields.includes(field);
+              const required = (requiredInternshipFields as readonly InternshipField[]).includes(field);
               const label = t(labels[field]);
               return <View key={field} style={{ gap: 8 }}>
                 <Text style={ui.label}>{label}{required ? ' *' : ''}</Text>

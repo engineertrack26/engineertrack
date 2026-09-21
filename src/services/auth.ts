@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Session } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
 import { User, UserRole, SupportedLanguage } from '@/types/user';
 import { isStudentAvatarId, type StudentAvatarId } from '@/utils/studentAvatar';
 
@@ -128,7 +129,7 @@ export const authService = {
   // Update-then-insert instead of upsert: PostgREST upsert puts `id` in the
   // ON CONFLICT UPDATE SET list, which requires an UPDATE(id) column grant
   // that the gamification lockdown intentionally does not give.
-  async upsertStudentProfile(userId: string, updates: Record<string, unknown>) {
+  async upsertStudentProfile(userId: string, updates: Omit<Database['public']['Tables']['student_profiles']['Insert'], 'id'>) {
     const { data: updated, error: updateError } = await supabase
       .from('student_profiles')
       .update(updates)
@@ -140,7 +141,7 @@ export const authService = {
 
     const { data, error } = await supabase
       .from('student_profiles')
-      .insert({ id: userId, ...updates })
+      .insert({ ...updates, id: userId })
       .select()
       .single();
     if (error) throw error;

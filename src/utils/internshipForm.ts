@@ -3,8 +3,12 @@ export const internshipFields = ['university', 'faculty', 'department', 'departm
   'company_name', 'company_address', 'company_sector', 'internship_start_date', 'internship_end_date'] as const;
 export type InternshipField = typeof internshipFields[number];
 export type InternshipForm = Record<InternshipField, string>;
-export const requiredInternshipFields: InternshipField[] = ['university', 'department', 'student_id',
-  'company_name', 'internship_start_date', 'internship_end_date'];
+export const requiredInternshipFields = ['university', 'department', 'student_id',
+  'company_name', 'internship_start_date', 'internship_end_date'] as const satisfies readonly InternshipField[];
+export type RequiredInternshipField = typeof requiredInternshipFields[number];
+/** What the form writes: the NOT NULL columns of student_profiles always a
+ *  string (validated non-empty), the rest a string or null. */
+export type InternshipPayload = Record<RequiredInternshipField, string> & Record<Exclude<InternshipField, RequiredInternshipField>, string | null>;
 
 export function readInternshipForm(row: Record<string, unknown> | null): InternshipForm {
   return Object.fromEntries(internshipFields.map((field) => [field, typeof row?.[field] === 'string' ? row[field] : ''])) as InternshipForm;
@@ -24,9 +28,10 @@ export function validateInternshipForm(form: InternshipForm): Partial<Record<Int
   if (start && end && end < start) errors.internship_end_date = 'order';
   return errors;
 }
-export function internshipPayload(form: InternshipForm): Record<InternshipField, string | null> {
+export function internshipPayload(form: InternshipForm): InternshipPayload {
+  const required: readonly InternshipField[] = requiredInternshipFields;
   return Object.fromEntries(internshipFields.map((field) => [field,
-    form[field].trim() || (requiredInternshipFields.includes(field) ? '' : null)])) as Record<InternshipField, string | null>;
+    form[field].trim() || (required.includes(field) ? '' : null)])) as InternshipPayload;
 }
 export function sameInternshipForm(a: InternshipForm, b: InternshipForm): boolean {
   return internshipFields.every((field) => a[field] === b[field]);

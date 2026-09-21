@@ -3,11 +3,11 @@ import { isStudentAvatarId, type StudentAvatarId } from '@/utils/studentAvatar';
 
 export interface StudentAvatarState { avatarId: StudentAvatarId | null; level: number }
 export async function getAdvisorStudentAvatars(groupId?: string): Promise<Record<string, StudentAvatarState>> {
-  const { data, error } = await supabase.rpc('advisor_student_avatars', { p_group_id: groupId ?? null });
+  const { data, error } = await supabase.rpc('advisor_student_avatars', { p_group_id: groupId ?? undefined });
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Invalid advisor avatar response');
   const result: Record<string, StudentAvatarState> = Object.create(null);
-  for (const row of data) {
+  for (const row of data as Record<string, unknown>[]) {
     if (!row || typeof row.studentId !== 'string' || !row.studentId) throw new Error('Invalid student ID');
     result[row.studentId] = parseStudentAvatar(row);
   }

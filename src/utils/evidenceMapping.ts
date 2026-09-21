@@ -1,4 +1,5 @@
 import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
+import type { Json } from '@/types/database';
 
 /** The camelCase -> snake_case boundary for submit_assignment's evidence
  *  parameters.
@@ -9,11 +10,11 @@ import type { PhotoEvidence, DocumentEvidence } from '@/types/assignment';
  *  rather than aborting the submission -- so the document would simply vanish,
  *  with no error on either side. This module is the one place that conversion
  *  happens, and it is tested. */
-export function toPhotoPayload(photos: PhotoEvidence[]): unknown[] {
+export function toPhotoPayload(photos: PhotoEvidence[]): Json[] {
   return photos.map((p) => ({ uri: p.uri, caption: p.caption ?? null }));
 }
 
-export function toDocumentPayload(docs: DocumentEvidence[]): unknown[] {
+export function toDocumentPayload(docs: DocumentEvidence[]): Json[] {
   return docs.map((d) => ({
     uri: d.uri,
     file_name: d.fileName,

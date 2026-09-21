@@ -7,7 +7,7 @@ jest.mock('@/services/notifications', () => ({
 jest.mock('@/services/supabase', () => ({ supabase: { removeChannel: jest.fn() } }));
 
 const state = () => useNotificationStore.getState();
-const row = (id: string) => ({ id, user_id: 'u', title: id, body: 'body', type: 'general', is_read: false, created_at: '2026-09-12T10:00:00Z' });
+const row = (id: string) => ({ id, user_id: 'u', title: id, body: 'body', type: 'general', is_read: false, created_at: '2026-09-12T10:00:00Z', data: {} });
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => { resolve = done; });

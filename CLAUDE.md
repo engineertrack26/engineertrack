@@ -17,13 +17,15 @@ npx expo start --clear     # Dev server (Expo Go; EXPO_PUBLIC_USE_RN_FETCH=1 in 
 npx tsc --noEmit           # Must be silent (noUnusedLocals / noUnusedParameters are on)
 npx jest --silent          # Pure helpers and services under src/**/__tests__
 npx expo install <pkg>     # SDK-compatible install
+npx supabase gen types typescript --project-id ocxpymvikzujdqefnoqg --schema public > src/types/database.ts
+                           # Regenerate after any SQL change (needs `supabase login` once)
 ```
 
 ## Architecture
 - **Routing**: Expo Router (file-based). Every file under `app/` is a route even when hidden from the tab bar with `href: null`.
 - **Styling**: StyleSheet + theme tokens (`src/theme`); newer screens share `src/components/common/workflowStyles.ts`.
 - **State**: Zustand — `authStore`, `gamificationStore`, `groupStore`, `logStore` (read-only legacy), `mentorReviewStore`, `notificationStore`.
-- **Backend**: Supabase. Business rules live in `SECURITY DEFINER` RPCs; tables that carry a rule have **no direct write policy** (`assignment_submissions`, `kpi_observations`, `feed_posts` task rows…). SQL lives in `docs/*.sql`, applied by hand in the Supabase SQL editor.
+- **Backend**: Supabase, typed client (`createClient<Database>`, `src/types/database.ts` generated — never hand-edited; RPCs through `services/rpc.ts`). Business rules live in `SECURITY DEFINER` RPCs; tables that carry a rule have **no direct write policy** (`assignment_submissions`, `kpi_observations`, `feed_posts` task rows…). SQL lives in `docs/*.sql`, applied by hand in the Supabase SQL editor.
 - **i18n**: i18next, 7 locales (en, tr, el, it, ro, de, sr). New keys go to `en.json`; others fall back. Use `t(key, 'Default text')` when adding keys.
 - **Auth tokens**: expo-secure-store.
 

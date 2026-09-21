@@ -2,7 +2,11 @@ import { supabase } from './supabase';
 import type { Attendance, DayEvent, DayLogForm, DayTask, InternshipDay, InternshipPerson } from '@/types/internshipDay';
 import { uploadToBucket } from './evidenceUrls';
 import type { daySummary } from '@/utils/internshipDays';
-async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+import type { RpcArgs, RpcName } from './rpc';
+import type { Json } from '@/types/database';
+/** Like services/rpc.ts, plus a 15 s abort: these calls sit behind the
+ *  attendance strip and must not hang the dashboard. */
+async function rpc<T, N extends RpcName = RpcName>(name: N, args: RpcArgs<N> = {} as RpcArgs<N>): Promise<T> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -23,8 +27,8 @@ export const internshipDayService = {
     { p_student_id: studentId, p_date: date, p_timezone: timezone, p_reason: reason.trim() }),
   saveLog: (day: InternshipDay, form: DayLogForm, submit: boolean) => rpc<void>('internship_save_log', {
     p_day: day.id, p_version: day.version, p_experience: form.experience.trim(), p_learning: form.learning.trim(),
-    p_next_step: form.nextStep.trim(), p_support: form.support, p_submit: submit, p_reason: form.reason.trim(),
-    p_task: form.taskId, p_attachment: form.attachment,
+    p_next_step: form.nextStep.trim(), p_support: form.support as number, p_submit: submit, p_reason: form.reason.trim(),
+    p_task: form.taskId ?? undefined, p_attachment: (form.attachment ?? undefined) as Json | undefined,
   }),
   review: (days: InternshipDay[], status: Exclude<Attendance,'pending'>, note: string) => rpc<void>('internship_review',
     { p_days: days.map(d => ({ id: d.id, version: d.version })), p_status: status, p_note: note.trim() }),

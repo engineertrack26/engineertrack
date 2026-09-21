@@ -18,7 +18,7 @@ test('advisor avatar batch uses group scope and server level without per-student
 test('advisor overview uses server-authorized scope and accepts no selections', async () => {
   jest.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
   expect(await getAdvisorStudentAvatars()).toEqual({});
-  expect(supabase.rpc).toHaveBeenCalledWith('advisor_student_avatars', { p_group_id: null });
+  expect(supabase.rpc).toHaveBeenCalledWith('advisor_student_avatars', { p_group_id: undefined });
 });
 
 test.each([null, {}, [{ studentId: '', avatarId: '01', level: 1 }],

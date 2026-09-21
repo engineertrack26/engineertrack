@@ -1,5 +1,4 @@
-import { supabase } from './supabase';
-import { RpcError } from './rpcError';
+import { rpc } from './rpc';
 import type { ConversationSummary, Message, MessageContact, Participant } from '@/types/messages';
 
 export const MESSAGES_PAGE_SIZE = 50;
@@ -28,18 +27,12 @@ function toMessage(r: Record<string, unknown>): Message {
   return { id: r.id as string, senderId: r.senderId as string, body: (r.body as string) || '', createdAt: r.createdAt as string };
 }
 
-async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw new RpcError(error.message);
-  return data as T;
-}
-
 export const messageService = {
   listConversations: async (groupId?: string) =>
-    ((await rpc<Record<string, unknown>[]>('list_conversations', { p_group_id: groupId ?? null })) || []).map(toSummary),
+    ((await rpc<Record<string, unknown>[]>('list_conversations', { p_group_id: groupId ?? undefined })) || []).map(toSummary),
   /** Newest first from the server; returned oldest first for rendering. */
   listMessages: async (conversationId: string, before?: string) =>
-    ((await rpc<Record<string, unknown>[]>('list_messages', { p_conversation_id: conversationId, p_before: before ?? null, p_limit: MESSAGES_PAGE_SIZE })) || []).map(toMessage).reverse(),
+    ((await rpc<Record<string, unknown>[]>('list_messages', { p_conversation_id: conversationId, p_before: before ?? undefined, p_limit: MESSAGES_PAGE_SIZE })) || []).map(toMessage).reverse(),
   listContacts: async (groupId: string): Promise<MessageContact[]> =>
     ((await rpc<Record<string, unknown>[]>('list_message_contacts', { p_group_id: groupId })) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '' })),
   /** A mentor's students, each with the group a conversation would be opened
@@ -56,5 +49,5 @@ export const messageService = {
   markRead: (conversationId: string) => rpc<void>('mark_conversation_read', { p_conversation_id: conversationId }),
   setBlocked: (conversationId: string, block: boolean) => rpc<void>('block_conversation', { p_conversation_id: conversationId, p_block: block }),
   unreadCount: async () => Number(await rpc<number>('unread_message_count', {})) || 0,
-  countDeletable: (groupId: string, studentId?: string) => rpc<number>('count_deletable_conversations', { p_group_id: groupId, p_student_id: studentId ?? null }),
+  countDeletable: (groupId: string, studentId?: string) => rpc<number>('count_deletable_conversations', { p_group_id: groupId, p_student_id: studentId ?? undefined }),
 };

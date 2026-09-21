@@ -10,7 +10,7 @@ jest.mock('../studentCode', () => ({ studentCodeService: { getMyCodeDetails: jes
 describe('student profile presentation loader', () => {
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.mocked(authService.getStudentProfile).mockResolvedValue({ university: 'School' });
+    jest.mocked(authService.getStudentProfile).mockResolvedValue({ university: 'School' } as Awaited<ReturnType<typeof authService.getStudentProfile>>);
     jest.mocked(groupService.getMyGroup).mockResolvedValue({ id: 'g', name: 'Group', advisorName: 'Advisor', term: '2026' });
     jest.mocked(studentCodeService.getMyCodeDetails).mockResolvedValue({ code: 'ABC123' });
     jest.mocked(studentCodeService.getLinkedUsers).mockResolvedValue({ mentor: { id: 'm', firstName: 'M', lastName: 'N' }, advisor: null });

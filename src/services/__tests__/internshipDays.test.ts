@@ -16,7 +16,7 @@ test('server owns attendance authority, timestamps and atomic batch review',asyn
 test('submission carries a version and never writes attendance or XP',async()=>{
   await service.saveLog({id:'day',version:4} as InternshipDay,{experience:' work ',learning:' lesson ',nextStep:'',support:0,reason:'',taskId:null,attachment:null},true);
   expect(supabase.rpc).toHaveBeenCalledWith('internship_save_log',{
-    p_day:'day',p_version:4,p_experience:'work',p_learning:'lesson',p_next_step:'',p_support:0,p_submit:true,p_reason:'',p_task:null,p_attachment:null,
+    p_day:'day',p_version:4,p_experience:'work',p_learning:'lesson',p_next_step:'',p_support:0,p_submit:true,p_reason:'',p_task:undefined,p_attachment:undefined,
   });
 });
 test('advisor correction does not send a replacement attendance value',async()=>{

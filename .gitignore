@@ -62,3 +62,6 @@ nul
 
 # Subagent-driven development scratch (ledgers, briefs, review packages)
 .superpowers/
+
+# Supabase CLI scratch (gen types)
+supabase/.temp/

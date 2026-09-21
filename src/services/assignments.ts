@@ -335,7 +335,7 @@ export const assignmentService = {
       p_reflection: reflection,
       p_photos: toPhotoPayload(photos),
       p_documents: toDocumentPayload(documents),
-      p_self_level: selfLevel ?? null,
+      p_self_level: selfLevel ?? undefined,
     });
     if (error) throw new RpcError(error.message);
     return data as string;
@@ -354,7 +354,7 @@ export const assignmentService = {
       p_submission_id: submissionId,
       p_approved: approved,
       p_note: note,
-      p_level: level ?? null,
+      p_level: level ?? undefined,
     });
     if (error) throw new RpcError(error.message);
   },

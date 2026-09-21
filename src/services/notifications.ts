@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { NotificationType } from '@/types/notification';
 import { sendPushNotification } from './pushNotifications';
+import type { Json } from '@/types/database';
 
 export const notificationService = {
   async create(
@@ -17,7 +18,7 @@ export const notificationService = {
         title,
         body,
         type,
-        data: data || {},
+        data: (data || {}) as Json,
       });
     if (error) throw error;
 

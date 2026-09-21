@@ -110,7 +110,7 @@ export const feedService = {
   async listPosts(groupId: string, before?: string): Promise<FeedPost[]> {
     const { data, error } = await supabase.rpc('list_feed_posts', {
       p_group_id: groupId,
-      p_before: before ?? null,
+      p_before: before ?? undefined,
       p_limit: FEED_PAGE_SIZE,
     });
     if (error) throw new RpcError(error.message);
@@ -139,7 +139,7 @@ export const feedService = {
       p_group_id: groupId,
       p_kind: kind,
       p_body: body,
-      p_options: options ?? null,
+      p_options: options ?? undefined,
       p_attachments: attachments ?? [],
       p_draft: draft,
     });

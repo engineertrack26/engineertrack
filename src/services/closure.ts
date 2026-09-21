@@ -1,12 +1,5 @@
-import { supabase } from './supabase';
-import { RpcError } from './rpcError';
+import { rpc } from './rpc';
 import type { ClosureStatus } from '@/types/closure';
-
-async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw new RpcError(error.message);
-  return data as T;
-}
 
 /** Wraps the four client-facing closure RPCs (docs/internship-closure-migration.sql).
  *  Their JSONB results are already camelCase, matching ClosureStatus and the
