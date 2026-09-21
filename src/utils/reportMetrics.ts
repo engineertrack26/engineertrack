@@ -29,7 +29,7 @@ export function competencyCompletion(progress: CompetencyProgress[]): Completion
  *
  * Returns 0 for an empty group (not NaN).
  */
-export function averageCompletion(students: Array<{ percent: number }>): number {
+export function averageCompletion(students: { percent: number }[]): number {
   if (students.length === 0) {
     return 0;
   }

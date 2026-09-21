@@ -10,7 +10,7 @@ function toPost(raw: Record<string, unknown>): FeedPost {
   const task = raw.task as Record<string, unknown> | null;
   const poll = raw.poll as Record<string, unknown> | null;
   const assignment = raw.assignment as Record<string, unknown> | null;
-  const attachments = Array.isArray(raw.attachments) ? (raw.attachments as Array<Record<string, unknown>>) : [];
+  const attachments = Array.isArray(raw.attachments) ? (raw.attachments as Record<string, unknown>[]) : [];
   return {
     id: raw.id as string,
     kind: raw.kind as FeedPostKind,
@@ -38,7 +38,7 @@ function toPost(raw: Record<string, unknown>): FeedPost {
       : undefined,
     poll: poll
       ? {
-          options: ((poll.options as Array<Record<string, unknown>>) || []).map((o) => ({
+          options: ((poll.options as Record<string, unknown>[]) || []).map((o) => ({
             id: o.id as string,
             label: (o.label as string) || '',
             position: Number(o.position) || 0,
@@ -114,7 +114,7 @@ export const feedService = {
       p_limit: FEED_PAGE_SIZE,
     });
     if (error) throw new RpcError(error.message);
-    const rows = (data || []) as Array<Record<string, unknown>>;
+    const rows = (data || []) as Record<string, unknown>[];
     return Promise.all(rows.map(signPost));
   },
 
@@ -123,7 +123,7 @@ export const feedService = {
   async listPending(groupId: string): Promise<FeedPost[]> {
     const { data, error } = await supabase.rpc('list_feed_pending', { p_group_id: groupId });
     if (error) throw new RpcError(error.message);
-    const rows = (data || []) as Array<Record<string, unknown>>;
+    const rows = (data || []) as Record<string, unknown>[];
     return Promise.all(rows.map(signPost));
   },
 
@@ -132,7 +132,7 @@ export const feedService = {
     kind: 'announcement' | 'poll',
     body: string,
     options?: string[],
-    attachments?: Array<{ kind: FeedAttachmentKind; target: string; name?: string; mime?: string; size?: number }>,
+    attachments?: { kind: FeedAttachmentKind; target: string; name?: string; mime?: string; size?: number }[],
     draft = false,
   ): Promise<string> {
     const { data, error } = await supabase.rpc('create_feed_post', {
@@ -189,7 +189,7 @@ export const feedService = {
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
     if (error) throw error;
-    const rows = (data || []) as Array<Record<string, unknown>>;
+    const rows = (data || []) as Record<string, unknown>[];
 
     // Names come from profiles_public, not an embed on profiles: the
     // profiles SELECT policy never lets a student read a classmate's or the
@@ -205,7 +205,7 @@ export const feedService = {
         .select('id, first_name, last_name')
         .in('id', authorIds);
       if (peopleError) throw peopleError;
-      for (const p of (people || []) as Array<Record<string, unknown>>) {
+      for (const p of (people || []) as Record<string, unknown>[]) {
         names.set(p.id as string, `${(p.first_name as string) || ''} ${(p.last_name as string) || ''}`.trim());
       }
     }

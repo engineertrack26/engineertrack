@@ -116,7 +116,7 @@ export const competencyService = {
       p_student_id: studentId,
     });
     if (error) throw new RpcError(error.message);
-    return ((data as Array<Record<string, unknown>>) || []).map((r) => ({
+    return ((data as Record<string, unknown>[]) || []).map((r) => ({
       competencyId: (r.competencyId as string) || '',
       code: (r.code as string) || '',
       name: (r.name as string) || '',

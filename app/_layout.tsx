@@ -286,7 +286,6 @@ export default function RootLayout() {
         const role = useAuthStore.getState().user?.role;
         const route = routeForNotification(data.type as string, data, role);
         if (route) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           router.push(route as any);
         }
       },

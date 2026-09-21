@@ -87,7 +87,7 @@ export const mentorService = {
     if (reviewedResult.error) throw reviewedResult.error;
     if (weekResult.error) throw weekResult.error;
 
-    const reviewedRows = (reviewedResult.data || []) as Array<{ status: string }>;
+    const reviewedRows = (reviewedResult.data || []) as { status: string }[];
     const approvedCount = reviewedRows.filter((r) => r.status === 'approved').length;
     // null (not 0) when this mentor has never reviewed anything -- 0% approved
     // and "no data yet" are different facts, and the card below only shows

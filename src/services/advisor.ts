@@ -478,7 +478,7 @@ export const advisorService = {
     if (assignmentsError) throw assignmentsError;
     const assignmentIds = (assignments || []).map((a) => (a as Record<string, unknown>).id as string);
 
-    let submissions: Array<{ student_id: string; status: string }> = [];
+    let submissions: { student_id: string; status: string }[] = [];
     if (assignmentIds.length > 0) {
       const { data: subs, error: subsError } = await supabase
         .from('assignment_submissions')
@@ -486,7 +486,7 @@ export const advisorService = {
         .in('assignment_id', assignmentIds)
         .in('student_id', studentIds);
       if (subsError) throw subsError;
-      submissions = (subs || []) as Array<{ student_id: string; status: string }>;
+      submissions = (subs || []) as { student_id: string; status: string }[];
     }
 
     const progressByStudent = new Map<string, CompetencyProgress[]>();

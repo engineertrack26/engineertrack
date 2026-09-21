@@ -77,7 +77,7 @@ test('history tabs, filters and empty states have Turkish copy', () => {
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s provides feedback history labels and interpolations', (_language, locale) => {
   expect(Object.keys(locale.feedbackUi).sort()).toEqual(Object.keys(en.feedbackUi).sort());
-  for (const key of Object.keys(en.feedbackUi) as Array<keyof typeof en.feedbackUi>) {
+  for (const key of Object.keys(en.feedbackUi) as (keyof typeof en.feedbackUi)[]) {
     expect(locale.feedbackUi[key].trim()).not.toBe('');
     expect((locale.feedbackUi[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.feedbackUi[key].match(/\{\{\w+\}\}/g) || []).sort());

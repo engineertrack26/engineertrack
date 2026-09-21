@@ -64,7 +64,7 @@ test('return routes are limited to the two existing entry points', () => {
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s provides internship form labels and interpolations', (_language, locale) => {
   expect(Object.keys(locale.internshipUi).sort()).toEqual(Object.keys(en.internshipUi).sort());
-  for (const key of Object.keys(en.internshipUi) as Array<keyof typeof en.internshipUi>) {
+  for (const key of Object.keys(en.internshipUi) as (keyof typeof en.internshipUi)[]) {
     expect(locale.internshipUi[key].trim()).not.toBe('');
     expect((locale.internshipUi[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.internshipUi[key].match(/\{\{\w+\}\}/g) || []).sort());

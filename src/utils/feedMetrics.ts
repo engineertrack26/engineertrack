@@ -2,7 +2,7 @@ import type { FeedPost } from '@/types/feed';
 
 /** Largest-remainder rounding so the bars always add up to 100 (or all
  *  zero when nobody has voted). Plain rounding shows 33/33/33 = 99. */
-export function pollPercentages(options: Array<{ votes: number }>): number[] {
+export function pollPercentages(options: { votes: number }[]): number[] {
   const total = options.reduce((sum, o) => sum + o.votes, 0);
   if (total === 0) return options.map(() => 0);
   const exact = options.map((o) => (o.votes * 100) / total);

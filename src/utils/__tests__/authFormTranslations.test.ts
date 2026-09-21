@@ -8,7 +8,7 @@ import el from '@/i18n/locales/el.json';
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s provides auth form copy and matching placeholders', (_language, locale) => {
   expect(Object.keys(locale.authUi).sort()).toEqual(Object.keys(en.authUi).sort());
-  for (const key of Object.keys(en.authUi) as Array<keyof typeof en.authUi>) {
+  for (const key of Object.keys(en.authUi) as (keyof typeof en.authUi)[]) {
     expect(locale.authUi[key].trim()).not.toBe('');
     expect((locale.authUi[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.authUi[key].match(/\{\{\w+\}\}/g) || []).sort());

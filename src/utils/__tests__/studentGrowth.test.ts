@@ -29,7 +29,7 @@ test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s localizes every jo
     expect(locale.levels[key].trim()).not.toBe('');
   }
   expect(Object.keys(locale.levelJourney).sort()).toEqual(Object.keys(en.levelJourney).sort());
-  for (const key of Object.keys(en.levelJourney) as Array<keyof typeof en.levelJourney>) {
+  for (const key of Object.keys(en.levelJourney) as (keyof typeof en.levelJourney)[]) {
     expect(locale.levelJourney[key].trim()).not.toBe('');
     expect((locale.levelJourney[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.levelJourney[key].match(/\{\{\w+\}\}/g) || []).sort());
@@ -85,7 +85,7 @@ test('surname stays limited to an initial, including unexpected full surname inp
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s provides growth labels and matching placeholders', (_language, locale) => {
   expect(Object.keys(locale.growthUi).sort()).toEqual(Object.keys(en.growthUi).sort());
-  for (const key of Object.keys(en.growthUi) as Array<keyof typeof en.growthUi>) {
+  for (const key of Object.keys(en.growthUi) as (keyof typeof en.growthUi)[]) {
     expect(locale.growthUi[key].trim()).not.toBe('');
     expect((locale.growthUi[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.growthUi[key].match(/\{\{\w+\}\}/g) || []).sort());

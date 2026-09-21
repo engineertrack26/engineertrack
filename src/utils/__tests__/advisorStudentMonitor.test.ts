@@ -45,7 +45,7 @@ test('keeps the existing local-calendar day count and its clamping rules', () =>
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s supplies all monitoring labels and placeholders', (_language, locale) => {
   expect(Object.keys(locale.advisorMonitor).sort()).toEqual(Object.keys(en.advisorMonitor).sort());
-  for (const key of Object.keys(en.advisorMonitor) as Array<keyof typeof en.advisorMonitor>) {
+  for (const key of Object.keys(en.advisorMonitor) as (keyof typeof en.advisorMonitor)[]) {
     expect(locale.advisorMonitor[key].trim()).not.toBe('');
     expect((locale.advisorMonitor[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.advisorMonitor[key].match(/\{\{\w+\}\}/g) || []).sort());

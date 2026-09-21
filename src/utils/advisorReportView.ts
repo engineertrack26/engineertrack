@@ -16,7 +16,7 @@ function csvCell(value: string | number): string {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function csvRow(cells: Array<string | number>): string {
+export function csvRow(cells: (string | number)[]): string {
   return cells.map(csvCell).join(',');
 }
 
@@ -28,7 +28,7 @@ export function filterReportStudents(rows: StudentReportRow[], query: string, so
 
 /** Attendance totals, one row per student, in the CSV's column order. Students
  *  are sorted by name so two exports of the same group line up in a diff. */
-export function attendanceSummaryRows(students: AttendanceStudentRow[], locale: string): Array<Array<string | number>> {
+export function attendanceSummaryRows(students: AttendanceStudentRow[], locale: string): (string | number)[][] {
   return [...students].sort((a, b) => a.name.localeCompare(b.name, locale) || a.id.localeCompare(b.id)).map((s) =>
     [s.name, s.company, s.mentor, s.expectedSoFar, s.expectedDays, s.unrecorded, s.present, s.partial, s.excused, s.absent, s.pending, s.corrections, s.submittedLogs]);
 }
@@ -40,7 +40,7 @@ export function attendanceSummaryRows(students: AttendanceStudentRow[], locale: 
  *  auditor can read them; a localised string would do neither reliably. */
 export function attendanceDayRows(days: AttendanceDayRow[], locale: string, labels: {
   yes: string; no: string; attendance: (value: AttendanceDayRow['attendance']) => string; logStatus: (value: AttendanceDayRow['logStatus']) => string;
-}): Array<Array<string | number>> {
+}): (string | number)[][] {
   return [...days].sort((a, b) => a.name.localeCompare(b.name, locale) || a.studentId.localeCompare(b.studentId) || a.date.localeCompare(b.date))
     .map((d) => [d.name, d.date, labels.attendance(d.attendance), d.checkedIn ? labels.yes : labels.no, d.checkInAt || '',
       d.decidedBy, d.decidedAt || '', d.correctionRequested ? labels.yes : labels.no, labels.logStatus(d.logStatus)]);

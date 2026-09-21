@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { ui } from '@/components/common/workflowStyles';
 import { Stamp } from '@/components/common/Stamp';
-export { ui } from '@/components/common/workflowStyles';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { taskState, taskStateKey, taskDueDate } from '@/utils/studentTasks';
 import type { MyAssignment } from '@/types/assignment';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
+export { ui } from '@/components/common/workflowStyles';
 
 export function StudentHeader({ title, leading }: { title: string; leading?: ReactNode }) {
   const router = useRouter();

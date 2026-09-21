@@ -21,7 +21,7 @@ const labels: Record<InternshipField, string> = {
   company_address: 'student.companyAddress', company_sector: 'student.companySector',
   internship_start_date: 'student.internshipStartDate', internship_end_date: 'student.internshipEndDate',
 };
-const sections: Array<{ title: string; hint: string; fields: InternshipField[] }> = [
+const sections: { title: string; hint: string; fields: InternshipField[] }[] = [
   { title: 'student.schoolInfo', hint: 'internshipUi.schoolHint', fields: ['university', 'faculty', 'department', 'department_branch', 'student_id'] },
   { title: 'student.internshipWorkplace', hint: 'internshipUi.workHint', fields: ['company_name', 'company_address', 'company_sector'] },
   { title: 'internshipUi.dates', hint: 'internshipUi.dateHint', fields: ['internship_start_date', 'internship_end_date'] },

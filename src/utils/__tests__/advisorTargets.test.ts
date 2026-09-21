@@ -36,7 +36,7 @@ test('requires at least one target and only integer levels 1 through 4', () => {
 
 test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s supplies target labels and interpolations', (_language, locale) => {
   expect(Object.keys(locale.targetUi).sort()).toEqual(Object.keys(en.targetUi).sort());
-  for (const key of Object.keys(en.targetUi) as Array<keyof typeof en.targetUi>) {
+  for (const key of Object.keys(en.targetUi) as (keyof typeof en.targetUi)[]) {
     expect(locale.targetUi[key].trim()).not.toBe('');
     expect((locale.targetUi[key].match(/\{\{\w+\}\}/g) || []).sort())
       .toEqual((en.targetUi[key].match(/\{\{\w+\}\}/g) || []).sort());

@@ -68,9 +68,9 @@ function toSubmission(r: Record<string, unknown>): AssignmentSubmission {
   // undefined, which is exactly right for a select that never asked
   // PostgREST for them.
   const photosRaw = Array.isArray(r.log_photos)
-    ? (r.log_photos as Array<Record<string, unknown>>) : undefined;
+    ? (r.log_photos as Record<string, unknown>[]) : undefined;
   const documentsRaw = Array.isArray(r.log_documents)
-    ? (r.log_documents as Array<Record<string, unknown>>) : undefined;
+    ? (r.log_documents as Record<string, unknown>[]) : undefined;
 
   return {
     id: (r.id as string) || '',
@@ -180,10 +180,10 @@ export const assignmentService = {
    *  the rest of the batch; the screen's partial-result reporting reads
    *  these settlements directly, unchanged. */
   async createDrafts(
-    inputs: Array<{
+    inputs: {
       groupId: string; tripletId: string; title: string; objective: string;
       criterion: string; dueDate?: string; createdBy: string;
-    }>,
+    }[],
   ): Promise<PromiseSettledResult<GroupAssignment>[]> {
     return Promise.allSettled(inputs.map((input) => this.createAssignment(input)));
   },
@@ -304,7 +304,7 @@ export const assignmentService = {
       p_group_id: groupId,
     });
     if (error) throw new RpcError(error.message);
-    return ((data as Array<Record<string, unknown>>) || []).map((r) => ({
+    return ((data as Record<string, unknown>[]) || []).map((r) => ({
       assignmentId: (r.assignment_id as string) || '',
       submitted: (r.submitted as number) ?? 0,
       approved: (r.approved as number) ?? 0,
@@ -388,7 +388,7 @@ export const assignmentService = {
       const all = Array.isArray(r.assignment_submissions) ? r.assignment_submissions : [];
       // PostgREST returns every submission on the assignment, not just this
       // student's — the RLS policy lets an advisor read them all.
-      const mine = (all as Array<Record<string, unknown>>)
+      const mine = (all as Record<string, unknown>[])
         .find((s) => s.student_id === studentId);
       if (!mine) return { ...assignment, documentUrl, submission: undefined };
 
@@ -414,7 +414,7 @@ export const assignmentService = {
    *  disappears — leaving a review card with no title, no task and, worst, no
    *  criterion, the one thing the mentor is supposed to judge against. A row
    *  they cannot evaluate is worse than a row they cannot see. */
-  async listPendingReviews(options: { submissionId?: string; signUrls?: boolean } = {}): Promise<Array<AssignmentSubmission & { assignment: GroupAssignment }>> {
+  async listPendingReviews(options: { submissionId?: string; signUrls?: boolean } = {}): Promise<(AssignmentSubmission & { assignment: GroupAssignment })[]> {
     let query = supabase
       .from('assignment_submissions')
       // log_photos/log_documents embedded the same way listMyAssignments does,
