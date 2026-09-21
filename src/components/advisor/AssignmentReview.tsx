@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { newAssignmentId, prepareAssignments, type PreparedTask } from '@/utils/assignmentPreparation';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
+import { toLocalIsoDate } from '@/utils/localDate';
 
 export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, onClose, onDone, onPublish }: {
   groupId: string; createdBy: string; triplets: KpiTriplet[]; dueDate: string; memberCount: number;
@@ -130,7 +131,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         onChange={(event, value) => {
           if (Platform.OS !== 'ios') setShowDate(false);
           if (event.type === 'dismissed' || !value) return;
-          changeDate(`${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`);
+          changeDate(toLocalIsoDate(value));
         }} />
       {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => setShowDate(false)}>
         <Text style={ui.link}>{t('common.done')}</Text>

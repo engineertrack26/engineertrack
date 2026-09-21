@@ -1,10 +1,7 @@
 import { supabase } from './supabase';
-import { createClient, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { User, UserRole, SupportedLanguage } from '@/types/user';
 import { isStudentAvatarId, type StudentAvatarId } from '@/utils/studentAvatar';
-
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface SignUpParams {
   email: string;
@@ -20,19 +17,6 @@ interface SignUpParams {
 interface SignInParams {
   email: string;
   password: string;
-}
-
-async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), ms);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
 }
 
 export const authService = {
@@ -189,39 +173,6 @@ export const authService = {
   async recordConsent(version: string) {
     const { error } = await supabase.rpc('record_consent', { p_version: version });
     if (error) throw error;
-  },
-
-  async changePassword(_email: string, _currentPassword: string, newPassword: string) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData.session;
-    if (!session) {
-      throw new Error('Your session expired. Please sign in again and retry.');
-    }
-
-    // Use a throwaway client so we bypass the main client's auth lock and listeners.
-    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-    await tempClient.auth.setSession({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-    });
-
-    const { error } = await withTimeout(
-      tempClient.auth.updateUser({ password: newPassword }),
-      15000,
-      'Timed out while updating the password. Check your connection and try again.',
-    );
-    if (error) {
-      if (error.message === 'Auth session missing!') {
-        throw new Error('Your session expired. Please sign in again and retry.');
-      }
-      throw error;
-    }
   },
 
   onAuthStateChange(callback: (event: string, session: Session | null) => void) {

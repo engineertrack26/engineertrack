@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { fromLocalIsoDate, toLocalIsoDate } from '@/utils/localDate';
 import { taskContent } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
 import { kpiContent } from '@/utils/kpiContent';
@@ -37,23 +38,6 @@ const LEVELS = [1, 2, 3, 4];
 // 'YYYY-MM-DD' strings, so that stays the stored shape. Only the display
 // changes.
 //
-// Both helpers work in LOCAL time on purpose. toISOString() converts local
-// midnight to UTC, which in any positive offset lands on the previous day, and
-// new Date('2026-09-01') is parsed as UTC and then rendered locally, which does
-// the same thing in reverse. Either one silently shifts the due date by a day.
-function toIsoDate(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-function fromIsoDate(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 type SubmissionCounts = Record<
   string,
   { submitted: number; approved: number; needsRevision: number }
@@ -578,7 +562,7 @@ function GroupAssignmentsContent() {
             >
               <Text style={dueDate ? styles.dateValue : styles.datePlaceholder}>
                 {dueDate
-                  ? fromIsoDate(dueDate)?.toLocaleDateString(i18n.language)
+                  ? fromLocalIsoDate(dueDate)?.toLocaleDateString(i18n.language)
                   : t('student.selectDate', 'Select a date')}
               </Text>
               <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
@@ -590,13 +574,13 @@ function GroupAssignmentsContent() {
             {showDatePicker && (
               <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
                 <DateTimePicker
-                  value={fromIsoDate(dueDate) || new Date()}
+                  value={fromLocalIsoDate(dueDate) || new Date()}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={(event, selected) => {
                     if (Platform.OS === 'android') setShowDatePicker(false);
                     if (event.type === 'dismissed' || !selected) return;
-                    setDueDate(toIsoDate(selected));
+                    setDueDate(toLocalIsoDate(selected));
                   }}
                 />
                 {Platform.OS === 'ios' && (
@@ -630,7 +614,7 @@ function GroupAssignmentsContent() {
           {!!a.description && <Text style={ui.body}>{a.description}</Text>}
           {!!a.documentName && <Text style={ui.secondary}>{a.documentName}</Text>}
           <Text style={ui.secondary}>{t('advisor.assignmentDueDate')}: {a.dueDate
-            ? fromIsoDate(a.dueDate)?.toLocaleDateString(i18n.language) : t('taskFlow.noDate')}</Text>
+            ? fromLocalIsoDate(a.dueDate)?.toLocaleDateString(i18n.language) : t('taskFlow.noDate')}</Text>
         </View>)}
         {members.length === 0 && <Text style={ui.secondary}>{t('taskFlow.noMembers')}</Text>}
         <TouchableOpacity style={ui.primary} accessibilityRole="button"

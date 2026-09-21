@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { fromLocalIsoDate, toLocalIsoDate } from '@/utils/localDate';
 import { taskContent, taskContentEdit } from '@/utils/taskContent';
 import { competencyContent } from '@/utils/competencyContent';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -12,25 +13,6 @@ import { assignmentService } from '@/services/assignments';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { GroupAssignment } from '@/types/assignment';
-
-// The database column is DATE and the rest of the app passes these around as
-// 'YYYY-MM-DD' strings -- duplicated from app/(advisor)/group-assignments.tsx
-// rather than shared, matching how every other screen with a due-date picker
-// (my-tasks.tsx, pending-reviews.tsx, internship-form.tsx) already keeps its
-// own copy. Both helpers work in LOCAL time on purpose; see that file's
-// comment for why toISOString()/`new Date(iso)` would silently shift the date.
-function toIsoDate(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-function fromIsoDate(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 interface AssignmentCounts {
   submitted: number;
@@ -79,7 +61,7 @@ export function AssignmentCard({
   // counts-based check the rest of the screen already relies on.
   const canEditTerms = isDraft || (!countsUnavailable && counts.submitted === 0);
 
-  const due = a.dueDate ? fromIsoDate(a.dueDate) : null;
+  const due = a.dueDate ? fromLocalIsoDate(a.dueDate) : null;
 
   function openEdit() {
     setEditTitle(a.title);
@@ -385,7 +367,7 @@ export function AssignmentCard({
           >
             <Text style={editDueDate ? styles.dateValue : styles.datePlaceholder}>
               {editDueDate
-                ? fromIsoDate(editDueDate)?.toLocaleDateString(i18n.language)
+                ? fromLocalIsoDate(editDueDate)?.toLocaleDateString(i18n.language)
                 : t('student.selectDate', 'Select a date')}
             </Text>
             <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
@@ -394,13 +376,13 @@ export function AssignmentCard({
           {editShowDatePicker && (
             <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
               <DateTimePicker
-                value={fromIsoDate(editDueDate) || new Date()}
+                value={fromLocalIsoDate(editDueDate) || new Date()}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={(event, selected) => {
                   if (Platform.OS === 'android') setEditShowDatePicker(false);
                   if (event.type === 'dismissed' || !selected) return;
-                  setEditDueDate(toIsoDate(selected));
+                  setEditDueDate(toLocalIsoDate(selected));
                 }}
               />
               {Platform.OS === 'ios' && (

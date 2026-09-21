@@ -1,3 +1,4 @@
+import { fromLocalIsoDate, toLocalIsoDate } from '@/utils/localDate';
 export const internshipFields = ['university', 'faculty', 'department', 'department_branch', 'student_id',
   'company_name', 'company_address', 'company_sector', 'internship_start_date', 'internship_end_date'] as const;
 export type InternshipField = typeof internshipFields[number];
@@ -9,14 +10,10 @@ export function readInternshipForm(row: Record<string, unknown> | null): Interns
   return Object.fromEntries(internshipFields.map((field) => [field, typeof row?.[field] === 'string' ? row[field] : ''])) as InternshipForm;
 }
 export function parseInternshipDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
-  const date = new Date(year, month, day);
-  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day ? date : null;
+  return fromLocalIsoDate(value);
 }
 export function internshipDateString(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return toLocalIsoDate(date);
 }
 export function validateInternshipForm(form: InternshipForm): Partial<Record<InternshipField, 'required' | 'date' | 'order'>> {
   const errors: ReturnType<typeof validateInternshipForm> = {};

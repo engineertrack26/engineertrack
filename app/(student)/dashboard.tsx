@@ -21,6 +21,7 @@ import { colors, fonts } from '@/theme';
 import type { CompetencyProgress } from '@/types/competency';
 import type { MyAssignment } from '@/types/assignment';
 import type { InternshipDay } from '@/types/internshipDay';
+import { toLocalIsoDate } from '@/utils/localDate';
 
 interface ProfileSummary {
   companyName: string;
@@ -58,13 +59,6 @@ function weekRange(now = new Date()): { monday: Date; sunday: Date } {
   return { monday, sunday };
 }
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 /** One cell of the attendance strip: a weekday of the current week. */
 interface DayCell {
   iso: string;
@@ -85,7 +79,7 @@ function buildDayCells(days: InternshipDay[], monday: Date, todayIso: string, la
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const iso = isoDate(date);
+    const iso = toLocalIsoDate(date);
     const day = days.find((d) => d.day_date === iso);
     if (i >= 5 && !day) continue;
     cells.push({ iso, weekday: date.toLocaleDateString(lang, { weekday: 'short' }), recorded: !!day,
@@ -172,7 +166,7 @@ export default function StudentDashboard() {
       setProgress(progressRows);
       try {
         const { monday } = weekRange();
-        const days = await internshipDayService.week(user.id, isoDate(monday));
+        const days = await internshipDayService.week(user.id, toLocalIsoDate(monday));
         if (request === requestId.current) setWeekCheckins(days);
       } catch {
         if (request === requestId.current) setWeekCheckins([]);
@@ -196,7 +190,7 @@ export default function StudentDashboard() {
   const refresh = () => { void tasks.reload(); void loadProfile(); };
 
   const { monday, sunday } = useMemo(() => weekRange(), []);
-  const todayIso = useMemo(() => isoDate(new Date()), []);
+  const todayIso = useMemo(() => toLocalIsoDate(new Date()), []);
   const goToInternshipDays = useCallback(() => router.push('/(student)/internship-days'), [router]);
   const dayCells = useMemo(() => buildDayCells(weekCheckins, monday, todayIso, i18n.language),
     [weekCheckins, monday, todayIso, i18n.language]);
