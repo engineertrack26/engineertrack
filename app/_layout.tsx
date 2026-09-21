@@ -1,4 +1,3 @@
-import '../global.css';
 import * as Linking from 'expo-linking';
 import { captureRecoveryLink } from '@/utils/recoveryLinkInbox';
 import { useEffect, useRef, useState } from 'react';
