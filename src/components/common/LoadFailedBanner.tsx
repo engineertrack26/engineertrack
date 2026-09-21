@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 interface LoadFailedBannerProps {
   onRetry: () => void;
@@ -15,10 +16,11 @@ interface LoadFailedBannerProps {
  *  keeps the last good data on screen. */
 export function LoadFailedBanner({ onRetry }: LoadFailedBannerProps) {
   const { t } = useTranslation();
+  const { offline } = useNetworkStatus();
   return (
     <View style={styles.banner}>
       <Ionicons name="cloud-offline-outline" size={20} color={colors.error} />
-      <Text style={styles.text}>{t('common.loadFailed')}</Text>
+      <Text style={styles.text}>{t(offline ? 'common.offlineHint' : 'common.loadFailed')}</Text>
       <TouchableOpacity onPress={onRetry} activeOpacity={0.7} hitSlop={8}>
         <Text style={styles.retry}>{t('common.retry')}</Text>
       </TouchableOpacity>

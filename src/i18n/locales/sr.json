@@ -645,6 +645,8 @@
     "yes": "Da",
     "no": "Ne",
     "loadFailed": "Podaci nisu mogli da se učitaju. Pokušaj ponovo.",
+    "offline": "Nema internet veze",
+    "offlineHint": "Nisi na mreži. Poveži se ponovo i pokušaj opet.",
     "fileSizeMB": "{{size}} MB",
     "fileSizeKB": "{{size}} KB",
     "loading": "Učitavanje...",

@@ -645,6 +645,8 @@
     "yes": "Da",
     "no": "Nu",
     "loadFailed": "Datele nu pot fi încărcate. Reîncearcă.",
+    "offline": "Fără conexiune la internet",
+    "offlineHint": "Ești offline. Reconectează-te și încearcă din nou.",
     "fileSizeMB": "{{size}} MB",
     "fileSizeKB": "{{size}} KB",
     "loading": "Se încarcă...",

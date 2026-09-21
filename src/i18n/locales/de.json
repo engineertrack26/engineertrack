@@ -645,6 +645,8 @@
     "yes": "Ja",
     "no": "Nein",
     "loadFailed": "Daten konnten nicht geladen werden. Versuche es erneut.",
+    "offline": "Keine Internetverbindung",
+    "offlineHint": "Du bist offline. Verbinde dich erneut und versuche es noch einmal.",
     "fileSizeMB": "{{size}} MB",
     "fileSizeKB": "{{size}} KB",
     "loading": "Wird geladen...",

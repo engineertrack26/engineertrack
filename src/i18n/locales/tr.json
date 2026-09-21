@@ -761,6 +761,8 @@
     "yes": "Evet",
     "no": "Hayır",
     "loadFailed": "Veriler yüklenemedi. Lütfen yeniden dene.",
+    "offline": "İnternet bağlantısı yok",
+    "offlineHint": "Çevrimdışısın. Bağlantı gelince tekrar dene.",
     "fileSizeMB": "{{size}} MB",
     "fileSizeKB": "{{size}} KB",
     "loading": "Yükleniyor...",

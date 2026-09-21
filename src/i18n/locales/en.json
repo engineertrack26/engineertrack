@@ -651,6 +651,8 @@
     "required": "Required",
     "retry": "Retry",
     "loadFailed": "Could not load. Check your connection and try again.",
+    "offline": "No internet connection",
+    "offlineHint": "You are offline. Reconnect and try again.",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
