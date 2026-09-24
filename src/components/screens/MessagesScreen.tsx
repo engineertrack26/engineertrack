@@ -10,8 +10,10 @@ import { messageService } from '@/services/messages';
 import { groupService } from '@/services/group';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { broadcastFormError, broadcastSummary, toggleRecipient } from '@/utils/broadcast';
+import { showToast } from '@/components/common/Toast';
 import { ClosureBanner, LoadFailedBanner } from '@/components/common';
-import { ConversationRow, conversationListStyles, ContactPicker } from '@/components/messages';
+import { ConversationRow, conversationListStyles, ContactPicker, BroadcastComposer } from '@/components/messages';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import type { ConversationSummary, MessageContact } from '@/types/messages';
 
@@ -30,7 +32,12 @@ export function MessagesScreen({ role }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [picker, setPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'contact' | 'case'>('contact');
+  const [pickerMode, setPickerMode] = useState<'contact' | 'case' | 'broadcast'>('contact');
+  // The broadcast selection lives here, not in the picker, so it survives a
+  // reload of the contact list and the hop to the composer.
+  const [recipients, setRecipients] = useState<string[]>([]);
+  const [composer, setComposer] = useState(false);
+  const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState<MessageContact[] | null>(null);
   const [contactsFailed, setContactsFailed] = useState(false);
   const request = useRef(0);
@@ -83,10 +90,11 @@ export function MessagesScreen({ role }: Props) {
 
   const onRefresh = useCallback(async () => { setRefreshing(true); await loadGroups(); await load(); setRefreshing(false); }, [loadGroups, load]);
 
-  async function openPicker() {
+  async function openPicker(mode: 'contact' | 'broadcast' = 'contact') {
     const req = ++pickerReq.current;
     setPicker(true);
-    setPickerMode('contact');
+    setPickerMode(mode);
+    if (mode === 'broadcast') setRecipients([]);
     setContacts(null);
     setContactsFailed(false);
     try {
@@ -133,10 +141,14 @@ export function MessagesScreen({ role }: Props) {
   }
 
   function retryPicker() {
-    if (pickerMode === 'case') void openCasePicker(); else void openPicker();
+    if (pickerMode === 'case') void openCasePicker(); else void openPicker(pickerMode === 'broadcast' ? 'broadcast' : 'contact');
   }
 
   async function openWith(contact: MessageContact & { groupId?: string }) {
+    if (pickerMode === 'broadcast') {
+      setRecipients((cur) => toggleRecipient(cur, contact.id));
+      return;
+    }
     if (pickerMode === 'case') {
       if (!groupId) return;
       try {
@@ -161,6 +173,25 @@ export function MessagesScreen({ role }: Props) {
     }
   }
 
+  async function sendBroadcast(body: string) {
+    const problem = broadcastFormError(recipients, body);
+    if (problem) { Alert.alert(t('common.error'), t(problem)); return; }
+    setSending(true);
+    try {
+      const result = await messageService.broadcast(recipients, body);
+      const { key, params } = broadcastSummary(result);
+      setComposer(false);
+      setRecipients([]);
+      showToast(t(key, params));
+      await load();
+    } catch (err) {
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    } finally {
+      setSending(false);
+    }
+  }
+
   if (!user) return null;
   return (
     <SafeAreaView style={styles.safe}>
@@ -173,8 +204,14 @@ export function MessagesScreen({ role }: Props) {
               <Text style={[styles.newText, !groupId && { color: colors.textDisabled }]}>{t('messages.newCase', 'New case')}</Text>
             </TouchableOpacity>
           )}
+          {(role === 'advisor' || role === 'mentor') && (
+            <TouchableOpacity style={styles.newBtn} onPress={() => openPicker('broadcast')} activeOpacity={0.7}>
+              <Ionicons name="megaphone-outline" size={18} color={colors.primary} />
+              <Text style={styles.newText}>{t('messages.broadcast', 'To several')}</Text>
+            </TouchableOpacity>
+          )}
           {!closure?.closed && (
-            <TouchableOpacity style={styles.newBtn} onPress={openPicker} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.newBtn} onPress={() => openPicker()} activeOpacity={0.7}>
               <Ionicons name="create-outline" size={18} color={colors.primary} />
               <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
             </TouchableOpacity>
@@ -219,8 +256,20 @@ export function MessagesScreen({ role }: Props) {
         onPick={openWith}
         onClose={() => { pickerReq.current++; setPicker(false); }}
         onRetry={retryPicker}
-        title={pickerMode === 'case' ? t('messages.pickCaseStudent', 'Open a case for which student?') : undefined}
-        hint={pickerMode === 'case' ? t('messages.caseHint', 'A case is a thread between you, the student and their mentor.') : undefined}
+        title={pickerMode === 'case' ? t('messages.pickCaseStudent', 'Open a case for which student?')
+          : pickerMode === 'broadcast' ? t('messages.pickRecipients', 'Who gets this message?') : undefined}
+        hint={pickerMode === 'case' ? t('messages.caseHint', 'A case is a thread between you, the student and their mentor.')
+          : pickerMode === 'broadcast' ? t('messages.broadcastPickHint', 'Everyone you pick gets the same message, privately.') : undefined}
+        multi={pickerMode === 'broadcast'
+          ? { selected: recipients, onSubmit: () => { setPicker(false); setComposer(true); } }
+          : undefined}
+      />
+      <BroadcastComposer
+        visible={composer}
+        count={recipients.length}
+        busy={sending}
+        onSend={sendBroadcast}
+        onClose={() => { if (!sending) { setComposer(false); setRecipients([]); } }}
       />
     </SafeAreaView>
   );

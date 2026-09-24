@@ -41,7 +41,8 @@ npx supabase gen types typescript --project-id ocxpymvikzujdqefnoqg --schema pub
 2. **Competency framework** — 6 competencies × 4 levels × 2 KPIs (48), each KPI with 10 triplets (objective → task → criterion, 480). Read-only seed data. A level is reached only with two observations per KPI from someone other than the student, in order.
 3. **Task assignment** — advisor drafts tasks from triplets (`group_assignments`, `published_at` NULL = draft), publishes; student submits (`assignment_submissions`, `submit_assignment`); mentor `review_assignment` approves → KPI observation. Mentor approval is final.
 4. **Stream** (`feed_posts`, kinds `task | announcement | poll | assignment`) — approved tasks appear automatically unless the student turned `share_to_feed` off; advisor posts announcements (≤1 photo, ≤1 document, ≤1 link) and polls, to one or many groups, now or as drafts. Likes, flat comments, advisor moderation. Liking and commenting pay small XP (1 / 2, at most 3 + 3 a day, once per post, never for your own; `docs/feed-engagement-xp.sql` — triggers, not RPCs, because likes/comments are written straight to their tables). Read through `list_feed_posts` (privacy boundary: never the reflection or the mentor's note).
-5. **Retired, tables kept**: `daily_logs`, `mentor_feedbacks`, `polls*`. Do not build on them.
+5. **Messaging** — one-to-one only (`conversations` with two participants, `open_conversation` + `send_message`); an advisor or mentor can send one message to several students at once with `broadcast_message(uuid[], text)`, which loops over those same two RPCs so every rule (`can_message`, closure, blocks, notifications) stays in one place and reports per recipient. No group chat.
+6. **Retired, tables kept**: `daily_logs`, `mentor_feedbacks`, `polls*`. Do not build on them.
 
 ## Conventions
 - Path aliases (`@/…`), never relative imports out of `src/`.

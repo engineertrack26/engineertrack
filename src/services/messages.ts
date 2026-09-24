@@ -1,4 +1,5 @@
 import { rpc } from './rpc';
+import type { BroadcastFailure, BroadcastResult } from '@/utils/broadcast';
 import type { ConversationSummary, Message, MessageContact, Participant } from '@/types/messages';
 
 export const MESSAGES_PAGE_SIZE = 50;
@@ -46,6 +47,14 @@ export const messageService = {
   listCaseCandidates: async (groupId: string): Promise<MessageContact[]> =>
     ((await rpc<Record<string, unknown>[]>('list_case_candidates', { p_group_id: groupId })) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '', hasCase: !!r.hasCase })),
   sendMessage: (conversationId: string, body: string) => rpc<string>('send_message', { p_conversation_id: conversationId, p_body: body }),
+  /** One message to several students at once, each in their own private
+   *  conversation -- advisor and mentor only, enforced server-side. The
+   *  result counts what went out and names what did not. */
+  broadcast: async (recipients: string[], body: string): Promise<BroadcastResult> => {
+    const data = await rpc<{ sent?: number; failed?: BroadcastFailure[] }>('broadcast_message',
+      { p_recipients: recipients, p_body: body });
+    return { sent: Number(data?.sent) || 0, failed: data?.failed ?? [] };
+  },
   markRead: (conversationId: string) => rpc<void>('mark_conversation_read', { p_conversation_id: conversationId }),
   setBlocked: (conversationId: string, block: boolean) => rpc<void>('block_conversation', { p_conversation_id: conversationId, p_block: block }),
   unreadCount: async () => Number(await rpc<number>('unread_message_count', {})) || 0,

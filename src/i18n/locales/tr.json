@@ -37,6 +37,19 @@
     "journeyRule": "Hazırlık: mentör, işyeri ve geçerli tarihler. Ardından ilk onaylı çalışma ve danışmanın raporlu kapanışı. Ara değerlendirme yapıldığı varsayılmaz."
   },
   "messages": {
+    "broadcast": "Çoklu gönderim",
+    "pickRecipients": "Bu mesajı kimler alsın?",
+    "broadcastPickHint": "Seçtiğin herkes aynı mesajı özel olarak alır.",
+    "selectAll": "Tümünü seç",
+    "clearAll": "Temizle",
+    "continueWith": "Devam ({{count}})",
+    "broadcastTitle": "{{count}} öğrenciye mesaj",
+    "broadcastHint": "Her biri mesajı özel olarak alır. Diğer alıcıları görmezler, cevapları yalnızca sana gelir.",
+    "broadcastPlaceholder": "Mesajını yaz",
+    "broadcastSend": "{{count}} kişiye gönder",
+    "broadcastSent": "{{count}} öğrenciye gönderildi.",
+    "broadcastPartial": "{{count}} kişiye gönderildi; {{failed}} kişiye ulaşılamadı.",
+    "broadcastNoneSent": "Kimseye ulaşılamadı ({{count}} başarısız).",
     "caseLabel": "Vaka",
     "newCase": "Yeni vaka",
     "pickCaseStudent": "Hangi öğrenci için vaka açılsın?",
@@ -1245,6 +1258,9 @@
     }
   },
   "errors": {
+    "recipientsEmpty": "Önce en az bir öğrenci seç.",
+    "tooManyRecipients": "Tek seferde en fazla 30 öğrenciye gönderebilirsin.",
+    "messageTooLong": "Bu mesaj çok uzun (en fazla 2000 karakter).",
     "notGroupOwner": "Burada yalnızca grubun danışmanı paylaşım yapabilir.",
     "kindNotAllowed": "Bu tür bir paylaşım burada oluşturulamaz.",
     "pollOptionsRange": "Ankette 2 ile 6 arasında seçenek olmalı.",

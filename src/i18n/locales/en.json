@@ -1081,6 +1081,9 @@
     }
   },
   "errors": {
+    "recipientsEmpty": "Pick at least one student first.",
+    "tooManyRecipients": "You can send to at most 30 students at once.",
+    "messageTooLong": "That message is too long (2000 characters at most).",
     "cannotMessage": "You can't message this person.",
     "conversationNotFound": "This conversation is no longer available.",
     "blocked": "You can't message this person.",
@@ -1152,6 +1155,19 @@
     "notRated": "Not rated"
   },
   "messages": {
+    "broadcast": "To several",
+    "pickRecipients": "Who gets this message?",
+    "broadcastPickHint": "Everyone you pick gets the same message, privately.",
+    "selectAll": "Select all",
+    "clearAll": "Clear",
+    "continueWith": "Continue ({{count}})",
+    "broadcastTitle": "Message to {{count}} students",
+    "broadcastHint": "Each one gets it as a private message. They do not see the other recipients, and a reply comes only to you.",
+    "broadcastPlaceholder": "Write your message",
+    "broadcastSend": "Send to {{count}}",
+    "broadcastSent": "Sent to {{count}} students.",
+    "broadcastPartial": "Sent to {{count}}; {{failed}} could not be reached.",
+    "broadcastNoneSent": "Nobody could be reached ({{count}} failed).",
     "title": "Messages",
     "empty": "No messages yet.",
     "newMessage": "New message",
