@@ -20,6 +20,10 @@
 -- Anonymous dollar-quoting only.
 -- ============================================================
 
+-- NOTE 2026-09-24: submit_assignment and review_assignment now live in
+-- docs/review-by-advisor.sql, where the reviewer is the ADVISOR. RE-RUNNING
+-- THIS FILE RESTORES THE MENTOR GATE -- re-apply that file afterwards.
+
 -- ============================================================
 -- submit_assignment -- was docs/self-assessment-migration.sql
 -- ============================================================
