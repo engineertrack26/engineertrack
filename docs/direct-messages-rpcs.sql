@@ -2,6 +2,10 @@
 -- docs/internship-closure-guards.sql. RE-RUNNING THIS FILE REMOVES THE
 -- CLOSURE GUARD from them -- re-apply docs/internship-closure-guards.sql
 -- afterwards.
+-- NOTE 2026-09-24: list_message_contacts now lives in
+-- docs/message-contact-labels.sql (each row carries its mentor/student
+-- pairing). Re-running this file puts the label-less version back -- re-apply
+-- that file afterwards too.
 -- ============================================
 -- Conversations v2 RPCs. Apply after docs/direct-messages-migration.sql.
 -- All SECURITY DEFINER; the actor is always auth.uid().

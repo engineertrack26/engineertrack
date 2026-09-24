@@ -109,7 +109,10 @@ export function MessagesScreen({ role }: Props) {
       } else if (groupId) {
         const list = await messageService.listContacts(groupId);
         if (req !== pickerReq.current) return;
-        setContacts(list);
+        // A broadcast resolves each recipient's group from their own student
+        // membership, so a mentor in the list could only ever fail with
+        // NOT_IN_GROUP. Offer the people who can actually receive it.
+        setContacts(mode === 'broadcast' ? list.filter((c) => c.role === 'student') : list);
       } else {
         setContacts([]);
       }
@@ -195,28 +198,30 @@ export function MessagesScreen({ role }: Props) {
   if (!user) return null;
   return (
     <SafeAreaView style={styles.safe}>
+      {/* The title keeps its own line: with three actions (new message, to
+          several, new case) a single row pushed the last one off screen. */}
       <View style={styles.titleRow}>
         <Text style={styles.title}>{t('messages.title', 'Messages')}</Text>
-        <View style={styles.headerBtns}>
-          {role === 'advisor' && (
-            <TouchableOpacity style={styles.newBtn} onPress={openCasePicker} activeOpacity={0.7} disabled={!groupId}>
-              <Ionicons name="people-outline" size={18} color={groupId ? colors.primary : colors.textDisabled} />
-              <Text style={[styles.newText, !groupId && { color: colors.textDisabled }]}>{t('messages.newCase', 'New case')}</Text>
-            </TouchableOpacity>
-          )}
-          {(role === 'advisor' || role === 'mentor') && (
-            <TouchableOpacity style={styles.newBtn} onPress={() => openPicker('broadcast')} activeOpacity={0.7}>
-              <Ionicons name="megaphone-outline" size={18} color={colors.primary} />
-              <Text style={styles.newText}>{t('messages.broadcast', 'To several')}</Text>
-            </TouchableOpacity>
-          )}
-          {!closure?.closed && (
-            <TouchableOpacity style={styles.newBtn} onPress={() => openPicker()} activeOpacity={0.7}>
-              <Ionicons name="create-outline" size={18} color={colors.primary} />
-              <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      </View>
+      <View style={styles.actionRow}>
+        {!closure?.closed && (
+          <TouchableOpacity style={styles.newBtn} onPress={() => openPicker()} activeOpacity={0.7} accessibilityRole="button">
+            <Ionicons name="create-outline" size={18} color={colors.ink} />
+            <Text style={styles.newText}>{t('messages.newMessage', 'New message')}</Text>
+          </TouchableOpacity>
+        )}
+        {(role === 'advisor' || role === 'mentor') && (
+          <TouchableOpacity style={styles.newBtn} onPress={() => openPicker('broadcast')} activeOpacity={0.7} accessibilityRole="button">
+            <Ionicons name="megaphone-outline" size={18} color={colors.ink} />
+            <Text style={styles.newText}>{t('messages.broadcast', 'To several')}</Text>
+          </TouchableOpacity>
+        )}
+        {role === 'advisor' && (
+          <TouchableOpacity style={styles.newBtn} onPress={openCasePicker} activeOpacity={0.7} disabled={!groupId} accessibilityRole="button">
+            <Ionicons name="people-outline" size={18} color={groupId ? colors.ink : colors.textDisabled} />
+            <Text style={[styles.newText, !groupId && { color: colors.textDisabled }]}>{t('messages.newCase', 'New case')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <FlatList
         data={items}
@@ -277,10 +282,12 @@ export function MessagesScreen({ role }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  titleRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   title: { fontSize: 26, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink },
-  headerBtns: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  newBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // Wraps rather than overflowing: an advisor has three actions here, and a
+  // long locale (or a large font setting) needs the second line.
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.lg, rowGap: spacing.xs, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  newBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44 },
   newText: { fontSize: 14, fontWeight: '500', fontFamily: fonts.medium, color: colors.ink },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, flexGrow: 1 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },

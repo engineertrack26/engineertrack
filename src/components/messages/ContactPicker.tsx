@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LoadFailedBanner } from '@/components/common';
 import { colors, spacing, fonts } from '@/theme';
+import { contactLabel } from '@/utils/contactLabel';
 import type { MessageContact } from '@/types/messages';
 
 interface Props {
@@ -22,7 +23,11 @@ interface Props {
 
 export function ContactPicker({ visible, contacts, failed, onPick, onClose, onRetry, title, hint, multi }: Props) {
   const { t } = useTranslation();
-  const label = (role: string) => role === 'advisor' ? t('messages.roleAdvisor', 'Advisor') : role === 'mentor' ? t('messages.roleMentor', 'Mentor') : t('messages.roleStudent', 'Student');
+  const label = (c: MessageContact) => {
+    const { roleKey, pairKey, names } = contactLabel(c.role, c.pairs);
+    const role = t(roleKey);
+    return pairKey ? `${role} · ${t(pairKey, { names })}` : role;
+  };
   const selected = multi?.selected ?? [];
   const all = contacts ?? [];
   const allPicked = all.length > 0 && all.every((c) => selected.includes(c.id));
@@ -63,7 +68,7 @@ export function ContactPicker({ visible, contacts, failed, onPick, onClose, onRe
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.role}>{item.hasCase ? t('messages.caseExists', 'Case already open') : label(item.role)}</Text>
+                    <Text style={styles.role}>{item.hasCase ? t('messages.caseExists', 'Case already open') : label(item)}</Text>
                   </View>
                 </TouchableOpacity>
               );

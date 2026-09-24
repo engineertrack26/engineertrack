@@ -1155,6 +1155,8 @@
     "notRated": "Not rated"
   },
   "messages": {
+    "mentorOf": "Mentor of {{names}}",
+    "mentoredBy": "Mentor: {{names}}",
     "broadcast": "To several",
     "pickRecipients": "Who gets this message?",
     "broadcastPickHint": "Everyone you pick gets the same message, privately.",

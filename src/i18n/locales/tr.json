@@ -37,6 +37,8 @@
     "journeyRule": "Hazırlık: mentör, işyeri ve geçerli tarihler. Ardından ilk onaylı çalışma ve danışmanın raporlu kapanışı. Ara değerlendirme yapıldığı varsayılmaz."
   },
   "messages": {
+    "mentorOf": "{{names}} mentoru",
+    "mentoredBy": "Mentoru: {{names}}",
     "broadcast": "Çoklu gönderim",
     "pickRecipients": "Bu mesajı kimler alsın?",
     "broadcastPickHint": "Seçtiğin herkes aynı mesajı özel olarak alır.",

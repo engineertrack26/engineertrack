@@ -39,4 +39,7 @@ export interface MessageContact {
   name: string;
   role: string;
   hasCase?: boolean;
+  /** Who this person is paired with in the group: a mentor's students, or a
+   *  student's mentor. Empty for the advisor and for an unlinked student. */
+  pairs?: string[];
 }

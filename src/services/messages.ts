@@ -35,7 +35,10 @@ export const messageService = {
   listMessages: async (conversationId: string, before?: string) =>
     ((await rpc<Record<string, unknown>[]>('list_messages', { p_conversation_id: conversationId, p_before: before ?? undefined, p_limit: MESSAGES_PAGE_SIZE })) || []).map(toMessage).reverse(),
   listContacts: async (groupId: string): Promise<MessageContact[]> =>
-    ((await rpc<Record<string, unknown>[]>('list_message_contacts', { p_group_id: groupId })) || []).map((r) => ({ id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '' })),
+    ((await rpc<Record<string, unknown>[]>('list_message_contacts', { p_group_id: groupId })) || []).map((r) => ({
+      id: r.id as string, name: (r.name as string) || '', role: (r.role as string) || '',
+      pairs: Array.isArray(r.pairs) ? (r.pairs as string[]) : [],
+    })),
   /** A mentor's students, each with the group a conversation would be opened
    *  in -- a mentor's students may sit in different groups. Backed by a
    *  SECURITY DEFINER RPC because a mentor cannot read group_memberships
