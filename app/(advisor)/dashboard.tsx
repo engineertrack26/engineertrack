@@ -5,17 +5,25 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { advisorDashboardViewService } from '@/services/advisorDashboardView';
 import { notificationService } from '@/services/notifications';
-import { LoadFailedBanner } from '@/components/common';
+import { mentorReviewService } from '@/services/mentorReviews';
+import { filterReviews } from '@/utils/mentorReviews';
+import { taskDueDate } from '@/utils/studentTasks';
+import { taskContent } from '@/utils/taskContent';
+import { competencyContent } from '@/utils/competencyContent';
+import { LoadFailedBanner, Stamp } from '@/components/common';
 import { AdvisorBell, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
+import { ReviewIdentity } from '@/components/mentor/ReviewUI';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { groupCenterRoute } from '@/utils/advisorGroups';
 import { colors, fonts } from '@/theme';
 import { showToast } from '@/components/common/Toast';
 
 type DashboardData = Awaited<ReturnType<typeof advisorDashboardViewService.load>>;
+type ReviewQueue = Awaited<ReturnType<typeof mentorReviewService.list>>;
 
 export default function AdvisorDashboard() {
   const userId = useAuthStore((s) => s.user?.id);
@@ -23,7 +31,7 @@ export default function AdvisorDashboard() {
 }
 
 function DashboardContent({ advisorId }: { advisorId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,15 +40,36 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
   const [expanded, setExpanded] = useState(false);
   const [sending, setSending] = useState<Set<string>>(new Set());
   const [sent, setSent] = useState<Set<string>>(new Set());
+  const [queue, setQueue] = useState<ReviewQueue | null>(null);
+  const [queueLoading, setQueueLoading] = useState(true);
+  const [queueFailed, setQueueFailed] = useState(false);
   const locks = useRef(new Set<string>());
   const delivered = useRef(new Set<string>());
   const sequence = useRef(0);
   const active = useRef(false);
   const load = useCallback(async () => {
     const request = ++sequence.current;
+    setQueueLoading(true);
+    setQueueFailed(false);
+    // Do not leave a previously reviewed submission actionable while refreshing.
+    setQueue(null);
+    const current = () => request === sequence.current && useAuthStore.getState().user?.id === advisorId;
     try {
-      const result = await advisorDashboardViewService.load(advisorId);
-      if (request === sequence.current && useAuthStore.getState().user?.id === advisorId) setData(result);
+      // Independent sections: a statistics failure must not hide the review queue.
+      const [result] = await Promise.all([
+        advisorDashboardViewService.load(advisorId),
+        mentorReviewService.list().then((queueResult) => {
+          if (!current()) return;
+          setQueue(queueResult);
+          useMentorReviewStore.getState().setCount(advisorId, queueResult.items.length);
+        }).catch(() => {
+          if (current()) {
+            setQueueFailed(true);
+            useMentorReviewStore.getState().invalidate(advisorId);
+          }
+        }).finally(() => { if (current()) setQueueLoading(false); }),
+      ]);
+      if (current()) setData(result);
     } finally {
       if (request === sequence.current) { setLoading(false); setRefreshing(false); }
     }
@@ -63,6 +92,15 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
   const progressKnown = !!stats && stats.assignedCount > 0 && stats.progressResolvedCount > 0;
   const openGroups = () => router.push({ pathname: '/(advisor)/groups', params: { groupId: '' } });
   const visibleFollowUp = expanded ? followUp : followUp?.slice(0, 3);
+  const next = queue ? filterReviews(queue.items, queue.names, '', 'oldest', i18n.language)[0] : undefined;
+  const waiting = queue?.items.length ?? 0;
+  const nextCompetency = next?.assignment.competencyName
+    ? `${competencyContent(next.assignment.competencyName, i18n.language)}${next.assignment.level ? ' · L' + next.assignment.level : ''}` : undefined;
+  const nextDue = next ? taskDueDate(next.assignment.dueDate, i18n.language) : undefined;
+  const nextFacts = [
+    nextCompetency && { label: t('dash.competency', 'Competency'), value: nextCompetency },
+    nextDue && { label: t('student.taskDueDate'), value: nextDue },
+  ].filter((f): f is { label: string; value: string } => !!f);
 
   function confirmReminder(studentId: string, name: string) {
     if (locks.current.has(studentId) || delivered.current.has(studentId)) return;
@@ -169,6 +207,40 @@ function DashboardContent({ advisorId }: { advisorId: string }) {
                 </Pressable>)}
           </View>
         </View>
+
+        <View style={[ui.card, ui.featured]}>
+          {queueLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
+            queueFailed ? <LoadFailedBanner onRetry={load} /> :
+            next ? <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 24 }}>
+                <Text accessibilityRole="header" style={ui.section}>{t('advisorHome.nextReview')}</Text>
+                <Stamp kind="pending" />
+              </View>
+              <ReviewIdentity name={queue!.names[next.studentId] || ''} submittedAt={next.submittedAt} />
+              <Text style={ui.cardTitle}>{taskContent(next.assignment.title, i18n.language)}</Text>
+              {nextFacts.length > 0 && <View style={{ gap: 6 }}>
+                {nextFacts.map((f) => <View key={f.label} style={{ flexDirection: 'row', gap: 12 }}>
+                  <Text style={[ui.secondary, { width: 96 }]}>{f.label}</Text>
+                  <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21, fontVariant: ['tabular-nums'] }]}>{f.value}</Text>
+                </View>)}
+              </View>}
+              <View style={{ borderTopWidth: 1, borderColor: colors.rule }} />
+              <Pressable accessibilityRole="button" style={ui.primary}
+                accessibilityLabel={t('mentorFlow.inspect') + ': ' + taskContent(next.assignment.title, i18n.language)}
+                onPress={() => router.push({ pathname: '/(advisor)/review-detail', params: { id: next.id, studentId: '', assignmentId: '' } })}>
+                <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </Pressable>
+            </> : <>
+              <Text accessibilityRole="header" style={ui.section}>{t('mentor.noPendingReviews')}</Text>
+              <Text style={ui.secondary}>{t('mentorHome.emptyHint')}</Text>
+            </>}
+        </View>
+        {waiting > 1 && <Pressable accessibilityRole="button" hitSlop={8} style={[{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', marginTop: -8 }]}
+          onPress={() => router.push({ pathname: '/(advisor)/pending-reviews', params: { assignmentId: '', studentId: '' } })}>
+          <Text style={{ fontSize: 14, color: colors.ink, fontFamily: fonts.medium }}>{t('advisorHome.allPending', { count: waiting })}</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.ink} />
+        </Pressable>}
 
         <View style={{ borderTopWidth: 1, borderColor: colors.rule }}>
           {tools.map((tool) => <Pressable key={tool.key} accessibilityRole="button" style={styles.row} onPress={tool.onPress}>

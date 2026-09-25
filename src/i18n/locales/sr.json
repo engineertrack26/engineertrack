@@ -333,7 +333,9 @@
     "showLess": "Prikaži manje",
     "showAll": "Prikaži sve",
     "tools": "Praćenje i izveštaji",
-    "reportsHint": "Pogledajte napredak kompetencija po grupama."
+    "reportsHint": "Pogledajte napredak kompetencija po grupama.",
+    "nextReview": "Sledeći pregled",
+    "allPending": "Prikaži sve na čekanju ({{count}})"
   },
   "taskFlow": {
     "add": "Dodaj zadatke",
@@ -551,7 +553,9 @@
     "studentsHint": "Podaci o praksi i razvoju",
     "bellTitle": "Obaveštenja su na zvonu iznad",
     "bellHint": "Sve novosti na jednom mestu.",
-    "emptyHint": "Novi radovi učenika će se pojaviti ovde."
+    "emptyHint": "Novi radovi učenika će se pojaviti ovde.",
+    "daysWaiting": "{{count}} dana čeka potvrdu",
+    "confirmDays": "Potvrdi dane"
   },
   "notifications": {
     "taskApprovedTitle": "Zadatak je odobren",

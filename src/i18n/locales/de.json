@@ -333,7 +333,9 @@
     "showLess": "Weniger anzeigen",
     "showAll": "Alle anzeigen",
     "tools": "Beobachtung und Berichte",
-    "reportsHint": "Kompetenzfortschritt nach Gruppe ansehen."
+    "reportsHint": "Kompetenzfortschritt nach Gruppe ansehen.",
+    "nextReview": "Nächste Prüfung",
+    "allPending": "Alle offenen anzeigen ({{count}})"
   },
   "taskFlow": {
     "add": "Aufgaben hinzufügen",
@@ -551,7 +553,9 @@
     "studentsHint": "Praktikums- und Entwicklungsinformationen",
     "bellTitle": "Benachrichtigungen über die Glocke oben",
     "bellHint": "Neue Meldungen an einem Ort.",
-    "emptyHint": "Neue Einreichungen deiner Lernenden erscheinen hier."
+    "emptyHint": "Neue Einreichungen deiner Lernenden erscheinen hier.",
+    "daysWaiting": "{{count}} Tage warten auf Bestätigung",
+    "confirmDays": "Tage bestätigen"
   },
   "notifications": {
     "taskApprovedTitle": "Aufgabe genehmigt",

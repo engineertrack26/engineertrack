@@ -333,7 +333,9 @@
     "showLess": "Show less",
     "showAll": "Show all",
     "tools": "Monitoring & reports",
-    "reportsHint": "Explore competency progress by group."
+    "reportsHint": "Explore competency progress by group.",
+    "nextReview": "Next review",
+    "allPending": "See all pending ({{count}})"
   },
   "taskFlow": {
     "add": "Add tasks",
@@ -540,7 +542,9 @@
     "studentsHint": "Internship and development details",
     "bellTitle": "Notifications are in the bell above",
     "bellHint": "Find new updates in one place.",
-    "emptyHint": "New student submissions will appear here."
+    "emptyHint": "New student submissions will appear here.",
+    "daysWaiting": "{{count}} days waiting for confirmation",
+    "confirmDays": "Confirm days"
   },
   "mentorFlow": {
     "title": "Reviews",

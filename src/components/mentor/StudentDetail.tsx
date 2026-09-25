@@ -3,7 +3,6 @@ import { ActivityIndicator, BackHandler, Pressable, RefreshControl, ScrollView, 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { ui } from '@/components/common/workflowStyles';
 import { LoadFailedBanner, Stamp } from '@/components/common';
 import { ReviewBack } from './ReviewUI';
@@ -83,11 +82,10 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
                 <Text style={ui.title}>{metric.value ?? '—'}</Text><Text style={ui.secondary}>{metric.label}</Text>
               </View>)}
           </View>
-          {!closure?.closed && !!summary?.pending && <Pressable accessibilityRole="button" style={ui.primary}
-            onPress={() => router.push({ pathname: '/(mentor)/pending-reviews', params: { studentId, assignmentId: '' } })}>
-            <Text style={ui.primaryText}>{t('mentorStudents.openPending', { count: summary.pending })}</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </Pressable>}
+          {/* Review moved to the advisor (2026-09-24-advisor-review): there is no
+              mentor screen left to open a pending submission on, so this stays
+              a read-only count — already shown in the metric above — rather
+              than a link to a route that no longer exists for this role. */}
           {!closure?.closed && summary?.pending === 0 && <Text style={ui.secondary}>{t('mentorStudents.noPending')}</Text>}
           <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.other')}</Text>
           <View style={ui.card}>

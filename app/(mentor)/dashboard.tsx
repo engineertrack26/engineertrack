@@ -3,22 +3,18 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } 
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { taskContent } from '@/utils/taskContent';
-import { competencyContent } from '@/utils/competencyContent';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
-import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { mentorService } from '@/services/mentor';
-import { mentorReviewService } from '@/services/mentorReviews';
-import { filterReviews } from '@/utils/mentorReviews';
-import { taskDueDate } from '@/utils/studentTasks';
+import { internshipDayService } from '@/services/internshipDays';
+import { dayWeek, needsAttendanceReview } from '@/utils/internshipDays';
+import { internshipDateString } from '@/utils/internshipForm';
 import { LoadFailedBanner, Stamp } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
-import { ReviewHeader, ReviewIdentity } from '@/components/mentor/ReviewUI';
-import { colors, fonts } from '@/theme';
+import { ReviewHeader } from '@/components/mentor/ReviewUI';
+import { colors } from '@/theme';
 
 type DashboardStats = Awaited<ReturnType<typeof mentorService.getDashboardStats>>;
-type ReviewQueue = Awaited<ReturnType<typeof mentorReviewService.list>>;
 
 export default function MentorDashboard() {
   const user = useAuthStore(s => s.user);
@@ -29,43 +25,49 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [queue, setQueue] = useState<ReviewQueue | null>(null);
+  const [daysWaiting, setDaysWaiting] = useState<number | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [queueLoading, setQueueLoading] = useState(true);
+  const [daysLoading, setDaysLoading] = useState(true);
   const [statsFailed, setStatsFailed] = useState(false);
-  const [queueFailed, setQueueFailed] = useState(false);
+  const [daysFailed, setDaysFailed] = useState(false);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
     setStatsLoading(true);
-    setQueueLoading(true);
+    setDaysLoading(true);
     setStatsFailed(false);
-    setQueueFailed(false);
-    // Do not leave a previously reviewed submission actionable while refreshing.
-    setQueue(null);
+    setDaysFailed(false);
     const current = () => request === generation.current && useAuthStore.getState().user?.id === userId;
     if (!userId) {
       setStatsLoading(false);
-      setQueueLoading(false);
+      setDaysLoading(false);
       return;
     }
-    // Independent sections: a statistics failure must not hide the review queue.
+    // Independent sections: a statistics failure must not hide the attendance count.
     await Promise.all([
       mentorService.getDashboardStats(userId).then(result => {
         if (current()) setStats(result);
       }).catch(() => {
         if (current()) { setStats(null); setStatsFailed(true); }
       }).finally(() => { if (current()) setStatsLoading(false); }),
-      mentorReviewService.list().then(result => {
-        if (!current()) return;
-        setQueue(result);
-        useMentorReviewStore.getState().setCount(userId, result.items.length);
-      }).catch(() => {
-        if (current()) {
-          setQueueFailed(true);
-          useMentorReviewStore.getState().invalidate(userId);
+      (async () => {
+        // Same call the internship-days screen uses to build its own queue
+        // (src/components/internship/InternshipDaysScreen.tsx): one week per
+        // student, batched 4 at a time.
+        const today = internshipDateString(new Date());
+        const from = dayWeek(today)[0];
+        const people = await internshipDayService.people();
+        let total = 0;
+        for (let offset = 0; offset < people.length; offset += 4) {
+          if (!current()) return;
+          const counts = await Promise.all(people.slice(offset, offset + 4)
+            .map(p => internshipDayService.week(p.id, from).then(days => days.filter(needsAttendanceReview).length)));
+          total += counts.reduce((a, b) => a + b, 0);
         }
-      }).finally(() => { if (current()) setQueueLoading(false); }),
+        if (current()) setDaysWaiting(total);
+      })().catch(() => {
+        if (current()) { setDaysWaiting(null); setDaysFailed(true); }
+      }).finally(() => { if (current()) setDaysLoading(false); }),
     ]);
   }, [userId]);
   useFocusEffect(useCallback(() => {
@@ -73,19 +75,8 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
     return () => { generation.current++; };
   }, [load]));
 
-  const next = queue ? filterReviews(queue.items, queue.names, '', 'oldest', i18n.language)[0] : undefined;
-  const waiting = queue?.items.length ?? 0;
-  const statusLine = [
-    stats?.assignedCount != null && t('mentorHome.studentsCount', '{{count}} students', { count: stats.assignedCount }),
-    queue && !queueLoading && t('mentorHome.waiting', { count: waiting }),
-  ].filter(Boolean).join(' · ') || t('mentorHome.intro');
-  const competency = next?.assignment.competencyName
-    ? `${competencyContent(next.assignment.competencyName, i18n.language)}${next.assignment.level ? ' · L' + next.assignment.level : ''}` : undefined;
-  const due = next ? taskDueDate(next.assignment.dueDate, i18n.language) : undefined;
-  const facts = [
-    competency && { label: t('dash.competency', 'Competency'), value: competency },
-    due && { label: t('student.taskDueDate'), value: due },
-  ].filter((f): f is { label: string; value: string } => !!f);
+  const statusLine = stats?.assignedCount != null
+    ? t('mentorHome.studentsCount', '{{count}} students', { count: stats.assignedCount }) : t('mentorHome.intro');
   const rate = stats?.approvalRate == null ? null
     : new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 0 }).format(stats.approvalRate / 100);
   const weekLine = stats
@@ -99,53 +90,30 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
 
   return <SafeAreaView style={ui.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={ui.content}
-      refreshControl={<RefreshControl refreshing={statsLoading || queueLoading} onRefresh={load} tintColor={colors.primaryDark} />}>
+      refreshControl={<RefreshControl refreshing={statsLoading || daysLoading} onRefresh={load} tintColor={colors.primaryDark} />}>
       <ReviewHeader title={name ? t('mentorHome.greeting', { name }) : t('mentorHome.welcome')} />
       <Text style={[ui.secondary, { marginTop: -12 }]}>{statusLine}</Text>
 
       <View style={[ui.card, ui.featured]}>
-        {queueLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
-          queueFailed ? <LoadFailedBanner onRetry={load} /> :
-          next ? <>
+        {daysLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
+          daysFailed ? <LoadFailedBanner onRetry={load} /> :
+          daysWaiting ? <>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 24 }}>
-              <Text accessibilityRole="header" style={ui.section}>{t('mentorHome.nextReview')}</Text>
+              <Text accessibilityRole="header" style={ui.section}>{t('mentorHome.daysWaiting', { count: daysWaiting })}</Text>
               <Stamp kind="pending" />
             </View>
-            <ReviewIdentity name={queue!.names[next.studentId] || ''} submittedAt={next.submittedAt} />
-            <Text style={ui.cardTitle}>{taskContent(next.assignment.title, i18n.language)}</Text>
-            {facts.length > 0 && <View style={{ gap: 6 }}>
-              {facts.map((f) => <View key={f.label} style={{ flexDirection: 'row', gap: 12 }}>
-                <Text style={[ui.secondary, { width: 96 }]}>{f.label}</Text>
-                <Text style={[ui.body, { flex: 1, fontSize: 15, lineHeight: 21, fontVariant: ['tabular-nums'] }]}>{f.value}</Text>
-              </View>)}
-            </View>}
+            <Text style={ui.secondary}>{t('days.mentorIntro')}</Text>
             <View style={{ borderTopWidth: 1, borderColor: colors.rule }} />
             <Pressable accessibilityRole="button" style={ui.primary}
-              accessibilityLabel={t('mentorFlow.inspect') + ': ' + taskContent(next.assignment.title, i18n.language)}
-              onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: next.id, studentId: '', assignmentId: '' } })}>
-              <Text style={ui.primaryText}>{t('mentorFlow.inspect')}</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            </Pressable>
-          </> : stats?.assignedCount === 0 ? <>
-            {/* No student linked yet: the empty queue is not the news, the
-                missing link is. Opens the link sheet on the student list. */}
-            <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.emptyHint')}</Text>
-            <Text style={ui.secondary}>{t('mentorStudents.linkHint')}</Text>
-            <Pressable accessibilityRole="button" style={ui.primary}
-              onPress={() => router.push({ pathname: '/(mentor)/student-list', params: { studentId: '', link: '1' } })}>
-              <Text style={ui.primaryText}>{t('mentorStudents.link')}</Text>
+              onPress={() => router.push('/(mentor)/internship-days')}>
+              <Text style={ui.primaryText}>{t('mentorHome.confirmDays')}</Text>
               <Ionicons name="arrow-forward" size={20} color="#fff" />
             </Pressable>
           </> : <>
-            <Text accessibilityRole="header" style={ui.section}>{t('mentor.noPendingReviews')}</Text>
+            <Text accessibilityRole="header" style={ui.section}>{t('days.noPending')}</Text>
             <Text style={ui.secondary}>{t('mentorHome.emptyHint')}</Text>
           </>}
       </View>
-      {waiting > 1 && <Pressable accessibilityRole="button" hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', marginTop: -8 }}
-        onPress={() => router.push({ pathname: '/(mentor)/pending-reviews', params: { assignmentId: '', studentId: '' } })}>
-        <Text style={{ fontSize: 14, color: colors.ink, fontFamily: fonts.medium }}>{t('mentorHome.allPending', { count: waiting })}</Text>
-        <Ionicons name="chevron-forward" size={14} color={colors.ink} />
-      </Pressable>}
 
       <View style={{ borderTopWidth: 1, borderColor: colors.rule }}>
         {statsFailed && <LoadFailedBanner onRetry={load} />}

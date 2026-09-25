@@ -377,7 +377,9 @@
     "showLess": "Daha az göster",
     "showAll": "Tümünü göster",
     "tools": "İzleme ve raporlar",
-    "reportsHint": "Grup bazında yetkinlik ilerlemesini inceleyin."
+    "reportsHint": "Grup bazında yetkinlik ilerlemesini inceleyin.",
+    "nextReview": "Sıradaki inceleme",
+    "allPending": "Tüm bekleyenleri gör ({{count}})"
   },
   "taskFlow": {
     "add": "Görev ekle",
@@ -660,7 +662,9 @@
     "studentsHint": "Staj ve gelişim bilgileri",
     "bellTitle": "Bildirimler üstteki zilde",
     "bellHint": "Yeni gelişmelere tek yerden ulaş.",
-    "emptyHint": "Öğrencilerin yeni çalışmalar gönderdiğinde burada görünecek."
+    "emptyHint": "Öğrencilerin yeni çalışmalar gönderdiğinde burada görünecek.",
+    "daysWaiting": "{{count}} gün onay bekliyor",
+    "confirmDays": "Günleri onayla"
   },
   "notifications": {
     "taskAssignedBody": "Yeni bir görev atandı: “{{title}}”.",

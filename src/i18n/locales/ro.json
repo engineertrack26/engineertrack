@@ -333,7 +333,9 @@
     "showLess": "Arată mai puțin",
     "showAll": "Arată tot",
     "tools": "Monitorizare și rapoarte",
-    "reportsHint": "Explorează progresul competențelor pe grupuri."
+    "reportsHint": "Explorează progresul competențelor pe grupuri.",
+    "nextReview": "Următoarea evaluare",
+    "allPending": "Vezi toate lucrările în așteptare ({{count}})"
   },
   "taskFlow": {
     "add": "Adaugă sarcini",
@@ -551,7 +553,9 @@
     "studentsHint": "Detalii despre stagiu și dezvoltare",
     "bellTitle": "Notificările sunt la clopoțelul de sus",
     "bellHint": "Noutățile într-un singur loc.",
-    "emptyHint": "Lucrările noi trimise de elevi vor apărea aici."
+    "emptyHint": "Lucrările noi trimise de elevi vor apărea aici.",
+    "daysWaiting": "{{count}} zile așteaptă confirmarea",
+    "confirmDays": "Confirmă zilele"
   },
   "notifications": {
     "taskApprovedTitle": "Sarcină aprobată",
