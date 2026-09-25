@@ -16,14 +16,14 @@ export function ReviewBack({ label, onPress, disabled = false }: { label: string
   </Pressable>;
 }
 
-export function ReviewHeader({ brand = false, title }: { brand?: boolean; title?: string }) {
+export function ReviewHeader({ brand = false, title, notificationsPath = '/(mentor)/notifications' }: { brand?: boolean; title?: string; notificationsPath?: string }) {
   const { t } = useTranslation();
   const router = useRouter();
   const count = useNotificationStore(s => s.unreadCount);
   return <View style={ui.header}>
     <Text accessibilityRole="header" style={[ui.title, { flex: 1 }, brand && { color: colors.primaryDark, fontSize: 22 }]}>{title ?? (brand ? 'EngineerTrack' : t('mentorFlow.title'))}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={t('studentFlow.notifications', { count })}
-      onPress={() => router.push('/(mentor)/notifications')} style={ui.iconButton}>
+      onPress={() => router.push(notificationsPath)} style={ui.iconButton}>
       <Ionicons name="notifications-outline" size={25} color={colors.text} />
       {count > 0 && (brand ? <View accessible={false} style={{ position: 'absolute', right: 0, top: 0, minWidth: 20, paddingHorizontal: 4, borderRadius: 12, backgroundColor: colors.error, alignItems: 'center' }}>
         <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', fontFamily: fonts.semibold }}>{count > 99 ? '99+' : count}</Text>

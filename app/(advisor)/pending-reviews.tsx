@@ -83,7 +83,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={load} />}
       ListHeaderComponent={<View style={{ gap: 16 }}>
         <ReviewBack label={t('studentFlow.home')} onPress={() => router.replace('/(advisor)/dashboard')} />
-        <ReviewHeader />
+        <ReviewHeader notificationsPath="/(advisor)/notifications" />
         {groups.length > 1 && <View style={styles.chipRow}>
           {groups.map((g) => (
             <Pressable key={g.id} accessibilityRole="button" accessibilityState={{ selected: g.id === groupId }}
@@ -93,7 +93,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
             </Pressable>
           ))}
         </View>}
-        {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: items.length })}</Text>}
+        {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: groupFiltered.length })}</Text>}
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
           placeholderTextColor={colors.textSecondary} accessibilityLabel={t('mentorFlow.search')} returnKeyType="search" />
         <View><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 40 }}>

@@ -67,16 +67,21 @@ export default function AdvisorLayout() {
       />
       <Tabs.Screen
         name="pending-reviews"
+        listeners={{ tabPress: event => { event.preventDefault(); router.navigate({ pathname: '/(advisor)/pending-reviews', params: { assignmentId: '', studentId: '' } }); } }}
         options={{
           title: t('tabs.review'),
           tabBarBadge: pendingCount && pendingCount > 0 ? (pendingCount > 99 ? '99+' : pendingCount) : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.primaryDark },
+          tabBarStyle: { display: 'none' },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkmark-circle-outline" size={size} color={color} />
           ),
         }}
       />
-      <Tabs.Screen name="review-detail" options={{ href: null }} />
+      <Tabs.Screen
+        name="review-detail"
+        options={{ href: null, tabBarStyle: { display: 'none' } }}
+      />
       <Tabs.Screen name="student-monitor" options={{ href: null }} />
       <Tabs.Screen name="group-competencies" options={{ href: null }} />
       <Tabs.Screen name="group-assignments" options={{ href: null }} />
