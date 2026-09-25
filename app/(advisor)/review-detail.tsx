@@ -86,7 +86,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
 
   const goBack = useCallback(() => {
     if (busy.current) return;
-    const leave = () => router.replace({ pathname: '/(mentor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
+    const leave = () => router.replace({ pathname: '/(advisor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
     if (!finished.current && (approvalNote.trim() || reason.trim())) {
       Alert.alert(t('mentorFlow.unsentNote'), t('mentorFlow.leaveNote'), [
         { text: t('common.cancel'), style: 'cancel' },
@@ -136,7 +136,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
       setApprovalNote('');
       setReason('');
       showToast(t(approved ? 'mentor.taskApproved' : 'mentor.taskRevisionRequested'));
-      router.replace({ pathname: '/(mentor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
+      router.replace({ pathname: '/(advisor)/pending-reviews', params: { studentId: studentId || '', assignmentId: assignmentId || '' } });
     } catch (error) {
       if (request !== generation.current) return;
       const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : '';

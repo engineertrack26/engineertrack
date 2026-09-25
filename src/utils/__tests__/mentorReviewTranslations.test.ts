@@ -5,8 +5,8 @@ const languages = ['en', 'tr', 'de', 'it', 'ro', 'sr', 'el'];
 const resources = Object.fromEntries(languages.map(language => [language,
   JSON.parse(readFileSync(join(process.cwd(), 'src/i18n/locales', `${language}.json`), 'utf8')),
 ]));
-const sources = ['app/(mentor)/pending-reviews.tsx', 'app/(mentor)/review-detail.tsx',
-  'app/(mentor)/dashboard.tsx', 'app/(mentor)/_layout.tsx',
+const sources = ['app/(advisor)/pending-reviews.tsx', 'app/(advisor)/review-detail.tsx',
+  'app/(mentor)/dashboard.tsx', 'app/(mentor)/_layout.tsx', 'app/(advisor)/_layout.tsx',
   'app/(mentor)/student-list.tsx', 'src/components/mentor/StudentDetail.tsx',
   'src/components/mentor/StudentIdentity.tsx', 'src/components/mentor/LinkStudentSheet.tsx',
   'src/components/mentor/ReviewUI.tsx', 'src/components/mentor/ReviewNoteSheet.tsx',

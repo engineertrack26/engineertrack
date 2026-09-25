@@ -13,7 +13,6 @@ export default function MentorLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const pendingCount = useMentorReviewStore(s => s.ownerId === user?.id ? s.pendingCount : null);
 
   useEffect(() => () => {
     if (user?.id) useMentorReviewStore.getState().invalidate(user.id);
@@ -65,23 +64,6 @@ export default function MentorLayout() {
             <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
-      />
-      <Tabs.Screen
-        name="pending-reviews"
-        listeners={{ tabPress: event => { event.preventDefault(); router.navigate({ pathname: '/(mentor)/pending-reviews', params: { assignmentId: '', studentId: '' } }); } }}
-        options={{
-          title: t('tabs.review'),
-          tabBarBadge: pendingCount && pendingCount > 0 ? (pendingCount > 99 ? '99+' : pendingCount) : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.primaryDark },
-          tabBarStyle: { display: 'none' },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="review-detail"
-        options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
       <Tabs.Screen name="feedback" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />

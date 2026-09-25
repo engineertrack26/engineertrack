@@ -18,26 +18,26 @@ describe('routeForNotification', () => {
     expect(routeForNotification('task_assigned', undefined, 'student')?.pathname).toBe('/(student)/my-tasks');
   });
 
-  it('sends a mentor to the review queue for a submission', () => {
-    expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'mentor')).toEqual({
-      pathname: '/(mentor)/pending-reviews',
-      params: { assignmentId: 'a1', studentId: '' },
-    });
+  test('a submitted task sends the advisor to their review queue', () => {
+    expect(routeForNotification('task_submitted', { submissionId: 's1' }, 'advisor'))
+      .toEqual({ pathname: '/(advisor)/review-detail', params: { id: 's1', studentId: '', assignmentId: '' } });
+    expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'advisor'))
+      .toEqual({ pathname: '/(advisor)/pending-reviews', params: { assignmentId: 'a1', studentId: '' } });
   });
 
-  it('opens an exact mentor review when the notification identifies the submission', () => {
-    expect(routeForNotification('task_submitted', { submissionId: 's1', assignmentId: 'a1' }, 'mentor')).toEqual({
-      pathname: '/(mentor)/review-detail', params: { id: 's1', studentId: '', assignmentId: '' },
-    });
-    expect(routeForNotification('task_submitted', { submissionId: 123, assignmentId: 'a1' }, 'mentor')).toEqual({
-      pathname: '/(mentor)/pending-reviews', params: { assignmentId: 'a1', studentId: '' },
+  test('a mentor no longer has a review queue to open', () => {
+    expect(routeForNotification('task_submitted', { submissionId: 's1' }, 'mentor')).toBeNull();
+  });
+
+  it('opens an exact advisor review when the notification identifies the submission', () => {
+    expect(routeForNotification('task_submitted', { submissionId: 123, assignmentId: 'a1' }, 'advisor')).toEqual({
+      pathname: '/(advisor)/pending-reviews', params: { assignmentId: 'a1', studentId: '' },
     });
   });
 
   it('never routes a notification type into a screen of the wrong role', () => {
     expect(routeForNotification('task_approved', { assignmentId: 'a1' }, 'mentor')).toBeNull();
     expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'student')).toBeNull();
-    expect(routeForNotification('task_submitted', { assignmentId: 'a1' }, 'advisor')).toBeNull();
   });
 
   it('returns null with no role or an unknown type', () => {

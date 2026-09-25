@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { useMessageStore } from '@/store/messageStore';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 
@@ -12,6 +13,11 @@ export default function AdvisorLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const pendingCount = useMentorReviewStore(s => s.ownerId === user?.id ? s.pendingCount : null);
+
+  useEffect(() => () => {
+    if (user?.id) useMentorReviewStore.getState().invalidate(user.id);
+  }, [user?.id]);
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
 
   const subscribeToNotifications = useNotificationStore((s) => s.subscribeToNotifications);
@@ -59,6 +65,18 @@ export default function AdvisorLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="pending-reviews"
+        options={{
+          title: t('tabs.review'),
+          tabBarBadge: pendingCount && pendingCount > 0 ? (pendingCount > 99 ? '99+' : pendingCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primaryDark },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="review-detail" options={{ href: null }} />
       <Tabs.Screen name="student-monitor" options={{ href: null }} />
       <Tabs.Screen name="group-competencies" options={{ href: null }} />
       <Tabs.Screen name="group-assignments" options={{ href: null }} />

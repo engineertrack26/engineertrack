@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -8,11 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useMentorReviewStore } from '@/store/mentorReviewStore';
 import { mentorReviewService } from '@/services/mentorReviews';
+import { groupService } from '@/services/group';
 import { filterReviews, reviewSubmittedAt, PendingReview, ReviewSort } from '@/utils/mentorReviews';
 import { LoadFailedBanner } from '@/components/common';
 import { ui } from '@/components/common/workflowStyles';
 import { ReviewBack, ReviewHeader } from '@/components/mentor/ReviewUI';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, spacing, borderRadius } from '@/theme';
+import type { InternshipGroup } from '@/types/group';
 
 export default function PendingReviewsScreen() {
   const userId = useAuthStore(s => s.user?.id);
@@ -31,6 +33,8 @@ function ReviewQueue({ userId }: { userId?: string }) {
   const [query, setQuery] = useState('');
   useEffect(() => { setQuery(''); }, [studentId, assignmentId]);
   const [order, setOrder] = useState<ReviewSort>('oldest');
+  const [groups, setGroups] = useState<InternshipGroup[]>([]);
+  const [groupId, setGroupId] = useState<string | null>(null);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
@@ -55,17 +59,40 @@ function ReviewQueue({ userId }: { userId?: string }) {
     void load();
     return () => { generation.current++; };
   }, [load]));
-  const visible = useMemo(() => filterReviews(items, names, query, order, i18n.language, assignmentId, studentId),
-    [items, names, query, order, i18n.language, assignmentId, studentId]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) { setGroups([]); setGroupId(null); return; }
+    // Cosmetic scoping only: an advisor with one group needs no chip, and the
+    // queue itself is already scoped to the advisor's own groups by RLS.
+    groupService.listMyGroups(userId).then((list) => {
+      if (cancelled) return;
+      setGroups(list);
+      setGroupId((cur) => (cur && list.some((g) => g.id === cur) ? cur : (list.find((g) => !g.isArchived) ?? list[0])?.id ?? null));
+    }).catch(() => { if (!cancelled) { setGroups([]); setGroupId(null); } });
+    return () => { cancelled = true; };
+  }, [userId]);
+  const groupFiltered = useMemo(() => (groups.length > 1 && groupId ? items.filter(i => i.assignment.groupId === groupId) : items),
+    [items, groups.length, groupId]);
+  const visible = useMemo(() => filterReviews(groupFiltered, names, query, order, i18n.language, assignmentId, studentId),
+    [groupFiltered, names, query, order, i18n.language, assignmentId, studentId]);
+  const filtering = !!(query.trim() || assignmentId || studentId || groups.length > 1);
 
   return <SafeAreaView style={ui.safe}>
     <FlatList data={loading ? [] : visible} keyExtractor={item => item.id}
       contentContainerStyle={[ui.content, { flexGrow: 1, gap: 0 }]} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={load} />}
       ListHeaderComponent={<View style={{ gap: 16 }}>
-        <ReviewBack label={t(studentId ? 'mentorStudents.detail' : 'studentFlow.home')} onPress={() => studentId
-          ? router.replace({ pathname: '/(mentor)/student-list', params: { studentId } }) : router.replace('/(mentor)/dashboard')} />
+        <ReviewBack label={t('studentFlow.home')} onPress={() => router.replace('/(advisor)/dashboard')} />
         <ReviewHeader />
+        {groups.length > 1 && <View style={styles.chipRow}>
+          {groups.map((g) => (
+            <Pressable key={g.id} accessibilityRole="button" accessibilityState={{ selected: g.id === groupId }}
+              onPress={() => setGroupId(g.id)}
+              style={[styles.chip, g.id === groupId && styles.chipActive, g.isArchived && { opacity: 0.6 }]}>
+              <Text style={[styles.chipText, g.id === groupId && styles.chipTextActive]} numberOfLines={1}>{g.name}</Text>
+            </Pressable>
+          ))}
+        </View>}
         {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: items.length })}</Text>}
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
           placeholderTextColor={colors.textSecondary} accessibilityLabel={t('mentorFlow.search')} returnKeyType="search" />
@@ -88,7 +115,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
         {loading && <ActivityIndicator size="large" color={colors.primary} />}
       </View>}
       ListEmptyComponent={!loading && !failed ? <View style={[ui.card, { marginTop: 16 }]}>
-        <Text style={ui.body}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.noResults' : 'mentor.noPendingReviews')}</Text>
+        <Text style={ui.body}>{t(filtering ? 'mentorFlow.noResults' : 'mentor.noPendingReviews')}</Text>
       </View> : null}
       renderItem={({ item }) => {
         const name = names[item.studentId] || t('mentorFlow.unknownStudent');
@@ -96,7 +123,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
           t('mentorFlow.attachments', { photos: item.photos?.length || 0, documents: item.documents?.length || 0 })].join(' · ');
         return <Pressable accessibilityRole="button"
           accessibilityLabel={t('mentorFlow.inspect') + ': ' + name + ', ' + taskContent(item.assignment.title, i18n.language) + '. ' + facts}
-          onPress={() => router.push({ pathname: '/(mentor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })}
+          onPress={() => router.push({ pathname: '/(advisor)/review-detail', params: { id: item.id, studentId: studentId || '', assignmentId: assignmentId || '' } })}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.divider }}>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={{ fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.text }}>{name}</Text>
@@ -106,7 +133,15 @@ function ReviewQueue({ userId }: { userId?: string }) {
           <Ionicons name="chevron-forward" size={18} color={colors.ink} />
         </Pressable>;
       }}
-      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center', marginTop: 16 }]}>{t(query.trim() || assignmentId || studentId ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
+      ListFooterComponent={!loading && !failed && visible.length > 0 ? <Text style={[ui.secondary, { textAlign: 'center', marginTop: 16 }]}>{t(filtering ? 'mentorFlow.filteredEnd' : 'mentorFlow.listEnd')}</Text> : null}
     />
   </SafeAreaView>;
 }
+
+const styles = StyleSheet.create({
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: { paddingHorizontal: spacing.md, minHeight: 40, justifyContent: 'center', borderRadius: borderRadius.md, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.divider },
+  chipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  chipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, maxWidth: 160 },
+  chipTextActive: { color: colors.textOnPrimary, fontWeight: '600', fontFamily: fonts.semibold },
+});

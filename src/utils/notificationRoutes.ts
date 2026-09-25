@@ -66,11 +66,6 @@ export function routeForNotification(
       }
     case 'mentor':
       switch (type) {
-        case 'task_submitted':
-          // New payloads may identify a submission. Older assignment-only
-          // payloads filter the queue rather than choosing an arbitrary student.
-          if (str(data?.submissionId)) return { pathname: '/(mentor)/review-detail', params: { id: str(data?.submissionId)!, studentId: '', assignmentId: '' } };
-          return { pathname: '/(mentor)/pending-reviews', params: { assignmentId: assignmentId || '', studentId: '' } };
         case 'direct_message': {
           const id = str(data?.conversationId);
           return id ? { pathname: '/(mentor)/conversation', params: { id } } : { pathname: '/(mentor)/messages' };
@@ -90,6 +85,11 @@ export function routeForNotification(
       }
     case 'advisor':
       switch (type) {
+        case 'task_submitted':
+          // New payloads may identify a submission. Older assignment-only
+          // payloads filter the queue rather than choosing an arbitrary student.
+          if (str(data?.submissionId)) return { pathname: '/(advisor)/review-detail', params: { id: str(data?.submissionId)!, studentId: '', assignmentId: '' } };
+          return { pathname: '/(advisor)/pending-reviews', params: { assignmentId: assignmentId || '', studentId: '' } };
         case 'feed_announcement':
         case 'feed_poll':
         case 'feed_comment':
