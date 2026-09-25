@@ -1,5 +1,9 @@
 # Subsystem C — Task assignment and the learning triplets
 
+> **Amended 2026-09-24:** review and approval moved from the workplace mentor
+> to the group's advisor — see `2026-09-24-advisor-review-design.md`. The rest
+> of this document still describes what is built.
+
 Date: 2026-08-20
 Status: approved for planning
 Depends on: subsystem B (competency framework), complete and verified 2026-08-20
