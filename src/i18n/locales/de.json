@@ -555,7 +555,8 @@
     "bellHint": "Neue Meldungen an einem Ort.",
     "emptyHint": "Neue Einreichungen deiner Lernenden erscheinen hier.",
     "daysWaiting": "{{count}} Tage warten auf Bestätigung",
-    "confirmDays": "Tage bestätigen"
+    "confirmDays": "Tage bestätigen",
+    "daysEmptyHint": "Bestätige die Tage deiner Lernenden, sobald sie sie erfassen."
   },
   "notifications": {
     "taskApprovedTitle": "Aufgabe genehmigt",

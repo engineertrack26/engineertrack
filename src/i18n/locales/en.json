@@ -544,7 +544,8 @@
     "bellHint": "Find new updates in one place.",
     "emptyHint": "New student submissions will appear here.",
     "daysWaiting": "{{count}} days waiting for confirmation",
-    "confirmDays": "Confirm days"
+    "confirmDays": "Confirm days",
+    "daysEmptyHint": "Confirm your students' days as they record them."
   },
   "mentorFlow": {
     "title": "Reviews",

@@ -97,7 +97,17 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
       <View style={[ui.card, ui.featured]}>
         {daysLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
           daysFailed ? <LoadFailedBanner onRetry={load} /> :
-          daysWaiting ? <>
+          stats?.assignedCount === 0 ? <>
+            {/* No student linked yet: the attendance card is not the news, the
+                missing link is. Opens the link sheet on the student list. */}
+            <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.emptyHint')}</Text>
+            <Text style={ui.secondary}>{t('mentorStudents.linkHint')}</Text>
+            <Pressable accessibilityRole="button" style={ui.primary}
+              onPress={() => router.push({ pathname: '/(mentor)/student-list', params: { studentId: '', link: '1' } })}>
+              <Text style={ui.primaryText}>{t('mentorStudents.link')}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </Pressable>
+          </> : daysWaiting ? <>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 24 }}>
               <Text accessibilityRole="header" style={ui.section}>{t('mentorHome.daysWaiting', { count: daysWaiting })}</Text>
               <Stamp kind="pending" />
@@ -111,7 +121,7 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
             </Pressable>
           </> : <>
             <Text accessibilityRole="header" style={ui.section}>{t('days.noPending')}</Text>
-            <Text style={ui.secondary}>{t('mentorHome.emptyHint')}</Text>
+            <Text style={ui.secondary}>{t('mentorHome.daysEmptyHint')}</Text>
           </>}
       </View>
 

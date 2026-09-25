@@ -555,7 +555,8 @@
     "bellHint": "Sve novosti na jednom mestu.",
     "emptyHint": "Novi radovi učenika će se pojaviti ovde.",
     "daysWaiting": "{{count}} dana čeka potvrdu",
-    "confirmDays": "Potvrdi dane"
+    "confirmDays": "Potvrdi dane",
+    "daysEmptyHint": "Potvrđuj dane svojih učenika čim ih zabeleže."
   },
   "notifications": {
     "taskApprovedTitle": "Zadatak je odobren",

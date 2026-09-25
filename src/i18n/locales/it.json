@@ -555,7 +555,8 @@
     "bellHint": "Tutti gli aggiornamenti in un unico posto.",
     "emptyHint": "Le nuove consegne degli studenti appariranno qui.",
     "daysWaiting": "{{count}} giorni in attesa di conferma",
-    "confirmDays": "Conferma i giorni"
+    "confirmDays": "Conferma i giorni",
+    "daysEmptyHint": "Conferma i giorni dei tuoi studenti man mano che li registrano."
   },
   "notifications": {
     "taskApprovedTitle": "Attività approvata",

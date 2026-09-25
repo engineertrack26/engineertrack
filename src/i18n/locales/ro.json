@@ -555,7 +555,8 @@
     "bellHint": "Noutățile într-un singur loc.",
     "emptyHint": "Lucrările noi trimise de elevi vor apărea aici.",
     "daysWaiting": "{{count}} zile așteaptă confirmarea",
-    "confirmDays": "Confirmă zilele"
+    "confirmDays": "Confirmă zilele",
+    "daysEmptyHint": "Confirmă zilele elevilor tăi pe măsură ce le înregistrează."
   },
   "notifications": {
     "taskApprovedTitle": "Sarcină aprobată",

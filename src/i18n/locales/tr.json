@@ -664,7 +664,8 @@
     "bellHint": "Yeni gelişmelere tek yerden ulaş.",
     "emptyHint": "Öğrencilerin yeni çalışmalar gönderdiğinde burada görünecek.",
     "daysWaiting": "{{count}} gün onay bekliyor",
-    "confirmDays": "Günleri onayla"
+    "confirmDays": "Günleri onayla",
+    "daysEmptyHint": "Öğrencilerin günlerini kaydettikçe onayla."
   },
   "notifications": {
     "taskAssignedBody": "Yeni bir görev atandı: “{{title}}”.",
