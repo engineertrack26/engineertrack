@@ -93,7 +93,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
             </Pressable>
           ))}
         </View>}
-        {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: groupFiltered.length })}</Text>}
+        {!loading && !failed && <Text style={ui.secondary}>{t('mentorFlow.pendingCount', { count: visible.length })}</Text>}
         <TextInput value={query} onChangeText={setQuery} style={ui.input} placeholder={t('mentorFlow.search')}
           placeholderTextColor={colors.textSecondary} accessibilityLabel={t('mentorFlow.search')} returnKeyType="search" />
         <View><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 40 }}>
