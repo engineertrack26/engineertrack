@@ -145,7 +145,7 @@ BEGIN
       -- v_sub1 is left unchanged by a rolled-back subtransaction).
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_advisor)::text, true);
       BEGIN
-        PERFORM review_assignment(v_sub1, true, 'Tebrikler', 2);
+        PERFORM review_assignment(v_sub1, true, 'Tebrikler', 2::SMALLINT);
       EXCEPTION WHEN OTHERS THEN
         v_log := v_log || 'FAIL B1: unexpected error: ' || SQLERRM || chr(10);
       END;
@@ -171,7 +171,7 @@ BEGIN
       -- This is the rule that changed -- assert the code, not just a refusal.
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_mentor2)::text, true);
       BEGIN
-        PERFORM review_assignment(v_sub2, true, 'nope', 2);
+        PERFORM review_assignment(v_sub2, true, 'nope', 2::SMALLINT);
         v_log := v_log || 'FAIL B2: the mentor call succeeded, expected ROLE_NOT_ALLOWED' || chr(10);
       EXCEPTION WHEN OTHERS THEN
         IF SQLERRM = 'ROLE_NOT_ALLOWED' THEN
@@ -184,7 +184,7 @@ BEGIN
       -- B3: the advisor approves the already-approved row a second time.
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_advisor)::text, true);
       BEGIN
-        PERFORM review_assignment(v_sub1, true, 'again', 2);
+        PERFORM review_assignment(v_sub1, true, 'again', 2::SMALLINT);
         v_log := v_log || 'FAIL B3: the second approval succeeded, expected ALREADY_APPROVED' || chr(10);
       EXCEPTION WHEN OTHERS THEN
         IF SQLERRM = 'ALREADY_APPROVED' THEN
@@ -214,7 +214,7 @@ BEGIN
           'Probe reflection for the submit-notifies-the-advisor check, over twenty characters.',
           '[]'::jsonb,
           '[{"uri":"probe","file_name":"evidence.pdf","file_type":"application/pdf"}]'::jsonb,
-          2
+          2::SMALLINT
         );
       EXCEPTION WHEN OTHERS THEN
         v_log := v_log || 'FAIL B4: unexpected error: ' || SQLERRM || chr(10);
@@ -249,7 +249,7 @@ BEGIN
 
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_advisor)::text, true);
       BEGIN
-        PERFORM review_assignment(v_sub3, true, 'closed', 2);
+        PERFORM review_assignment(v_sub3, true, 'closed', 2::SMALLINT);
         v_log := v_log || 'FAIL B5: review succeeded on a closed internship, expected INTERNSHIP_CLOSED' || chr(10);
       EXCEPTION WHEN OTHERS THEN
         IF SQLERRM = 'INTERNSHIP_CLOSED' THEN
