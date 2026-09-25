@@ -138,9 +138,17 @@ BEGIN
               'A second probe reflection, also comfortably over twenty characters.', 1, now())
       RETURNING id INTO v_sub2;
 
-      -- B1: the group's advisor approves student1's row.
+      -- B1: the group's advisor approves student1's row. Guarded like B2/B3/B5
+      -- below: an unexpected raise here must not abort the whole DO block and
+      -- hide every check after it -- it gets its own FAIL line instead, and
+      -- the B1a/B1b reads below still run (and correctly report FAIL, since
+      -- v_sub1 is left unchanged by a rolled-back subtransaction).
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_advisor)::text, true);
-      PERFORM review_assignment(v_sub1, true, 'Tebrikler', 2);
+      BEGIN
+        PERFORM review_assignment(v_sub1, true, 'Tebrikler', 2);
+      EXCEPTION WHEN OTHERS THEN
+        v_log := v_log || 'FAIL B1: unexpected error: ' || SQLERRM || chr(10);
+      END;
 
       SELECT status, mentor_level INTO v_status, v_level
       FROM assignment_submissions WHERE id = v_sub1;
@@ -194,14 +202,23 @@ BEGIN
       FROM kpi_triplets t WHERE t.id = v_triplet
       RETURNING id INTO v_open_assignment;
 
+      -- Guarded like B1/B2/B3/B5: an unexpected raise here must not abort the
+      -- whole DO block. v_open_assignment is already set (from the INSERT
+      -- above, outside this guard), so the notification counts below still
+      -- read correctly -- both zero -- and produce a FAIL line rather than a
+      -- NULL dereference.
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_student1)::text, true);
-      PERFORM submit_assignment(
-        v_open_assignment, 'note',
-        'Probe reflection for the submit-notifies-the-advisor check, over twenty characters.',
-        '[]'::jsonb,
-        '[{"uri":"probe","file_name":"evidence.pdf","file_type":"application/pdf"}]'::jsonb,
-        2
-      );
+      BEGIN
+        PERFORM submit_assignment(
+          v_open_assignment, 'note',
+          'Probe reflection for the submit-notifies-the-advisor check, over twenty characters.',
+          '[]'::jsonb,
+          '[{"uri":"probe","file_name":"evidence.pdf","file_type":"application/pdf"}]'::jsonb,
+          2
+        );
+      EXCEPTION WHEN OTHERS THEN
+        v_log := v_log || 'FAIL B4: unexpected error: ' || SQLERRM || chr(10);
+      END;
 
       SELECT count(*) INTO v_notif_advisor FROM notifications
       WHERE user_id = v_advisor AND type = 'task_submitted'
@@ -286,6 +303,10 @@ BEGIN
     WHERE m.left_at IS NULL AND sp.mentor_id IS NOT NULL
     LIMIT 1;
 
+    -- No ON CONFLICT: this branch only runs when the query above found zero
+    -- assignment_submissions rows anywhere for a mentored student, so this
+    -- v_student has no existing row on any assignment (including a.id) to
+    -- collide with.
     INSERT INTO assignment_submissions (assignment_id, student_id, status, reflection, self_level, submitted_at)
     SELECT a.id, v_student, 'submitted',
            'Probe reflection for Part C, comfortably over twenty characters.', 1, now()
@@ -318,13 +339,20 @@ BEGIN
     v_log := v_log || 'FAIL C1: the mentor SELECT returned no row' || chr(10);
   END IF;
 
-  UPDATE assignment_submissions SET status = 'approved' WHERE id = v_submission;
-  GET DIAGNOSTICS v_updated = ROW_COUNT;
-  IF v_updated = 0 THEN
-    v_log := v_log || 'PASS C2: the mentor UPDATE affected 0 rows (no write policy)' || chr(10);
-  ELSE
-    v_log := v_log || 'FAIL C2: the mentor UPDATE affected ' || v_updated || ' row(s)' || chr(10);
-  END IF;
+  -- Guarded like Part B's success-path calls: an unexpected raise here (e.g.
+  -- a regression that turns "no write policy" into an actual error) must not
+  -- abort the block before probe.results is set -- it gets its own FAIL line.
+  BEGIN
+    UPDATE assignment_submissions SET status = 'approved' WHERE id = v_submission;
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+    IF v_updated = 0 THEN
+      v_log := v_log || 'PASS C2: the mentor UPDATE affected 0 rows (no write policy)' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL C2: the mentor UPDATE affected ' || v_updated || ' row(s)' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL C2: unexpected error: ' || SQLERRM || chr(10);
+  END;
 
   PERFORM set_config('probe.results', v_log, true);
 END $$;
