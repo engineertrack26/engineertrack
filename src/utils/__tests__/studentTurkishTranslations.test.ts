@@ -36,3 +36,10 @@ test('task navigation, statuses and form labels resolve in Turkish', async () =>
   expect(instance.t('student.whatILearned')).toBe('Ne öğrendim?');
   expect(instance.t('errors.reflectionRequired')).toBe('Göndermeden önce ne öğrendiğini yaz.');
 });
+
+test('the student is told the advisor reviews, not the mentor', async () => {
+  const instance = createInstance();
+  await instance.init({ lng: 'tr', fallbackLng: 'en', resources: { tr: { translation: tr }, en: { translation: en } } });
+  expect(instance.t('studentFlow.mentorNote')).toBe('Danışman notu');
+  expect(instance.t('studentFlow.reviewHint')).toBe('Gönderdiğinde danışmanın çalışmanı inceleyecek.');
+});

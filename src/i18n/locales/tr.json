@@ -697,7 +697,7 @@
     "noteTooLong": "Not en fazla 1000 karakter olabilir.",
     "reviewChanged": "Bu çalışma değişmiş veya artık inceleme beklemiyor. Güncel durumu kontrol et.",
     "requestRevision": "Revizyon iste",
-    "optionalNote": "Mentor notu ekle (isteğe bağlı)",
+    "optionalNote": "Not ekle (isteğe bağlı)",
     "reason": "Revizyon gerekçesi",
     "reasonHint": "Öğrencinin neyi değiştirmesi gerektiğini açıkça yaz.",
     "noteToStudent": "Bu not öğrenciye gönderilecek.",
@@ -712,7 +712,7 @@
     "whatDid": "Ne yaptı?",
     "whatLearned": "Ne öğrendi?",
     "notProvided": "Açıklama eklenmemiş.",
-    "previousNote": "Önceki mentor notu",
+    "previousNote": "Önceki not",
     "decisionHint": "Kararın öğrencinin görevine yansıyacak."
   },
   "studentFlow": {
@@ -723,7 +723,7 @@
     "nextTask": "Sıradaki görevin",
     "continueTask": "Göreve devam et",
     "viewTask": "Görevi görüntüle",
-    "mentorNote": "Mentor notu",
+    "mentorNote": "Danışman notu",
     "upcoming": "Yaklaşan teslim",
     "allTasks": "Tüm görevler",
     "allCaughtUp": "Şu an işlem bekleyen görevin yok",
@@ -747,7 +747,7 @@
     "useServerCopy": "Sunucudaki kayıtla devam et",
     "taskChanged": "Bu görevin durumu başka bir yerde değişti. Görev listesine dönüp güncel kaydı aç. Bu ekrandaki içerik gönderilmedi.",
     "submitReview": "İncelemeye gönder",
-    "reviewHint": "Gönderdiğinde mentorun çalışmanı inceleyecek.",
+    "reviewHint": "Gönderdiğinde danışmanın çalışmanı inceleyecek.",
     "competencies_title": "Yetkinlikler"
   },
   "dash": {
@@ -857,7 +857,7 @@
     "competencyInProgress": "1. seviyeye doğru",
     "competencyComplete": "Hedefe ulaşıldı",
     "whatIDidToday": "Bugün hangi davranışları gösterdin?",
-    "whatIDidTodayHint": "Gösterdiğin davranışları işaretle. Mentorun ayrı değerlendirme yapar; iki değerlendirme birleştirilmez, karşılaştırılır.",
+    "whatIDidTodayHint": "Gösterdiğin davranışları işaretle. Danışmanın ayrı değerlendirme yapar; iki değerlendirme birleştirilmez, karşılaştırılır.",
     "selectDate": "Tarih seç",
     "myTasks": "Görevlerim",
     "tasksToDo": "Yapılacak görevler",

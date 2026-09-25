@@ -585,7 +585,7 @@
     "noteTooLong": "Beleška može imati najviše 1000 znakova.",
     "reviewChanged": "Rad je izmenjen ili više ne čeka pregled. Proveri trenutno stanje.",
     "requestRevision": "Zatraži izmenu",
-    "optionalNote": "Dodaj belešku mentora (opciono)",
+    "optionalNote": "Dodaj belešku (opciono)",
     "reason": "Razlog izmene",
     "reasonHint": "Jasno objasni šta učenik treba da izmeni.",
     "noteToStudent": "Ova beleška će biti poslata učeniku.",
@@ -600,7 +600,7 @@
     "whatDid": "Šta je urađeno?",
     "whatLearned": "Šta je naučeno?",
     "notProvided": "Objašnjenje nije dodato.",
-    "previousNote": "Prethodna beleška mentora",
+    "previousNote": "Prethodna beleška",
     "decisionHint": "Tvoja odluka će biti prikazana u zadatku učenika."
   },
   "studentFlow": {

@@ -585,7 +585,7 @@
     "noteTooLong": "Notele pot avea cel mult 1000 de caractere.",
     "reviewChanged": "Lucrarea s-a schimbat sau nu mai așteaptă evaluarea. Verifică starea actuală.",
     "requestRevision": "Solicită revizuire",
-    "optionalNote": "Adaugă nota mentorului (opțional)",
+    "optionalNote": "Adaugă o notă (opțional)",
     "reason": "Motivul revizuirii",
     "reasonHint": "Explică clar ce trebuie să schimbe studentul.",
     "noteToStudent": "Această notă va fi trimisă studentului.",
@@ -600,7 +600,7 @@
     "whatDid": "Ce a făcut?",
     "whatLearned": "Ce a învățat?",
     "notProvided": "Nicio explicație furnizată.",
-    "previousNote": "Nota anterioară a mentorului",
+    "previousNote": "Nota anterioară",
     "decisionHint": "Decizia ta va apărea în sarcina studentului."
   },
   "studentFlow": {

@@ -585,7 +585,7 @@
     "noteTooLong": "Le note possono contenere al massimo 1000 caratteri.",
     "reviewChanged": "Il lavoro è cambiato o non è più in attesa. Controlla lo stato attuale.",
     "requestRevision": "Richiedi modifiche",
-    "optionalNote": "Aggiungi nota del tutor (facoltativa)",
+    "optionalNote": "Aggiungi una nota (facoltativa)",
     "reason": "Motivo delle modifiche",
     "reasonHint": "Spiega chiaramente cosa deve modificare lo studente.",
     "noteToStudent": "Questa nota sarà inviata allo studente.",
@@ -600,7 +600,7 @@
     "whatDid": "Cosa ha fatto?",
     "whatLearned": "Cosa ha imparato?",
     "notProvided": "Nessuna spiegazione fornita.",
-    "previousNote": "Nota precedente del tutor",
+    "previousNote": "Nota precedente",
     "decisionHint": "La decisione apparirà nell'attività dello studente."
   },
   "studentFlow": {

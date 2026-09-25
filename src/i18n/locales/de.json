@@ -585,7 +585,7 @@
     "noteTooLong": "Notizen dürfen höchstens 1000 Zeichen enthalten.",
     "reviewChanged": "Diese Arbeit wurde geändert oder bereits geprüft. Prüfe den aktuellen Stand.",
     "requestRevision": "Überarbeitung anfordern",
-    "optionalNote": "Mentornotiz hinzufügen (optional)",
+    "optionalNote": "Notiz hinzufügen (optional)",
     "reason": "Grund der Überarbeitung",
     "reasonHint": "Erkläre deutlich, was geändert werden soll.",
     "noteToStudent": "Diese Notiz wird an den Schüler gesendet.",
@@ -600,7 +600,7 @@
     "whatDid": "Was wurde gemacht?",
     "whatLearned": "Was wurde gelernt?",
     "notProvided": "Keine Erklärung vorhanden.",
-    "previousNote": "Vorherige Mentornotiz",
+    "previousNote": "Vorherige Notiz",
     "decisionHint": "Deine Entscheidung wird in der Aufgabe des Schülers angezeigt."
   },
   "studentFlow": {

@@ -568,7 +568,7 @@
     "noteTooLong": "Notes can contain up to 1000 characters.",
     "reviewChanged": "This submission has changed or is no longer pending. Check its current status.",
     "requestRevision": "Request revision",
-    "optionalNote": "Add mentor note (optional)",
+    "optionalNote": "Add a note (optional)",
     "reason": "Revision reason",
     "reasonHint": "Clearly explain what the student needs to change.",
     "noteToStudent": "This note will be sent to the student.",
@@ -583,7 +583,7 @@
     "whatDid": "What did they do?",
     "whatLearned": "What did they learn?",
     "notProvided": "No explanation provided.",
-    "previousNote": "Previous mentor note",
+    "previousNote": "Previous note",
     "decisionHint": "Your decision will appear on the student's task."
   },
   "studentFlow": {
@@ -594,7 +594,7 @@
     "nextTask": "Your next task",
     "continueTask": "Continue task",
     "viewTask": "View task",
-    "mentorNote": "Mentor note",
+    "mentorNote": "Advisor note",
     "upcoming": "Upcoming deadline",
     "allTasks": "All tasks",
     "allCaughtUp": "No tasks need your action right now",
@@ -618,7 +618,7 @@
     "useServerCopy": "Use server copy",
     "taskChanged": "This task changed elsewhere. Return to Tasks and open the current record. This screen's content was not submitted.",
     "submitReview": "Send for review",
-    "reviewHint": "Your mentor will review your work after you submit.",
+    "reviewHint": "Your advisor will review your work after you submit.",
     "competencies_title": "Competencies"
   },
   "dash": {
@@ -778,7 +778,7 @@
     "competencyInProgress": "Working towards level 1",
     "competencyComplete": "Target reached",
     "whatIDidToday": "What did you demonstrate today?",
-    "whatIDidTodayHint": "Tick the behaviours you showed. Your mentor ticks separately — the two are compared, not merged.",
+    "whatIDidTodayHint": "Tick the behaviours you showed. Your advisor rates separately — the two are compared, not merged.",
     "selectDate": "Select a date",
     "myTasks": "My Tasks",
     "tasksToDo": "Tasks to Do",
