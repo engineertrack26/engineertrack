@@ -34,8 +34,8 @@ npx supabase gen types typescript --project-id ocxpymvikzujdqefnoqg --schema pub
 ## Route Groups (current)
 - `app/(auth)/` — login, register, forgot-password, language-select, consent, privacy-policy
 - `app/(student)/` — dashboard, my-tasks, task-detail, feed, achievements, leaderboard, notifications, profile, internship-form, log-history (read-only history of the retired daily log)
-- `app/(mentor)/` — dashboard, student-list, feedback, notifications, profile
-- `app/(advisor)/` — dashboard, groups, group-assignments, group-competencies, pending-reviews, review-detail, student-monitor, reports, feed, notifications, profile
+- `app/(mentor)/` — dashboard, student-list, feedback, messages, conversation, internship-days, internship-report, notifications, profile
+- `app/(advisor)/` — dashboard, groups, group-assignments, group-competencies, pending-reviews, review-detail, student-monitor, reports, feed, messages, conversation, internship-days, internship-report, notifications, profile
 - No admin role. No daily-log creation, no advisor validation, no Polls screens (retired; see below).
 
 ## Domain Model (read before touching anything)
