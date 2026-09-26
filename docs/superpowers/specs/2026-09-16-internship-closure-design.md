@@ -1,5 +1,12 @@
 # Internship closure — design
 
+> **Amended 2026-09-24:** the reviewer is now the group's advisor, not the
+> workplace mentor — see `2026-09-24-advisor-review-design.md`. Where §Verification
+> has a mentor approving a pending submission, that is the advisor now. The
+> closure rules themselves (`PENDING_REVIEWS`, versions, reopen) are unchanged.
+> The report's rating columns were relabelled "Reviewer" for the same reason
+> (`docs/closure-report-reviewer-column.sql`).
+
 **Date:** 2026-09-16
 **Status:** approved in conversation, awaiting written review
 **Why:** the owners' workflow diagram ends with "Final approval: the internship is officially over, the final grade is approved" and a reports step. The app has no end: a group is archived as an administrative act, but a student's internship never closes, nothing is ever locked, and nothing summarises it. This is the last of the three audit gaps (after case threads and self-assessment).
