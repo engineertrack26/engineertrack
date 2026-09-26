@@ -519,7 +519,11 @@
     "days": "{{count}} Tage",
     "reviewHint": "Der Betreuer trifft die Prüfentscheidung; das Ergebnis siehst du hier.",
     "unavailable": "Person nicht gefunden oder nicht mehr zugewiesen.",
-    "studentFilter": "Offene Einreichungen von {{name}} werden angezeigt."
+    "studentFilter": "Offene Einreichungen von {{name}} werden angezeigt.",
+    "submissions": "Einreichungen",
+    "noSubmissions": "Noch keine Einreichungen.",
+    "openSubmission": "Einreichung öffnen",
+    "advisorNote": "Notiz des Betreuers"
   },
   "tabs": {
     "messages": "Nachrichten",

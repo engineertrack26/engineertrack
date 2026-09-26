@@ -620,7 +620,11 @@
     "days": "{{count}} gün",
     "reviewHint": "İnceleme kararını danışman veriyor; sonucu burada görebilirsin.",
     "unavailable": "Öğrenci bulunamadı veya artık sana bağlı değil.",
-    "studentFilter": "{{name}} için bekleyen çalışmalar gösteriliyor."
+    "studentFilter": "{{name}} için bekleyen çalışmalar gösteriliyor.",
+    "submissions": "Çalışmalar",
+    "noSubmissions": "Henüz çalışma yok.",
+    "openSubmission": "Çalışmayı aç",
+    "advisorNote": "Danışman notu"
   },
   "tabs": {
     "dashboard": "Ana Sayfa",

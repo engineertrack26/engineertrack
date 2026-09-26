@@ -519,7 +519,11 @@
     "days": "{{count}} zile",
     "reviewHint": "Consilierul ia decizia de evaluare; vei vedea rezultatul aici.",
     "unavailable": "Elevul nu a fost găsit sau nu îți mai este alocat.",
-    "studentFilter": "Lucrări în așteptare pentru {{name}}."
+    "studentFilter": "Lucrări în așteptare pentru {{name}}.",
+    "submissions": "Lucrări",
+    "noSubmissions": "Încă nu există lucrări.",
+    "openSubmission": "Deschide lucrarea",
+    "advisorNote": "Nota consilierului"
   },
   "tabs": {
     "messages": "Mesaje",

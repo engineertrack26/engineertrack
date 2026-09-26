@@ -451,4 +451,45 @@ export const assignmentService = {
       };
     }));
   },
+
+  /** Every submission a student has made, newest first, for the mentor's
+   *  read-only follow-up (2026-09-24-advisor-review-design.md, Decision 2:
+   *  "through the student list they still read submissions, evidence and
+   *  the advisor's decision"). No status filter -- unlike listPendingReviews,
+   *  which is a queue of work still to judge, this is a history of everything,
+   *  submitted, approved or sent back. The RLS policy on assignment_submissions
+   *  already admits is_mentor_of(student_id) for every status; this only
+   *  shapes what that read already allows into the same PendingReview shape
+   *  the review screens use, so the two can share ReviewEvidence and Stamp.
+   *
+   *  The advisor's decision needs no separate column read: mentor_note and
+   *  mentor_level (kept under those names, see the design doc) already hold
+   *  it once the RPC changed hands. */
+  async listStudentSubmissions(studentId: string, options: { submissionId?: string; signUrls?: boolean } = {}): Promise<(AssignmentSubmission & { assignment: GroupAssignment })[]> {
+    let query = supabase
+      .from('assignment_submissions')
+      .select(`*, group_assignments!inner(*, ${COMPETENCY_EMBED}), log_photos(*), log_documents(*)`)
+      .eq('student_id', studentId)
+      .order('submitted_at', { ascending: false });
+    if (options.submissionId) query = query.eq('id', options.submissionId);
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Same signing trade-off as listPendingReviews: the list view only shows
+    // a title and a stamp, so it passes signUrls: false and skips signing
+    // evidence nobody is about to open; opening one submission signs it.
+    return Promise.all((data || []).map(async (row) => {
+      const r = row as Record<string, unknown>;
+      const submission = toSubmission(r);
+      const assignment = toAssignment((r.group_assignments || {}) as Record<string, unknown>);
+      if (options.signUrls === false) return { ...submission, assignment };
+      const signed = await signEvidence(submission.photos, submission.documents);
+      const documentUrl = await signAssignmentDocument(assignment.documentPath);
+      return {
+        ...submission,
+        ...signed,
+        assignment: { ...assignment, documentUrl },
+      };
+    }));
+  },
 };

@@ -516,7 +516,11 @@
     "days": "{{count}} days",
     "reviewHint": "The advisor reviews and decides on submitted work; you'll see the outcome here.",
     "unavailable": "Student not found or no longer assigned to you.",
-    "studentFilter": "Showing pending submissions for {{name}}."
+    "studentFilter": "Showing pending submissions for {{name}}.",
+    "submissions": "Submissions",
+    "noSubmissions": "No submissions yet.",
+    "openSubmission": "Open submission",
+    "advisorNote": "Advisor's note"
   },
   "mentorHome": {
     "greeting": "Hello, {{name}}",

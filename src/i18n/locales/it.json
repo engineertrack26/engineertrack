@@ -519,7 +519,11 @@
     "days": "{{count}} giorni",
     "reviewHint": "Il tutor accademico decide sulla revisione; qui vedrai l'esito.",
     "unavailable": "Studente non trovato o non più assegnato a te.",
-    "studentFilter": "Consegne in attesa di {{name}}."
+    "studentFilter": "Consegne in attesa di {{name}}.",
+    "submissions": "Consegne",
+    "noSubmissions": "Nessuna consegna ancora.",
+    "openSubmission": "Apri consegna",
+    "advisorNote": "Nota del tutor accademico"
   },
   "tabs": {
     "messages": "Messaggi",

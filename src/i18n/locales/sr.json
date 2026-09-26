@@ -519,7 +519,11 @@
     "days": "{{count}} dana",
     "reviewHint": "Savetnik donosi odluku o pregledu; ovde ćeš videti ishod.",
     "unavailable": "Učenik nije pronađen ili ti više nije dodeljen.",
-    "studentFilter": "Prikazuju se radovi na čekanju za {{name}}."
+    "studentFilter": "Prikazuju se radovi na čekanju za {{name}}.",
+    "submissions": "Radovi",
+    "noSubmissions": "Još nema radova.",
+    "openSubmission": "Otvori rad",
+    "advisorNote": "Beleška savetnika"
   },
   "tabs": {
     "messages": "Poruke",

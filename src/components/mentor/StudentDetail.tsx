@@ -3,12 +3,17 @@ import { ActivityIndicator, BackHandler, Pressable, RefreshControl, ScrollView, 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { ui } from '@/components/common/workflowStyles';
 import { LoadFailedBanner, Stamp } from '@/components/common';
 import { ReviewBack } from './ReviewUI';
 import { StudentDates, StudentIdentity } from './StudentIdentity';
 import { mentorStudentService } from '@/services/mentorStudents';
+import { assignmentService } from '@/services/assignments';
 import { MentorStudent } from '@/utils/mentorStudents';
+import { PendingReview, reviewSubmittedAt } from '@/utils/mentorReviews';
+import { submissionStampKind } from '@/utils/mentorSubmissions';
+import { taskContent } from '@/utils/taskContent';
 import { useAuthStore } from '@/store/authStore';
 import { useClosureStatus } from '@/hooks/useClosureStatus';
 import { colors } from '@/theme';
@@ -23,11 +28,13 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
   const [failed, setFailed] = useState(false);
   const [countsFailed, setCountsFailed] = useState(false);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [submissions, setSubmissions] = useState<PendingReview[]>([]);
+  const [submissionsFailed, setSubmissionsFailed] = useState(false);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
     const current = () => request === generation.current && useAuthStore.getState().user?.id === userId;
-    setLoading(true); setFailed(false); setCountsFailed(false); setSummary(null);
+    setLoading(true); setFailed(false); setCountsFailed(false); setSubmissionsFailed(false); setSummary(null);
     try {
       const students = await mentorStudentService.students(userId);
       if (!current()) return;
@@ -44,6 +51,14 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
         } catch (error) {
           if (current()) console.warn('Student group load for closure badge failed:', error instanceof Error ? error.message : error);
         }
+        // Read-only follow-up (2026-09-24-advisor-review-design.md, Decision
+        // 2): every submission, any status, signed only once one is opened --
+        // signUrls: false keeps this list from signing evidence nobody has
+        // asked to see yet.
+        try {
+          const items = await assignmentService.listStudentSubmissions(studentId, { signUrls: false });
+          if (current()) setSubmissions(items);
+        } catch { if (current()) { setSubmissionsFailed(true); setSubmissions([]); } }
       }
     } catch { if (current()) { setFailed(true); setStudent(null); } }
     finally { if (current()) setLoading(false); }
@@ -82,11 +97,24 @@ export function StudentDetail({ userId, studentId, onBack }: { userId: string; s
                 <Text style={ui.title}>{metric.value ?? '—'}</Text><Text style={ui.secondary}>{metric.label}</Text>
               </View>)}
           </View>
-          {/* Review moved to the advisor (2026-09-24-advisor-review): there is no
-              mentor screen left to open a pending submission on, so this stays
-              a read-only count — already shown in the metric above — rather
-              than a link to a route that no longer exists for this role. */}
           {!closure?.closed && summary?.pending === 0 && <Text style={ui.secondary}>{t('mentorStudents.noPending')}</Text>}
+          <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.submissions')}</Text>
+          {submissionsFailed && <LoadFailedBanner onRetry={load} />}
+          {!submissionsFailed && submissions.length === 0 && <Text style={ui.secondary}>{t('mentorStudents.noSubmissions')}</Text>}
+          {submissions.map(sub => <Pressable key={sub.id} accessibilityRole="button"
+            accessibilityLabel={t('mentorStudents.openSubmission') + ': ' + taskContent(sub.assignment.title, i18n.language)}
+            onPress={() => router.push({ pathname: '/(mentor)/submission-detail', params: { id: sub.id, studentId, name: student.name } })}
+            style={ui.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <Text style={[ui.label, { flex: 1 }]}>{taskContent(sub.assignment.title, i18n.language)}</Text>
+              <Stamp kind={submissionStampKind(sub.status)} />
+            </View>
+            <Text style={ui.secondary}>{reviewSubmittedAt(sub.submittedAt, i18n.language)}</Text>
+            <View style={[ui.header, { borderTopWidth: 1, borderColor: colors.divider, minHeight: 48 }]}>
+              <Text style={[ui.link, { flexShrink: 1 }]}>{t('mentorStudents.openSubmission')}</Text>
+              <Ionicons name="arrow-forward" size={20} color={colors.primaryDark} />
+            </View>
+          </Pressable>)}
           <Text accessibilityRole="header" style={ui.section}>{t('mentorStudents.other')}</Text>
           <View style={ui.card}>
             {[{ label: t('mentorStudents.total'), value: summary?.total ?? '—' },
