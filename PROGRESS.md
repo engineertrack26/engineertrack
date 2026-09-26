@@ -230,6 +230,12 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Complete advisor group report export (2026-09-26)
+
+- Added an owner-scoped, read-only `advisor_group_export` RPC covering current and former group members, competency targets/reached levels, published tasks, each member's task status and ratings, attendance totals, recorded days, and the text of submitted internship journals. It works for archived groups. Draft journal text and binary attachments are excluded; unrecorded days remain unknown rather than absent.
+- Replaced the report screen's text-only CSV share with a real UTF-8 CSV file. Android asks the advisor for a destination folder and saves there; iOS opens the file share sheet for Save to Files. Existing on-screen group metrics are unchanged and may still focus on active members; the downloaded history includes former members.
+- Verification: TypeScript and all 73 test suites (654 tests) passed, including Turkish/English labels, former-member history, multiline reflections, CSV formula escaping, numeric ratings, Android folder save/cancel, iOS file share and source immutability. The user applied the SQL migration successfully and accepted closing the feature; real-device file saving was not independently verified. Concurrent `sim/` work remains untouched.
+
 ### Advisor student-monitor avatars
 
 - Student Monitor now displays the selected student character beside the name using the shared 48px avatar renderer without level markers. The appearance uses the server-calculated level; absent selections or unavailable avatar data retain initials. Both group and overview entry points load a single batch, refresh on focus, and discard stale/account-switched results.

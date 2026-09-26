@@ -291,8 +291,23 @@
     "search": "Search student name",
     "sort_name": "By name",
     "sort_progress": "Progress: low to high",
-    "exportHint": "CSV sharing includes the entire selected group report, regardless of search or sorting.",
-    "export": "Share group report (CSV)"
+    "exportHint": "Download a CSV of all current and former group members, published tasks, submission results, attendance and submitted journal text. Search and sorting do not affect it.",
+    "export": "Download group report (CSV)"
+  },
+  "advisorExport": {
+    "group": "Group", "term": "Term", "archived": "Archived", "yes": "Yes", "no": "No",
+    "exportedAt": "Exported at (UTC)",
+    "scopeNote": "Includes current and former group members. Journal drafts and attachment files are not included. Blank values mean no record; a missing day is not absence.",
+    "students": "STUDENTS", "studentId": "Student ID", "student": "Student", "joinedAt": "Joined at", "leftAt": "Left at",
+    "competencies": "COMPETENCY LEVELS", "competency": "Competency", "targetLevel": "Target level", "reachedLevel": "Reached level",
+    "tasks": "PUBLISHED TASKS", "taskId": "Task ID", "title": "Task", "objective": "Learning outcome", "criterion": "Assessment criterion", "description": "Description", "dueDate": "Due date", "publishedAt": "Published at",
+    "submissions": "TASK RESULTS", "status": "Status", "submittedAt": "Submitted at", "reviewedAt": "Reviewed at", "studentNote": "Student note", "reflection": "Self-reflection", "reviewerNote": "Reviewer note", "selfLevel": "Self rating", "reviewerLevel": "Reviewer rating",
+    "status_submitted": "Awaiting review", "status_approved": "Approved", "status_needs_revision": "Revision requested", "status_not_started": "Not started",
+    "attendanceTotals": "ATTENDANCE TOTALS", "mentor": "Mentor", "expectedDays": "Working days in internship", "expectedSoFar": "Working days so far", "recorded": "Recorded days", "unrecorded": "Days without a record", "corrections": "Corrections requested", "submittedLogs": "Journals submitted",
+    "days": "INTERNSHIP DAYS AND JOURNALS", "date": "Date", "company": "Workplace", "attendance": "Attendance", "checkInAt": "Check-in time", "decidedAt": "Decision time", "attendanceNote": "Attendance note", "correctionRequested": "Correction requested", "logStatus": "Journal status", "taskTitle": "Linked task", "experience": "Experience", "learning": "Learning and self-assessment", "nextStep": "Next step", "supportLevel": "Support level",
+    "attendance_present": "Present", "attendance_partial": "Partial", "attendance_excused": "Excused", "attendance_absent": "Absent", "attendance_pending": "Awaiting decision",
+    "log_submitted": "Submitted", "log_draft": "Not submitted",
+    "saved": "The report file was saved."
   },
   "advisorMonitor": {
     "groupHint": "Find and manage group members. Explore competency progress in group reports.",

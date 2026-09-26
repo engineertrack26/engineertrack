@@ -31,7 +31,7 @@ test('report screen and CSV literal labels have Turkish translations with matchi
     expect(translated?.trim()).not.toBe('');
     expect(placeholders(translated!)).toEqual(placeholders(value(en, key)!));
   }
-  expect(source).toContain('selfVsMentorCsvRows(s.selfVsMentor, i18n.language)');
+  expect(source).toContain('groupExportCsv(snapshot, i18n.language');
 });
 
 test('student search supports Turkish casing and trimmed input', () => {

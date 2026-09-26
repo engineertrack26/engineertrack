@@ -2211,6 +2211,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advisor_group_export: { Args: { p_group_id: string }; Returns: Json }
       advisor_student_avatars: { Args: { p_group_id?: string }; Returns: Json }
       assignment_has_submissions: {
         Args: { p_assignment_id: string }

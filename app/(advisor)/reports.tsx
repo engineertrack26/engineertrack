@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Share, Alert, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, TextInput, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -7,13 +7,16 @@ import { competencyContent } from '@/utils/competencyContent';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { advisorService } from '@/services/advisor';
+import { getAdvisorGroupExport } from '@/services/advisorGroupExport';
+import { saveGroupReportCsv } from '@/services/saveGroupReport';
 import { groupService } from '@/services/group';
 import { BackButton, LoadFailedBanner, Stamp } from '@/components/common';
 import { AdvisorBell, GroupModal, groupStyles } from '@/components/advisor/GroupUI';
 import { ui } from '@/components/common/workflowStyles';
 import { selectAdvisorGroup, groupCenterRoute } from '@/utils/advisorGroups';
-import { attendanceDayRows, attendanceSummaryRows, csvRow, filterReportStudents } from '@/utils/advisorReportView';
-import { gapTag, selfVsMentorCsvRows, weightedAverage } from '@/utils/selfAssessment';
+import { filterReportStudents } from '@/utils/advisorReportView';
+import { groupExportCsv } from '@/utils/groupExportCsv';
+import { gapTag } from '@/utils/selfAssessment';
 import { colors, fonts } from '@/theme';
 import type { InternshipGroup } from '@/types/group';
 import type { AttendanceDayRow, GroupReportData } from '@/types/report';
@@ -105,141 +108,19 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
   }
   const canExport = !!data && data.groupId === selectedGroupId && !loadingReport && !loadingGroups && !groupsFailed && !reportFailed;
   async function handleExportCSV() {
-    if (!data || !canExport || exportLock.current || useAuthStore.getState().user?.id !== advisorId) return;
+    if (!data || !canExport || !selectedGroupId || exportLock.current ||
+        useAuthStore.getState().user?.id !== advisorId) return;
     exportLock.current = true; setExporting(true);
     try {
-      const lines: string[] = [];
-
-      // The group name leads the file. Two exports from two groups are
-      // otherwise indistinguishable once they sit next to each other in a
-      // downloads folder.
-      lines.push(csvRow([t('advisor.csvGroupHeader'), data.groupName]));
-      lines.push('');
-
-      lines.push(t('advisor.csvSummaryHeader'));
-      lines.push(
-        csvRow([
-          t('advisor.csvColStudents'),
-          t('advisor.csvColAvgCompletion'),
-          t('advisor.csvColSubmitted'),
-          t('advisor.csvColApproved'),
-          t('advisor.csvColNeedsRevision'),
-        ]),
-      );
-      lines.push(
-        csvRow([
-          data.studentCount,
-          data.averageCompletion,
-          data.submitted,
-          data.approved,
-          data.needsRevision,
-        ]),
-      );
-      // Approved and sent back are subsets of submitted. A reader who summed
-      // the last three columns would otherwise double-count. This note names
-      // both, unlike the on-screen one, because "Sent Back" is a real column
-      // here and is not shown on screen at all.
-      lines.push(csvRow([t('advisor.csvSubsetNote')]));
-      lines.push('');
-
-      lines.push(t('advisor.csvCompetencyHeader'));
-      lines.push(
-        csvRow([
-          t('advisor.csvColCompetency'),
-          t('advisor.csvColTargetLevel'),
-          t('advisor.csvColStudentsAtTarget'),
-          t('advisor.csvColStudents'),
-        ]),
-      );
-      data.competencyBreakdown.forEach((c) => {
-        lines.push(
-          csvRow([competencyContent(c.competencyName, i18n.language), c.targetLevel, c.studentsAtTarget, data.studentCount]),
-        );
-      });
-      lines.push('');
-
-      lines.push(t('advisor.csvStudentHeader'));
-      lines.push(
-        csvRow([
-          t('advisor.csvColName'),
-          t('advisor.csvColCompletion'),
-          t('advisor.csvColSubmitted'),
-          t('advisor.csvColApproved'),
-          t('assessment.csvColSelf'),
-          t('assessment.csvColMentor'),
-          t('assessment.csvColGap'),
-        ]),
-      );
-      data.studentProgress.forEach((s) => {
-        lines.push(csvRow([
-          s.name, s.completionPercent, s.submitted, s.approved,
-          weightedAverage(s.selfVsMentor, 'avgSelf') ?? '',
-          weightedAverage(s.selfVsMentor, 'avgMentor') ?? '',
-          s.selfVsMentorGap ?? '',
-        ]));
-      });
-
-      // One row per student x competency -- students with no rated
-      // submissions simply contribute none, same as their blank cells in the
-      // Student table above.
-      lines.push('');
-      lines.push(t('assessment.csvHeader'));
-      lines.push(
-        csvRow([
-          t('advisor.csvColName'),
-          t('advisor.csvColCompetency'),
-          t('assessment.csvColTasks'),
-          t('assessment.csvColSelf'),
-          t('assessment.csvColMentor'),
-          t('assessment.csvColGap'),
-        ]),
-      );
-      data.studentProgress.forEach((s) => {
-        selfVsMentorCsvRows(s.selfVsMentor, i18n.language).forEach((row) => lines.push(csvRow([s.name, ...row])));
-      });
-
-      // Attendance: the section a university asks for as proof. Totals per
-      // student, then every internship day with the mentor's decision -- the
-      // day rows are the record, the totals are the summary of it. Absent
-      // entirely when the module is not installed, rather than an empty table
-      // that reads as "nobody attended".
-      if (data.attendance) {
-        const att = data.attendance;
-        lines.push('');
-        lines.push(t('advisorReports.csvAttendanceHeader', 'Attendance'));
-        lines.push(csvRow([
-          t('advisor.csvColName'), t('advisorReports.csvColCompany', 'Workplace'), t('advisorReports.csvColMentor', 'Mentor'),
-          t('advisorReports.csvColExpectedSoFar', 'Working days so far'), t('advisorReports.csvColExpectedTotal', 'Working days in internship'),
-          t('advisorReports.csvColUnrecorded', 'Days without a record'),
-          attendanceLabel('present'), attendanceLabel('partial'), attendanceLabel('excused'), attendanceLabel('absent'), attendanceLabel('pending'),
-          t('advisorReports.csvColCorrections', 'Corrections requested'), t('advisorReports.csvColSubmittedLogs', 'Journals submitted'),
-        ]));
-        attendanceSummaryRows(att.students, i18n.language).forEach((row) => lines.push(csvRow(row)));
-        lines.push(csvRow([t('advisorReports.csvAttendanceNote', 'Working days are Monday to Friday between the internship dates; public holidays are not excluded. A day without a record is unknown, not absent.')]));
-        lines.push('');
-        lines.push(t('advisorReports.csvAttendanceDaysHeader', 'Attendance days'));
-        lines.push(csvRow([
-          t('advisor.csvColName'), t('advisorReports.csvColDate', 'Date'), t('advisorReports.csvColAttendance', 'Attendance'),
-          t('advisorReports.csvColCheckedIn', 'Checked in on the day'), t('advisorReports.csvColCheckInAt', 'Check-in time'),
-          t('advisorReports.csvColDecidedBy', 'Decided by'), t('advisorReports.csvColDecidedAt', 'Decided at'),
-          t('advisorReports.csvColCorrection', 'Correction requested'), t('advisorReports.csvColLog', 'Journal'),
-        ]));
-        attendanceDayRows(att.days, i18n.language, {
-          yes: t('common.yes', 'Yes'), no: t('common.no', 'No'), attendance: attendanceLabel,
-          logStatus: (value) => t('advisorReports.log_' + value, value === 'submitted' ? 'Submitted' : 'Not submitted'),
-        }).forEach((row) => lines.push(csvRow(row)));
-      }
-
-      await Share.share({
-        message: lines.join('\n'),
-        title: t('advisor.exportTitle', { group: data.groupName }),
-      });
-
+      const snapshot = await getAdvisorGroupExport(selectedGroupId);
+      if (useAuthStore.getState().user?.id !== advisorId || snapshot.groupId !== selectedGroupId) return;
+      const csv = groupExportCsv(snapshot, i18n.language, (key) => t(key));
+      const saved = await saveGroupReportCsv(snapshot.groupId, csv, snapshot.groupName);
+      if (saved) Alert.alert(t('common.done'), t('advisorExport.saved'));
     } catch {
       Alert.alert(t('advisor.exportErrorTitle'), t('advisor.exportFailed'));
     } finally { exportLock.current = false; setExporting(false); }
   }
-
   function attendanceLabel(value: AttendanceDayRow['attendance']): string {
     const defaults = { present: 'Present', partial: 'Partial', excused: 'Excused', absent: 'Absent', pending: 'Awaiting decision' };
     return t('advisorReports.attendance_' + value, defaults[value]);

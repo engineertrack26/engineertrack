@@ -335,8 +335,23 @@
     "search": "Öğrenci adı ara",
     "sort_name": "Ada göre",
     "sort_progress": "İlerleme: düşükten yükseğe",
-    "exportHint": "CSV paylaşımı, arama ve sıralamadan bağımsız olarak seçili grubun tüm raporunu içerir.",
-    "export": "Grup raporunu paylaş (CSV)"
+    "exportHint": "Mevcut ve ayrılmış grup üyelerinin görev sonuçlarını, devam kayıtlarını ve gönderilmiş günlük metinlerini CSV dosyası olarak kaydedin. Arama ve sıralama dosyayı etkilemez.",
+    "export": "Grup raporunu indir (CSV)"
+  },
+  "advisorExport": {
+    "group": "Grup", "term": "Dönem", "archived": "Arşivlendi", "yes": "Evet", "no": "Hayır",
+    "exportedAt": "Dışa aktarma zamanı (UTC)",
+    "scopeNote": "Mevcut ve ayrılmış grup üyelerini içerir. Günlük taslakları ve ek dosyalar dahil değildir. Boş alan kayıtsızdır; günü kayıtsız olmak devamsızlık anlamına gelmez.",
+    "students": "ÖĞRENCİLER", "studentId": "Öğrenci kimliği", "student": "Öğrenci", "joinedAt": "Katılım zamanı", "leftAt": "Ayrılma zamanı",
+    "competencies": "YETKİNLİK DÜZEYLERİ", "competency": "Yetkinlik", "targetLevel": "Hedef seviye", "reachedLevel": "Ulaşılan seviye",
+    "tasks": "YAYIMLANAN GÖREVLER", "taskId": "Görev kimliği", "title": "Görev", "objective": "Kazanım", "criterion": "Değerlendirme kriteri", "description": "Açıklama", "dueDate": "Son teslim tarihi", "publishedAt": "Yayımlanma zamanı",
+    "submissions": "GÖREV SONUÇLARI", "status": "Durum", "submittedAt": "Gönderim zamanı", "reviewedAt": "Değerlendirme zamanı", "studentNote": "Öğrenci notu", "reflection": "Özdeğerlendirme", "reviewerNote": "Değerlendirenin notu", "selfLevel": "Öğrenci puanı", "reviewerLevel": "Değerlendirenin puanı",
+    "status_submitted": "Değerlendirme bekliyor", "status_approved": "Onaylandı", "status_needs_revision": "Düzeltme istendi", "status_not_started": "Başlanmadı",
+    "attendanceTotals": "DEVAM ÖZETİ", "mentor": "Mentör", "expectedDays": "Stajdaki iş günü", "expectedSoFar": "Şimdiye kadarki iş günü", "recorded": "Kayıtlı gün", "unrecorded": "Kayıtsız gün", "corrections": "Düzeltme talebi", "submittedLogs": "Gönderilen günlük",
+    "days": "STAJ GÜNLERİ VE GÜNLÜKLER", "date": "Tarih", "company": "İş yeri", "attendance": "Devam durumu", "checkInAt": "Giriş zamanı", "decidedAt": "Karar zamanı", "attendanceNote": "Devam notu", "correctionRequested": "Düzeltme istendi", "logStatus": "Günlük durumu", "taskTitle": "İlişkili görev", "experience": "Staj deneyimi", "learning": "Öğrenme ve özdeğerlendirme", "nextStep": "Sonraki adım", "supportLevel": "Destek düzeyi",
+    "attendance_present": "Katıldı", "attendance_partial": "Kısmi", "attendance_excused": "İzinli", "attendance_absent": "Katılmadı", "attendance_pending": "Karar bekliyor",
+    "log_submitted": "Gönderildi", "log_draft": "Gönderilmedi",
+    "saved": "Rapor dosyası kaydedildi."
   },
   "advisorMonitor": {
     "groupHint": "Grup üyelerini bulun ve yönetin. Yetkinlik ilerlemesini grup raporlarında inceleyebilirsiniz.",
