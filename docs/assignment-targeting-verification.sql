@@ -26,7 +26,9 @@
 -- set_config('probe.results', ...) because the editor hides NOTICE and shows
 -- only the last statement's result. Every check sits in its own
 -- BEGIN ... EXCEPTION sub-block -- that is a savepoint, so one failing check
--- rolls back only itself and the checks after it still run.
+-- rolls back only itself and the checks after it still run. The fixtures each
+-- part builds first are deliberately NOT guarded: if they cannot be built, no
+-- check below them means anything and the owner should see the raw error.
 -- ============================================================
 
 
@@ -93,16 +95,26 @@ WITH checks AS (
                  WHERE r.routine_schema = 'public'
                    AND r.routine_name = 'group_assignment_counts'
                    AND pa.parameter_name = 'target_count')
-  UNION ALL SELECT 'A12 set_assignment_targets + levels: authenticated yes, anon no',
+  UNION ALL SELECT 'A12 the four targeting functions: authenticated yes, anon no',
          -- to_regprocedure returns NULL instead of raising when the function
          -- is absent, so a database that has not seen the migration gets a
          -- FAIL row here rather than an error that kills the whole of Part A.
+         --
+         -- The two predicates are in this list because Part B calls them
+         -- directly (B3, B13): without EXECUTE they raise 42883 there, and
+         -- this row is what tells the owner why before they read the rest.
          coalesce((SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                    FROM pg_proc p
                    WHERE p.oid = to_regprocedure('public.set_assignment_targets(uuid,uuid[])')), false)
      AND coalesce((SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                    FROM pg_proc p
                    WHERE p.oid = to_regprocedure('public.group_levels_for_competency(uuid,uuid)')), false)
+     AND coalesce((SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p
+                   WHERE p.oid = to_regprocedure('public.can_see_assignment(uuid)')), false)
+     AND coalesce((SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p
+                   WHERE p.oid = to_regprocedure('public.mentor_sees_assignment(uuid)')), false)
      AND NOT coalesce((SELECT has_function_privilege('anon', p.oid, 'EXECUTE')
                    FROM pg_proc p
                    WHERE p.oid = to_regprocedure('public.set_assignment_targets(uuid,uuid[])')), false)
@@ -120,7 +132,10 @@ ORDER BY coalesce(ok, false), check_name;
 
 -- ============================================================
 -- PART B -- behaviour, live against the simulation group (join code 58MMWL).
--- Run this whole block alone. Expect one line per check, B1 .. B14.
+-- Run this whole block alone. Expect 17 lines: B1, B2, B3, B4a, B4b, B5, B6,
+-- B7, B8, B9a, B9b, B9c, B10, B11, B12, B13, B14 -- B4 and B9 are each split,
+-- B4 into the refusal and the submission it must still allow, B9 into the
+-- refusal, the removal that is allowed, and the group-audience case.
 -- Nothing is kept: the transaction rolls back.
 --
 -- Every actor and every row is resolved or built inside the transaction; no
@@ -292,19 +307,29 @@ BEGIN
   -- 1 for every impersonated actor and the s2 case would read FAIL on correct
   -- code. can_see_assignment is exactly what the read policy calls; Part C
   -- proves the policy calls it.
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', s1)::text, true);
-  v_see_target := can_see_assignment(a_sel);
-  v_see_group  := can_see_assignment(a_group);
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', s2)::text, true);
-  v_see_other  := can_see_assignment(a_sel);
+  --
+  -- Guarded like every other check, and for a reason of its own: a missing or
+  -- unexecutable can_see_assignment raises here, and unguarded that would
+  -- abort the whole DO block -- so the one failure this script most exists to
+  -- catch would be the one that hides the sixteen checks after it. (A12 names
+  -- the EXECUTE grant it needs.)
+  BEGIN
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', s1)::text, true);
+    v_see_target := can_see_assignment(a_sel);
+    v_see_group  := can_see_assignment(a_group);
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', s2)::text, true);
+    v_see_other  := can_see_assignment(a_sel);
 
-  IF v_see_target AND NOT v_see_other AND v_see_group THEN
-    v_log := v_log || 'PASS B3: the target sees the selected task, the untargeted member does not, both see the group task' || chr(10);
-  ELSE
-    v_log := v_log || 'FAIL B3: target sees selected=' || coalesce(v_see_target::text, '<null>')
-                    || ', untargeted sees selected=' || coalesce(v_see_other::text, '<null>')
-                    || ', target sees group=' || coalesce(v_see_group::text, '<null>') || chr(10);
-  END IF;
+    IF v_see_target AND NOT v_see_other AND v_see_group THEN
+      v_log := v_log || 'PASS B3: the target sees both the selected task and the group task; the untargeted member does not see the selected one' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL B3: target sees selected=' || coalesce(v_see_target::text, '<null>')
+                      || ', untargeted sees selected=' || coalesce(v_see_other::text, '<null>')
+                      || ', target sees group=' || coalesce(v_see_group::text, '<null>') || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL B3: unexpected error: ' || SQLERRM || chr(10);
+  END;
 
   -- ---- B4: submitting ----
   -- The reflection and the document are real, not placeholders: with a NULL
@@ -631,23 +656,26 @@ ROLLBACK;
 
 
 -- ============================================================
--- PART C -- policies. Run this whole block alone. Expect 4 rows, all PASS.
+-- PART C -- policies. Run this whole block alone. Expect 6 rows, all PASS
+-- (C4 may read SKIP if the target has no linked mentor).
 -- An owner-run script proves a policy exists; SET LOCAL ROLE authenticated is
 -- what makes one evaluate. This is the only part of the file that tests the
--- read policy itself rather than the predicate behind it.
+-- read policy itself rather than the predicates behind it -- and the only
+-- place the advisor's own branch of that policy is exercised at all.
 -- ============================================================
 
 BEGIN;
 
 -- The fixture is built here, as the owner, BEFORE the role switch -- under
 -- role authenticated there is no write path to assignment_targets at all,
--- which is exactly what C3 and C4 exist to prove.
+-- which is exactly what C5 and C6 exist to prove.
 DO $$
 DECLARE
   g         UUID;
   advisor   UUID;
   s_target  UUID;
   s_other   UUID;
+  v_mentor  UUID;
   v_triplet UUID;
   v_comp    UUID;
   a_sel     UUID;
@@ -661,6 +689,19 @@ BEGIN
   SELECT m.student_id INTO s_other FROM group_memberships m
   WHERE m.group_id = g AND m.left_at IS NULL
   ORDER BY m.joined_at, m.student_id OFFSET 1 LIMIT 1;
+
+  -- Worded, not raw: without this the fixture below dies on a NOT NULL
+  -- violation and the owner reads a constraint name instead of a sentence.
+  -- Part B says the same thing first, but Part C is pasted on its own.
+  IF g IS NULL OR s_other IS NULL THEN
+    PERFORM set_config('probe.results',
+      'FAIL setup: Part C needs group 58MMWL with at least two active members' || chr(10), true);
+    PERFORM set_config('probe.assignment', '', true);
+    RETURN;
+  END IF;
+
+  -- The target's mentor, for C4. NULL is allowed -- C4 says SKIP.
+  SELECT sp.mentor_id INTO v_mentor FROM student_profiles sp WHERE sp.id = s_target;
 
   SELECT t.id, k.competency_id INTO v_triplet, v_comp
   FROM kpi_triplets t
@@ -688,39 +729,105 @@ BEGIN
   PERFORM set_config('probe.target', s_target::text, true);
   PERFORM set_config('probe.other', s_other::text, true);
   PERFORM set_config('probe.advisor', advisor::text, true);
+  PERFORM set_config('probe.mentor', coalesce(v_mentor::text, ''), true);
 END $$;
 
 SET LOCAL ROLE authenticated;
 
 DO $$
 DECLARE
-  a_sel     UUID := current_setting('probe.assignment')::uuid;
-  s_other   UUID := current_setting('probe.other')::uuid;
+  a_sel     UUID;
+  s_other   UUID;
   v_cnt     INT;
   v_deleted INT;
   v_log     TEXT := '';
 BEGIN
-  -- C1: an active member of the group who was not named.
-  PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', current_setting('probe.other'))::text, true);
-  SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
-  IF v_cnt = 0 THEN
-    v_log := v_log || 'PASS C1: the untargeted member''s SELECT returned no row' || chr(10);
-  ELSE
-    v_log := v_log || 'FAIL C1: the untargeted member read ' || v_cnt || ' row(s)' || chr(10);
+  -- The fixture above sets probe.assignment to '' when it could not build
+  -- itself, having already written its reason into probe.results. Reading
+  -- it in DECLARE would raise on the cast, so the guard comes first.
+  IF coalesce(current_setting('probe.assignment', true), '') = '' THEN
+    -- Keep whatever the fixture said; say something if it never ran at all,
+    -- so the SELECT below has a setting to read either way.
+    PERFORM set_config('probe.results',
+      coalesce(current_setting('probe.results', true),
+               'FAIL setup: the Part C fixture did not run -- paste the whole part' || chr(10)), true);
+    RETURN;
   END IF;
+
+  a_sel   := current_setting('probe.assignment')::uuid;
+  s_other := current_setting('probe.other')::uuid;
+
+  -- C1: an active member of the group who was not named. Guarded like the
+  -- rest: if the read policy cannot be evaluated at all, that is one FAIL
+  -- line, not an aborted block that hides the five checks below it.
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.other'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
+    IF v_cnt = 0 THEN
+      v_log := v_log || 'PASS C1: the untargeted member''s SELECT returned no row' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL C1: the untargeted member read ' || v_cnt || ' row(s)' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL C1: unexpected error: ' || SQLERRM || chr(10);
+  END;
 
   -- C2: the same query as the student who was named.
-  PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', current_setting('probe.target'))::text, true);
-  SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
-  IF v_cnt = 1 THEN
-    v_log := v_log || 'PASS C2: the target''s SELECT returned the assignment' || chr(10);
-  ELSE
-    v_log := v_log || 'FAIL C2: the target read ' || v_cnt || ' row(s), expected 1' || chr(10);
-  END IF;
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.target'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
+    IF v_cnt = 1 THEN
+      v_log := v_log || 'PASS C2: the target''s SELECT returned the assignment' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL C2: the target read ' || v_cnt || ' row(s), expected 1' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL C2: unexpected error: ' || SQLERRM || chr(10);
+  END;
 
-  -- C3: the advisor owns the group and can READ the target rows, and still has
+  -- C3: the advisor's own branch of the policy. docs/assignment-targeting.sql
+  -- REPLACES "assignments read" whole, and owns_group(group_id) is the branch
+  -- the rewrite carried over untouched -- which is exactly the kind of clause
+  -- a rewrite drops silently. Nothing else in this file would notice: Part B
+  -- calls the predicates directly and never goes through the policy, and
+  -- C1/C2 only exercise the student branch. If this row goes red, every
+  -- advisor's task list is empty across the whole product.
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.advisor'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
+    IF v_cnt = 1 THEN
+      v_log := v_log || 'PASS C3: the owning advisor still reads their own group''s assignment' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL C3: the owning advisor read ' || v_cnt || ' row(s), expected 1' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL C3: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- C4: the third branch, mentor_sees_assignment, through the policy rather
+  -- than through the predicate (B13 does the predicate). The mentor of the
+  -- targeted student must still read the task their student was given.
+  BEGIN
+    IF coalesce(current_setting('probe.mentor', true), '') = '' THEN
+      v_log := v_log || 'SKIP C4: the targeted student has no linked mentor' || chr(10);
+    ELSE
+      PERFORM set_config('request.jwt.claims',
+        json_build_object('sub', current_setting('probe.mentor'))::text, true);
+      SELECT count(*)::INT INTO v_cnt FROM group_assignments WHERE id = a_sel;
+      IF v_cnt = 1 THEN
+        v_log := v_log || 'PASS C4: the target''s mentor reads the assignment through the policy' || chr(10);
+      ELSE
+        v_log := v_log || 'FAIL C4: the target''s mentor read ' || v_cnt || ' row(s), expected 1' || chr(10);
+      END IF;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL C4: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- C5: the advisor owns the group and can READ the target rows, and still has
   -- no way to write one. Matched on SQLSTATE, not on message text: "new row
   -- violates row-level security policy" and "permission denied for table" are
   -- both 42501 and either one is the refusal this asserts.
@@ -728,16 +835,16 @@ BEGIN
     json_build_object('sub', current_setting('probe.advisor'))::text, true);
   BEGIN
     INSERT INTO assignment_targets (assignment_id, student_id) VALUES (a_sel, s_other);
-    v_log := v_log || 'FAIL C3: the advisor inserted a target row directly' || chr(10);
+    v_log := v_log || 'FAIL C5: the advisor inserted a target row directly' || chr(10);
   EXCEPTION
     WHEN insufficient_privilege THEN
-      v_log := v_log || 'PASS C3: the advisor''s direct INSERT was refused with 42501' || chr(10);
+      v_log := v_log || 'PASS C5: the advisor''s direct INSERT was refused with 42501' || chr(10);
     WHEN OTHERS THEN
-      v_log := v_log || 'FAIL C3: refused with SQLSTATE ' || SQLSTATE || ' (' || SQLERRM
+      v_log := v_log || 'FAIL C5: refused with SQLSTATE ' || SQLSTATE || ' (' || SQLERRM
                       || '), expected 42501' || chr(10);
   END;
 
-  -- C4: a DELETE with no policy is not an error -- it simply matches nothing.
+  -- C6: a DELETE with no policy is not an error -- it simply matches nothing.
   -- That is the quiet half of "no write policy", and the half a reader is
   -- likeliest to assume works the other way.
   BEGIN
@@ -745,18 +852,18 @@ BEGIN
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     SELECT count(*)::INT INTO v_cnt FROM assignment_targets WHERE assignment_id = a_sel;
     IF v_deleted = 0 AND v_cnt = 1 THEN
-      v_log := v_log || 'PASS C4: the advisor''s DELETE affected 0 rows and the target row is still there' || chr(10);
+      v_log := v_log || 'PASS C6: the advisor''s DELETE affected 0 rows and the target row is still there' || chr(10);
     ELSE
-      v_log := v_log || 'FAIL C4: DELETE affected ' || v_deleted || ' row(s), '
+      v_log := v_log || 'FAIL C6: DELETE affected ' || v_deleted || ' row(s), '
                       || v_cnt || ' target row(s) remain' || chr(10);
     END IF;
   EXCEPTION
     WHEN insufficient_privilege THEN
       -- Refused outright rather than filtered to nothing: a stronger outcome
       -- than the one asserted, so it is a pass, but say which one happened.
-      v_log := v_log || 'PASS C4: the advisor''s DELETE was refused outright with 42501 (no table grant)' || chr(10);
+      v_log := v_log || 'PASS C6: the advisor''s DELETE was refused outright with 42501 (no table grant)' || chr(10);
     WHEN OTHERS THEN
-      v_log := v_log || 'FAIL C4: unexpected error: ' || SQLERRM || chr(10);
+      v_log := v_log || 'FAIL C6: unexpected error: ' || SQLERRM || chr(10);
   END;
 
   PERFORM set_config('probe.results', v_log, true);
