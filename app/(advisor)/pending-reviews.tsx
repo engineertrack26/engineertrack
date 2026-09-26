@@ -39,6 +39,10 @@ function ReviewQueue({ userId }: { userId?: string }) {
   // clearing the deep link also clear a group selection nobody actually
   // chose, without ever touching one the advisor picked on purpose.
   const autoMatchedGroup = useRef(false);
+  // The (assignmentId, studentId) pair the auto-match effect below has
+  // already resolved -- see that effect for why this can't just key on
+  // `items`.
+  const appliedFor = useRef<string | null>(null);
   useEffect(() => {
     setQuery('');
     if (!assignmentId && !studentId && autoMatchedGroup.current) {
@@ -90,11 +94,26 @@ function ReviewQueue({ userId }: { userId?: string }) {
   // loads, point the chip at its actual group -- this is display only (the
   // group filter below only applies once a chip is selected, so an
   // unmatched or not-yet-loaded item is never hidden by it).
+  //
+  // Idempotent per deep link, not per `items` reference: `items` gets a new
+  // array on every load() (a pull-to-refresh, or returning to this
+  // Tabs.Screen without deciding, both refire it without remounting), so
+  // keying only on `items` re-ran this match-and-set on every such reload --
+  // silently overwriting a chip the advisor had since picked themselves.
+  // `appliedFor` records the (assignmentId, studentId) pair this was already
+  // resolved for, so it only acts once per notification; a match not yet
+  // found (items still loading) leaves it unset and keeps retrying.
   useEffect(() => {
     if (!(assignmentId || studentId) || groups.length <= 1) return;
+    const key = `${assignmentId || ''}:${studentId || ''}`;
+    if (appliedFor.current === key) return;
     const match = items.find(i => (assignmentId ? i.assignmentId === assignmentId : i.studentId === studentId));
-    if (match) { autoMatchedGroup.current = true; setGroupId(match.assignment.groupId); }
-  }, [assignmentId, studentId, items, groups.length]);
+    if (!match) return;
+    appliedFor.current = key;
+    // Already on the matching group (including one the advisor picked
+    // themselves) -- nothing to override, so leave autoMatchedGroup as it is.
+    if (match.assignment.groupId !== groupId) { autoMatchedGroup.current = true; setGroupId(match.assignment.groupId); }
+  }, [assignmentId, studentId, items, groups.length, groupId]);
   const groupFiltered = useMemo(() => (groups.length > 1 && groupId ? items.filter(i => i.assignment.groupId === groupId) : items),
     [items, groups.length, groupId]);
   const visible = useMemo(() => filterReviews(groupFiltered, names, query, order, i18n.language, assignmentId, studentId),
