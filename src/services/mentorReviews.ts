@@ -21,7 +21,7 @@ export const mentorReviewService = {
     const names = item ? await mentorReviewService.names([item]) : {};
     return { item, name: item ? names[item.studentId] || '' : '' };
   },
-  async submit(item: PendingReview, approved: boolean, note: string, notification: { title: string; body: string }, level?: SupervisionLevel) {
+  async submit(item: PendingReview, approved: boolean, note: string, level?: SupervisionLevel) {
     const errorKey = reviewNoteError(approved, note);
     if (errorKey) throw new Error(errorKey);
     // Reject stale screens, including a submission reviewed elsewhere. This
@@ -30,10 +30,8 @@ export const mentorReviewService = {
     if (!latest || reviewVersion(latest) !== reviewVersion(item)) throw new Error('mentorFlow.reviewChanged');
     // review_assignment writes the student's notification in the same
     // transaction as the decision (simulation finding #11) -- nothing to send
-    // from here any more. The `notification` argument stays for the callers'
-    // sake; the copy is composed server-side in the shape notificationContent()
-    // localises.
-    void notification;
+    // from here; the copy is composed server-side in the shape
+    // notificationContent() localises.
     await assignmentService.reviewAssignment(item.id, approved, note.trim(), level);
   },
 };

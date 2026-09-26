@@ -22,7 +22,7 @@ export default function MentorDashboard() {
 }
 
 function Dashboard({ userId, name }: { userId?: string; name: string }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [daysWaiting, setDaysWaiting] = useState<number | null>(null);
@@ -30,6 +30,9 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
   const [daysLoading, setDaysLoading] = useState(true);
   const [statsFailed, setStatsFailed] = useState(false);
   const [daysFailed, setDaysFailed] = useState(false);
+  // Defaults to reachable: this only ever hides the "Review history" row, so
+  // a slow or failed check must never hide a row that might in fact be real.
+  const [historyExists, setHistoryExists] = useState(true);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
@@ -68,6 +71,9 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
       })().catch(() => {
         if (current()) { setDaysWaiting(null); setDaysFailed(true); }
       }).finally(() => { if (current()) setDaysLoading(false); }),
+      mentorService.hasFeedbackHistory(userId).then(result => {
+        if (current()) setHistoryExists(result);
+      }).catch(() => { if (current()) setHistoryExists(true); }),
     ]);
   }, [userId]);
   useFocusEffect(useCallback(() => {
@@ -77,14 +83,12 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
 
   const statusLine = stats?.assignedCount != null
     ? t('mentorHome.studentsCount', '{{count}} students', { count: stats.assignedCount }) : t('mentorHome.intro');
-  const rate = stats?.approvalRate == null ? null
-    : new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 0 }).format(stats.approvalRate / 100);
-  const weekLine = stats
-    ? `${t('mentorHome.reviewedWeek')}: ${stats.reviewedThisWeek ?? '—'} · ${rate == null ? t('mentorHome.noDecisions') : t('mentorHome.approvalRate') + ' ' + rate}`
-    : null;
   const rows: { key: string; title: string; hint?: string; href: Href }[] = [
     { key: 'days', title: t('days.staffTitle'), hint: t('days.linkHint'), href: '/(mentor)/internship-days' },
-    { key: 'history', title: t('mentorHome.history'), hint: t('mentorHome.historyHint'), href: '/(mentor)/feedback' },
+    // Review history is real for a mentor with old decisions or legacy
+    // feedback, but permanently empty for a new one -- it stays reachable,
+    // just not featured until there is something behind it (I3).
+    ...(historyExists ? [{ key: 'history', title: t('mentorHome.history'), hint: t('mentorHome.historyHint'), href: '/(mentor)/feedback' as Href }] : []),
   ];
   const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.rule };
 
@@ -95,7 +99,12 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
       <Text style={[ui.secondary, { marginTop: -12 }]}>{statusLine}</Text>
 
       <View style={[ui.card, ui.featured]}>
-        {daysLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
+        {/* Gated on both loads (I5): stats decides the assignedCount === 0
+            branch below, so a still-loading stats fetch must not let the
+            days-derived branches render first and then flip once stats
+            resolves (a brand-new, unlinked mentor briefly saw "no pending
+            attendance" before "link your first student"). */}
+        {(daysLoading || statsLoading) ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} /> :
           daysFailed ? <LoadFailedBanner onRetry={load} /> :
           stats?.assignedCount === 0 ? <>
             {/* No student linked yet: the attendance card is not the news, the
@@ -126,14 +135,13 @@ function Dashboard({ userId, name }: { userId?: string; name: string }) {
       </View>
 
       <View style={{ borderTopWidth: 1, borderColor: colors.rule }}>
+        {/* The "Reviewed this week / approval rate" quick summary is gone
+            (I3): reviewed_by is now the group's advisor, never the mentor, so
+            those figures were structurally always 0 / "No reviews yet".
+            statsFailed still surfaces a real fetch failure (assignedCount and
+            statusLine above depend on the same stats), just with nothing left
+            to retry into. */}
         {statsFailed && <LoadFailedBanner onRetry={load} />}
-        {statsLoading ? <ActivityIndicator accessibilityLabel={t('common.loading')} color={colors.primaryDark} style={{ paddingVertical: 12 }} /> :
-          !!weekLine && <View style={rowStyle} accessible accessibilityLabel={weekLine}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={ui.label}>{t('mentorHome.summary')}</Text>
-              <Text style={ui.secondary}>{weekLine}</Text>
-            </View>
-          </View>}
         {rows.map((row) => <Pressable key={row.key} accessibilityRole="button" style={rowStyle} onPress={() => router.push(row.href)}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={ui.label}>{row.title}</Text>

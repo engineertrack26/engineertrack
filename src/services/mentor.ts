@@ -169,4 +169,22 @@ export const mentorService = {
     });
   },
 
+  /** Existence check only, for the dashboard's "Review history" row: a count,
+   *  not the rows themselves, from both sources getFeedbackHistory and
+   *  getLegacyFeedbackHistory read. review_assignment now writes reviewed_by
+   *  as the group's advisor, so a brand-new mentor's task-path count is
+   *  structurally always 0 going forward -- the legacy count is the only one
+   *  that can still be positive for an established mentor. */
+  async hasFeedbackHistory(mentorId: string): Promise<boolean> {
+    const [task, legacy] = await Promise.all([
+      supabase.from('assignment_submissions').select('id', { count: 'exact', head: true })
+        .eq('reviewed_by', mentorId).not('mentor_note', 'is', null),
+      supabase.from('mentor_feedbacks').select('id', { count: 'exact', head: true })
+        .eq('mentor_id', mentorId),
+    ]);
+    if (task.error) throw task.error;
+    if (legacy.error) throw legacy.error;
+    return (task.count || 0) > 0 || (legacy.count || 0) > 0;
+  },
+
 };

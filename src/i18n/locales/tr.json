@@ -642,18 +642,9 @@
     "greeting": "Merhaba, {{name}}",
     "welcome": "Merhaba",
     "intro": "Öğrencilerinin çalışmalarını buradan takip et.",
-    "waiting": "{{count}} çalışma bekliyor",
     "studentsCount": "{{count}} öğrenci",
-    "nextReview": "Sıradaki inceleme",
-    "oldestHint": "En uzun süredir bekleyen çalışma",
-    "allPending": "Tüm bekleyenleri gör ({{count}})",
-    "openQueue": "İnceleme listesini aç",
-    "summary": "Kısa özet",
     "assigned": "Atanan öğrenci",
-    "reviewedWeek": "Bu hafta incelenen",
-    "approvalRate": "Onay oranı",
     "approvalHint": "İncelenen çalışmalar içinde",
-    "noDecisions": "Henüz inceleme yok",
     "shortcuts": "Kısayollar",
     "history": "İnceleme geçmişi",
     "historyHint": "Kararların ve mentor notların",
@@ -663,18 +654,14 @@
     "bellTitle": "Bildirimler üstteki zilde",
     "bellHint": "Yeni gelişmelere tek yerden ulaş.",
     "emptyHint": "Öğrencilerin yeni çalışmalar gönderdiğinde burada görünecek.",
-    "daysWaiting": "{{count}} gün onay bekliyor",
+    "daysWaiting": "Bu hafta {{count}} katılım onayı veya düzeltme bekliyor",
     "confirmDays": "Günleri onayla",
     "daysEmptyHint": "Öğrencilerin günlerini kaydettikçe onayla."
   },
   "notifications": {
     "taskAssignedBody": "Yeni bir görev atandı: “{{title}}”.",
     "tasksAssignedBody": "{{count}} yeni görev atandı.",
-    "taskAssignedTitle": "Yeni görev atandı",
-    "taskApprovedTitle": "Görevin onaylandı",
-    "taskApprovedBody": "{{mentorName}}, “{{title}}” çalışmanı onayladı.",
-    "taskRevisionTitle": "Görevin için revizyon istendi",
-    "taskRevisionBody": "{{mentorName}}, “{{title}}” çalışmanda revizyon istedi."
+    "taskAssignedTitle": "Yeni görev atandı"
   },
   "mentorFlow": {
     "title": "İncelemeler",
@@ -995,7 +982,6 @@
     "rating": "Değerlendirme",
     "comments": "Yorumlar",
     "competencyRating": "Yetkinlik Değerlendirmesi",
-    "pendingReviews": "Bekleyen İncelemeler",
     "reviewedToday": "Bugün İncelenen",
     "averageRating": "Ortalama Puan"
   },

@@ -122,13 +122,7 @@ function ReviewDetail({ id, userId }: { id?: string; userId?: string }) {
     try {
       const user = useAuthStore.getState().user;
       if (user?.id !== userId) return;
-      const mentorName = [user.firstName, user.lastName].filter(Boolean).join(' ');
-      await mentorReviewService.submit(item, approved, note, {
-        title: t(approved ? 'notifications.taskApprovedTitle' : 'notifications.taskRevisionTitle'),
-        body: t(approved ? 'notifications.taskApprovedBody' : 'notifications.taskRevisionBody', {
-          mentorName, title: item.assignment.title,
-        }),
-      }, level ?? undefined);
+      await mentorReviewService.submit(item, approved, note, level ?? undefined);
       finished.current = true;
       useMentorReviewStore.getState().invalidate(userId);
       if (request !== generation.current) return;
