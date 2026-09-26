@@ -63,19 +63,36 @@ function ReviewQueue({ userId }: { userId?: string }) {
     let cancelled = false;
     if (!userId) { setGroups([]); setGroupId(null); return; }
     // Cosmetic scoping only: an advisor with one group needs no chip, and the
-    // queue itself is already scoped to the advisor's own groups by RLS.
+    // queue itself is already scoped to the advisor's own groups by RLS. No
+    // group is pre-selected -- the queue starts showing every group's pending
+    // submissions (matching the total the dashboard already advertises), and
+    // a chip only narrows it down once the advisor taps one.
     groupService.listMyGroups(userId).then((list) => {
       if (cancelled) return;
       setGroups(list);
-      setGroupId((cur) => (cur && list.some((g) => g.id === cur) ? cur : (list.find((g) => !g.isArchived) ?? list[0])?.id ?? null));
+      setGroupId((cur) => (cur && list.some((g) => g.id === cur) ? cur : null));
     }).catch(() => { if (!cancelled) { setGroups([]); setGroupId(null); } });
     return () => { cancelled = true; };
   }, [userId]);
+  // A notification only carries assignmentId/studentId, never the group, so
+  // there is nothing to pre-select from it directly. Once the matching item
+  // loads, point the chip at its actual group -- this is display only (the
+  // group filter below only applies once a chip is selected, so an
+  // unmatched or not-yet-loaded item is never hidden by it).
+  useEffect(() => {
+    if (!(assignmentId || studentId) || groups.length <= 1) return;
+    const match = items.find(i => (assignmentId ? i.assignmentId === assignmentId : i.studentId === studentId));
+    if (match) setGroupId(match.assignment.groupId);
+  }, [assignmentId, studentId, items, groups.length]);
   const groupFiltered = useMemo(() => (groups.length > 1 && groupId ? items.filter(i => i.assignment.groupId === groupId) : items),
     [items, groups.length, groupId]);
   const visible = useMemo(() => filterReviews(groupFiltered, names, query, order, i18n.language, assignmentId, studentId),
     [groupFiltered, names, query, order, i18n.language, assignmentId, studentId]);
-  const filtering = !!(query.trim() || assignmentId || studentId || groups.length > 1);
+  // The group chip is a visible control of its own (it shows which group is
+  // selected even with an empty, unfiltered queue) -- it does not belong in
+  // "filtering", which gates the empty-state and footer copy between "no
+  // submissions at all" and "no submissions match this search or task".
+  const filtering = !!(query.trim() || assignmentId || studentId);
 
   return <SafeAreaView style={ui.safe}>
     <FlatList data={loading ? [] : visible} keyExtractor={item => item.id}
