@@ -1,6 +1,12 @@
 -- docs/assignment-drafts-rpcs.sql
 -- Run AFTER docs/assignment-drafts-migration.sql. Idempotent.
 
+-- NOTE (2026-09-26): publish_assignments NO LONGER LIVES HERE.
+-- docs/assignment-targeting.sql holds the copy that stands -- this one has no
+-- idea group_assignments.audience exists, so re-running this file alone lets a
+-- 'selected' assignment with no targets be published to nobody, silently.
+-- If you re-apply this file, re-apply docs/assignment-targeting.sql after it.
+
 -- ============================================
 -- publish_assignments: send a batch of drafts to the students
 -- ============================================

@@ -1,4 +1,10 @@
 -- ============================================
+-- NOTE (2026-09-26): the trg_feed_assignment_post TRIGGER no longer lives here
+-- (the function trg_feed_assignment_post_fn still does). The copy that stands
+-- is in docs/assignment-targeting.sql and carries "AND NEW.audience = 'group'".
+-- Re-running this file drops that condition and every targeted publish posts a
+-- stream card announcing the task to the whole group again.
+--
 -- Group feed: a card in the stream for every task the advisor publishes.
 --
 -- When group_assignments.published_at goes from NULL to a timestamp, one

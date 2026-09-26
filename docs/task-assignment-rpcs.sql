@@ -5,6 +5,10 @@
 -- re-running this file ever restores an older review_assignment, re-apply
 -- docs/self-assessment-migration.sql and then docs/review-by-advisor.sql
 -- afterwards.
+-- NOTE (2026-09-26): group_assignment_counts NO LONGER LIVES HERE.
+-- docs/assignment-targeting.sql holds the copy that stands; this one returns
+-- four columns instead of five, so re-running it makes the advisor's cards
+-- lose their denominator and getAssignmentCounts read target_count as 0.
 -- Run AFTER docs/task-assignment-migration.sql. Idempotent.
 --
 -- Every column reference below is alias-qualified. RETURNS TABLE (level INT, …)

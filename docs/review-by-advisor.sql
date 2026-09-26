@@ -11,6 +11,11 @@
 -- advisor draws the task from the framework and assigns it, so the owners want
 -- the same person to judge it. The mentor keeps attendance confirmation
 -- (internship_review), messaging and read-only access to the work.
+--
+-- 2026-09-26: submit_assignment also refuses NOT_TARGETED when the task was
+-- given to selected students and the caller is not one of them. The predicate
+-- can_see_assignment comes from docs/assignment-targeting.sql, which must be
+-- applied before this file.
 
 -- ============================================================
 -- submit_assignment -- was docs/self-assessment-migration.sql
@@ -86,6 +91,14 @@ BEGIN
   -- Only an active member of the assignment's group may submit to it.
   IF NOT is_member_of_group(target_group) THEN
     RAISE EXCEPTION 'ROLE_NOT_ALLOWED';
+  END IF;
+
+  -- ... and only if the task was actually given to them. A separate code from
+  -- ROLE_NOT_ALLOWED so the message can say the task is not yours rather than
+  -- that you lack a role -- a member of the group has the role.
+  -- can_see_assignment also covers "not published yet".
+  IF NOT can_see_assignment(p_assignment_id) THEN
+    RAISE EXCEPTION 'NOT_TARGETED';
   END IF;
 
   -- An approved submission is a finished record. The observation it produced is
