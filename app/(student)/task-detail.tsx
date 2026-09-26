@@ -247,11 +247,11 @@ function TaskDetail({ id, userId }: { id?: string; userId?: string }) {
   const facts = task ? [
     task.competencyName && { label: t('dash.competency', 'Competency'), value: `${competencyContent(task.competencyName, i18n.language)}${task.level ? ' · L' + task.level : ''}` },
     due && { label: t('student.taskDueDate'), value: due },
-    rated && { label: `${t('assessment.you', 'You')} / ${t('assessment.mentor', 'Mentor')}`,
+    rated && { label: `${t('assessment.you', 'You')} / ${t('assessment.mentor', 'Advisor')}`,
       value: `${levelLabel(task.submission!.selfLevel!, t)} / ${levelLabel(task.submission!.mentorLevel!, t)}` },
   ].filter((f): f is { label: string; value: string } => !!f) : [];
-  const gapNote = rated && task!.submission!.mentorLevel! > task!.submission!.selfLevel! ? t('assessment.theySawMore', 'Your mentor saw more')
-    : rated && task!.submission!.mentorLevel! < task!.submission!.selfLevel! ? t('assessment.theySawLess', 'Your mentor saw less') : '';
+  const gapNote = rated && task!.submission!.mentorLevel! > task!.submission!.selfLevel! ? t('assessment.theySawMore', 'Your advisor saw more')
+    : rated && task!.submission!.mentorLevel! < task!.submission!.selfLevel! ? t('assessment.theySawLess', 'Your advisor saw less') : '';
   return <SafeAreaView style={ui.safe}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled">

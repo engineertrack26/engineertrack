@@ -342,7 +342,7 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
               <ReportProgress label={student.name + ': ' + t('advisorMonitor.progress')} percent={student.completionPercent} />
               <Text style={ui.secondary}>{t('advisor.submittedCount', { count: student.submitted })}
                 {' ('}{t('advisor.approvedCount', { count: student.approved })}{')'}</Text>
-              <Text style={ui.secondary}>{t('assessment.selfVsMentor', 'Self vs mentor')}
+              <Text style={ui.secondary}>{t('assessment.selfVsMentor', 'Self vs advisor')}
                 {': '}{student.selfVsMentorGap == null ? '—'
                   : (student.selfVsMentorGap >= 0 ? '+' : '') + student.selfVsMentorGap.toFixed(1)}</Text>
               {student.selfVsMentorGap != null && gapTag(student.selfVsMentorGap) && <Text style={[ui.label, { color: colors.warning }]}>

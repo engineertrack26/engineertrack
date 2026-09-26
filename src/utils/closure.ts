@@ -23,5 +23,5 @@ export function closureLabel(status: ClosureStatus, t: Translate, locale?: strin
 
 /** Explains why the advisor's Close button is disabled. */
 export function pendingReviewsMessage(n: number, t: Translate): string {
-  return t('closure.pendingReviews', '{{count}} awaiting the mentor', { count: n });
+  return t('closure.pendingReviews', '{{count}} awaiting your review', { count: n });
 }

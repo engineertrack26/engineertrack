@@ -875,7 +875,7 @@
     "statusApproved": "Approved",
     "statusRevision": "Revision",
     "noFeedbackYet": "No Feedback Yet",
-    "noFeedbackYetDesc": "Your review history will appear here after you review student tasks."
+    "noFeedbackYetDesc": "This is the history of the task reviews you made before; the advisor decides task submissions now."
   },
   "advisor": {
     "dashboard": "Advisor Dashboard",

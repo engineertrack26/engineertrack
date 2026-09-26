@@ -975,7 +975,7 @@
     "statusApproved": "Onaylandı",
     "statusRevision": "Düzeltme istendi",
     "noFeedbackYet": "Henüz değerlendirme yok",
-    "noFeedbackYetDesc": "Öğrenci görevlerini değerlendirdiğinde inceleme geçmişin burada görünecek.",
+    "noFeedbackYetDesc": "Bu, daha önce yaptığın görev değerlendirmelerinin geçmişidir; artık görev teslimlerine danışman karar veriyor.",
     "noPendingReviews": "İnceleme bekleyen çalışma yok.",
     "taskDocumentUnavailable": "Görev belgesi açılamadı. Lütfen yeniden dene.",
     "taskApproved": "Çalışma onaylandı.",

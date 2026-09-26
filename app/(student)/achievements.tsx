@@ -157,7 +157,7 @@ function GrowthContent({ studentId }: { studentId: string }) {
                     <Text style={styles.barValue}>{row.avgSelf.toFixed(1)}</Text>
                   </View>
                   <View style={styles.barRow}>
-                    <Text style={styles.barLabel}>{t('assessment.mentor', 'Mentor')}</Text>
+                    <Text style={styles.barLabel}>{t('assessment.mentor', 'Advisor')}</Text>
                     <View style={styles.barTrack}><View style={[styles.barFill, { width: `${(row.avgMentor / 3) * 100}%`, backgroundColor: colors.primary }]} /></View>
                     <Text style={styles.barValue}>{row.avgMentor.toFixed(1)}</Text>
                   </View>
