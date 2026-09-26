@@ -14,8 +14,8 @@
 --
 -- 2026-09-26: submit_assignment also refuses NOT_TARGETED when the task was
 -- given to selected students and the caller is not one of them. The predicate
--- can_see_assignment comes from docs/assignment-targeting.sql, which must be
--- applied before this file.
+-- can_see_assignment comes from docs/assignment-targeting.sql. Apply order:
+-- docs/assignment-targeting.sql FIRST, then re-apply this file.
 
 -- ============================================================
 -- submit_assignment -- was docs/self-assessment-migration.sql

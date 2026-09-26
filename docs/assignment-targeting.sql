@@ -2,9 +2,15 @@
 -- A task can go to selected students, not only the whole group.
 -- Spec: docs/superpowers/specs/2026-09-26-assignment-targeting-design.md
 --
--- Apply AFTER docs/task-assignment-migration.sql,
--- docs/assignment-drafts-migration.sql, docs/assignment-drafts-rpcs.sql,
--- docs/group-feed-assignment-cards.sql and docs/review-by-advisor.sql.
+-- Apply AFTER docs/task-assignment-migration.sql, docs/assignment-drafts-migration.sql,
+-- docs/assignment-drafts-rpcs.sql and docs/group-feed-assignment-cards.sql.
+-- Apply THIS FILE FIRST, then re-apply docs/review-by-advisor.sql -- its
+-- submit_assignment calls can_see_assignment, defined below, and a database
+-- that has not seen this file yet does not have it. (The order is about the
+-- object existing when submit_assignment is later CALLED, not about the order
+-- the two files' CREATE statements run in -- plpgsql does not resolve a
+-- callee at creation time -- but re-applying this file first is the one
+-- order that needs no such caveat.)
 -- Idempotent, anonymous $$ only.
 --
 -- THIS FILE IS NOW THE HOME OF publish_assignments (was
@@ -182,6 +188,20 @@ BEGIN
   SELECT COALESCE(array_agg(DISTINCT x), ARRAY[]::UUID[]) INTO v_ids
   FROM unnest(COALESCE(p_student_ids, ARRAY[]::UUID[])) AS x;
 
+  -- A NULL element must be refused, not filtered: stripping it in the dedupe
+  -- above would turn ARRAY[NULL] into an empty array, which this function
+  -- reads as "send it to the whole group" -- silently widening on malformed
+  -- input is the dangerous direction for this feature. Checked with an
+  -- explicit IS NULL, not folded into the membership scan below, because
+  -- `x = ANY(...)` and `NOT EXISTS (... x ...)` involve x in a comparison,
+  -- and three-valued logic would make a NULL either vanish from both sides or
+  -- report as "not a member" -- either way it would reach the INSERT and die
+  -- on assignment_targets.student_id's NOT NULL constraint as a raw 23502
+  -- instead of a stable code.
+  IF EXISTS (SELECT 1 FROM unnest(v_ids) AS x WHERE x IS NULL) THEN
+    RAISE EXCEPTION 'STUDENT_NOT_IN_GROUP';
+  END IF;
+
   -- Every named student must be an active member of THIS group.
   SELECT x INTO v_bad
   FROM unnest(v_ids) AS x
@@ -199,13 +219,20 @@ BEGIN
   -- write so a refusal leaves the targets exactly as they were. Widening to the
   -- whole group removes nobody, so it is never refused -- an advisor whose
   -- targeted student has submitted must still be able to open the task up.
+  --
+  -- Keyed off assignment_submissions, not assignment_targets: a published
+  -- GROUP-audience assignment has submissions but no target rows at all, so a
+  -- check that joined through assignment_targets was always vacuously false
+  -- for that case -- an advisor narrowing a published group task could remove
+  -- a student who had already submitted, silently, and the read policy would
+  -- then hide that student's own work from their history. A submission can
+  -- only exist from someone who had access when they submitted (can_see_
+  -- assignment or the pre-targeting group-wide policy), which is what makes
+  -- this check correct for both audiences without consulting audience at all.
   IF array_length(v_ids, 1) IS NOT NULL AND EXISTS (
-    SELECT 1
-    FROM assignment_targets tg
-    JOIN assignment_submissions s ON s.assignment_id = tg.assignment_id
-                                 AND s.student_id = tg.student_id
-    WHERE tg.assignment_id = p_assignment_id
-      AND NOT (tg.student_id = ANY(v_ids))
+    SELECT 1 FROM assignment_submissions s
+    WHERE s.assignment_id = p_assignment_id
+      AND NOT (s.student_id = ANY(v_ids))
   ) THEN
     RAISE EXCEPTION 'HAS_SUBMISSION';
   END IF;
