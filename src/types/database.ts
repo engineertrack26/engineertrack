@@ -2212,6 +2212,7 @@ export type Database = {
     }
     Functions: {
       advisor_group_export: { Args: { p_group_id: string }; Returns: Json }
+      my_internship_book: { Args: Record<PropertyKey, never>; Returns: Json }
       advisor_student_avatars: { Args: { p_group_id?: string }; Returns: Json }
       assignment_has_submissions: {
         Args: { p_assignment_id: string }

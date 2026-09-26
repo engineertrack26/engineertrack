@@ -128,6 +128,7 @@ export function StudentProfileSections({ userId }: { userId: string }) {
         </View>)}
       </View>}
       {button(t('studentProfileView.editInternship'), 'pencil-outline', editInternship)}
+      {button(t('studentBook.open'), 'book-outline', () => router.push('/(student)/internship-book'))}
     </Section>
 
     <Section title={t('studentProfileView.group')} loading={loading} failed={failed('group')} onRetry={load}>

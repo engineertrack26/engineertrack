@@ -230,6 +230,12 @@
 
 ## Codex Delivery Notes - 2026-09-19
 
+### Student personal internship book (2026-09-26)
+
+- Added a student-only, read-only `my_internship_book()` RPC over the student's own profile, historical groups, placements, recorded days, submitted journal text, task results and current competency levels. Draft journal text and binary attachments are excluded. It remains available after group archiving.
+- Added Profile → My internship book, with a record summary/recent days and an A4 PDF export. Android saves to a selected folder; iOS opens the named PDF in the share sheet. The document distinguishes personal records from signed institutional certificates and treats unrecorded dates as unknown.
+- Added English and Turkish labels, HTML escaping/draft exclusion tests, RPC response validation and PDF save tests. TypeScript and all 76 suites / 662 tests pass after the final PDF naming/time refinement. The user applied the SQL migration, confirmed both authorization verification PASS notices, and verified that the PDF downloads and looks correct in Expo Go. Concurrent `sim/` work untouched.
+
 ### Complete advisor group report export (2026-09-26)
 
 - Added an owner-scoped, read-only `advisor_group_export` RPC covering current and former group members, competency targets/reached levels, published tasks, each member's task status and ratings, attendance totals, recorded days, and the text of submitted internship journals. It works for archived groups. Draft journal text and binary attachments are excluded; unrecorded days remain unknown rather than absent.

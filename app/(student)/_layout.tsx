@@ -40,6 +40,7 @@ export default function StudentLayout() {
     >
       <Tabs.Screen name="internship-days" options={{ href: null }} />
       <Tabs.Screen name="internship-report" options={{ href: null }} />
+      <Tabs.Screen name="internship-book" options={{ href: null }} />
       <Tabs.Screen
         name="dashboard"
         options={{
