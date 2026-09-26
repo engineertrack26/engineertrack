@@ -31,10 +31,21 @@ function ReviewQueue({ userId }: { userId?: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState('');
-  useEffect(() => { setQuery(''); }, [studentId, assignmentId]);
   const [order, setOrder] = useState<ReviewSort>('oldest');
   const [groups, setGroups] = useState<InternshipGroup[]>([]);
   const [groupId, setGroupId] = useState<string | null>(null);
+  // True only while the current groupId was picked FOR the advisor by the
+  // deep-link auto-match effect below, never by the advisor themselves. Lets
+  // clearing the deep link also clear a group selection nobody actually
+  // chose, without ever touching one the advisor picked on purpose.
+  const autoMatchedGroup = useRef(false);
+  useEffect(() => {
+    setQuery('');
+    if (!assignmentId && !studentId && autoMatchedGroup.current) {
+      autoMatchedGroup.current = false;
+      setGroupId(null);
+    }
+  }, [studentId, assignmentId]);
   const generation = useRef(0);
   const load = useCallback(async () => {
     const request = ++generation.current;
@@ -82,7 +93,7 @@ function ReviewQueue({ userId }: { userId?: string }) {
   useEffect(() => {
     if (!(assignmentId || studentId) || groups.length <= 1) return;
     const match = items.find(i => (assignmentId ? i.assignmentId === assignmentId : i.studentId === studentId));
-    if (match) setGroupId(match.assignment.groupId);
+    if (match) { autoMatchedGroup.current = true; setGroupId(match.assignment.groupId); }
   }, [assignmentId, studentId, items, groups.length]);
   const groupFiltered = useMemo(() => (groups.length > 1 && groupId ? items.filter(i => i.assignment.groupId === groupId) : items),
     [items, groups.length, groupId]);
@@ -102,9 +113,14 @@ function ReviewQueue({ userId }: { userId?: string }) {
         <ReviewBack label={t('studentFlow.home')} onPress={() => router.replace('/(advisor)/dashboard')} />
         <ReviewHeader notificationsPath="/(advisor)/notifications" />
         {groups.length > 1 && <View style={styles.chipRow}>
+          <Pressable key="all" accessibilityRole="button" accessibilityState={{ selected: groupId === null }}
+            onPress={() => { autoMatchedGroup.current = false; setGroupId(null); }}
+            style={[styles.chip, groupId === null && styles.chipActive]}>
+            <Text style={[styles.chipText, groupId === null && styles.chipTextActive]} numberOfLines={1}>{t('mentorFlow.showAll')}</Text>
+          </Pressable>
           {groups.map((g) => (
             <Pressable key={g.id} accessibilityRole="button" accessibilityState={{ selected: g.id === groupId }}
-              onPress={() => setGroupId(g.id)}
+              onPress={() => { autoMatchedGroup.current = false; setGroupId(g.id); }}
               style={[styles.chip, g.id === groupId && styles.chipActive, g.isArchived && { opacity: 0.6 }]}>
               <Text style={[styles.chipText, g.id === groupId && styles.chipTextActive]} numberOfLines={1}>{g.name}</Text>
             </Pressable>
