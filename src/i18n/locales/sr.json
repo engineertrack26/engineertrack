@@ -492,8 +492,8 @@
     "codeHint": "Unesi kod od 6 znakova koji je učenik podelio.",
     "linked": "{{name}} je povezan sa tvojom listom.",
     "all": "Svi",
-    "pendingFilter": "Čeka pregled",
-    "waiting": "{{count}} radova čeka pregled",
+    "pendingFilter": "Čeka pregled savetnika",
+    "waiting": "{{count}} radova čeka pregled savetnika",
     "noPending": "Nema radova za pregled",
     "countUnknown": "Broj pregleda još nije dostupan",
     "viewDetail": "Prikaži detalje učenika",
@@ -502,7 +502,7 @@
     "linkHint": "Zatraži od studenta kôd sa njegovog profila i unesi ga ovde.",
     "noResults": "Nema pronađenih učenika",
     "searchHint": "Promeni pretragu ili filter.",
-    "listHint": "Podaci o praksi i radovima su u detaljima učenika.",
+    "listHint": "Radovi čekaju pregled savetnika; podaci o praksi i radovima su u detaljima učenika.",
     "detail": "Detalji učenika",
     "calendar": "Kalendar prakse",
     "noCompany": "Nema podataka o kompaniji",
@@ -517,7 +517,7 @@
     "level": "Nivo",
     "streak": "Dnevni niz",
     "days": "{{count}} dana",
-    "reviewHint": "Odluku o pregledu donesi u detaljima rada.",
+    "reviewHint": "Savetnik donosi odluku o pregledu; ovde ćeš videti ishod.",
     "unavailable": "Učenik nije pronađen ili ti više nije dodeljen.",
     "studentFilter": "Prikazuju se radovi na čekanju za {{name}}."
   },
@@ -611,7 +611,7 @@
     "nextTask": "Tvoj sledeći zadatak",
     "continueTask": "Nastavi zadatak",
     "viewTask": "Pogledaj zadatak",
-    "mentorNote": "Beleška mentora",
+    "mentorNote": "Beleška savetnika",
     "upcoming": "Predstojeći rok",
     "allTasks": "Svi zadaci",
     "allCaughtUp": "Trenutno nema zadataka koji zahtevaju akciju",
@@ -635,7 +635,7 @@
     "useServerCopy": "Koristi kopiju sa servera",
     "taskChanged": "Ovaj zadatak je izmenjen na drugom mestu. Vrati se u Zadatke i otvori aktuelni zapis. Ovaj sadržaj nije poslat.",
     "submitReview": "Pošalji na pregled",
-    "reviewHint": "Mentor će pregledati tvoj rad nakon slanja."
+    "reviewHint": "Savetnik će pregledati tvoj rad nakon slanja."
   },
   "flow": {
     "archiveEmpty": "Nema arhiviranih zapisa",

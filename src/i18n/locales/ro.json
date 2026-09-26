@@ -492,8 +492,8 @@
     "codeHint": "Introdu codul de 6 caractere primit de la elev.",
     "linked": "{{name}} a fost asociat listei tale.",
     "all": "Toți",
-    "pendingFilter": "Așteaptă evaluarea",
-    "waiting": "{{count}} lucrări așteaptă evaluarea",
+    "pendingFilter": "Așteaptă evaluarea consilierului",
+    "waiting": "{{count}} lucrări așteaptă evaluarea consilierului",
     "noPending": "Nu există evaluări în așteptare",
     "countUnknown": "Numărul evaluărilor nu este încă disponibil",
     "viewDetail": "Vezi detaliile elevului",
@@ -502,7 +502,7 @@
     "linkHint": "Cere-i studentului codul din profilul lui și introdu-l aici.",
     "noResults": "Niciun elev găsit",
     "searchHint": "Modifică căutarea sau filtrul.",
-    "listHint": "Informațiile despre stagiu și lucrări sunt în detaliile elevului.",
+    "listHint": "Lucrările așteaptă evaluarea consilierului; informațiile despre stagiu și lucrări sunt în detaliile elevului.",
     "detail": "Detalii elev",
     "calendar": "Calendar stagiu",
     "noCompany": "Lipsesc informațiile despre companie",
@@ -517,7 +517,7 @@
     "level": "Nivel",
     "streak": "Serie zilnică",
     "days": "{{count}} zile",
-    "reviewHint": "Ia decizia de evaluare în detaliile lucrării.",
+    "reviewHint": "Consilierul ia decizia de evaluare; vei vedea rezultatul aici.",
     "unavailable": "Elevul nu a fost găsit sau nu îți mai este alocat.",
     "studentFilter": "Lucrări în așteptare pentru {{name}}."
   },
@@ -611,7 +611,7 @@
     "nextTask": "Următoarea ta sarcină",
     "continueTask": "Continuă sarcina",
     "viewTask": "Vezi sarcina",
-    "mentorNote": "Nota mentorului",
+    "mentorNote": "Nota consilierului",
     "upcoming": "Termen apropiat",
     "allTasks": "Toate sarcinile",
     "allCaughtUp": "Nicio sarcină nu necesită acțiune acum",
@@ -635,7 +635,7 @@
     "useServerCopy": "Folosește copia de pe server",
     "taskChanged": "Sarcina a fost modificată în altă parte. Revino la Sarcini și deschide versiunea actuală. Acest conținut nu a fost trimis.",
     "submitReview": "Trimite pentru evaluare",
-    "reviewHint": "Mentorul va evalua lucrarea după trimitere."
+    "reviewHint": "Consilierul va evalua lucrarea după trimitere."
   },
   "flow": {
     "archiveEmpty": "Nu există înregistrări arhivate",

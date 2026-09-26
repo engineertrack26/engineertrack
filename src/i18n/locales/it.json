@@ -492,8 +492,8 @@
     "codeHint": "Inserisci il codice di 6 caratteri condiviso dallo studente.",
     "linked": "{{name}} è stato collegato alla tua lista.",
     "all": "Tutti",
-    "pendingFilter": "In attesa di revisione",
-    "waiting": "{{count}} consegne da revisionare",
+    "pendingFilter": "In attesa del tutor accademico",
+    "waiting": "{{count}} consegne in attesa di revisione del tutor accademico",
     "noPending": "Nessuna revisione in attesa",
     "countUnknown": "Numero revisioni non ancora disponibile",
     "viewDetail": "Vedi dettagli studente",
@@ -502,7 +502,7 @@
     "linkHint": "Chiedi allo studente il codice nel suo profilo e inseriscilo qui.",
     "noResults": "Nessuno studente trovato",
     "searchHint": "Modifica la ricerca o il filtro.",
-    "listHint": "Informazioni su tirocinio e consegne nei dettagli studente.",
+    "listHint": "Le consegne sono in attesa di revisione del tutor accademico; informazioni su tirocinio e consegne nei dettagli studente.",
     "detail": "Dettagli studente",
     "calendar": "Calendario tirocinio",
     "noCompany": "Informazioni azienda assenti",
@@ -517,7 +517,7 @@
     "level": "Livello",
     "streak": "Serie giornaliera",
     "days": "{{count}} giorni",
-    "reviewHint": "Decidi la revisione nei dettagli della consegna.",
+    "reviewHint": "Il tutor accademico decide sulla revisione; qui vedrai l'esito.",
     "unavailable": "Studente non trovato o non più assegnato a te.",
     "studentFilter": "Consegne in attesa di {{name}}."
   },
@@ -611,7 +611,7 @@
     "nextTask": "La tua prossima attività",
     "continueTask": "Continua attività",
     "viewTask": "Visualizza attività",
-    "mentorNote": "Nota del tutor",
+    "mentorNote": "Nota del tutor accademico",
     "upcoming": "Prossima scadenza",
     "allTasks": "Tutte le attività",
     "allCaughtUp": "Nessuna attività richiede un intervento ora",
@@ -635,7 +635,7 @@
     "useServerCopy": "Usa la copia sul server",
     "taskChanged": "Questa attività è cambiata altrove. Torna ad Attività e apri la versione aggiornata. Questo contenuto non è stato inviato.",
     "submitReview": "Invia per revisione",
-    "reviewHint": "Il tutor esaminerà il lavoro dopo l'invio."
+    "reviewHint": "Il tutor accademico esaminerà il lavoro dopo l'invio."
   },
   "flow": {
     "archiveEmpty": "Nessuna voce archiviata",

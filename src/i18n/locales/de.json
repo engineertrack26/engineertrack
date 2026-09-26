@@ -492,8 +492,8 @@
     "codeHint": "Gib den 6-stelligen Code der lernenden Person ein.",
     "linked": "{{name}} wurde deiner Liste zugeordnet.",
     "all": "Alle",
-    "pendingFilter": "Prüfung ausstehend",
-    "waiting": "{{count}} Einreichungen zur Prüfung",
+    "pendingFilter": "Betreuerprüfung ausstehend",
+    "waiting": "{{count}} Einreichungen zur Prüfung durch den Betreuer",
     "noPending": "Keine offenen Prüfungen",
     "countUnknown": "Prüfanzahl noch nicht verfügbar",
     "viewDetail": "Details anzeigen",
@@ -502,7 +502,7 @@
     "linkHint": "Bitte deinen Studierenden um den Code aus seinem Profil und gib ihn hier ein.",
     "noResults": "Keine Lernenden gefunden",
     "searchHint": "Ändere die Suche oder den Filter.",
-    "listHint": "Praktikums- und Arbeitsinformationen stehen in den Details.",
+    "listHint": "Einreichungen warten auf die Prüfung durch den Betreuer; Praktikums- und Arbeitsinformationen stehen in den Details.",
     "detail": "Details zur Person",
     "calendar": "Praktikumszeitraum",
     "noCompany": "Keine Firmeninformationen",
@@ -517,7 +517,7 @@
     "level": "Stufe",
     "streak": "Tages-Serie",
     "days": "{{count}} Tage",
-    "reviewHint": "Triff Prüfentscheidungen in den Details der Einreichung.",
+    "reviewHint": "Der Betreuer trifft die Prüfentscheidung; das Ergebnis siehst du hier.",
     "unavailable": "Person nicht gefunden oder nicht mehr zugewiesen.",
     "studentFilter": "Offene Einreichungen von {{name}} werden angezeigt."
   },
@@ -611,7 +611,7 @@
     "nextTask": "Deine nächste Aufgabe",
     "continueTask": "Aufgabe fortsetzen",
     "viewTask": "Aufgabe ansehen",
-    "mentorNote": "Mentornotiz",
+    "mentorNote": "Betreuernotiz",
     "upcoming": "Nächste Abgabe",
     "allTasks": "Alle Aufgaben",
     "allCaughtUp": "Aktuell besteht kein Handlungsbedarf",
@@ -635,7 +635,7 @@
     "useServerCopy": "Serverversion verwenden",
     "taskChanged": "Diese Aufgabe wurde anderswo geändert. Gehe zurück zu Aufgaben und öffne den aktuellen Stand. Dieser Inhalt wurde nicht eingereicht.",
     "submitReview": "Zur Prüfung senden",
-    "reviewHint": "Dein Mentor prüft deine Arbeit nach dem Absenden."
+    "reviewHint": "Dein Betreuer prüft deine Arbeit nach dem Absenden."
   },
   "flow": {
     "archiveEmpty": "Keine archivierten Einträge",
