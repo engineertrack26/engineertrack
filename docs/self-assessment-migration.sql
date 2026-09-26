@@ -1,6 +1,9 @@
 -- NOTE 2026-09-16: submit_assignment, review_assignment now live in
--- docs/internship-closure-guards.sql. RE-RUNNING THIS FILE REMOVES THE
--- CLOSURE GUARD from them -- re-apply docs/internship-closure-guards.sql
+-- docs/internship-closure-guards.sql, and as of 2026-09-24 in
+-- docs/review-by-advisor.sql on top of that (review_assignment now belongs
+-- to the group's ADVISOR, not the mentor). RE-RUNNING THIS FILE REMOVES THE
+-- CLOSURE GUARD AND THE ADVISOR GATE from them -- re-apply
+-- docs/internship-closure-guards.sql, then docs/review-by-advisor.sql,
 -- afterwards.
 -- docs/self-assessment-migration.sql
 -- Self-assessment and mentor comparison: the student rates their own work on

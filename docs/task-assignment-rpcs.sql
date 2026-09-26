@@ -1,5 +1,10 @@
 -- docs/task-assignment-rpcs.sql
 -- NOTE 2026-09-15: review_assignment is now defined in docs/self-assessment-migration.sql (4 args); the 3-arg body below is history.
+-- NOTE 2026-09-24: and after that, in docs/review-by-advisor.sql, where
+-- review_assignment belongs to the group's ADVISOR, not the mentor. If
+-- re-running this file ever restores an older review_assignment, re-apply
+-- docs/self-assessment-migration.sql and then docs/review-by-advisor.sql
+-- afterwards.
 -- Run AFTER docs/task-assignment-migration.sql. Idempotent.
 --
 -- Every column reference below is alias-qualified. RETURNS TABLE (level INT, …)

@@ -1,5 +1,10 @@
 -- docs/daily-log-retirement-rpcs.sql
 -- NOTE 2026-09-15: submit_assignment is now defined in docs/self-assessment-migration.sql (6 args); the 5-arg body below is history.
+-- NOTE 2026-09-24: and after that, in docs/review-by-advisor.sql, where
+-- submit_assignment and review_assignment belong to the group's ADVISOR, not
+-- the mentor. If re-running this file ever restores an older submit_assignment,
+-- re-apply docs/self-assessment-migration.sql and then
+-- docs/review-by-advisor.sql afterwards.
 -- Run AFTER docs/daily-log-retirement-migration.sql. Idempotent.
 --
 -- Every column reference below is alias-qualified. RETURNS TABLE (level INT, …)

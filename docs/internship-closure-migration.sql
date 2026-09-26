@@ -3,6 +3,13 @@
 -- group; the record becomes read-only (see docs/internship-closure-guards.sql),
 -- a Markdown report is built here and stored; reopening needs a reason.
 -- Apply order: this file, then -guards.sql, then -verification.sql.
+--
+-- NOTE 2026-09-24: build_internship_report now lives in
+-- docs/closure-report-reviewer-column.sql, where its "Mentor (avg)" / "Mentor"
+-- report headers were replaced with the writer-neutral "Reviewer (avg)" /
+-- "Reviewer" (review_assignment moved to the ADVISOR in
+-- docs/review-by-advisor.sql). RE-RUNNING THIS FILE RESTORES THE OLD
+-- HEADERS -- re-apply that file afterwards.
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS internship_closures (
