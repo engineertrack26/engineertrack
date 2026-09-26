@@ -782,6 +782,7 @@ DECLARE
   s3       UUID;  -- target who submits
   a_group  UUID;  -- a group-audience assignment, already published
   a_sel    UUID;  -- a draft that becomes selected-audience
+  a_bare   UUID;  -- a 'selected' draft that names nobody (check 7)
   n        INT;
 BEGIN
   SELECT ig.id, ig.advisor_id INTO g, advisor
@@ -873,8 +874,11 @@ The twelve checks, in order:
 6. **A target who leaves:** set `left_at = now()` on `s1`'s membership; as `s1`,
    `a_sel` returns 0 rows, and `assignment_submissions` for `s3` is untouched.
    Restore `left_at = NULL`. *(Review Focus 1.)*
-7. As the advisor: publishing a draft whose audience is `'selected'` with no
-   targets raises `TARGETS_REQUIRED`.
+7. As the advisor: publishing `a_bare` — a **third** draft, set to
+   `'selected'` with `UPDATE group_assignments SET audience = 'selected'`
+   directly rather than through `set_assignment_targets` (which never leaves an
+   assignment selected-with-no-targets) — raises `TARGETS_REQUIRED`. `a_sel`
+   cannot serve here: by check 1 it already has targets.
 8. `INSERT INTO assignment_targets (assignment_id, student_id) VALUES (a_group, s2)`
    raises `AUDIENCE_NOT_SELECTED`.
 9. Removing `s3` (who submitted in check 4) with
