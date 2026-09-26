@@ -66,15 +66,19 @@ Each one has its test written into the task that owns the code.
 2. **The same student id appears twice in `p_student_ids`.** The composite
    primary key would raise; asking twice means the same as asking once, so the
    call must succeed and count the student once. (Task 1, Part B via Task 2.)
-3. **Widening back to the whole group when a target has already submitted.**
+3. **Narrowing a published *group* task when a member has already submitted.**
+   The task has no target rows at all, so a targets-based `HAS_SUBMISSION`
+   check is vacuously false and that student's work is orphaned. The check has
+   to key off the submissions. (Task 2, Part B check 9.)
+4. **Widening back to the whole group when a target has already submitted.**
    `HAS_SUBMISSION` exists to stop a submission being orphaned; widening orphans
    nobody, so it must be **allowed** — refusing it would trap the advisor.
    (Task 2, Part B.)
-4. **A published task that changes audience and the stream card.** Narrowing
+5. **A published task that changes audience and the stream card.** Narrowing
    must take the card down (it names the task to everyone, which is what
    targeting avoids); widening must create the card that was never posted.
    (Task 2, Part B.)
-5. **The advisor sends a batch spanning two competencies.** There is no single
+6. **The advisor sends a batch spanning two competencies.** There is no single
    level to show, so the picker must omit the badges instead of showing a level
    from the wrong competency. (Task 3, Jest.)
 
@@ -148,10 +152,11 @@ the owner applies it. The task's deliverable is the file plus the notes.
 -- A task can go to selected students, not only the whole group.
 -- Spec: docs/superpowers/specs/2026-09-26-assignment-targeting-design.md
 --
--- Apply AFTER docs/task-assignment-migration.sql,
--- docs/assignment-drafts-migration.sql, docs/assignment-drafts-rpcs.sql,
--- docs/group-feed-assignment-cards.sql and docs/review-by-advisor.sql.
--- Idempotent, anonymous $$ only.
+-- APPLY ORDER: this file FIRST, then re-apply docs/review-by-advisor.sql
+-- (which gains a call to can_see_assignment, defined here). Both must come
+-- after docs/task-assignment-migration.sql,
+-- docs/assignment-drafts-migration.sql, docs/assignment-drafts-rpcs.sql and
+-- docs/group-feed-assignment-cards.sql. Idempotent, anonymous $$ only.
 --
 -- THIS FILE IS NOW THE HOME OF publish_assignments (was
 -- docs/assignment-drafts-rpcs.sql), group_assignment_counts (was
@@ -353,17 +358,31 @@ BEGIN
     RAISE EXCEPTION 'STUDENT_NOT_IN_GROUP';
   END IF;
 
+  -- A NULL in the array would survive array_agg(DISTINCT x), make every
+  -- comparison below three-valued and finally die on a raw 23502. Refused, not
+  -- filtered: stripping it would turn ARRAY[NULL] into an empty array, which
+  -- means "send it to the whole group" -- silently widening on malformed input
+  -- is the dangerous direction for this feature.
+  IF EXISTS (SELECT 1 FROM unnest(v_ids) AS x WHERE x IS NULL) THEN
+    RAISE EXCEPTION 'STUDENT_NOT_IN_GROUP';
+  END IF;
+
   -- Nothing already worked on may be taken away, and the check runs before any
   -- write so a refusal leaves the targets exactly as they were. Widening to the
   -- whole group removes nobody, so it is never refused -- an advisor whose
   -- targeted student has submitted must still be able to open the task up.
+  --
+  -- It keys off the SUBMISSIONS, not off assignment_targets: a task that is
+  -- still group-wide has no target rows at all, so a targets-based check would
+  -- be vacuously false exactly when an advisor narrows a published group task
+  -- and drops a student who has already handed work in. A submission can only
+  -- exist from someone who had access, which makes this correct for both
+  -- audiences.
   IF array_length(v_ids, 1) IS NOT NULL AND EXISTS (
     SELECT 1
-    FROM assignment_targets tg
-    JOIN assignment_submissions s ON s.assignment_id = tg.assignment_id
-                                 AND s.student_id = tg.student_id
-    WHERE tg.assignment_id = p_assignment_id
-      AND NOT (tg.student_id = ANY(v_ids))
+    FROM assignment_submissions s
+    WHERE s.assignment_id = p_assignment_id
+      AND NOT (s.student_id = ANY(v_ids))
   ) THEN
     RAISE EXCEPTION 'HAS_SUBMISSION';
   END IF;
@@ -626,8 +645,8 @@ Add to that file's header:
 ```sql
 -- 2026-09-26: submit_assignment also refuses NOT_TARGETED when the task was
 -- given to selected students and the caller is not one of them. The predicate
--- can_see_assignment comes from docs/assignment-targeting.sql, which must be
--- applied before this file.
+-- can_see_assignment comes from docs/assignment-targeting.sql.
+-- APPLY ORDER: docs/assignment-targeting.sql first, then this file.
 ```
 
 - [ ] **Step 10: Add the NOTE headers to the three old homes**
@@ -883,7 +902,11 @@ The twelve checks, in order:
    raises `AUDIENCE_NOT_SELECTED`.
 9. Removing `s3` (who submitted in check 4) with
    `set_assignment_targets(a_sel, ARRAY[s1])` raises `HAS_SUBMISSION`;
-   removing `s1`, who has not, with `ARRAY[s3]` returns `1`.
+   removing `s1`, who has not, with `ARRAY[s3]` returns `1`. Then the case the
+   targets-based check missed *(Review Focus 3)*: have a member submit to the
+   **group-audience** `a_group`, then `set_assignment_targets(a_group,
+   ARRAY[<someone else>])` — it must raise `HAS_SUBMISSION` although `a_group`
+   has no target rows at all.
 10. **Widening with a submission present:** `set_assignment_targets(a_sel, '{}')`
     returns `0` and sets the audience to `'group'` — it is **not** refused.
     *(Review Focus 3.)*
