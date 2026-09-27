@@ -1349,7 +1349,7 @@
     "recipientsEmpty": "Önce en az bir öğrenci seç.",
     "tooManyRecipients": "Tek seferde en fazla 30 öğrenciye gönderebilirsin.",
     "messageTooLong": "Bu mesaj çok uzun (en fazla 2000 karakter).",
-    "notGroupOwner": "Burada yalnızca grubun danışmanı paylaşım yapabilir.",
+    "notGroupOwner": "Bunu yalnızca grubun danışmanı yapabilir.",
     "kindNotAllowed": "Bu tür bir paylaşım burada oluşturulamaz.",
     "pollOptionsRange": "Ankette 2 ile 6 arasında seçenek olmalı.",
     "optionMismatch": "Bu seçenek bu ankete ait değil.",

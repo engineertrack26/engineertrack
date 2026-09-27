@@ -6,8 +6,8 @@ import {
 import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
   AssignmentCounts, PhotoEvidence, DocumentEvidence, SupervisionLevel,
+  AssignmentAudience,
 } from '@/types/assignment';
-import type { AssignmentAudience } from '@/types/assignment';
 import { toPhotoPayload, toDocumentPayload } from '@/utils/evidenceMapping';
 import type { StudentLevel } from '@/utils/assignmentTargets';
 

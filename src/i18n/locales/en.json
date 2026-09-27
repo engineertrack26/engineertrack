@@ -1201,7 +1201,7 @@
     "reflectionTooShort": "Write at least 20 characters about what you learned.",
     "evidenceRequired": "Add at least one photo or document before submitting.",
     "mentorAlreadyLinked": "This student already has a mentor. Ask the student to generate a new code if the mentor is changing.",
-    "notGroupOwner": "Only the group's advisor can post here.",
+    "notGroupOwner": "Only the group's advisor can do this.",
     "notInGroup": "You are not a member of this group.",
     "notOwner": "Only the student who submitted this can change it.",
     "kindNotAllowed": "That kind of post cannot be created here.",
