@@ -85,6 +85,7 @@ export default function AdvisorLayout() {
       <Tabs.Screen name="student-monitor" options={{ href: null }} />
       <Tabs.Screen name="group-competencies" options={{ href: null }} />
       <Tabs.Screen name="group-assignments" options={{ href: null }} />
+      <Tabs.Screen name="group-quizzes" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="reports" options={{ href: null }} />
       <Tabs.Screen
         name="feed"

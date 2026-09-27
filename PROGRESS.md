@@ -24,6 +24,7 @@
 | Phase 17 | Pre-launch: security review + hardening, password policy, architecture/UX audit and its first 13 items, EAS/Sentry wiring, lint + CI | In progress (Session 28, cont.) |
 | Phase 18 | Review and approval move from the workplace mentor to the group's advisor | Complete (Session 29) |
 | Phase 19 | A task can go to selected students, not only the whole group | Complete, verified live and on device (Session 30) |
+| Phase 20 | Advisor-authored quizzes for groups or selected students | Core flow complete; SQL A/B/C and Expo Go role-to-role test passed (Session 31) |
 
 > The checklists below Phase 6 are the v1 (daily-log era) record and are kept as history. The Session Log at the bottom is the source of truth for what the app is today; `CLAUDE.md` summarises the current model.
 
@@ -317,10 +318,16 @@
 
 - Updated `advisor_group_export` to version 2 after assignment targeting: task rows identify their audience, and "not started" result rows are limited to eligible recipients. Historical submissions remain in the export; a former member no longer inherits a task published after leaving.
 - The client refuses an outdated report RPC instead of exporting misleading rows. The new error is translated in all seven UI languages. CSV includes a task-audience column and explains that earlier changes to a selected-task target list are not archived.
-- `docs/advisor-group-export-targeting-verification.sql` checks the deployed RPC and expected student/task pairs. The owner must re-run `docs/advisor-group-export-migration.sql` in Supabase, then run the verification. No schema or data rewrite is involved; deployment/device acceptance is pending.
+- `docs/advisor-group-export-targeting-verification.sql` checks the deployed RPC and expected student/task pairs. The owner reported successful execution of both the updated report SQL and its verification in Supabase. The exact NOTICE counts were not provided, so whether a published selected-audience task was covered remains unconfirmed. No schema or data rewrite was involved; an advisor CSV device check remains pending.
 - Verification: TypeScript passed; full Jest suite passed (78 suites / 673 tests); lint finished with 0 errors and 50 warnings across the repository. Concurrent `sim/log/security-probe.md` was not touched.
 
 ## Session Log
+
+2026-09-27 quiz device follow-up (Codex): The first advisor and student quiz screens both showed a load error although the RPC returned HTTP 200 when called with an advisor JWT. A context-sensitive regression test reproduced the cause: `supabase.rpc` had been detached and invoked without its Supabase client `this`. Quiz calls now use `supabase.rpc(...)` directly; load failures in the new quiz screens and dashboard log their cause. The live schema was used to regenerate `src/types/database.ts` (only quiz tables/RPCs were added), removing the temporary untyped RPC cast. Typecheck, lint and all 683 Jest tests pass. The owner then verified both quiz screens and the create -> send -> answer -> submit -> stored score -> advisor results loop in Expo Go (Elif: 1/1). The owner's separate SQL checks returned PASS A, PASS B and PASS C.
+
+2026-09-27 quiz copy follow-up (Codex): Rechecked the advisor load catches and generated database types after a report based on the earlier state; both were already fixed. The quiz editor's section heading now uses a separate `questionsHeading` key (`Sorular` / `Questions`), while the lowercase `questions` key remains for counts. Typecheck, focused lint and locale JSON validation pass. A published test quiz and a student submission were reported; neither was deleted or closed.
+
+Session 31 (2026-09-27, Codex, core flow verified): Advisor quizzes now have a draft/send/results flow and a student save/submit/results flow. The quiz is separate from retired polls and stream polls: 1-10 single-answer questions, 2-5 choices, optional private image, whole-group or selected recipients, server-graded one-time submission, and answer release only after deadline, manual close, or group archive. Added `docs/group-quizzes.sql`, three separate verification scripts (with the combined script retained), screen/service/types/tests, and English/Turkish UI copy; the other five locales currently use the English fallback. Local typecheck, targeted lint and all 683 Jest tests pass. **The owner applied the migration, supplied separate PASS A/B/C SQL results, and verified the advisor-student core loop in Expo Go: create, send, answer, submit, persist score, advisor results (Elif 1/1).** Image upload was not separately reported as device-tested. No XP, badges, KPI, or mentor review changes. Existing concurrent work in `sim/log/security-probe.md` was not touched.
 
 | Date | Session | Work Done |
 |------|---------|-----------|

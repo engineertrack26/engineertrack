@@ -131,6 +131,8 @@ export default function StudentLayout() {
         name="task-detail"
         options={{ href: null, tabBarStyle: { display: 'none' } }}
       />
+      <Tabs.Screen name="my-quizzes" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="quiz-detail" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen
         name="internship-form"
         options={{

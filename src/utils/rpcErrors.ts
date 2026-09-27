@@ -62,6 +62,18 @@ const ERROR_KEYS: Record<string, string> = {
   NOT_TARGETED: 'errors.notTargeted',
   TARGETS_REQUIRED: 'errors.targetsRequired',
   HAS_SUBMISSION: 'errors.hasSubmission',
+  QUIZ_FORBIDDEN: 'quiz.unavailable',
+  QUIZ_NOT_EDITABLE: 'quiz.notEditable',
+  QUIZ_GROUP_ARCHIVED: 'quiz.groupArchived',
+  QUIZ_INVALID: 'quiz.invalid',
+  QUIZ_TARGETS_INVALID: 'quiz.targetsInvalid',
+  QUIZ_IMAGE_INVALID: 'quiz.imageInvalid',
+  QUIZ_TARGETS_REQUIRED: 'quiz.targetsRequired',
+  QUIZ_NOT_CLOSABLE: 'quiz.notClosable',
+  QUIZ_UNAVAILABLE: 'quiz.unavailable',
+  QUIZ_ALREADY_SUBMITTED: 'quiz.alreadySubmitted',
+  QUIZ_ANSWERS_INVALID: 'quiz.answersInvalid',
+  QUIZ_INCOMPLETE: 'quiz.incomplete',
 };
 
 /**

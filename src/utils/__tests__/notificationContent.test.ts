@@ -56,6 +56,13 @@ test('unknown templates, custom titles and prototype keys are preserved safely',
   expect(display('general', 'constructor', 'Custom').title).toBe('constructor');
 });
 
+test('quiz notification translates the system text but preserves the advisor title', () => {
+  expect(display('quiz_available', 'New quiz', 'Your advisor sent a quiz: Circuits'))
+    .toEqual({ title: 'Yeni quiz', body: 'Danışmanın bir quiz gönderdi: Circuits' });
+  expect(display('quiz_available', 'Custom', 'Your advisor sent a quiz: Circuits').body)
+    .toBe('Your advisor sent a quiz: Circuits');
+});
+
 test('badges and reminders use Turkish text without losing custom values', () => {
   expect(display('badge_earned', 'Badge Earned!', 'You earned the "first_task" badge! Keep up the great work!').body)
     .toBe('“İlk Görev” rozetini kazandın! Böyle devam et!');

@@ -42,6 +42,10 @@ export default function MyTasksScreen() {
     <ScrollView contentContainerStyle={ui.content} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing && !loading} onRefresh={reload} />}>
       <StudentHeader title={t('student.myTasks')} />
+      <Pressable style={ui.card} onPress={() => router.push('/(student)/my-quizzes')} accessibilityRole="button">
+        <Text style={ui.cardTitle}>{t('quiz.studentTitle', 'My quizzes')}</Text>
+        <Text style={ui.secondary}>{t('quiz.openFromTasks', 'Open quizzes sent by your advisor')}</Text>
+      </Pressable>
       <ClosureBanner status={closure} onReport={() => router.push({ pathname: '/(student)/internship-report', params: { studentId: userId, groupId: groupId! } })} />
       <TextInput style={ui.input} value={query} onChangeText={setQuery} placeholder={t('studentFlow.searchTasks')}
         accessibilityLabel={t('studentFlow.searchTasks')} placeholderTextColor={colors.textSecondary} returnKeyType="search" />

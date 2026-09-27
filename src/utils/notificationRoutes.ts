@@ -26,6 +26,11 @@ export function routeForNotification(
   switch (role) {
     case 'student':
       switch (type) {
+        case 'quiz_available': {
+          const quizId = str(data?.quizId);
+          return quizId ? { pathname: '/(student)/quiz-detail', params: { id: quizId } }
+            : { pathname: '/(student)/my-quizzes' };
+        }
         case 'task_assigned':
         case 'task_approved':
         case 'task_revision_requested':

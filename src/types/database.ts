@@ -895,6 +895,138 @@ export type Database = {
           },
         ]
       }
+      group_quiz_attempts: {
+        Row: {
+          answers: Json
+          quiz_id: string
+          score: number | null
+          student_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          quiz_id: string
+          score?: number | null
+          student_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          quiz_id?: string
+          score?: number | null
+          student_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "group_quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_quiz_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_quiz_targets: {
+        Row: {
+          quiz_id: string
+          student_id: string
+        }
+        Insert: {
+          quiz_id: string
+          student_id: string
+        }
+        Update: {
+          quiz_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_quiz_targets_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "group_quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_quiz_targets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_quizzes: {
+        Row: {
+          advisor_id: string
+          audience: string
+          closed_at: string | null
+          created_at: string
+          description: string
+          ends_at: string | null
+          group_id: string
+          id: string
+          published_at: string | null
+          questions: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          advisor_id: string
+          audience?: string
+          closed_at?: string | null
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          group_id: string
+          id?: string
+          published_at?: string | null
+          questions?: Json
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          advisor_id?: string
+          audience?: string
+          closed_at?: string | null
+          created_at?: string
+          description?: string
+          ends_at?: string | null
+          group_id?: string
+          id?: string
+          published_at?: string | null
+          questions?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_quizzes_advisor_id_fkey"
+            columns: ["advisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_quizzes_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "internship_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       growth_awards: {
         Row: {
           checked_at: string
@@ -2553,6 +2685,35 @@ export type Database = {
       owns_group: { Args: { p_group_id: string }; Returns: boolean }
       publish_assignments: { Args: { p_ids: string[] }; Returns: number }
       publish_feed_post: { Args: { p_post_id: string }; Returns: undefined }
+      quiz_can_read: { Args: { p_quiz_id: string }; Returns: boolean }
+      quiz_close: { Args: { p_id: string }; Returns: undefined }
+      quiz_delete_draft: { Args: { p_id: string }; Returns: undefined }
+      quiz_detail: { Args: { p_id: string }; Returns: Json }
+      quiz_image_allowed: {
+        Args: { p_path: string; p_write: boolean }
+        Returns: boolean
+      }
+      quiz_init: { Args: { p_group_id: string }; Returns: string }
+      quiz_list_advisor: { Args: { p_group_id: string }; Returns: Json }
+      quiz_list_student: { Args: never; Returns: Json }
+      quiz_publish: { Args: { p_id: string }; Returns: number }
+      quiz_results: { Args: { p_id: string }; Returns: Json }
+      quiz_save: {
+        Args: {
+          p_audience: string
+          p_description: string
+          p_ends_at: string
+          p_id: string
+          p_questions: Json
+          p_target_ids: string[]
+          p_title: string
+        }
+        Returns: undefined
+      }
+      quiz_save_answers: {
+        Args: { p_answers: Json; p_id: string; p_submit: boolean }
+        Returns: Json
+      }
       record_consent: { Args: { p_version: string }; Returns: undefined }
       record_kpi_observations: {
         Args: { p_kpi_ids: string[]; p_log_id: string; p_student_id: string }

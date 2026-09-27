@@ -12,6 +12,7 @@ const titles: Partial<Record<NotificationType, Record<string, string>>> = {
   task_revision_requested: { 'Revision Requested': 'Görevin için revizyon istendi' },
   feed_announcement: { 'New announcement': 'Yeni duyuru' },
   feed_poll: { 'New poll': 'Yeni anket' },
+  quiz_available: { 'New quiz': 'Yeni quiz' },
   feed_comment: { 'New comment': 'Yeni yorum' },
   feed_task_post: { 'New in the feed': 'Akışta yeni paylaşım' },
   direct_message: { 'New message': 'Yeni mesaj', 'Case opened': 'Konu görüşmesi açıldı' },
@@ -78,6 +79,9 @@ export function notificationContent(item: Pick<AppNotification, 'type' | 'title'
       break;
     case 'feed_poll':
       body = body.replace(/^(.+?) asked: ([\s\S]*)$/, (_, name, preview) => `${actor(name)} sordu: ${preview}`);
+      break;
+    case 'quiz_available':
+      body = body.replace(/^Your advisor sent a quiz: ([\s\S]*)$/, (_, quizTitle) => `Danışmanın bir quiz gönderdi: ${quizTitle}`);
       break;
     case 'feed_comment':
       body = body.replace(/^(.+) commented on your post\.$/, (_, name) => `${actor(name)} paylaşımına yorum yaptı.`);

@@ -6,6 +6,7 @@ export type NotificationType =
   | 'badge_earned'
   | 'level_up'
   | 'poll_available'
+  | 'quiz_available'
   | 'general'
   | 'task_assigned'
   | 'task_submitted'

@@ -26,6 +26,7 @@ export function groupCenterRoute(groupId: string) {
 const workspacePaths = {
   'student-monitor': '/(advisor)/student-monitor',
   'group-assignments': '/(advisor)/group-assignments',
+  'group-quizzes': '/(advisor)/group-quizzes',
   'group-competencies': '/(advisor)/group-competencies',
   reports: '/(advisor)/reports',
   feed: '/(advisor)/feed',

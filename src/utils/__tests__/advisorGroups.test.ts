@@ -35,7 +35,7 @@ describe('advisor group navigation and search', () => {
     expect(filterAdvisorGroups(groups, false, '2026', 'tr').map((g) => g.id)).toEqual(['active']);
     expect(filterAdvisorGroups(groups, false, 'missing', 'tr')).toEqual([]);
   });
-  it.each(['student-monitor', 'group-assignments', 'group-competencies', 'reports', 'feed'] as const)(
+  it.each(['student-monitor', 'group-assignments', 'group-quizzes', 'group-competencies', 'reports', 'feed'] as const)(
     'preserves the group and logical parent for %s', (screen) => {
       expect(groupWorkspaceRoute(screen, 'g')).toEqual({ pathname: '/(advisor)/' + screen, params: { groupId: 'g', fromGroup: '1' } });
       expect(groupCenterRoute('g')).toEqual({ pathname: '/(advisor)/groups', params: { groupId: 'g' } });

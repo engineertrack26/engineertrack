@@ -43,7 +43,7 @@ export function GroupCenter({ advisorId, groupId }: { advisorId: string; groupId
     void load();
     return () => { sequence.current += 1; };
   }, [load]));
-  const open = (screen: 'student-monitor' | 'group-assignments' | 'group-competencies' | 'reports' | 'feed') => {
+  const open = (screen: 'student-monitor' | 'group-assignments' | 'group-quizzes' | 'group-competencies' | 'reports' | 'feed') => {
     const route = groupWorkspaceRoute(screen, groupId);
     // A repeated visit must honor this group even if the destination's local selector changed.
     router.push({ ...route, params: { ...route.params, entry: String(Date.now()) } });
@@ -90,6 +90,8 @@ export function GroupCenter({ advisorId, groupId }: { advisorId: string; groupId
           <GroupRow title={t('advisorGroups.viewStudents')} detail={t('advisorGroups.membersHint')} icon="people-outline" onPress={() => open('student-monitor')} />
           <GroupRow title={t('advisorGroups.assignments')} detail={drafts !== null ? t('advisorGroups.taskCounts', { draft: drafts, published: (assignments?.length ?? 0) - drafts }) : undefined}
             icon="clipboard-outline" onPress={() => open('group-assignments')} />
+          <GroupRow title={t('quiz.advisorTitle', 'Quizzes')} detail={t('quiz.advisorHint', 'Prepare up to 10 questions and send them to the group or selected students.')}
+            icon="help-circle-outline" onPress={() => open('group-quizzes')} />
           <GroupRow title={t('advisorGroups.competencies')} detail={t('advisorGroups.targetsHint')} icon="flag-outline" onPress={() => open('group-competencies')} />
           <GroupRow title={t('advisorGroups.reportsTitle')} icon="bar-chart-outline" onPress={() => open('reports')} />
           <GroupRow title={t('advisorGroups.openStream')} icon="newspaper-outline" onPress={() => open('feed')} />

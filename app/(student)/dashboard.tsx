@@ -12,6 +12,7 @@ import { supabase } from '@/services/supabase';
 import { competencyService } from '@/services/competency';
 import { logService } from '@/services/logs';
 import { internshipDayService } from '@/services/internshipDays';
+import { quizService } from '@/services/quizzes';
 import { useStudentTasks } from '@/hooks/useStudentTasks';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { sortTasks, isActionable } from '@/utils/studentTasks';
@@ -22,6 +23,7 @@ import { colors, fonts } from '@/theme';
 import type { CompetencyProgress } from '@/types/competency';
 import type { MyAssignment } from '@/types/assignment';
 import type { InternshipDay } from '@/types/internshipDay';
+import type { QuizSummary } from '@/types/quiz';
 import { toLocalIsoDate } from '@/utils/localDate';
 
 interface ProfileSummary {
@@ -134,6 +136,8 @@ export default function StudentDashboard() {
   const [profileSummary, setProfileSummary] = useState<ProfileSummary | null>(null);
   const [progress, setProgress] = useState<CompetencyProgress[] | null>(null);
   const [weekCheckins, setWeekCheckins] = useState<InternshipDay[]>([]);
+  const [openQuizzes, setOpenQuizzes] = useState<QuizSummary[]>([]);
+  const [quizFailed, setQuizFailed] = useState(false);
   const [profileFailed, setProfileFailed] = useState(false);
   const [hasArchive, setHasArchive] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -186,13 +190,32 @@ export default function StudentDashboard() {
     void loadProfile();
     return () => { requestId.current++; };
   }, [loadProfile]));
+  const quizRequest = useRef(0);
+  const loadQuizzes = useCallback(async () => {
+    const request = ++quizRequest.current;
+    try {
+      const items = await quizService.listStudent();
+      if (request === quizRequest.current) {
+        setOpenQuizzes(items.filter(item => !item.closed && !item.submittedAt)); setQuizFailed(false);
+      }
+    } catch (error) {
+      if (request === quizRequest.current) {
+        console.warn('Dashboard quizzes load failed:', error instanceof Error ? error.message : error);
+        setQuizFailed(true);
+      }
+    }
+  }, []);
+  useFocusEffect(useCallback(() => {
+    void loadQuizzes();
+    return () => { quizRequest.current++; };
+  }, [loadQuizzes]));
   useRealtimeSubscription({
     table: 'assignment_submissions', filter: user ? 'student_id=eq.' + user.id : undefined,
     event: 'UPDATE', enabled: !!user, onPayload: () => { void tasks.reload(); void loadProfile(); },
   });
   const actionable = useMemo(() => sortTasks(tasks.items).filter(isActionable), [tasks.items]);
   const next = actionable[0];
-  const refresh = () => { void tasks.reload(); void loadProfile(); };
+  const refresh = () => { void tasks.reload(); void loadProfile(); void loadQuizzes(); };
 
   const { monday, sunday } = useMemo(() => weekRange(), []);
   const todayIso = useMemo(() => toLocalIsoDate(new Date()), []);
@@ -267,6 +290,16 @@ export default function StudentDashboard() {
           </View>)}
         </View>}
       </View>
+
+      {quizFailed && <LoadFailedBanner onRetry={loadQuizzes} />}
+      {openQuizzes.length > 0 && <Pressable style={[ui.card, ui.featured]} accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/(student)/quiz-detail', params: { id: openQuizzes[0].id } })}>
+        <Text style={ui.section}>{t('quiz.pendingLabel', 'Quiz waiting for you')}</Text>
+        <Text style={ui.cardTitle}>{openQuizzes[0].title}</Text>
+        <Text style={ui.secondary}>{openQuizzes.length > 1
+          ? t('quiz.morePending', '{{count}} quizzes awaiting answers', { count: openQuizzes.length })
+          : t('quiz.start', 'Start quiz')}</Text>
+      </Pressable>}
 
       {tasks.failed && <LoadFailedBanner onRetry={tasks.reload} />}
       {tasks.loading ? <ActivityIndicator size="large" color={colors.primary} /> :

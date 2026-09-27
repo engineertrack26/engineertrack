@@ -18,6 +18,14 @@ describe('routeForNotification', () => {
     expect(routeForNotification('task_assigned', undefined, 'student')?.pathname).toBe('/(student)/my-tasks');
   });
 
+  it("opens only the student's quiz from a quiz notification", () => {
+    expect(routeForNotification('quiz_available', { quizId: 'q1' }, 'student'))
+      .toEqual({ pathname: '/(student)/quiz-detail', params: { id: 'q1' } });
+    expect(routeForNotification('quiz_available', {}, 'student'))
+      .toEqual({ pathname: '/(student)/my-quizzes' });
+    expect(routeForNotification('quiz_available', { quizId: 'q1' }, 'mentor')).toBeNull();
+  });
+
   test('a submitted task sends the advisor to their review queue', () => {
     expect(routeForNotification('task_submitted', { submissionId: 's1' }, 'advisor'))
       .toEqual({ pathname: '/(advisor)/review-detail', params: { id: 's1', studentId: '', assignmentId: '' } });
