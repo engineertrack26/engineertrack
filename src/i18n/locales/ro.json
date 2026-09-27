@@ -292,7 +292,8 @@
     "sort_name": "După nume",
     "sort_progress": "Progres: crescător",
     "exportHint": "Partajarea CSV include raportul complet al grupului selectat, indiferent de căutare sau sortare.",
-    "export": "Partajează raportul grupului (CSV)"
+    "export": "Partajează raportul grupului (CSV)",
+    "exportUpdateRequired": "Datele raportului trebuie actualizate. Cere responsabilului proiectului să aplice cea mai recentă migrare SQL pentru raportul coordonatorului."
   },
   "advisorMonitor": {
     "groupHint": "Găsește și gestionează membrii grupului. Consultă progresul competențelor în rapoartele grupului.",

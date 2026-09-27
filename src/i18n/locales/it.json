@@ -292,7 +292,8 @@
     "sort_name": "Per nome",
     "sort_progress": "Progresso: crescente",
     "exportHint": "La condivisione CSV include il report completo del gruppo selezionato, indipendentemente dalla ricerca e dall’ordinamento.",
-    "export": "Condividi report del gruppo (CSV)"
+    "export": "Condividi report del gruppo (CSV)",
+    "exportUpdateRequired": "I dati del report devono essere aggiornati. Chiedi al responsabile del progetto di applicare l'ultima migrazione SQL per il report del consulente."
   },
   "advisorMonitor": {
     "groupHint": "Trova e gestisci i membri del gruppo. Consulta i progressi delle competenze nei report del gruppo.",

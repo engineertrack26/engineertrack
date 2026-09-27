@@ -117,8 +117,9 @@ function ReportsContent({ advisorId, initialGroupId }: { advisorId: string; init
       const csv = groupExportCsv(snapshot, i18n.language, (key) => t(key));
       const saved = await saveGroupReportCsv(snapshot.groupId, csv, snapshot.groupName);
       if (saved) Alert.alert(t('common.done'), t('advisorExport.saved'));
-    } catch {
-      Alert.alert(t('advisor.exportErrorTitle'), t('advisor.exportFailed'));
+    } catch (error) {
+      Alert.alert(t('advisor.exportErrorTitle'), t(error instanceof Error && error.message === 'REPORT_UPDATE_REQUIRED'
+        ? 'advisorReports.exportUpdateRequired' : 'advisor.exportFailed'));
     } finally { exportLock.current = false; setExporting(false); }
   }
   function attendanceLabel(value: AttendanceDayRow['attendance']): string {

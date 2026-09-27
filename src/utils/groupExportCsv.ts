@@ -28,10 +28,10 @@ export function groupExportCsv(data: GroupExport, language: string, label: Label
   for (const c of data.competencies) add(c.studentId, names.get(c.studentId) ?? '',
     competencyContent(c.name, language), c.targetLevel, c.reachedLevel);
 
-  section('tasks', ['taskId', 'title', 'objective', 'criterion', 'description', 'dueDate', 'publishedAt']);
+  section('tasks', ['taskId', 'title', 'objective', 'criterion', 'description', 'audience', 'dueDate', 'publishedAt']);
   for (const a of data.tasks) add(a.taskId, taskContent(a.title, language),
     taskContent(a.objective, language, 'objective'), taskContent(a.criterion, language, 'criterion'),
-    a.description, a.dueDate, a.publishedAt);
+    a.description, text(`audience_${a.audience}`), a.dueDate, a.publishedAt);
 
   section('submissions', ['studentId', 'student', 'taskId', 'title', 'status', 'submittedAt',
     'reviewedAt', 'studentNote', 'reflection', 'reviewerNote', 'selfLevel', 'reviewerLevel']);

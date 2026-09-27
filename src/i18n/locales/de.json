@@ -292,7 +292,8 @@
     "sort_name": "Nach Name",
     "sort_progress": "Fortschritt: aufsteigend",
     "exportHint": "Die CSV-Freigabe enthält den vollständigen Bericht der ausgewählten Gruppe, unabhängig von Suche und Sortierung.",
-    "export": "Gruppenbericht teilen (CSV)"
+    "export": "Gruppenbericht teilen (CSV)",
+    "exportUpdateRequired": "Die Berichtsdaten müssen aktualisiert werden. Bitte den Projektverantwortlichen, die neueste SQL-Migration für den Betreuerbericht auszuführen."
   },
   "advisorMonitor": {
     "groupHint": "Gruppenmitglieder finden und verwalten. Kompetenzfortschritt sehen Sie in den Gruppenberichten.",

@@ -312,6 +312,13 @@
 - Reloads when the dashboard regains focus so profile changes appear on return. Guards against stale requests/account changes; shows a loading indicator or neutral person icon when no avatar is available.
 - **Verification:** TypeScript passed; existing avatar service/helper tests passed (2 suites / 46 tests); diff checks passed. Device visual verification was left to the owner in Expo Go. No SQL change, build or export was needed.
 
+### Advisor CSV export compatibility with selected task recipients
+
+- Updated `advisor_group_export` to version 2 after assignment targeting: task rows identify their audience, and "not started" result rows are limited to eligible recipients. Historical submissions remain in the export; a former member no longer inherits a task published after leaving.
+- The client refuses an outdated report RPC instead of exporting misleading rows. The new error is translated in all seven UI languages. CSV includes a task-audience column and explains that earlier changes to a selected-task target list are not archived.
+- `docs/advisor-group-export-targeting-verification.sql` checks the deployed RPC and expected student/task pairs. The owner must re-run `docs/advisor-group-export-migration.sql` in Supabase, then run the verification. No schema or data rewrite is involved; deployment/device acceptance is pending.
+- Verification: TypeScript passed; full Jest suite passed (78 suites / 673 tests); lint finished with 0 errors and 50 warnings across the repository. Concurrent `sim/log/security-probe.md` was not touched.
+
 ## Session Log
 
 | Date | Session | Work Done |
