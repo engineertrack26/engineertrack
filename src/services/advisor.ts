@@ -197,7 +197,9 @@ export const advisorService = {
    *  1. The window is 7 days, not the daily log's 3. Logs were daily; a task
    *     has a deadline and a student may legitimately spend several days on
    *     one without that being silence.
-   *  2. A student whose group has no PUBLISHED assignment is never inactive.
+   *  2. A student who has been given no PUBLISHED assignment is never
+   *     inactive -- given, not merely "published in their group": a task
+   *     targeted at other students was never theirs to do.
    *     Reaching "has never submitted" for someone nobody has given anything
    *     to do is the same false accusation in a new form. A draft is the
    *     advisor's own unsent preparation and RLS does not hide it from the
@@ -232,32 +234,83 @@ export const advisorService = {
     // to the old group's task, move groups two days later, ignore everything
     // the new group has published, and stay unflagged for five more days on
     // the strength of work done for a group you are no longer in.
+    //
+    // A task can now go to selected students, so "published in your group" is
+    // no longer the same thing as "published to you". A student for whom
+    // every published task was given to somebody else has been given nothing
+    // to do, and flagging them for not submitting it is precisely the false
+    // accusation rule 2 exists to prevent. The group-audience ids stay keyed
+    // by group (every member has them, including a late joiner); the
+    // 'selected' ones are resolved per student from assignment_targets.
     const publishedIdsByGroup = new Map<string, string[]>();
+    const selectedGroupById = new Map<string, string>();
     if (groupIds.length > 0) {
       const { data: assignments, error: assignmentsError } = await supabase
         .from('group_assignments')
-        .select('id, group_id')
+        .select('id, group_id, audience')
         .in('group_id', groupIds)
         .not('published_at', 'is', null);
       if (assignmentsError) throw assignmentsError;
       (assignments || []).forEach((a) => {
         const row = a as Record<string, unknown>;
         const gid = row.group_id as string;
+        const aid = row.id as string;
+        if (row.audience === 'selected') {
+          selectedGroupById.set(aid, gid);
+          return;
+        }
         const list = publishedIdsByGroup.get(gid);
         if (list) {
-          list.push(row.id as string);
+          list.push(aid);
         } else {
-          publishedIdsByGroup.set(gid, [row.id as string]);
+          publishedIdsByGroup.set(gid, [aid]);
         }
       });
     }
 
-    // Rule 2 applied before anything is measured: a student with no published
-    // assignment is not considered at all.
-    const publishedIdsForStudent = (id: string): string[] => {
+    // One read for the whole cohort, not one per student. The advisor owns
+    // these groups, so the "advisor reads targets" policy returns the rows;
+    // an advisor who owns none gets an empty list rather than an error.
+    const targetedIdsByStudent = new Map<string, string[]>();
+    if (selectedGroupById.size > 0) {
+      const { data: targets, error: targetsError } = await supabase
+        .from('assignment_targets')
+        .select('assignment_id, student_id')
+        .in('assignment_id', Array.from(selectedGroupById.keys()));
+      if (targetsError) throw targetsError;
+      (targets || []).forEach((tg) => {
+        const row = tg as Record<string, unknown>;
+        const aid = row.assignment_id as string;
+        const sid = row.student_id as string;
+        // A target row outlives the membership that justified it, and this
+        // function already refuses to let a group the student has left vouch
+        // for them having work to do -- the same rule has to hold for a task
+        // that group gave them.
+        if (selectedGroupById.get(aid) !== groupByStudent.get(sid)) return;
+        const list = targetedIdsByStudent.get(sid);
+        if (list) {
+          list.push(aid);
+        } else {
+          targetedIdsByStudent.set(sid, [aid]);
+        }
+      });
+    }
+
+    // Built once per student rather than concatenated on every lookup: the
+    // result is read inside two loops below.
+    const publishedByStudent = new Map<string, string[]>();
+    studentIds.forEach((id) => {
       const groupId = groupByStudent.get(id);
-      return groupId ? publishedIdsByGroup.get(groupId) || [] : [];
-    };
+      if (!groupId) return;
+      publishedByStudent.set(id, [
+        ...(publishedIdsByGroup.get(groupId) || []),
+        ...(targetedIdsByStudent.get(id) || []),
+      ]);
+    });
+
+    // Rule 2 applied before anything is measured: a student with no published
+    // assignment OF THEIR OWN is not considered at all.
+    const publishedIdsForStudent = (id: string): string[] => publishedByStudent.get(id) || [];
     const eligibleIds = studentIds.filter((id) => publishedIdsForStudent(id).length > 0);
     if (eligibleIds.length === 0) return [];
     const allPublishedIds = Array.from(

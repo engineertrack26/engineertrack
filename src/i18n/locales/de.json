@@ -980,6 +980,7 @@
     "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "notAuthenticated": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     "roleNotAllowed": "Ihre Rolle kann diese Aktion nicht ausführen.",
+    "notTargeted": "Diese Aufgabe wurde Ihnen nicht zugewiesen.",
     "invalidCode": "Dieser Code ist ungültig. Überprüfen Sie ihn mit der Person, die ihn Ihnen gegeben hat.",
     "expiredCode": "Dieser Code ist nicht mehr aktiv. Bitten Sie den Studenten, seinen aktuellen Code mitzuteilen.",
     "invalidCodeFormat": "Das sieht nicht wie ein gültiger Code aus. Geben Sie den vollständigen Code oder nur die letzten 6 Zeichen ein.",

@@ -980,6 +980,7 @@
     "unknown": "Ceva n-a mers bine. Te rugăm să încerci din nou.",
     "notAuthenticated": "Sesiunea ta a expirat. Te rugăm să te autentifici din nou.",
     "roleNotAllowed": "Rolul tău nu poate efectua această acțiune.",
+    "notTargeted": "Această sarcină nu ți-a fost atribuită.",
     "invalidCode": "Acest cod nu este valid. Verifică-l cu persoana care ți l-a dat.",
     "expiredCode": "Acest cod nu mai este activ. Cere-i studentului să îți transmită codul actual.",
     "invalidCodeFormat": "Acesta nu pare a fi un cod valid. Introdu codul complet sau doar ultimele 6 caractere.",

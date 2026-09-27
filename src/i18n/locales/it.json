@@ -980,6 +980,7 @@
     "unknown": "Qualcosa è andato storto. Riprova.",
     "notAuthenticated": "La tua sessione è scaduta. Accedi di nuovo.",
     "roleNotAllowed": "Il tuo ruolo non può eseguire questa azione.",
+    "notTargeted": "Questo compito non ti è stato assegnato.",
     "invalidCode": "Questo codice non è valido. Verificalo con chi te lo ha fornito.",
     "expiredCode": "Questo codice non è più attivo. Chiedi allo studente di condividere il suo codice attuale.",
     "invalidCodeFormat": "Questo non sembra un codice valido. Inserisci il codice completo oppure solo gli ultimi 6 caratteri.",

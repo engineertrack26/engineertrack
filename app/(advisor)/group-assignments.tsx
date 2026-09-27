@@ -250,7 +250,11 @@ function GroupAssignmentsContent() {
     setShowDatePicker(false);
   }
 
-  async function handleSendToStudents(batch: GroupAssignment[], targetIds: string[]): Promise<boolean> {
+  /** `targetIds` is the audience DECISION this call site made, and `null` is
+   *  "no decision" -- the drafts tray, which shows no picker and must leave
+   *  each draft's own audience exactly as it is. An empty ARRAY is a
+   *  decision: it means the whole group, and it has to be written. */
+  async function handleSendToStudents(batch: GroupAssignment[], targetIds: string[] | null): Promise<boolean> {
     if (!batch.length || publishLock.current || !user ||
         useAuthStore.getState().user?.id !== user.id) return false;
     publishLock.current = true;
@@ -265,9 +269,21 @@ function GroupAssignmentsContent() {
       if (useAuthStore.getState().user?.id !== user.id) return false;
       // The targets go in first: publish_assignments refuses a 'selected'
       // assignment that names nobody, and set_assignment_targets is what makes
-      // it 'selected' in the first place. An empty array is a no-op on a draft
-      // that is already group-audience, so the group path costs nothing.
-      if (targetIds.length) {
+      // it 'selected' in the first place.
+      //
+      // The call is made for EVERY array, empty or not, and the reason is a
+      // retry: the review screen's picker stays open after a failed send
+      // (deliberately -- the fix for a failed send is often a different
+      // audience), the drafts it already wrote targets to are frozen in
+      // AssignmentReview's snapshot, and prepareAssignments recovers those
+      // same rows by client id. So "pick 2, send, publish fails, tap Whole
+      // group, send again" hands us an empty array for drafts the server
+      // already has down as 'selected' with the old two targets. Skipping the
+      // call on an empty array published that task to 2 of 7 while the UI
+      // said "Whole group (7)". An empty array IS a no-op on a draft that is
+      // already group-audience -- it costs one round-trip per draft and
+      // changes nothing -- which is the price of the guarantee.
+      if (targetIds) {
         for (const draft of batch) {
           await assignmentService.setAssignmentTargets(draft.id, targetIds);
         }
@@ -292,20 +308,21 @@ function GroupAssignmentsContent() {
         // the stream card was dropped to avoid.
         //
         // Recipients follow each assignment's OWN audience, not the
-        // `targetIds` argument alone: the drafts tray always calls this with
-        // an empty array, even for a draft that already carries a 'selected'
-        // audience and its own targets from an earlier review. `targetIds`
-        // wins only for the rows the loop above just retargeted (every id in
-        // `batch`, when it ran); everything else falls back to what the row
-        // itself already says. If any assignment in the batch reaches the
-        // whole group, the whole group is in the recipient set regardless of
-        // any other assignment's narrower targets.
+        // `targetIds` argument alone: the drafts tray calls this with `null`,
+        // even for a draft that already carries a 'selected' audience and its
+        // own targets from an earlier review. `targetIds` wins whenever the
+        // loop above ran (every id in `batch`) -- including for an empty
+        // array, which just set every one of them back to the whole group;
+        // only a `null` falls back to what the row itself already says. If
+        // any assignment in the batch reaches the whole group, the whole
+        // group is in the recipient set regardless of any other assignment's
+        // narrower targets.
         let recipients = members;
         try {
           const perAssignmentIds = await Promise.all(batch.map(async (a) => {
-            const audience = targetIds.length ? 'selected' : a.audience;
+            const audience = targetIds ? (targetIds.length ? 'selected' : 'group') : a.audience;
             if (audience !== 'selected') return members.map((m) => m.id);
-            return targetIds.length ? targetIds : assignmentService.listAssignmentTargets(a.id);
+            return targetIds?.length ? targetIds : assignmentService.listAssignmentTargets(a.id);
           }));
           const recipientIds = new Set(perAssignmentIds.flat());
           recipients = members.filter((m) => recipientIds.has(m.id));
@@ -350,7 +367,7 @@ function GroupAssignmentsContent() {
       // 'selected' server-side even though nothing published. A retry has to
       // know that, or it retries assuming a clean slate that no longer
       // exists.
-      const retarget = targetIds.length ? ` ${t('taskFlow.retargetPartial')}` : '';
+      const retarget = targetIds ? ` ${t('taskFlow.retargetPartial')}` : '';
       if ((code === 'NOT_IN_SCOPE' || code === 'TARGETS_REQUIRED') && detail) {
         Alert.alert(t('common.error'), t(code === 'NOT_IN_SCOPE'
           ? 'errors.notInScopeTitled' : 'errors.targetsRequiredTitled', { title: detail }) + retarget);
@@ -675,10 +692,12 @@ function GroupAssignmentsContent() {
         {members.length === 0 && <Text style={ui.secondary}>{t('taskFlow.noMembers')}</Text>}
         <TouchableOpacity style={ui.primary} accessibilityRole="button"
           disabled={sending || !selectedDrafts.length || !members.length}
-          // No review screen here, so there is no picker either: each draft
-          // keeps whatever audience it already carries, and an empty target
-          // array is a no-op for both 'group' and already-'selected' drafts.
-          onPress={() => handleSendToStudents(selectedDrafts, [])}>
+          // No review screen here, so there is no picker either -- hence
+          // `null` and not `[]`: each draft keeps whatever audience it
+          // already carries. An empty array would now be read as the
+          // decision "the whole group" and would widen a draft that a
+          // previous review had already narrowed to selected students.
+          onPress={() => handleSendToStudents(selectedDrafts, null)}>
           {sending ? <ActivityIndicator color="#fff" /> :
             <Text style={ui.primaryText}>{t('taskFlow.send', { count: selectedDrafts.length })}</Text>}
         </TouchableOpacity>

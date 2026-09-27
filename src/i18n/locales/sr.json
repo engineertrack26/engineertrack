@@ -980,6 +980,7 @@
     "unknown": "Nešto je pošlo naopako. Molimo pokušajte ponovo.",
     "notAuthenticated": "Vaša sesija je istekla. Molimo prijavite se ponovo.",
     "roleNotAllowed": "Vaša uloga ne može da izvrši ovu radnju.",
+    "notTargeted": "Ovaj zadatak vam nije dodeljen.",
     "invalidCode": "Ovaj kod nije važeći. Proverite ga sa osobom koja vam ga je dala.",
     "expiredCode": "Ovaj kod više nije aktivan. Zamolite studenta da podeli svoj trenutni kod.",
     "invalidCodeFormat": "Ovo ne izgleda kao važeći kod. Unesite ceo kod ili samo poslednjih 6 karaktera.",

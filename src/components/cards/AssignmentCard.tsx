@@ -220,13 +220,32 @@ export function AssignmentCard({
   // Seeds the sheet from the server's own record of who is targeted, not
   // from a local guess -- the card keeps no copy of assignment_targets
   // between opens.
+  //
+  // Guarded by `retargeting`, the same flag applyTargets uses: the read is a
+  // round-trip and the link was tappable throughout it, so a second tap
+  // opened a second read and the last answer to ARRIVE seeded the sheet.
   async function openTargetPicker() {
+    if (retargeting) return;
+    setRetargeting(true);
     try {
-      setTargetIds(await assignmentService.listAssignmentTargets(a.id));
+      const stored = await assignmentService.listAssignmentTargets(a.id);
+      // Only ids the advisor can actually SEE in the sheet. `members` is the
+      // ACTIVE roster, and a target row outlives the membership that
+      // justified it: a target who has left is still stored, would still be
+      // sent back on Continue, and set_assignment_targets refuses any id
+      // that is not an active member -- with STUDENT_NOT_IN_GROUP, naming
+      // nobody, for a student the advisor cannot see in the list and
+      // therefore cannot untick. Dropping them here is also what the advisor
+      // means: the sheet shows who is in the group, and Continue sends
+      // exactly what the sheet shows.
+      const active = new Set(members.map((m) => m.id));
+      setTargetIds(stored.filter((id) => active.has(id)));
       setPicking(true);
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
       Alert.alert(t('common.error'), t(key));
+    } finally {
+      setRetargeting(false);
     }
   }
 
@@ -359,72 +378,85 @@ export function AssignmentCard({
         <Text style={styles.warning}>{t('advisor.assignmentOutOfScope')}</Text>
       )}
 
-      {isDraft ? (
+      {isDraft && (
         // A draft cannot have submissions -- the counts row below would only
         // ever read 0/0/0, which is indistinguishable from "loaded and
         // empty". This badge is what actually says "not yet sent".
         <Text style={styles.draftBadge}>{t('advisor.draftBadge')}</Text>
-      ) : (
-        <>
-          {/* Metadata, not a headline -- styles.label (12px, secondary), not
-              ui.label (16px, primary): this line used to read louder than
-              the title. Group audience carries no count of its own here --
-              the row below already gives it as the "/ N" denominator (from
-              counts.targetCount, the server's own count of active members
-              for a group audience), so repeating it here would just be the
-              same number twice. A selected audience's headcount comes from
-              the same counts RPC as the submitted/approved tallies below, so
-              it is withheld under the same countsUnavailable flag rather
-              than asserting a "0" the server never actually said -- it is
-              also the ONLY place that number appears, so it stays here
-              rather than moving to the row below. */}
-          <Text style={styles.label}>
-            {a.audience === 'selected'
-              ? (countsUnavailable
-                ? t('taskFlow.audienceSelected', 'Selected students')
-                : t('taskFlow.audienceSelectedCount', { count: counts.targetCount }))
-              : t('taskFlow.audienceWholeGroup', 'Whole group')}
-          </Text>
-          {/* approved and "sent back" are subsets of submitted, not further
-              buckets alongside it -- the parenthesis is what says so. The
-              denominator is who the task actually reached, not the group's
-              size -- see submittedOfTarget. */}
-          <Text style={styles.subtle}>
-            {countsUnavailable ? (
-              t('advisor.assignmentCountsUnavailable')
-            ) : (
-              <>
-                {t('advisor.submittedOfCount', '{{value}} submitted', { value: submittedOfTarget(counts) })}
-                {' ('}
-                {t('advisor.approvedCount', { count: counts.approved })}
-                {', '}
-                {t('advisor.revisionCount', { count: counts.needsRevision })}
-                {')'}
-              </>
-            )}
-          </Text>
-        </>
+      )}
+      {/* Metadata, not a headline -- styles.label (12px, secondary), not
+          ui.label (16px, primary): this line used to read louder than the
+          title. Group audience carries no count of its own here -- on a sent
+          card the row below already gives it as the "/ N" denominator (from
+          counts.targetCount, the server's own count of active members for a
+          group audience), so repeating it here would just be the same number
+          twice. A selected audience's headcount comes from the same counts
+          RPC as the submitted/approved tallies below, so it is withheld under
+          the same countsUnavailable flag rather than asserting a "0" the
+          server never actually said -- it is also the ONLY place that number
+          appears, so it stays here rather than moving to the row below.
+
+          Rendered on DRAFTS too, and that is not cosmetic: a draft really can
+          carry audience='selected' (a review whose publish failed after the
+          targets were written leaves one behind, which is why
+          handleSendToStudents warns about it), and until this line existed
+          the advisor was told "some tasks may already be set to selected
+          students" with nothing on screen saying which. The drafts tray then
+          published them to the hidden subset. group_assignment_counts covers
+          drafts as well as sent tasks, so targetCount is the real number
+          here. */}
+      <Text style={styles.label}>
+        {a.audience === 'selected'
+          ? (countsUnavailable
+            ? t('taskFlow.audienceSelected', 'Selected students')
+            : t('taskFlow.audienceSelectedCount', { count: counts.targetCount }))
+          : t('taskFlow.audienceWholeGroup', 'Whole group')}
+      </Text>
+      {!isDraft && (
+        /* approved and "sent back" are subsets of submitted, not further
+           buckets alongside it -- the parenthesis is what says so. The
+           denominator is who the task actually reached, not the group's
+           size -- see submittedOfTarget. */
+        <Text style={styles.subtle}>
+          {countsUnavailable ? (
+            t('advisor.assignmentCountsUnavailable')
+          ) : (
+            <>
+              {t('advisor.submittedOfCount', '{{value}} submitted', { value: submittedOfTarget(counts) })}
+              {' ('}
+              {t('advisor.approvedCount', { count: counts.approved })}
+              {', '}
+              {t('advisor.revisionCount', { count: counts.needsRevision })}
+              {')'}
+            </>
+          )}
+        </Text>
       )}
 
-      {!isDraft && (
-        <View style={styles.audienceActions}>
+      {/* On drafts too, for the same reason the line above is: seeing that a
+          draft is narrowed is worth little without a way to change it, and
+          set_assignment_targets works identically on a draft and on a
+          published assignment. NO CONFIRMATION on a draft, in either
+          direction -- nothing has ever been visible to anyone, so neither
+          dialog has anything to warn about. */}
+      <View style={styles.audienceActions}>
+        <TouchableOpacity accessibilityRole="button" disabled={retargeting}
+          accessibilityState={{ disabled: retargeting }} onPress={openTargetPicker}>
+          <Text style={[ui.link, retargeting && styles.linkDisabled]}>
+            {t('taskFlow.changeAudience', 'Change who this is for')}
+          </Text>
+        </TouchableOpacity>
+        {a.audience === 'selected' && (
           <TouchableOpacity accessibilityRole="button" disabled={retargeting}
-            accessibilityState={{ disabled: retargeting }} onPress={openTargetPicker}>
+            accessibilityState={{ disabled: retargeting }}
+            onPress={isDraft ? () => applyTargets([]) : confirmBackToGroup}>
             <Text style={[ui.link, retargeting && styles.linkDisabled]}>
-              {t('taskFlow.changeAudience', 'Change who this is for')}
+              {t('taskFlow.audienceBackToGroup', 'Send to the whole group')}
             </Text>
           </TouchableOpacity>
-          {a.audience === 'selected' && (
-            <TouchableOpacity accessibilityRole="button" disabled={retargeting}
-              accessibilityState={{ disabled: retargeting }} onPress={confirmBackToGroup}>
-              <Text style={[ui.link, retargeting && styles.linkDisabled]}>
-                {t('taskFlow.audienceBackToGroup', 'Send to the whole group')}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {retargeting && <ActivityIndicator size="small" color={colors.primary} />}
-        </View>
-      )}
+        )}
+        {retargeting && <ActivityIndicator size="small" color={colors.primary} />}
+      </View>
 
       {picking && (
         <TargetPicker visible groupId={a.groupId}
