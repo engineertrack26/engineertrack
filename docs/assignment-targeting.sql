@@ -82,6 +82,15 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION can_see_assignment(UUID) TO authenticated;
+-- Explicit, not left to docs/security-hardening-2026-09-20.sql's ALTER DEFAULT
+-- PRIVILEGES REVOKE ... FROM PUBLIC, anon. That net was meant to catch exactly
+-- this, and on this database it did not: verification found EXECUTE still
+-- granted to PUBLIC (and so to anon) on all six functions below. None of the
+-- six is exploitable that way -- each refuses an unauthenticated or
+-- non-owning caller on its own -- but it is a defence-in-depth gap this file
+-- introduced and every other file with a SECURITY DEFINER function closes
+-- explicitly. Do the same here rather than trust the default-privileges net.
+REVOKE EXECUTE ON FUNCTION can_see_assignment(UUID) FROM PUBLIC, anon;
 
 -- The mentor sees what THEIR student was given -- not every task in the group,
 -- which after targeting would mean showing them tasks their student never had.
@@ -110,6 +119,7 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION mentor_sees_assignment(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION mentor_sees_assignment(UUID) FROM PUBLIC, anon;
 
 -- ---- 4. The read policy ----
 -- Replaces the version in docs/assignment-drafts-migration.sql. The advisor's
@@ -272,6 +282,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION set_assignment_targets(UUID, UUID[]) TO authenticated;
+REVOKE EXECUTE ON FUNCTION set_assignment_targets(UUID, UUID[]) FROM PUBLIC, anon;
 
 -- ---- 7. publish_assignments: NEW HOME ----
 -- Body copied verbatim from docs/assignment-drafts-rpcs.sql, plus the
@@ -343,6 +354,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION publish_assignments(UUID[]) TO authenticated;
+REVOKE EXECUTE ON FUNCTION publish_assignments(UUID[]) FROM PUBLIC, anon;
 
 -- ---- 8. group_assignment_counts: NEW HOME, one column wider ----
 -- "2 submitted" means nothing without its denominator once a task can go to
@@ -376,6 +388,7 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION group_assignment_counts(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION group_assignment_counts(UUID) FROM PUBLIC, anon;
 
 -- ---- 9. The picker's level badges ----
 -- The purpose of targeting is level-based individualisation, so the picker has
@@ -427,6 +440,7 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION group_levels_for_competency(UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION group_levels_for_competency(UUID, UUID) FROM PUBLIC, anon;
 
 -- ---- 10. No stream card for a targeted task: NEW HOME of the trigger ----
 -- The card tells a group what it is all working on. A task given to two
