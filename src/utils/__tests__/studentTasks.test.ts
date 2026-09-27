@@ -2,7 +2,7 @@ import { filterTasks, isActionable, sortTasks, taskDueDate, taskState } from '..
 import type { MyAssignment, SubmissionStatus } from '@/types/assignment';
 
 function task(id: string, status?: SubmissionStatus, dueDate?: string): MyAssignment {
-  return { id, title: id, groupId: 'g', tripletId: 't', objective: 'o', criterion: 'c', createdAt: '', dueDate,
+  return { id, title: id, groupId: 'g', tripletId: 't', objective: 'o', criterion: 'c', createdAt: '', audience: 'group', dueDate,
     submission: status ? { id: 's', assignmentId: id, studentId: 'u', status, submittedAt: '' } : undefined };
 }
 describe('student task presentation', () => {

@@ -29,7 +29,7 @@ test('unknown/custom names are not guessed and empty names are safe', () => {
 
 test('Turkish search finds the competency without changing stored names', () => {
   const task = { id: 'a', groupId: 'g', tripletId: 't', title: 'Task', objective: '', criterion: '', createdAt: '',
-    competencyName: 'Professional Communication' };
+    audience: 'group' as const, competencyName: 'Professional Communication' };
   expect(filterTasks([task], 'all', 'mesleki iletişim', 'tr')).toEqual([task]);
   expect(filterTasks([task], 'all', 'Professional Communication', 'tr')).toEqual([task]);
   expect(task.competencyName).toBe('Professional Communication');

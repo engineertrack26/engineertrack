@@ -7,7 +7,9 @@ import type {
   KpiTriplet, GroupAssignment, MyAssignment, AssignmentSubmission,
   AssignmentCounts, PhotoEvidence, DocumentEvidence, SupervisionLevel,
 } from '@/types/assignment';
+import type { AssignmentAudience } from '@/types/assignment';
 import { toPhotoPayload, toDocumentPayload } from '@/utils/evidenceMapping';
+import type { StudentLevel } from '@/utils/assignmentTargets';
 
 /** The nested embed every assignment query asks for, so the three roles cannot
  *  drift on how a task's competency is resolved.
@@ -53,6 +55,9 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
     competencyName: competency.name,
     level: competency.level,
     publishedAt: (r.published_at as string) || undefined,
+    // Server default 'group'. The ?? also covers a row read by an old client
+    // path before the column existed -- which meant the whole group.
+    audience: (r.audience as AssignmentAudience) ?? 'group',
     documentPath: (r.document_path as string) || undefined,
     documentName: (r.document_name as string) || undefined,
     // documentUrl is deliberately left unset here -- it is a signed URL, and
@@ -309,6 +314,45 @@ export const assignmentService = {
       submitted: (r.submitted as number) ?? 0,
       approved: (r.approved as number) ?? 0,
       needsRevision: (r.needs_revision as number) ?? 0,
+      targetCount: (r.target_count as number) ?? 0,
+    }));
+  },
+
+  /** Sets the audience and the target rows in one call -- they are written
+   *  together server-side so they can never disagree. An empty array is how a
+   *  task goes back to the whole group. Returns the number of targets after
+   *  the call. See set_assignment_targets in docs/assignment-targeting.sql. */
+  async setAssignmentTargets(assignmentId: string, studentIds: string[]): Promise<number> {
+    const { data, error } = await supabase.rpc('set_assignment_targets', {
+      p_assignment_id: assignmentId,
+      p_student_ids: studentIds,
+    });
+    if (error) throw new RpcError(error.message);
+    return (data as number) ?? 0;
+  },
+
+  /** The current targets of one assignment. A plain select: assignment_targets
+   *  has a read policy for the group's advisor, and nobody else calls this. */
+  async listAssignmentTargets(assignmentId: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('assignment_targets')
+      .select('student_id')
+      .eq('assignment_id', assignmentId);
+    if (error) throw new RpcError(error.message);
+    return (data || []).map((r) => r.student_id as string);
+  },
+
+  /** Every member's level in one competency, for the target picker's badges.
+   *  One round-trip instead of get_competency_progress per student. */
+  async listGroupLevels(groupId: string, competencyId: string): Promise<StudentLevel[]> {
+    const { data, error } = await supabase.rpc('group_levels_for_competency', {
+      p_group_id: groupId,
+      p_competency_id: competencyId,
+    });
+    if (error) throw new RpcError(error.message);
+    return ((data as Record<string, unknown>[]) || []).map((r) => ({
+      studentId: (r.student_id as string) || '',
+      currentLevel: (r.current_level as number) ?? 0,
     }));
   },
 

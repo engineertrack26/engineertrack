@@ -3,7 +3,7 @@ import type { MyAssignment } from '@/types/assignment';
 
 const base = {
   groupId: 'g', tripletId: 't', title: 'T', objective: 'O',
-  criterion: 'C', createdAt: '2026-01-01',
+  criterion: 'C', createdAt: '2026-01-01', audience: 'group' as const,
 };
 
 function make(id: string, status?: 'submitted' | 'approved' | 'needs_revision'): MyAssignment {

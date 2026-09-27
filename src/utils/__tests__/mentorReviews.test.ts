@@ -2,7 +2,7 @@ import { filterReviews, PendingReview, reviewInitials, reviewNoteError, reviewSu
 
 function item(id: string, submittedAt: string, assignmentId = 'a1'): PendingReview {
   return { id, studentId: 'u-' + id, assignmentId, submittedAt, status: 'submitted',
-    assignment: { id: assignmentId, groupId: 'g', tripletId: 't', title: 'Devre ölçümü', objective: '', criterion: '', createdAt: '' } };
+    assignment: { id: assignmentId, groupId: 'g', tripletId: 't', title: 'Devre ölçümü', objective: '', criterion: '', createdAt: '', audience: 'group' } };
 }
 describe('mentor review presentation', () => {
   const earlier = item('1', '2026-09-11T10:00:00Z');

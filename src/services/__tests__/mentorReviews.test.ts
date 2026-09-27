@@ -9,7 +9,7 @@ jest.mock('../notifications', () => ({ notificationService: { create: jest.fn() 
 jest.mock('../supabase', () => ({ supabase: { from: jest.fn() } }));
 
 const item: PendingReview = { id: 's1', assignmentId: 'a1', studentId: 'u1', status: 'submitted', submittedAt: '2026-09-11',
-  assignment: { id: 'a1', groupId: 'g1', tripletId: 't1', title: 'T', objective: '', criterion: '', createdAt: '' } };
+  assignment: { id: 'a1', groupId: 'g1', tripletId: 't1', title: 'T', objective: '', criterion: '', createdAt: '', audience: 'group' } };
 const list = jest.mocked(assignmentService.listPendingReviews);
 const review = jest.mocked(assignmentService.reviewAssignment);
 const notify = jest.mocked(notificationService.create);

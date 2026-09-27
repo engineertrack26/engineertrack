@@ -98,7 +98,7 @@ describe('display/write separation', () => {
     expect(taskContentEdit(example[field], '', 'tr', field)).toBe('');
   });
   const assignment: MyAssignment = { id: 'a', groupId: 'g', tripletId: 't', title: example.task,
-    objective: example.objective, criterion: example.criterion, createdAt: '2026-09-18' };
+    objective: example.objective, criterion: example.criterion, createdAt: '2026-09-18', audience: 'group' };
   test('student search finds both Turkish display and English source without mutating records', () => {
     expect(filterTasks([assignment], 'all', taskContent(example.task, 'tr'), 'tr')).toEqual([assignment]);
     expect(filterTasks([assignment], 'all', example.task, 'tr')).toEqual([assignment]);

@@ -59,6 +59,9 @@ const ERROR_KEYS: Record<string, string> = {
   MENTOR_ALREADY_LINKED: 'errors.mentorAlreadyLinked',
   EVIDENCE_REQUIRED: 'errors.evidenceRequired',
   REFLECTION_TOO_SHORT: 'errors.reflectionTooShort',
+  NOT_TARGETED: 'errors.notTargeted',
+  TARGETS_REQUIRED: 'errors.targetsRequired',
+  HAS_SUBMISSION: 'errors.hasSubmission',
 };
 
 /**

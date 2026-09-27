@@ -21,6 +21,7 @@ function assignment(id: string, tripletId: string): GroupAssignment {
     objective: 'o',
     criterion: 'c',
     createdAt: '2026-09-08T00:00:00Z',
+    audience: 'group',
   };
 }
 

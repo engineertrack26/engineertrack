@@ -58,7 +58,7 @@ describe('local task drafts', () => {
     expect(() => store.remove('u1', '../a1')).toThrow('Invalid draft identity');
   });
   it('prefills revision work and fingerprints server changes, not signed URLs', () => {
-    const task: MyAssignment = { id: 'a1', groupId: 'g', tripletId: 't', title: 'T', objective: '', criterion: '', createdAt: '',
+    const task: MyAssignment = { id: 'a1', groupId: 'g', tripletId: 't', title: 'T', objective: '', criterion: '', createdAt: '', audience: 'group',
       submission: { id: 's1', assignmentId: 'a1', studentId: 'u1', status: 'needs_revision', submittedAt: '1', reviewedAt: '2',
         studentNote: draft.note, reflection: draft.reflection, photos: draft.photos, documents: draft.documents } };
     expect(submissionDraft(task)).toEqual(draft);

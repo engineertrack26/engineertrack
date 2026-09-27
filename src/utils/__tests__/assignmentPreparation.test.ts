@@ -11,7 +11,7 @@ function apiFixture() {
   const api = {
     findPreparedAssignment: jest.fn(async (id: string, _group: string, _owner: string) => records.get(id) || null),
     createAssignment: jest.fn(async (input: PreparedTask) => {
-      const row: GroupAssignment = { ...input, createdAt: '2026-09-13' };
+      const row: GroupAssignment = { ...input, createdAt: '2026-09-13', audience: 'group' };
       if (records.has(input.id)) throw new Error('duplicate');
       records.set(input.id, row);
       return row;
@@ -31,7 +31,7 @@ test('identities have UUID v4 shape', () => {
 });
 
 test('final preflight rejects deleted or changed rows, but ignores unrelated drafts and signed URLs', () => {
-  const row: GroupAssignment = { ...task('a'), createdAt: 'now' };
+  const row: GroupAssignment = { ...task('a'), createdAt: 'now', audience: 'group' };
   expect(reviewedAssignmentsMatch([row], [])).toBe(false);
   expect(reviewedAssignmentsMatch([], [row])).toBe(false);
   expect(reviewedAssignmentsMatch([row], [{ ...row, criterion: 'Different' }])).toBe(false);
@@ -41,7 +41,7 @@ test('final preflight rejects deleted or changed rows, but ignores unrelated dra
 
 test('prepares only the selected tasks and retains edited content and date', async () => {
   const { api, records } = apiFixture();
-  records.set('unrelated', { ...task('unrelated'), createdAt: 'yesterday' });
+  records.set('unrelated', { ...task('unrelated'), createdAt: 'yesterday', audience: 'group' });
   const edited = { ...task('a'), title: 'Edited', description: 'Instructions', dueDate: '2026-10-01' };
   const rows = await prepareAssignments([edited, task('b')], api);
   expect(rows.map((r) => r.id)).toEqual(['a', 'b']);
@@ -61,7 +61,7 @@ test('recovers a committed insert whose response was lost without duplicating it
   const { api, records } = apiFixture();
   const input = task('a');
   api.createAssignment.mockImplementationOnce(async (value) => {
-    records.set(value.id, { ...value, createdAt: 'today' });
+    records.set(value.id, { ...value, createdAt: 'today', audience: 'group' });
     throw new Error('response lost');
   });
   await expect(prepareAssignments([input], api)).rejects.toThrow('response lost');
@@ -112,7 +112,7 @@ test('refuses to overwrite content edited in another session', async () => {
 
 test('refuses to attach a missing document to a concurrently published task', async () => {
   const { api, records } = apiFixture();
-  records.set('a', { ...task('a'), createdAt: 'today', publishedAt: 'now' });
+  records.set('a', { ...task('a'), createdAt: 'today', publishedAt: 'now', audience: 'group' });
   await expect(prepareAssignments([{ ...task('a'), document: { uri: 'file://a', name: 'a.pdf', mimeType: 'pdf' } }], api))
     .rejects.toThrow('PREPARED_TASK_CHANGED');
   expect(api.uploadAssignmentDocument).not.toHaveBeenCalled();

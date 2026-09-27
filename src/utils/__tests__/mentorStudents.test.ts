@@ -25,7 +25,7 @@ describe('mentor student presentation', () => {
   });
   it('filters by student ID, not a shared display name, while preserving assignment filters', () => {
     const item = (id: string, studentId: string, assignmentId: string): PendingReview => ({ id, studentId, assignmentId,
-      status: 'submitted', submittedAt: '2026-09-01', assignment: { id: assignmentId, title: 'Task', groupId: 'g', tripletId: 't', objective: '', criterion: '', createdAt: '' } });
+      status: 'submitted', submittedAt: '2026-09-01', assignment: { id: assignmentId, title: 'Task', groupId: 'g', tripletId: 't', objective: '', criterion: '', createdAt: '', audience: 'group' } });
     const rows = [item('1', 's1', 'a1'), item('2', 's2', 'a1'), item('3', 's1', 'a2')];
     expect(filterReviews(rows, { s1: 'Same Name', s2: 'Same Name' }, '', 'oldest', 'en', '', 's1').map(row => row.id)).toEqual(['1', '3']);
     expect(filterReviews(rows, {}, '', 'oldest', 'en', 'a1', 's1').map(row => row.id)).toEqual(['1']);

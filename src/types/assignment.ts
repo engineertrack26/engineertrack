@@ -15,6 +15,13 @@ export interface KpiTriplet {
 
 export type SubmissionStatus = 'submitted' | 'approved' | 'needs_revision';
 
+/** Who a task was given to. 'group' is every active member, now and later --
+ *  a student who joins next week sees it too. 'selected' is exactly the rows
+ *  in assignment_targets. Explicit rather than "no target rows means
+ *  everyone", so that losing the rows hides the task instead of broadcasting
+ *  it: see the 2026-09-26 spec. */
+export type AssignmentAudience = 'group' | 'selected';
+
 export interface GroupAssignment {
   id: string;
   groupId: string;
@@ -37,6 +44,9 @@ export interface GroupAssignment {
    *  it must not move it again -- it is the record of when students first
    *  saw the task. */
   publishedAt?: string;
+  /** Server default 'group'; a row read before the column existed reads as
+   *  'group' too, which is what it was. */
+  audience: AssignmentAudience;
   /** The storage path in the private assignment-docs bucket, not a URL --
    *  the same shape submission evidence already uses and for the same
    *  reason. */
@@ -84,6 +94,11 @@ export interface AssignmentCounts {
   submitted: number;
   approved: number;
   needsRevision: number;
+  /** How many people were given this task: the group's active member count
+   *  for a group audience, the number of target rows for a selected one. 0
+   *  only when the group is empty -- the card then shows a bare number rather
+   *  than a denominator of zero. */
+  targetCount: number;
 }
 
 /** An assignment as one student sees it: the task plus their own state, which
