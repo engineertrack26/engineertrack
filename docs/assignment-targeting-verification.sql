@@ -910,6 +910,16 @@ ROLLBACK;
 -- against a synthetic path with no row inserted at all, so they are
 -- unconditional and are the floor beneath D1a-D1c when those SKIP.
 --
+-- READ D1a, D1b AND D1c AS ONE SET, never D1a alone. D1a's claim is "the
+-- untargeted member reads 0 rows", which is also exactly what EVERYONE reads
+-- if the claims object or the fixture is broken -- an absent or malformed
+-- 'role' key on request.jwt.claims makes auth.role() NULL, which makes the
+-- whole assignment_docs_read USING clause NULL, which refuses the target and
+-- the owning advisor along with the untargeted member. A D1a PASS sitting
+-- next to a D1b or D1c FAIL means exactly that: the fixture or the claims are
+-- wrong, not that the policy is right. This happened once already -- see the
+-- comment above D1a's BEGIN block.
+--
 -- Same shape as Parts B and C: one owner-run DO block that builds the
 -- fixtures and runs everything needing SECURITY DEFINER reach, then
 -- SET LOCAL ROLE authenticated for the checks that are only meaningful when
@@ -1260,6 +1270,27 @@ BEGIN
     -- probe.results; say nothing more here. D1d-D1f below still run.
     NULL;
   ELSE
+    -- D1a-D1c all need 'role': 'authenticated' alongside 'sub' in the claims
+    -- object, and this is the one place in this file that tests a POLICY
+    -- ON storage.objects rather than a table policy or a plpgsql predicate.
+    -- assignment_docs_read requires auth.role() = 'authenticated'
+    -- (docs/assignment-targeting-followups.sql:74); auth.role() reads the
+    -- 'role' key of this same request.jwt.claims GUC and has NOTHING to do
+    -- with the Postgres role SET LOCAL ROLE changed above. Every other
+    -- set_config('request.jwt.claims', ...) call in this file impersonates a
+    -- caller only for auth.uid() (a table policy, or can_see_assignment /
+    -- mentor_sees_assignment / owns_group, all of which read only 'sub') and
+    -- correctly carries 'sub' alone. Live evidence of what omitting it does:
+    -- a first run of this file with 'sub' alone gave D1a PASS (0 rows) and
+    -- D1b/D1c FAIL (0 rows, expected 1) -- not because the policy was wrong,
+    -- but because auth.role() was NULL for everybody, the whole USING clause
+    -- was NULL, and NOBODY -- including the advisor -- could read the row.
+    -- D1a's PASS there was vacuous: it read 0 for the wrong reason. This is
+    -- exactly the trap docs/assignment-drafts-verification.sql:470-477
+    -- documents and docs/assignment-drafts-verification.sql:482 shows the fix
+    -- for; D1a, D1b and D1c must be read as a set for the same reason C1-C3
+    -- are there: D1a alone proves nothing.
+    --
     -- D1a: an ACTIVE member of the group who was never named. Before the fix
     -- this returned the row: the old policy asked only "is the reader a
     -- member of the group in path segment 1, and is the assignment
@@ -1268,7 +1299,7 @@ BEGIN
     -- judgement about someone else's level.
     BEGIN
       PERFORM set_config('request.jwt.claims',
-        json_build_object('sub', current_setting('probe.d_other'))::text, true);
+        json_build_object('sub', current_setting('probe.d_other'), 'role', 'authenticated')::text, true);
       SELECT count(*)::INT INTO v_cnt FROM storage.objects
       WHERE bucket_id = 'assignment-docs' AND name = v_object;
       IF v_cnt = 0 THEN
@@ -1287,7 +1318,7 @@ BEGIN
     -- the fix narrowed the policy and did not simply close it.
     BEGIN
       PERFORM set_config('request.jwt.claims',
-        json_build_object('sub', current_setting('probe.d_target'))::text, true);
+        json_build_object('sub', current_setting('probe.d_target'), 'role', 'authenticated')::text, true);
       SELECT count(*)::INT INTO v_cnt FROM storage.objects
       WHERE bucket_id = 'assignment-docs' AND name = v_object;
       IF v_cnt = 1 THEN
@@ -1307,7 +1338,7 @@ BEGIN
     -- goes red, no advisor can open any task brief anywhere in the product.
     BEGIN
       PERFORM set_config('request.jwt.claims',
-        json_build_object('sub', current_setting('probe.d_advisor'))::text, true);
+        json_build_object('sub', current_setting('probe.d_advisor'), 'role', 'authenticated')::text, true);
       SELECT count(*)::INT INTO v_cnt FROM storage.objects
       WHERE bucket_id = 'assignment-docs' AND name = v_object;
       IF v_cnt = 1 THEN
