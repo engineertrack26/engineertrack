@@ -1,6 +1,8 @@
 -- Detailed, read-only group export. Run after the group, assignment and
--- internship-days and internship-closure migrations. Archived groups remain
--- readable by their owner.
+-- internship-days, internship-closure and assignment-targeting migrations.
+-- Archived groups remain readable by their owner. Re-run this file after
+-- installing assignment targeting to update the existing RPC; it changes no
+-- tables or data.
 BEGIN;
 CREATE OR REPLACE FUNCTION public.advisor_group_export(p_group_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
@@ -13,6 +15,7 @@ BEGIN
     RAISE EXCEPTION 'REPORT_FORBIDDEN' USING ERRCODE = '42501';
   END IF;
   RETURN jsonb_build_object(
+    'exportVersion', 2,
     'groupId', v_group.id, 'groupName', v_group.name,
     'term', v_group.term, 'archived', v_group.is_archived,
     'students', (SELECT coalesce(jsonb_agg(jsonb_build_object(
@@ -33,6 +36,7 @@ BEGIN
     'tasks', (SELECT coalesce(jsonb_agg(jsonb_build_object(
       'taskId', a.id, 'title', a.title, 'objective', a.objective,
       'criterion', a.criterion, 'description', a.description,
+      'audience', a.audience,
       'dueDate', a.due_date, 'publishedAt', a.published_at
     ) ORDER BY a.published_at, a.id), '[]'::jsonb)
       FROM public.group_assignments a
@@ -45,9 +49,19 @@ BEGIN
       'reviewerLevel', s.mentor_level
     ) ORDER BY m.student_id, a.published_at, a.id), '[]'::jsonb)
       FROM (SELECT DISTINCT student_id FROM public.group_memberships WHERE group_id = p_group_id) m
-      CROSS JOIN public.group_assignments a
+      JOIN public.group_assignments a ON a.group_id = p_group_id
       LEFT JOIN public.assignment_submissions s ON s.assignment_id = a.id AND s.student_id = m.student_id
-      WHERE a.group_id = p_group_id AND a.published_at IS NOT NULL
+      WHERE a.published_at IS NOT NULL
+        AND (s.id IS NOT NULL OR (
+          -- Students who joined later inherit earlier group tasks, but a
+          -- former member must not inherit tasks published after they left.
+          EXISTS (SELECT 1 FROM public.group_memberships gm
+                  WHERE gm.group_id = p_group_id AND gm.student_id = m.student_id
+                    AND (gm.left_at IS NULL OR a.published_at <= gm.left_at))
+          AND (a.audience = 'group' OR (a.audience = 'selected' AND
+            EXISTS (SELECT 1 FROM public.assignment_targets tg
+                    WHERE tg.assignment_id = a.id AND tg.student_id = m.student_id)))
+        ))
     ),
     'attendanceTotals', (public.internship_group_attendance(p_group_id)->'students'),
     'days', (SELECT coalesce(jsonb_agg(jsonb_build_object(

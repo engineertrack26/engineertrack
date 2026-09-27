@@ -4,11 +4,11 @@ import type { GroupExport } from '@/services/advisorGroupExport';
 import { groupExportCsv } from '../groupExportCsv';
 
 const sample: GroupExport = {
-  groupId: 'group-1', groupName: '2026, Staj', term: 'Güz', archived: true,
+  exportVersion: 2, groupId: 'group-1', groupName: '2026, Staj', term: 'Güz', archived: true,
   students: [{ studentId: 'student-1', name: 'İpek Yılmaz', joinedAt: '2026-01-01', leftAt: '2026-06-01' }],
   competencies: [{ studentId: 'student-1', name: 'Technical Documentation', targetLevel: 3, reachedLevel: 2 }],
   tasks: [{ taskId: 'task-1', title: 'Custom task', objective: 'Custom objective', criterion: 'Custom criterion',
-    description: null, dueDate: null, publishedAt: '2026-01-02' }],
+    description: null, audience: 'selected', dueDate: null, publishedAt: '2026-01-02' }],
   submissions: [{ taskId: 'task-1', studentId: 'student-1', status: 'approved', submittedAt: '2026-01-04',
     reviewedAt: '2026-01-05', studentNote: '=1+1', reflection: 'İlk satır\nİkinci satır, "alıntı"',
     reviewerNote: null, selfLevel: 0, reviewerLevel: 3 }],
@@ -31,6 +31,7 @@ test('archived group CSV includes former student, task result, attendance and su
   expect(csv).toContain('"İlk satır\nİkinci satır, ""alıntı"""');
   expect(csv).toContain("'=1+1");
   expect(csv).toContain('İpek Yılmaz');
+  expect(csv).toContain('Seçili öğrenciler');
   expect(csv).toContain(',0,3');
   expect(csv).not.toContain('undefined');
 });

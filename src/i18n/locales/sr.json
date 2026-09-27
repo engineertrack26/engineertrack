@@ -292,7 +292,8 @@
     "sort_name": "Po imenu",
     "sort_progress": "Napredak: rastuće",
     "exportHint": "Deljenje CSV-a uključuje ceo izveštaj izabrane grupe, bez obzira na pretragu i sortiranje.",
-    "export": "Podeli izveštaj grupe (CSV)"
+    "export": "Podeli izveštaj grupe (CSV)",
+    "exportUpdateRequired": "Podaci izveštaja moraju da se ažuriraju. Zamolite vlasnika projekta da primeni najnoviju SQL migraciju za izveštaj savetnika."
   },
   "advisorMonitor": {
     "groupHint": "Pronađite članove grupe i upravljajte njima. Napredak kompetencija pogledajte u izveštajima grupe.",

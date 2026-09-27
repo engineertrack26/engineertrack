@@ -292,15 +292,16 @@
     "sort_name": "By name",
     "sort_progress": "Progress: low to high",
     "exportHint": "Download a CSV of all current and former group members, published tasks, submission results, attendance and submitted journal text. Search and sorting do not affect it.",
-    "export": "Download group report (CSV)"
+    "export": "Download group report (CSV)",
+    "exportUpdateRequired": "The report data needs an update. Ask the project owner to apply the latest advisor report SQL migration."
   },
   "advisorExport": {
     "group": "Group", "term": "Term", "archived": "Archived", "yes": "Yes", "no": "No",
     "exportedAt": "Exported at (UTC)",
-    "scopeNote": "Includes current and former group members. Journal drafts and attachment files are not included. Blank values mean no record; a missing day is not absence.",
+    "scopeNote": "Includes current and former group members. 'Not started' appears only for eligible task recipients; selected-task targets reflect the current list because earlier target-list changes are not archived. Journal drafts and attachment files are excluded. A missing day is not absence.",
     "students": "STUDENTS", "studentId": "Student ID", "student": "Student", "joinedAt": "Joined at", "leftAt": "Left at",
     "competencies": "COMPETENCY LEVELS", "competency": "Competency", "targetLevel": "Target level", "reachedLevel": "Reached level",
-    "tasks": "PUBLISHED TASKS", "taskId": "Task ID", "title": "Task", "objective": "Learning outcome", "criterion": "Assessment criterion", "description": "Description", "dueDate": "Due date", "publishedAt": "Published at",
+    "tasks": "PUBLISHED TASKS", "taskId": "Task ID", "title": "Task", "objective": "Learning outcome", "criterion": "Assessment criterion", "description": "Description", "audience": "Audience", "audience_group": "Whole group", "audience_selected": "Selected students", "dueDate": "Due date", "publishedAt": "Published at",
     "submissions": "TASK RESULTS", "status": "Status", "submittedAt": "Submitted at", "reviewedAt": "Reviewed at", "studentNote": "Student note", "reflection": "Self-reflection", "reviewerNote": "Reviewer note", "selfLevel": "Self rating", "reviewerLevel": "Reviewer rating",
     "status_submitted": "Awaiting review", "status_approved": "Approved", "status_needs_revision": "Revision requested", "status_not_started": "Not started",
     "attendanceTotals": "ATTENDANCE TOTALS", "mentor": "Mentor", "expectedDays": "Working days in internship", "expectedSoFar": "Working days so far", "recorded": "Recorded days", "unrecorded": "Days without a record", "corrections": "Corrections requested", "submittedLogs": "Journals submitted",

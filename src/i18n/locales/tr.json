@@ -336,15 +336,16 @@
     "sort_name": "Ada göre",
     "sort_progress": "İlerleme: düşükten yükseğe",
     "exportHint": "Mevcut ve ayrılmış grup üyelerinin görev sonuçlarını, devam kayıtlarını ve gönderilmiş günlük metinlerini CSV dosyası olarak kaydedin. Arama ve sıralama dosyayı etkilemez.",
-    "export": "Grup raporunu indir (CSV)"
+    "export": "Grup raporunu indir (CSV)",
+    "exportUpdateRequired": "Rapor verisinin güncellenmesi gerekiyor. Proje sahibinden en güncel danışman raporu SQL değişikliğini uygulamasını isteyin."
   },
   "advisorExport": {
     "group": "Grup", "term": "Dönem", "archived": "Arşivlendi", "yes": "Evet", "no": "Hayır",
     "exportedAt": "Dışa aktarma zamanı (UTC)",
-    "scopeNote": "Mevcut ve ayrılmış grup üyelerini içerir. Günlük taslakları ve ek dosyalar dahil değildir. Boş alan kayıtsızdır; günü kayıtsız olmak devamsızlık anlamına gelmez.",
+    "scopeNote": "Mevcut ve ayrılmış grup üyelerini içerir. 'Başlanmadı' yalnızca görevin uygun alıcıları için gösterilir; seçili görevlerde güncel hedef listesi esas alınır, önceki liste değişiklikleri arşivlenmez. Günlük taslakları ve ek dosyalar dahil değildir. Kayıtsız gün devamsızlık anlamına gelmez.",
     "students": "ÖĞRENCİLER", "studentId": "Öğrenci kimliği", "student": "Öğrenci", "joinedAt": "Katılım zamanı", "leftAt": "Ayrılma zamanı",
     "competencies": "YETKİNLİK DÜZEYLERİ", "competency": "Yetkinlik", "targetLevel": "Hedef seviye", "reachedLevel": "Ulaşılan seviye",
-    "tasks": "YAYIMLANAN GÖREVLER", "taskId": "Görev kimliği", "title": "Görev", "objective": "Kazanım", "criterion": "Değerlendirme kriteri", "description": "Açıklama", "dueDate": "Son teslim tarihi", "publishedAt": "Yayımlanma zamanı",
+    "tasks": "YAYIMLANAN GÖREVLER", "taskId": "Görev kimliği", "title": "Görev", "objective": "Kazanım", "criterion": "Değerlendirme kriteri", "description": "Açıklama", "audience": "Hedef kitle", "audience_group": "Tüm grup", "audience_selected": "Seçili öğrenciler", "dueDate": "Son teslim tarihi", "publishedAt": "Yayımlanma zamanı",
     "submissions": "GÖREV SONUÇLARI", "status": "Durum", "submittedAt": "Gönderim zamanı", "reviewedAt": "Değerlendirme zamanı", "studentNote": "Öğrenci notu", "reflection": "Özdeğerlendirme", "reviewerNote": "Değerlendirenin notu", "selfLevel": "Öğrenci puanı", "reviewerLevel": "Değerlendirenin puanı",
     "status_submitted": "Değerlendirme bekliyor", "status_approved": "Onaylandı", "status_needs_revision": "Düzeltme istendi", "status_not_started": "Başlanmadı",
     "attendanceTotals": "DEVAM ÖZETİ", "mentor": "Mentör", "expectedDays": "Stajdaki iş günü", "expectedSoFar": "Şimdiye kadarki iş günü", "recorded": "Kayıtlı gün", "unrecorded": "Kayıtsız gün", "corrections": "Düzeltme talebi", "submittedLogs": "Gönderilen günlük",
