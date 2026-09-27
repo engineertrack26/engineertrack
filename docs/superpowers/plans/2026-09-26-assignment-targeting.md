@@ -1650,6 +1650,20 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   `assignmentService.listAssignmentTargets`, `setAssignmentTargets`.
 - Produces: nothing further.
 
+**Do this first — the counts type is duplicated three ways.** Task 3's review
+confirmed it: `src/components/cards/AssignmentCard.tsx:17-21` declares its own
+narrower `interface AssignmentCounts { submitted, approved, needsRevision }`,
+`app/(advisor)/group-assignments.tsx:42-45` declares a second copy as
+`type SubmissionCounts`, and `group-assignments.tsx:158-165` **actively drops**
+`c.targetCount` when it builds `byAssignment`. Nothing here can render "2 / 3"
+until all three agree.
+
+So before any UI work: delete both local declarations, import
+`AssignmentCounts` from `@/types/assignment` in both files, and stop dropping
+`targetCount` in the mapper. `tsc` will then name every literal that needs the
+new field — including the `ZERO_COUNTS` constant, which Task 3 correctly left
+alone because the duplicate types meant the compiler never asked for it.
+
 - [ ] **Step 1: Show the audience on the card**
 
 `AssignmentCard` already takes `counts`, `countsUnavailable` and `memberCount`.
