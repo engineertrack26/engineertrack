@@ -5,6 +5,10 @@
 > this document says the mentor reviews, approves or is attributed an
 > observation (§3 in particular), read "advisor"; the mechanism it describes is
 > unchanged and still built. Everything else here stands.
+>
+> **Amended again on 2026-09-26** by
+> `2026-09-26-assignment-targeting-design.md`: an assignment no longer
+> necessarily belongs to every member of its group.
 
 Date: 2026-08-20
 Status: approved for planning
