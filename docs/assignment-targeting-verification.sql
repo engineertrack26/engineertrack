@@ -21,6 +21,10 @@
 -- PART C is the only real RLS test: SET LOCAL ROLE authenticated, which is
 -- what actually makes a policy evaluate (see the note in
 -- docs/review-by-advisor-verification.sql).
+-- PART D covers docs/assignment-targeting-followups.sql -- the storage read
+-- policy, the closure report, the departed-submitter exemption, target_count
+-- and the audience-desync trigger. It mixes both styles: an owner-run block
+-- and then a SET LOCAL ROLE authenticated block that continues the same log.
 --
 -- Parts B and C accumulate PASS/FAIL lines into a v_log and publish it through
 -- set_config('probe.results', ...) because the editor hides NOTICE and shows
@@ -864,6 +868,423 @@ BEGIN
       v_log := v_log || 'PASS C6: the advisor''s DELETE was refused outright with 42501 (no table grant)' || chr(10);
     WHEN OTHERS THEN
       v_log := v_log || 'FAIL C6: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  PERFORM set_config('probe.results', v_log, true);
+END $$;
+
+-- Back to the owner before anything reads the results, so a failure in the
+-- SELECT below cannot be blamed on the role change (house pattern, see
+-- docs/task-assignment-verification.sql Part C).
+RESET ROLE;
+
+SELECT btrim(line) AS result
+FROM regexp_split_to_table(current_setting('probe.results'), chr(10)) AS line
+WHERE btrim(line) <> '';
+
+ROLLBACK;
+
+
+-- ============================================================
+-- PART D -- the 2026-09-27 follow-ups (docs/assignment-targeting-followups.sql).
+-- Run this whole block alone. Expect 11 rows: D0, D1a, D1b, D1c, D2, D3a, D3b,
+-- D4a, D4b, D5a, D5b. D1a-D1c read SKIP on a database where this session
+-- cannot write storage.objects (see the fixture note) -- D0 still proves the
+-- policy was replaced in that case.
+--
+-- Same shape as Parts B and C: one owner-run DO block that builds the
+-- fixtures and runs everything needing SECURITY DEFINER reach, then
+-- SET LOCAL ROLE authenticated for the three checks that are only meaningful
+-- when a policy actually evaluates, then RESET ROLE and one SELECT. The
+-- second block CONTINUES the first one's v_log rather than replacing it.
+-- Nothing is kept: the transaction rolls back.
+--
+-- The checks are stateful and build on each other, so the order is
+-- load-bearing: D3b is what makes s3 a DEPARTED member, and D4a and D5
+-- depend on that having happened.
+-- ============================================================
+
+BEGIN;
+
+DO $$
+DECLARE
+  v_log        TEXT := '';
+  g            UUID;
+  advisor      UUID;
+  s1           UUID;   -- the target, and the student D2 reports on
+  s2           UUID;   -- an active member who is never targeted
+  s3           UUID;   -- a target who submits and then leaves the group
+  v_triplet    UUID;
+  v_comp       UUID;
+  a_group      UUID;   -- group audience, published
+  a_sel        UUID;   -- selected audience, published, targets {s1, s3}
+  a_cnt        UUID;   -- selected audience, published, targets {s1, s3}, for D4/D5
+  v_mem_id     UUID;
+  v_qual       TEXT;
+  v_title_sel  TEXT := 'PROBE followups: selected task';
+  v_title_grp  TEXT := 'PROBE followups: group task';
+  v_rep_target TEXT;
+  v_rep_other  TEXT;
+  v_object     TEXT;
+  v_audience   TEXT;
+  v_members    INT;
+  v_rows       INT;
+  v_tc_sel     INT;
+  v_tc_grp     INT;
+  n            INT;
+BEGIN
+  -- ---- Setup. Deliberately unguarded, except the storage row (see below):
+  -- ---- if the fixtures cannot be built, no check means anything.
+  SELECT ig.id, ig.advisor_id INTO g, advisor
+  FROM internship_groups ig WHERE ig.join_code = '58MMWL';
+
+  IF g IS NULL THEN
+    PERFORM set_config('probe.results',
+      'FAIL setup: no internship_groups row with join_code 58MMWL' || chr(10), true);
+    PERFORM set_config('probe.d_object', '', true);
+    RETURN;
+  END IF;
+
+  -- Three distinct active members with an OPEN internship: submit_assignment
+  -- refuses a closed one with INTERNSHIP_CLOSED long before D3a's guard.
+  SELECT m.student_id INTO s1 FROM group_memberships m
+  WHERE m.group_id = g AND m.left_at IS NULL AND NOT internship_closed(m.student_id, g)
+  ORDER BY m.joined_at, m.student_id OFFSET 0 LIMIT 1;
+  SELECT m.student_id INTO s2 FROM group_memberships m
+  WHERE m.group_id = g AND m.left_at IS NULL AND NOT internship_closed(m.student_id, g)
+  ORDER BY m.joined_at, m.student_id OFFSET 1 LIMIT 1;
+  SELECT m.student_id INTO s3 FROM group_memberships m
+  WHERE m.group_id = g AND m.left_at IS NULL AND NOT internship_closed(m.student_id, g)
+  ORDER BY m.joined_at, m.student_id OFFSET 2 LIMIT 1;
+
+  IF s3 IS NULL THEN
+    PERFORM set_config('probe.results',
+      'FAIL setup: 58MMWL has fewer than three active members with an open internship' || chr(10), true);
+    PERFORM set_config('probe.d_object', '', true);
+    RETURN;
+  END IF;
+
+  SELECT t.id, k.competency_id INTO v_triplet, v_comp
+  FROM kpi_triplets t
+  JOIN competency_kpis k ON k.id = t.kpi_id
+  ORDER BY k.competency_id, t.id
+  LIMIT 1;
+
+  INSERT INTO group_competency_targets (group_id, competency_id, target_level)
+  VALUES (g, v_comp, 4)
+  ON CONFLICT (group_id, competency_id) DO NOTHING;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT g, t.id, v_title_grp, t.objective, t.criterion, advisor
+  FROM kpi_triplets t WHERE t.id = v_triplet
+  RETURNING id INTO a_group;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT g, t.id, v_title_sel, t.objective, t.criterion, advisor
+  FROM kpi_triplets t WHERE t.id = v_triplet
+  RETURNING id INTO a_sel;
+
+  INSERT INTO group_assignments (group_id, triplet_id, title, objective, criterion, created_by)
+  SELECT g, t.id, 'PROBE followups: counting task', t.objective, t.criterion, advisor
+  FROM kpi_triplets t WHERE t.id = v_triplet
+  RETURNING id INTO a_cnt;
+
+  -- Every RPC below reads auth.uid(); without this they all raise
+  -- NOT_AUTHENTICATED.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', advisor)::text, true);
+
+  PERFORM publish_assignments(ARRAY[a_group]);
+  n := set_assignment_targets(a_sel, ARRAY[s1, s3]);
+  PERFORM publish_assignments(ARRAY[a_sel]);
+  n := set_assignment_targets(a_cnt, ARRAY[s1, s3]);
+  PERFORM publish_assignments(ARRAY[a_cnt]);
+
+  -- ---- D0: the storage policy was actually replaced ----
+  -- Structural, and the one check that still says something when this session
+  -- cannot write storage.objects. It is not a substitute for D1a-D1c: it
+  -- proves the policy's text, not that the policy is evaluated. The absence
+  -- of is_member_of_group is as load-bearing as the presence of the two
+  -- predicates -- that clause IS the hole, and a half-applied file would
+  -- leave it beside them.
+  BEGIN
+    SELECT pg_get_expr(pol.polqual, pol.polrelid) INTO v_qual
+    FROM pg_policy pol
+    JOIN pg_class c ON c.oid = pol.polrelid
+    JOIN pg_namespace ns ON ns.oid = c.relnamespace
+    WHERE ns.nspname = 'storage' AND c.relname = 'objects'
+      AND pol.polname = 'assignment_docs_read';
+
+    IF v_qual IS NULL THEN
+      v_log := v_log || 'FAIL D0: no assignment_docs_read policy on storage.objects at all' || chr(10);
+    ELSIF position('can_see_assignment' in v_qual) > 0
+      AND position('mentor_sees_assignment' in v_qual) > 0
+      AND position('is_member_of_group' in v_qual) = 0 THEN
+      v_log := v_log || 'PASS D0: assignment_docs_read routes through can_see_assignment and mentor_sees_assignment, and no longer through is_member_of_group' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D0: assignment_docs_read still reads: ' || v_qual || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D0: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- ---- D2: the closure report lists only the tasks this student was given ----
+  -- Both halves in one line, because either alone would be satisfied by a
+  -- wrong fix: omitting the targeted task from EVERY report (an empty Tasks
+  -- table) would pass the first half, and the second half is what says the
+  -- group task is still there for both of them.
+  BEGIN
+    v_rep_target := build_internship_report(s1, g);
+    v_rep_other  := build_internship_report(s2, g);
+
+    IF position(v_title_sel in v_rep_target) > 0
+      AND position(v_title_sel in v_rep_other) = 0
+      AND position(v_title_grp in v_rep_target) > 0
+      AND position(v_title_grp in v_rep_other) > 0 THEN
+      v_log := v_log || 'PASS D2: the targeted task is on its target''s report and not on the untargeted member''s, and the group task is on both' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D2: target report has selected task='
+                      || (position(v_title_sel in v_rep_target) > 0)::text
+                      || ' (expected true), other report has selected task='
+                      || (position(v_title_sel in v_rep_other) > 0)::text
+                      || ' (expected false), target report has group task='
+                      || (position(v_title_grp in v_rep_target) > 0)::text
+                      || ', other report has group task='
+                      || (position(v_title_grp in v_rep_other) > 0)::text || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D2: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- ---- The storage fixture for D1a-D1c ----
+  -- GUARDED, unlike every other fixture in this file, and deliberately so:
+  -- it is the only one that writes outside the public schema, and a session
+  -- without rights on storage.objects is an environment fact rather than a
+  -- defect in the policy under test. Failing here must leave D2..D5 standing.
+  -- The path is the real one the uploader writes,
+  -- <groupId>/<assignmentId>/<file>, which is the whole reason a storage
+  -- policy can decide anything here at all.
+  v_object := g::text || '/' || a_sel::text || '/probe-brief.pdf';
+  BEGIN
+    INSERT INTO storage.objects (bucket_id, name, owner, metadata)
+    VALUES ('assignment-docs', v_object, advisor, '{"mimetype":"application/pdf"}'::jsonb);
+    PERFORM set_config('probe.d_object', v_object, true);
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('probe.d_object', '', true);
+    v_log := v_log || 'SKIP D1: could not create a storage.objects fixture ('
+                    || SQLERRM || ') -- D0 still covers the policy text' || chr(10);
+  END;
+
+  PERFORM set_config('probe.d_target',  s1::text, true);
+  PERFORM set_config('probe.d_other',   s2::text, true);
+  PERFORM set_config('probe.d_advisor', advisor::text, true);
+
+  -- ---- D3a: an ACTIVE submitter still cannot be dropped ----
+  -- The half of HAS_SUBMISSION that must NOT have been weakened. s3 submits
+  -- to a_sel, then the advisor tries to narrow it to {s1} alone.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', s3)::text, true);
+  BEGIN
+    PERFORM submit_assignment(a_sel, 'probe',
+      'Probe reflection for the departed-submitter checks, comfortably over twenty characters.',
+      '[]'::jsonb,
+      '[{"uri":"probe","file_name":"evidence.pdf","file_type":"application/pdf"}]'::jsonb,
+      2::SMALLINT);
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D3 setup: the target could not submit: ' || SQLERRM || chr(10);
+  END;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', advisor)::text, true);
+  BEGIN
+    n := set_assignment_targets(a_sel, ARRAY[s1]);
+    v_log := v_log || 'FAIL D3a: dropping an ACTIVE student who submitted returned '
+                    || coalesce(n::text, '<null>') || ', expected HAS_SUBMISSION' || chr(10);
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'HAS_SUBMISSION' THEN
+      v_log := v_log || 'PASS D3a: dropping an active student who submitted still raises HAS_SUBMISSION' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D3a: refused with ' || SQLERRM || ', expected HAS_SUBMISSION' || chr(10);
+    END IF;
+  END;
+
+  -- ---- D3b: a DEPARTED submitter no longer deadlocks the assignment ----
+  -- The id is captured rather than matched on (group_id, student_id): a
+  -- student can hold older, already-closed memberships in the same group.
+  -- Leaving also fires trg_dm_membership_closed -- rolled back with the rest.
+  -- Before the fix both directions were refused: naming s3 raises
+  -- STUDENT_NOT_IN_GROUP (targets must be active), leaving them out raised
+  -- HAS_SUBMISSION, so the task could never be re-targeted again.
+  BEGIN
+    UPDATE group_memberships SET left_at = now()
+    WHERE group_id = g AND student_id = s3 AND left_at IS NULL
+    RETURNING id INTO v_mem_id;
+
+    n := set_assignment_targets(a_sel, ARRAY[s1]);
+    IF n = 1 THEN
+      v_log := v_log || 'PASS D3b: once the submitter has left the group, narrowing to the remaining target returned 1' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D3b: returned ' || coalesce(n::text, '<null>') || ', expected 1' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D3b: refused with ' || SQLERRM || ', expected it to succeed' || chr(10);
+  END;
+
+  -- ---- D4a: target_count ignores a target who has left ----
+  -- a_cnt still carries BOTH target rows -- nothing deleted them, s3 simply
+  -- stopped being a member -- so the row count and the number the card shows
+  -- must now disagree. That disagreement is the whole check: if v_rows were
+  -- 1, the assertion would pass for the wrong reason.
+  BEGIN
+    SELECT count(*)::INT INTO v_rows FROM assignment_targets WHERE assignment_id = a_cnt;
+    SELECT c.target_count INTO v_tc_sel FROM group_assignment_counts(g) c
+    WHERE c.assignment_id = a_cnt;
+
+    IF v_rows = 2 AND v_tc_sel = 1 THEN
+      v_log := v_log || 'PASS D4a: two target rows, one of them departed, and target_count reads 1' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D4a: target rows=' || coalesce(v_rows::text, '<null>')
+                      || ' (expected 2), target_count=' || coalesce(v_tc_sel::text, '<null>')
+                      || ' (expected 1)' || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D4a: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- ---- D4b: the group branch still means active members ----
+  -- The base the selected branch was brought into line WITH, so it has to be
+  -- shown still standing -- a "fix" that broke this would make both branches
+  -- agree on the wrong number.
+  BEGIN
+    SELECT count(*)::INT INTO v_members FROM group_memberships m
+    WHERE m.group_id = g AND m.left_at IS NULL;
+    SELECT c.target_count INTO v_tc_grp FROM group_assignment_counts(g) c
+    WHERE c.assignment_id = a_group;
+
+    IF v_tc_grp = v_members THEN
+      v_log := v_log || 'PASS D4b: target_count on a group-audience task is the active member count ('
+                      || v_members || ')' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D4b: target_count=' || coalesce(v_tc_grp::text, '<null>')
+                      || ', active members=' || coalesce(v_members::text, '<null>') || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D4b: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- ---- D5a: the audience column cannot be desynced by a direct UPDATE ----
+  -- a_cnt is 'selected' with target rows. This is the PostgREST-shaped write
+  -- the trigger exists for: an owning advisor updating the column directly
+  -- and leaving the rows behind.
+  BEGIN
+    UPDATE group_assignments SET audience = 'group' WHERE id = a_cnt;
+    v_log := v_log || 'FAIL D5a: audience was set to group while target rows exist, expected TARGETS_EXIST' || chr(10);
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'TARGETS_EXIST' THEN
+      v_log := v_log || 'PASS D5a: setting audience=group with target rows still present raised TARGETS_EXIST' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D5a: refused with ' || SQLERRM || ', expected TARGETS_EXIST' || chr(10);
+    END IF;
+  END;
+
+  -- ---- D5b: the writer's own widening path still passes the new trigger ----
+  -- set_assignment_targets deletes the target rows BEFORE it sets
+  -- audience='group', so by the time the trigger fires there is nothing left
+  -- to find. If those two statements are ever reordered, this row goes red
+  -- and advisors lose the ability to widen a task at all -- exactly the
+  -- regression a new BEFORE UPDATE trigger on this table risks.
+  BEGIN
+    n := set_assignment_targets(a_cnt, '{}'::UUID[]);
+    SELECT a.audience INTO v_audience FROM group_assignments a WHERE a.id = a_cnt;
+    SELECT count(*)::INT INTO v_rows FROM assignment_targets WHERE assignment_id = a_cnt;
+    IF n = 0 AND v_audience = 'group' AND v_rows = 0 THEN
+      v_log := v_log || 'PASS D5b: the empty-array path still widens to the whole group and leaves no target rows' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D5b: returned ' || coalesce(n::text, '<null>')
+                      || ', audience=' || coalesce(v_audience, '<null>')
+                      || ', target rows=' || coalesce(v_rows::text, '<null>') || chr(10);
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D5b: widening was refused with ' || SQLERRM || chr(10);
+  END;
+
+  PERFORM set_config('probe.results', v_log, true);
+END $$;
+
+SET LOCAL ROLE authenticated;
+
+DO $$
+DECLARE
+  v_object TEXT;
+  v_cnt    INT;
+  -- CONTINUES the owner block's log rather than replacing it: everything
+  -- above has already been recorded there.
+  v_log    TEXT := coalesce(current_setting('probe.results', true), '');
+BEGIN
+  v_object := coalesce(current_setting('probe.d_object', true), '');
+  IF v_object = '' THEN
+    -- The fixture already wrote its own SKIP (or its setup failure) into
+    -- probe.results; say nothing more and leave the log as it is.
+    PERFORM set_config('probe.results', v_log, true);
+    RETURN;
+  END IF;
+
+  -- D1a: an ACTIVE member of the group who was never named. Before the fix
+  -- this returned the row: the old policy asked only "is the reader a member
+  -- of the group in path segment 1, and is the assignment published", so any
+  -- member could list <groupId>/, walk the assignment-id folders and sign a
+  -- brief for a task that encodes a judgement about someone else's level.
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.d_other'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM storage.objects
+    WHERE bucket_id = 'assignment-docs' AND name = v_object;
+    IF v_cnt = 0 THEN
+      v_log := v_log || 'PASS D1a: the untargeted member cannot see the brief''s object row' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D1a: the untargeted member read ' || v_cnt || ' object row(s)' || chr(10);
+    END IF;
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      v_log := v_log || 'SKIP D1a: role authenticated has no table grant on storage.objects here' || chr(10);
+    WHEN OTHERS THEN
+      v_log := v_log || 'FAIL D1a: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- D1b: the student the task was actually given to. The half that says the
+  -- fix narrowed the policy and did not simply close it.
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.d_target'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM storage.objects
+    WHERE bucket_id = 'assignment-docs' AND name = v_object;
+    IF v_cnt = 1 THEN
+      v_log := v_log || 'PASS D1b: the target can still see the brief''s object row' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D1b: the target read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+    END IF;
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      v_log := v_log || 'SKIP D1b: role authenticated has no table grant on storage.objects here' || chr(10);
+    WHEN OTHERS THEN
+      v_log := v_log || 'FAIL D1b: unexpected error: ' || SQLERRM || chr(10);
+  END;
+
+  -- D1c: the advisor's own branch, the one clause the rewrite carried over
+  -- untouched -- and therefore the one a rewrite drops silently. If this goes
+  -- red, no advisor can open any task brief anywhere in the product.
+  BEGIN
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', current_setting('probe.d_advisor'))::text, true);
+    SELECT count(*)::INT INTO v_cnt FROM storage.objects
+    WHERE bucket_id = 'assignment-docs' AND name = v_object;
+    IF v_cnt = 1 THEN
+      v_log := v_log || 'PASS D1c: the owning advisor can still see the brief''s object row' || chr(10);
+    ELSE
+      v_log := v_log || 'FAIL D1c: the owning advisor read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+    END IF;
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      v_log := v_log || 'SKIP D1c: role authenticated has no table grant on storage.objects here' || chr(10);
+    WHEN OTHERS THEN
+      v_log := v_log || 'FAIL D1c: unexpected error: ' || SQLERRM || chr(10);
   END;
 
   PERFORM set_config('probe.results', v_log, true);
