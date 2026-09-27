@@ -887,17 +887,35 @@ ROLLBACK;
 
 -- ============================================================
 -- PART D -- the 2026-09-27 follow-ups (docs/assignment-targeting-followups.sql).
--- Run this whole block alone. Expect 11 rows: D0, D1a, D1b, D1c, D2, D3a, D3b,
--- D4a, D4b, D5a, D5b. D1a-D1c read SKIP on a database where this session
--- cannot write storage.objects (see the fixture note) -- D0 still proves the
--- policy was replaced in that case.
+-- Run this whole block alone. The row count depends on which of two
+-- independent things this session can do with storage.objects, and the two
+-- do NOT read the same:
+--   * full success (this owner session can INSERT the fixture, and role
+--     authenticated can then SELECT it): 14 rows, all PASS -- D0, D1a, D1b,
+--     D1c, D1d, D1e, D1f, D2, D3a, D3b, D4a, D4b, D5a, D5b.
+--   * the owner INSERT succeeds but role authenticated has no table grant on
+--     storage.objects (so it cannot SELECT the fixture row at all): still 14
+--     rows, but D1a, D1b and D1c individually read SKIP -- three SKIP lines,
+--     the rest determinate. D1d-D1f do NOT depend on this grant (see below)
+--     and still come back PASS/FAIL.
+--   * the fixture INSERT itself fails, as the OWNER (see the fixture note):
+--     the block never reaches D1a, D1b or D1c individually and logs ONE
+--     combined "SKIP D1" line in their place, so the total is 12 rows -- D0,
+--     D1d, D1e, D1f, D2, SKIP D1, D3a, D3b, D4a, D4b, D5a, D5b -- of which
+--     exactly that one is a SKIP.
+-- D0, D1a-D1c and D1d-D1f are three different levels of the same claim: D0
+-- reads the policy's text (survives every branch above); D1a-D1c exercise
+-- the real policy end to end through an actual storage.objects row (only
+-- when the fixture allows); D1d-D1f evaluate the policy's own predicates
+-- against a synthetic path with no row inserted at all, so they are
+-- unconditional and are the floor beneath D1a-D1c when those SKIP.
 --
 -- Same shape as Parts B and C: one owner-run DO block that builds the
 -- fixtures and runs everything needing SECURITY DEFINER reach, then
--- SET LOCAL ROLE authenticated for the three checks that are only meaningful
--- when a policy actually evaluates, then RESET ROLE and one SELECT. The
--- second block CONTINUES the first one's v_log rather than replacing it.
--- Nothing is kept: the transaction rolls back.
+-- SET LOCAL ROLE authenticated for the checks that are only meaningful when
+-- a policy actually evaluates, then RESET ROLE and one SELECT. The second
+-- block CONTINUES the first one's v_log rather than replacing it. Nothing is
+-- kept: the transaction rolls back.
 --
 -- The checks are stateful and build on each other, so the order is
 -- load-bearing: D3b is what makes s3 a DEPARTED member, and D4a and D5
@@ -1063,6 +1081,16 @@ BEGIN
   -- The path is the real one the uploader writes,
   -- <groupId>/<assignmentId>/<file>, which is the whole reason a storage
   -- policy can decide anything here at all.
+  --
+  -- This guard is probably unnecessary: the previous whole-branch review
+  -- confirmed that inserting into storage.objects from the SQL editor DOES
+  -- work here as the owner -- docs/assignment-drafts-verification.sql:377,384
+  -- does exactly this, unguarded, in this same bucket, and two other
+  -- verification files do the same. It is left in place anyway: it costs
+  -- nothing when it never fires, and a guard that never fires is cheaper
+  -- than a round-trip that dies. Do not remove it on the strength of this
+  -- comment alone -- D1d-D1f below are the reason it is safe to leave it,
+  -- not a reason to delete it.
   v_object := g::text || '/' || a_sel::text || '/probe-brief.pdf';
   BEGIN
     INSERT INTO storage.objects (bucket_id, name, owner, metadata)
@@ -1077,6 +1105,11 @@ BEGIN
   PERFORM set_config('probe.d_target',  s1::text, true);
   PERFORM set_config('probe.d_other',   s2::text, true);
   PERFORM set_config('probe.d_advisor', advisor::text, true);
+  -- For D1d-D1f: a real group id and a real assignment id, set unconditionally
+  -- (unlike probe.d_object above) because those three checks never touch
+  -- storage.objects and must run whether or not the fixture insert did.
+  PERFORM set_config('probe.d_group',      g::text,     true);
+  PERFORM set_config('probe.d_assignment', a_sel::text, true);
 
   -- ---- D3a: an ACTIVE submitter still cannot be dropped ----
   -- The half of HAS_SUBMISSION that must NOT have been weakened. s3 submits
@@ -1213,78 +1246,142 @@ SET LOCAL ROLE authenticated;
 DO $$
 DECLARE
   v_object TEXT;
+  v_path   TEXT;
   v_cnt    INT;
   -- CONTINUES the owner block's log rather than replacing it: everything
   -- above has already been recorded there.
   v_log    TEXT := coalesce(current_setting('probe.results', true), '');
 BEGIN
+  -- ---- D1a-D1c: the real policy, end to end, through an actual
+  -- ---- storage.objects row -- when the fixture allows it ----
   v_object := coalesce(current_setting('probe.d_object', true), '');
   IF v_object = '' THEN
     -- The fixture already wrote its own SKIP (or its setup failure) into
-    -- probe.results; say nothing more and leave the log as it is.
-    PERFORM set_config('probe.results', v_log, true);
-    RETURN;
+    -- probe.results; say nothing more here. D1d-D1f below still run.
+    NULL;
+  ELSE
+    -- D1a: an ACTIVE member of the group who was never named. Before the fix
+    -- this returned the row: the old policy asked only "is the reader a
+    -- member of the group in path segment 1, and is the assignment
+    -- published", so any member could list <groupId>/, walk the
+    -- assignment-id folders and sign a brief for a task that encodes a
+    -- judgement about someone else's level.
+    BEGIN
+      PERFORM set_config('request.jwt.claims',
+        json_build_object('sub', current_setting('probe.d_other'))::text, true);
+      SELECT count(*)::INT INTO v_cnt FROM storage.objects
+      WHERE bucket_id = 'assignment-docs' AND name = v_object;
+      IF v_cnt = 0 THEN
+        v_log := v_log || 'PASS D1a: the untargeted member cannot see the brief''s object row' || chr(10);
+      ELSE
+        v_log := v_log || 'FAIL D1a: the untargeted member read ' || v_cnt || ' object row(s)' || chr(10);
+      END IF;
+    EXCEPTION
+      WHEN insufficient_privilege THEN
+        v_log := v_log || 'SKIP D1a: role authenticated has no table grant on storage.objects here' || chr(10);
+      WHEN OTHERS THEN
+        v_log := v_log || 'FAIL D1a: unexpected error: ' || SQLERRM || chr(10);
+    END;
+
+    -- D1b: the student the task was actually given to. The half that says
+    -- the fix narrowed the policy and did not simply close it.
+    BEGIN
+      PERFORM set_config('request.jwt.claims',
+        json_build_object('sub', current_setting('probe.d_target'))::text, true);
+      SELECT count(*)::INT INTO v_cnt FROM storage.objects
+      WHERE bucket_id = 'assignment-docs' AND name = v_object;
+      IF v_cnt = 1 THEN
+        v_log := v_log || 'PASS D1b: the target can still see the brief''s object row' || chr(10);
+      ELSE
+        v_log := v_log || 'FAIL D1b: the target read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+      END IF;
+    EXCEPTION
+      WHEN insufficient_privilege THEN
+        v_log := v_log || 'SKIP D1b: role authenticated has no table grant on storage.objects here' || chr(10);
+      WHEN OTHERS THEN
+        v_log := v_log || 'FAIL D1b: unexpected error: ' || SQLERRM || chr(10);
+    END;
+
+    -- D1c: the advisor's own branch, the one clause the rewrite carried over
+    -- untouched -- and therefore the one a rewrite drops silently. If this
+    -- goes red, no advisor can open any task brief anywhere in the product.
+    BEGIN
+      PERFORM set_config('request.jwt.claims',
+        json_build_object('sub', current_setting('probe.d_advisor'))::text, true);
+      SELECT count(*)::INT INTO v_cnt FROM storage.objects
+      WHERE bucket_id = 'assignment-docs' AND name = v_object;
+      IF v_cnt = 1 THEN
+        v_log := v_log || 'PASS D1c: the owning advisor can still see the brief''s object row' || chr(10);
+      ELSE
+        v_log := v_log || 'FAIL D1c: the owning advisor read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+      END IF;
+    EXCEPTION
+      WHEN insufficient_privilege THEN
+        v_log := v_log || 'SKIP D1c: role authenticated has no table grant on storage.objects here' || chr(10);
+      WHEN OTHERS THEN
+        v_log := v_log || 'FAIL D1c: unexpected error: ' || SQLERRM || chr(10);
+    END;
   END IF;
 
-  -- D1a: an ACTIVE member of the group who was never named. Before the fix
-  -- this returned the row: the old policy asked only "is the reader a member
-  -- of the group in path segment 1, and is the assignment published", so any
-  -- member could list <groupId>/, walk the assignment-id folders and sign a
-  -- brief for a task that encodes a judgement about someone else's level.
+  -- ---- D1d-D1f: the policy's own predicates, no storage.objects row at all
+  -- ----
+  -- Unconditional -- unlike D1a-D1c, nothing here touches storage.objects, so
+  -- neither a failed fixture INSERT nor a missing table grant for role
+  -- authenticated can SKIP these. They are the floor beneath D1a-D1c: C1 was
+  -- a real security defect (assignment_docs_read did not know about
+  -- audience, so any group member could list the bucket folder and sign a
+  -- targeted task's brief), and if D1a-D1c ever SKIP, D0's text check is not
+  -- enough to stand in for them on its own -- a policy's TEXT is not proof it
+  -- EVALUATES correctly. Same shape as Part B's B3: call the predicate
+  -- itself under SET LOCAL ROLE authenticated, which is what actually
+  -- executes it, rather than SELECT from this session (the owner bypasses
+  -- RLS and would answer "yes" for everybody).
+  --
+  -- v_path is built from a REAL group id and a REAL assignment id
+  -- (probe.d_group / probe.d_assignment, set unconditionally in the owner
+  -- block) so storage.foldername's two segments resolve to rows that really
+  -- exist, even though no storage.objects row is ever inserted for this path.
+  v_path := coalesce(current_setting('probe.d_group', true), '') || '/'
+         || coalesce(current_setting('probe.d_assignment', true), '') || '/probe-brief.pdf';
+
+  -- D1d: the untargeted member, straight from the predicate.
   BEGIN
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', current_setting('probe.d_other'))::text, true);
-    SELECT count(*)::INT INTO v_cnt FROM storage.objects
-    WHERE bucket_id = 'assignment-docs' AND name = v_object;
-    IF v_cnt = 0 THEN
-      v_log := v_log || 'PASS D1a: the untargeted member cannot see the brief''s object row' || chr(10);
+    IF NOT can_see_assignment((storage.foldername(v_path))[2]::uuid) THEN
+      v_log := v_log || 'PASS D1d: can_see_assignment on the synthetic path is false for the untargeted member' || chr(10);
     ELSE
-      v_log := v_log || 'FAIL D1a: the untargeted member read ' || v_cnt || ' object row(s)' || chr(10);
+      v_log := v_log || 'FAIL D1d: can_see_assignment on the synthetic path was true for the untargeted member' || chr(10);
     END IF;
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      v_log := v_log || 'SKIP D1a: role authenticated has no table grant on storage.objects here' || chr(10);
-    WHEN OTHERS THEN
-      v_log := v_log || 'FAIL D1a: unexpected error: ' || SQLERRM || chr(10);
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D1d: unexpected error: ' || SQLERRM || chr(10);
   END;
 
-  -- D1b: the student the task was actually given to. The half that says the
-  -- fix narrowed the policy and did not simply close it.
+  -- D1e: the target.
   BEGIN
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', current_setting('probe.d_target'))::text, true);
-    SELECT count(*)::INT INTO v_cnt FROM storage.objects
-    WHERE bucket_id = 'assignment-docs' AND name = v_object;
-    IF v_cnt = 1 THEN
-      v_log := v_log || 'PASS D1b: the target can still see the brief''s object row' || chr(10);
+    IF can_see_assignment((storage.foldername(v_path))[2]::uuid) THEN
+      v_log := v_log || 'PASS D1e: can_see_assignment on the synthetic path is true for the target' || chr(10);
     ELSE
-      v_log := v_log || 'FAIL D1b: the target read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+      v_log := v_log || 'FAIL D1e: can_see_assignment on the synthetic path was false for the target' || chr(10);
     END IF;
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      v_log := v_log || 'SKIP D1b: role authenticated has no table grant on storage.objects here' || chr(10);
-    WHEN OTHERS THEN
-      v_log := v_log || 'FAIL D1b: unexpected error: ' || SQLERRM || chr(10);
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D1e: unexpected error: ' || SQLERRM || chr(10);
   END;
 
-  -- D1c: the advisor's own branch, the one clause the rewrite carried over
-  -- untouched -- and therefore the one a rewrite drops silently. If this goes
-  -- red, no advisor can open any task brief anywhere in the product.
+  -- D1f: the owning advisor, through owns_group rather than can_see_assignment
+  -- -- the same branch D1c exercises through the real policy.
   BEGIN
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', current_setting('probe.d_advisor'))::text, true);
-    SELECT count(*)::INT INTO v_cnt FROM storage.objects
-    WHERE bucket_id = 'assignment-docs' AND name = v_object;
-    IF v_cnt = 1 THEN
-      v_log := v_log || 'PASS D1c: the owning advisor can still see the brief''s object row' || chr(10);
+    IF owns_group((storage.foldername(v_path))[1]::uuid) THEN
+      v_log := v_log || 'PASS D1f: owns_group on the synthetic path''s group segment is true for the owning advisor' || chr(10);
     ELSE
-      v_log := v_log || 'FAIL D1c: the owning advisor read ' || v_cnt || ' object row(s), expected 1' || chr(10);
+      v_log := v_log || 'FAIL D1f: owns_group on the synthetic path''s group segment was false for the owning advisor' || chr(10);
     END IF;
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      v_log := v_log || 'SKIP D1c: role authenticated has no table grant on storage.objects here' || chr(10);
-    WHEN OTHERS THEN
-      v_log := v_log || 'FAIL D1c: unexpected error: ' || SQLERRM || chr(10);
+  EXCEPTION WHEN OTHERS THEN
+    v_log := v_log || 'FAIL D1f: unexpected error: ' || SQLERRM || chr(10);
   END;
 
   PERFORM set_config('probe.results', v_log, true);

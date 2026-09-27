@@ -62,15 +62,55 @@ BEGIN
   -- all, and every draft in every group becomes visible again with no error
   -- anywhere. A count of 1 policy named "assignments read" would still pass
   -- after that revert; only reading its USING clause catches it.
+  --
+  -- UPDATED 2026-09-27: the assertion used to read the policy's own qual for
+  -- the literal string 'published_at'. docs/assignment-targeting.sql moved
+  -- the published_at IS NOT NULL condition OUT of this policy and INTO
+  -- can_see_assignment / mentor_sees_assignment, which the policy now calls
+  -- instead of testing the column itself -- see docs/assignment-targeting.sql
+  -- section 4. The old form of this assertion no longer matches the current,
+  -- correct policy at all and RAISEd a false "looks reverted" failure on
+  -- every run since that move, which sends the owner to re-apply a file that
+  -- was never wrong.
+  --
+  -- The replacement checks the same claim at the level where it now lives:
+  -- first, that the policy still ROUTES through both predicates (a revert to
+  -- either the task-assignment-migration.sql or assignment-drafts-
+  -- migration.sql shape drops both function calls at once, so this still
+  -- fails hard on a genuine revert); second, that both predicates
+  -- THEMSELVES still carry the published_at guarantee, so a change that left
+  -- the policy's call sites alone but quietly weakened what they check would
+  -- still be caught. Reading prosrc, not calling the functions: both are
+  -- STABLE SECURITY DEFINER and this session is the table owner, so a CALL
+  -- here would bypass RLS and answer from behind it -- the same reason Part B
+  -- of docs/assignment-targeting-verification.sql never SELECTs the table
+  -- directly to test what a policy allows.
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'public' AND tablename = 'group_assignments'
       AND policyname = 'assignments read'
-      AND qual LIKE '%published_at%'
+      AND qual LIKE '%can_see_assignment%'
+      AND qual LIKE '%mentor_sees_assignment%'
   ) THEN
-    RAISE EXCEPTION 'FAIL: "assignments read" on group_assignments does not mention published_at -- '
-      'it looks reverted to the pre-drafts policy from docs/task-assignment-migration.sql; '
-      're-apply docs/assignment-drafts-migration.sql';
+    RAISE EXCEPTION 'FAIL: "assignments read" on group_assignments no longer routes through '
+      'can_see_assignment / mentor_sees_assignment -- it looks reverted to a pre-targeting policy '
+      '(docs/task-assignment-migration.sql or docs/assignment-drafts-migration.sql); '
+      're-apply docs/assignment-targeting.sql';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace
+      AND p.proname = 'can_see_assignment' AND p.prosrc LIKE '%published_at%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace
+      AND p.proname = 'mentor_sees_assignment' AND p.prosrc LIKE '%published_at%'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: can_see_assignment / mentor_sees_assignment no longer mention published_at -- '
+      'the published_at guarantee that used to sit in "assignments read" itself moved into these two '
+      'predicates (docs/assignment-targeting.sql) and must still hold there; '
+      're-apply docs/assignment-targeting.sql';
   END IF;
 
   -- The backfill's proof, in a form that survives drafts existing. A task that
