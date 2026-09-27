@@ -374,7 +374,14 @@
     "changed": "A task was changed in another session. Check drafts and published tasks.",
     "leaveSaved": "Saved tasks are kept. Unsaved tasks or attachments may be incomplete; check drafts. Close?",
     "leaveReview": "Edits and attachments from this review will be lost. Return to task selection?",
-    "leaveSelection": "Your task selection will be cleared. Close?"
+    "leaveSelection": "Your task selection will be cleared. Close?",
+    "audience": "Who gets this",
+    "audienceGroup": "Whole group ({{count}})",
+    "audienceSelected": "Selected students",
+    "audienceSelectedCount": "{{count}} students",
+    "pickStudents": "Who gets this task?",
+    "pickStudentsHint": "Only the students you choose will see this task.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Group center",

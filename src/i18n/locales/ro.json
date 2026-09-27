@@ -359,7 +359,14 @@
     "changed": "O sarcină a fost modificată în altă sesiune. Verifică ciornele și sarcinile publicate.",
     "leaveSaved": "Sarcinile salvate sunt păstrate. Sarcinile sau atașamentele nesalvate pot fi incomplete; verifică ciornele. Închizi?",
     "leaveReview": "Modificările și atașamentele acestei verificări se vor pierde. Revii la selecție?",
-    "leaveSelection": "Selecția sarcinilor va fi ștearsă. Închizi?"
+    "leaveSelection": "Selecția sarcinilor va fi ștearsă. Închizi?",
+    "audience": "Cine primește sarcina",
+    "audienceGroup": "Tot grupul ({{count}})",
+    "audienceSelected": "Studenți selectați",
+    "audienceSelectedCount": "{{count}} studenți",
+    "pickStudents": "Cine primește această sarcină?",
+    "pickStudentsHint": "Doar studenții aleși de tine vor vedea această sarcină.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Centrul grupului",

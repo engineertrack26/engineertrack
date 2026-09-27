@@ -359,7 +359,14 @@
     "changed": "Zadatak je promenjen u drugoj sesiji. Proverite nacrte i objavljene zadatke.",
     "leaveSaved": "Sačuvani zadaci ostaju. Nesačuvani zadaci ili prilozi mogu biti nepotpuni; proverite nacrte. Zatvoriti?",
     "leaveReview": "Izmene i prilozi iz ove provere biće izgubljeni. Vratiti se na izbor zadataka?",
-    "leaveSelection": "Izbor zadataka biće obrisan. Zatvoriti?"
+    "leaveSelection": "Izbor zadataka biće obrisan. Zatvoriti?",
+    "audience": "Ko dobija ovo",
+    "audienceGroup": "Cela grupa ({{count}})",
+    "audienceSelected": "Izabrani studenti",
+    "audienceSelectedCount": "{{count}} studenata",
+    "pickStudents": "Ko dobija ovaj zadatak?",
+    "pickStudentsHint": "Samo studenti koje izaberete videće ovaj zadatak.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Centar grupe",

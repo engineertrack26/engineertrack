@@ -359,7 +359,14 @@
     "changed": "Un’attività è stata modificata in un’altra sessione. Controlla bozze e attività pubblicate.",
     "leaveSaved": "Le attività salvate vengono mantenute. Attività o allegati non salvati potrebbero essere incompleti; controlla le bozze. Chiudere?",
     "leaveReview": "Modifiche e allegati di questa verifica andranno persi. Tornare alla selezione?",
-    "leaveSelection": "La selezione delle attività verrà cancellata. Chiudere?"
+    "leaveSelection": "La selezione delle attività verrà cancellata. Chiudere?",
+    "audience": "Chi la riceve",
+    "audienceGroup": "Tutto il gruppo ({{count}})",
+    "audienceSelected": "Studenti selezionati",
+    "audienceSelectedCount": "{{count}} studenti",
+    "pickStudents": "Chi riceve questa attività?",
+    "pickStudentsHint": "Solo gli studenti selezionati vedranno questa attività.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Centro del gruppo",

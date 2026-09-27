@@ -359,7 +359,14 @@
     "changed": "Eine Aufgabe wurde in einer anderen Sitzung geändert. Prüfen Sie Entwürfe und veröffentlichte Aufgaben.",
     "leaveSaved": "Gespeicherte Aufgaben bleiben erhalten. Nicht gespeicherte Aufgaben oder Anhänge können fehlen; prüfen Sie die Entwürfe. Schließen?",
     "leaveReview": "Änderungen und Anhänge dieser Prüfung gehen verloren. Zur Aufgabenauswahl zurückkehren?",
-    "leaveSelection": "Ihre Aufgabenauswahl wird gelöscht. Schließen?"
+    "leaveSelection": "Ihre Aufgabenauswahl wird gelöscht. Schließen?",
+    "audience": "Wer bekommt das",
+    "audienceGroup": "Ganze Gruppe ({{count}})",
+    "audienceSelected": "Ausgewählte Studierende",
+    "audienceSelectedCount": "{{count}} Studierende",
+    "pickStudents": "Wer bekommt diese Aufgabe?",
+    "pickStudentsHint": "Nur die von Ihnen ausgewählten Studierenden sehen diese Aufgabe.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Gruppenzentrale",

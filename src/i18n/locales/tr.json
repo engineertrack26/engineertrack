@@ -418,7 +418,14 @@
     "changed": "Bir görev başka bir oturumda değiştirildi. Taslaklar ve gönderilen görevleri kontrol edin.",
     "leaveSaved": "Kaydedilen görevler korunur. Kaydedilemeyen görev ve ekler tamamlanmamış olabilir; taslakları kontrol edin. Çıkılsın mı?",
     "leaveReview": "Son kontroldeki düzenlemeler ve ekler kaybolacak. Görev seçimine dönülsün mü?",
-    "leaveSelection": "Görev seçimi temizlenecek. Çıkılsın mı?"
+    "leaveSelection": "Görev seçimi temizlenecek. Çıkılsın mı?",
+    "audience": "Bu görevi kimler alacak",
+    "audienceGroup": "Tüm grup ({{count}})",
+    "audienceSelected": "Seçili öğrenciler",
+    "audienceSelectedCount": "{{count}} öğrenci",
+    "pickStudents": "Bu görevi kim alacak?",
+    "pickStudentsHint": "Sadece seçtiğiniz öğrenciler bu görevi görecek.",
+    "levelBadge": "L{{level}}"
   },
   "advisorGroups": {
     "groupCenter": "Grup merkezi",

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl,
   TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput,
@@ -21,6 +21,7 @@ import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
 import { reviewedAssignmentsMatch } from '@/utils/assignmentPreparation';
+import { soleCompetencyId } from '@/utils/assignmentTargets';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
@@ -252,7 +253,7 @@ function GroupAssignmentsContent() {
     setShowDatePicker(false);
   }
 
-  async function handleSendToStudents(batch: GroupAssignment[]): Promise<boolean> {
+  async function handleSendToStudents(batch: GroupAssignment[], targetIds: string[]): Promise<boolean> {
     if (!batch.length || publishLock.current || !user ||
         useAuthStore.getState().user?.id !== user.id) return false;
     publishLock.current = true;
@@ -265,6 +266,15 @@ function GroupAssignmentsContent() {
         return false;
       }
       if (useAuthStore.getState().user?.id !== user.id) return false;
+      // The targets go in first: publish_assignments refuses a 'selected'
+      // assignment that names nobody, and set_assignment_targets is what makes
+      // it 'selected' in the first place. An empty array is a no-op on a draft
+      // that is already group-audience, so the group path costs nothing.
+      if (targetIds.length) {
+        for (const draft of batch) {
+          await assignmentService.setAssignmentTargets(draft.id, targetIds);
+        }
+      }
       const count = await assignmentService.publishAssignments(batch.map((d) => d.id));
 
       // count is 0 when every id in the tray was already published --
@@ -280,8 +290,14 @@ function GroupAssignmentsContent() {
         // batch, best-effort so a delivery failure cannot make assignments
         // that were actually sent look like they failed.
         const single = batch.length === 1 ? batch[0] : null;
+        // Only the people who were actually given the task. Notifying the
+        // whole group about a task five of them cannot open is the same leak
+        // the stream card was dropped to avoid.
+        const recipients = targetIds.length
+          ? members.filter((m) => targetIds.includes(m.id))
+          : members;
         await Promise.all(
-          members.map((m) =>
+          recipients.map((m) =>
             notificationService.create(
               m.id,
               t('notifications.taskAssignedTitle'),
@@ -309,8 +325,9 @@ function GroupAssignmentsContent() {
       // the whole tray for it. The tray is deliberately left untouched (no
       // loadData() here): the advisor has to fix the named task, and
       // reloading could only ever confirm nothing changed.
-      if (code === 'NOT_IN_SCOPE' && detail) {
-        Alert.alert(t('common.error'), t('errors.notInScopeTitled', { title: detail }));
+      if ((code === 'NOT_IN_SCOPE' || code === 'TARGETS_REQUIRED') && detail) {
+        Alert.alert(t('common.error'), t(code === 'NOT_IN_SCOPE'
+          ? 'errors.notInScopeTitled' : 'errors.targetsRequiredTitled', { title: detail }));
       } else {
         Alert.alert(t('common.error'), t(key));
       }
@@ -320,6 +337,14 @@ function GroupAssignmentsContent() {
       setSending(false);
     }
   }
+
+  // One spelling of a member's name for both the target picker and (Task 5)
+  // the assignment card -- two different spellings on two screens of the same
+  // flow is exactly the kind of drift this project keeps out.
+  const targetCandidates = useMemo(
+    () => members.map((m) => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })),
+    [members],
+  );
 
   // Unset published_at means draft. Derived here, not queried separately --
   // a second fetch is a second thing that can disagree with the first.
@@ -604,6 +629,10 @@ function GroupAssignmentsContent() {
       </GroupModal>}
       {reviewing && groupId && user && <AssignmentReview groupId={groupId} createdBy={user.id}
         triplets={Array.from(picked.values())} dueDate={dueDate} memberCount={members.length}
+        competencyId={soleCompetencyId(
+          Array.from(picked.values()).map((tr) => kpis.find((k) => k.id === tr.kpiId)?.competencyId),
+        )}
+        members={targetCandidates}
         onClose={() => setReviewing(false)} onDone={finishReview} onPublish={handleSendToStudents} />}
       {reviewingDrafts && <GroupModal title={t('taskFlow.review')} onClose={() => setReviewingDrafts(false)} busy={sending}>
         <GroupContextLabel groupId={groupId} />
@@ -620,7 +649,10 @@ function GroupAssignmentsContent() {
         {members.length === 0 && <Text style={ui.secondary}>{t('taskFlow.noMembers')}</Text>}
         <TouchableOpacity style={ui.primary} accessibilityRole="button"
           disabled={sending || !selectedDrafts.length || !members.length}
-          onPress={() => handleSendToStudents(selectedDrafts)}>
+          // No review screen here, so there is no picker either: each draft
+          // keeps whatever audience it already carries, and an empty target
+          // array is a no-op for both 'group' and already-'selected' drafts.
+          onPress={() => handleSendToStudents(selectedDrafts, [])}>
           {sending ? <ActivityIndicator color="#fff" /> :
             <Text style={ui.primaryText}>{t('taskFlow.send', { count: selectedDrafts.length })}</Text>}
         </TouchableOpacity>

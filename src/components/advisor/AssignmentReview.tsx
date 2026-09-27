@@ -12,11 +12,19 @@ import { mapRpcError } from '@/utils/rpcErrors';
 import { newAssignmentId, prepareAssignments, type PreparedTask } from '@/utils/assignmentPreparation';
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import { toLocalIsoDate } from '@/utils/localDate';
+import { TargetPicker, type TargetCandidate } from './TargetPicker';
 
-export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, onClose, onDone, onPublish }: {
+export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, members, competencyId, onClose, onDone, onPublish }: {
   groupId: string; createdBy: string; triplets: KpiTriplet[]; dueDate: string; memberCount: number;
+  /** The group's active members as the picker wants them. `GroupMember` has
+   *  firstName/lastName, not name, so the caller maps -- the picker should not
+   *  have to know how this project spells a person. */
+  members: TargetCandidate[];
+  /** The one competency this batch is drawn from, or null when it spans more
+   *  than one -- the picker then shows no level badges. */
+  competencyId: string | null;
   onClose: () => void; onDone: () => void;
-  onPublish: (rows: GroupAssignment[]) => Promise<boolean>;
+  onPublish: (rows: GroupAssignment[], targetIds: string[]) => Promise<boolean>;
 }) {
   const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState<PreparedTask[]>(() => triplets.map((tr) => ({
@@ -29,6 +37,10 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   const [busy, setBusy] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The audience is chosen once per batch, and defaults to the whole group so
+  // an advisor who never opens the picker keeps today's behaviour exactly.
+  const [targetIds, setTargetIds] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
   const running = useRef(false);
   const snapshot = useRef<PreparedTask[] | null>(null);
 
@@ -89,7 +101,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
       const rows = await prepareAssignments(snapshot.current, assignmentService);
       if (useAuthStore.getState().user?.id !== createdBy) throw new Error('Session changed');
       if (send) {
-        if (!await onPublish(rows)) { setFailed(true); return; }
+        if (!await onPublish(rows, targetIds)) { setFailed(true); return; }
       } else {
         if (rows.some((row) => row.publishedAt)) throw new Error('PREPARED_TASK_CHANGED');
         Alert.alert(t('common.done'), t('advisor.draftsCreated', { count: rows.length }));
@@ -117,6 +129,27 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   </>}>
     <GroupContextLabel groupId={groupId} />
     <Text style={ui.body}>{t('taskFlow.summary', { tasks: tasks.length, students: memberCount })}</Text>
+    <Text style={ui.label}>{t('taskFlow.audience', 'Who gets this')}</Text>
+    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+      {(['group', 'selected'] as const).map((value) => {
+        const on = value === 'group' ? targetIds.length === 0 : targetIds.length > 0;
+        return (
+          <TouchableOpacity key={value} accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            style={[groupStyles.outline, on && groupStyles.outlineOn]}
+            disabled={attempted || busy}
+            onPress={() => value === 'group' ? setTargetIds([]) : setPicking(true)}>
+            <Text style={groupStyles.linkText}>
+              {value === 'group'
+                ? t('taskFlow.audienceGroup', 'Whole group ({{count}})', { count: memberCount })
+                : targetIds.length > 0
+                  ? t('taskFlow.audienceSelectedCount', '{{count}} students', { count: targetIds.length })
+                  : t('taskFlow.audienceSelected', 'Selected students')}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
     <TouchableOpacity style={groupStyles.outline} accessibilityRole="button" disabled={attempted || busy}
       onPress={() => setShowDate(true)}>
       <Text style={groupStyles.linkText}>{t('advisor.assignmentDueDate')}: {batchDate
@@ -174,5 +207,11 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         </TouchableOpacity>}
       </View>}
     </View>)}
+    {picking && <TargetPicker visible groupId={groupId} competencyId={competencyId}
+      students={members} selected={targetIds}
+      onToggle={(id) => setTargetIds((old) =>
+        old.includes(id) ? old.filter((x) => x !== id) : [...old, id])}
+      onSubmit={() => setPicking(false)}
+      onClose={() => setPicking(false)} />}
   </GroupModal>;
 }
