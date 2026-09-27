@@ -366,7 +366,8 @@
     "audienceSelectedCount": "{{count}} studenti",
     "pickStudents": "Chi riceve questa attività?",
     "pickStudentsHint": "Solo gli studenti selezionati vedranno questa attività.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Alcune di queste attività potrebbero già avere il nuovo destinatario."
   },
   "advisorGroups": {
     "groupCenter": "Centro del gruppo",
@@ -531,6 +532,11 @@
     "noSubmissions": "Nessuna consegna ancora.",
     "openSubmission": "Apri consegna",
     "advisorNote": "Nota del tutor accademico"
+  },
+  "messages": {
+    "selectAll": "Seleziona tutti",
+    "clearAll": "Deseleziona",
+    "continueWith": "Continua ({{count}})"
   },
   "tabs": {
     "messages": "Messaggi",

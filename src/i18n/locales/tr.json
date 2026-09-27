@@ -425,7 +425,8 @@
     "audienceSelectedCount": "{{count}} öğrenci",
     "pickStudents": "Bu görevi kim alacak?",
     "pickStudentsHint": "Sadece seçtiğiniz öğrenciler bu görevi görecek.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Bu görevlerin bazıları yeni hedef kitleyi zaten taşıyor olabilir."
   },
   "advisorGroups": {
     "groupCenter": "Grup merkezi",

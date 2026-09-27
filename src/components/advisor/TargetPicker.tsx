@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,18 +28,35 @@ export function TargetPicker({ visible, groupId, competencyId, students, selecte
   const { t } = useTranslation();
   const [levels, setLevels] = useState<StudentLevel[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // Guards both an unmount and a Retry tap superseding an earlier request --
+  // without it a slow first response can land after a retry has already
+  // started a second one, or after the sheet closed.
+  const request = useRef(0);
 
-  useEffect(() => {
-    if (!visible || !competencyId) { setLevels(null); return; }
-    let alive = true;
-    setFailed(false);
+  // Hoisted so Retry can re-run the exact same fetch instead of just hiding
+  // the banner: a Retry button that does not retry left the sheet stuck on a
+  // spinner with no way out but closing and reopening it.
+  const loadLevels = useCallback(() => {
+    // No setState here: the initial `levels` state is already `null`, and the
+    // render guard below only shows the spinner when `competencyId` is
+    // truthy, so a null competencyId needs nothing done for the list to
+    // render correctly, unsorted. Nothing synchronous below either -- both
+    // outcomes only touch state from inside the promise callbacks, so a
+    // Retry tap does not clear the banner until the new attempt actually
+    // resolves one way or the other.
+    if (!competencyId) return;
+    const id = ++request.current;
     assignmentService.listGroupLevels(groupId, competencyId)
-      .then((rows) => { if (alive) setLevels(rows); })
+      .then((rows) => { if (id === request.current) { setLevels(rows); setFailed(false); } })
       // The badges are an aid, not the point of the screen. A failed read
       // leaves the list usable and unsorted rather than blocking the send.
-      .catch((err) => { console.warn('levels failed:', err); if (alive) setFailed(true); });
-    return () => { alive = false; };
-  }, [visible, groupId, competencyId]);
+      .catch((err) => { console.warn('levels failed:', err); if (id === request.current) setFailed(true); });
+  }, [groupId, competencyId]);
+
+  useEffect(() => {
+    loadLevels();
+    return () => { request.current += 1; };
+  }, [loadLevels]);
 
   const ordered = sortByLevel(students, levels);
   const allPicked = students.length > 0 && students.every((s) => selected.includes(s.id));
@@ -66,8 +83,8 @@ export function TargetPicker({ visible, groupId, competencyId, students, selecte
         </View>
         <Text style={styles.hint}>{t('taskFlow.pickStudentsHint',
           'Only the students you choose will see this task.')}</Text>
-        {failed && <LoadFailedBanner onRetry={() => setFailed(false)} />}
-        {visible && competencyId && levels === null && !failed
+        {failed && <LoadFailedBanner onRetry={loadLevels} />}
+        {competencyId && levels === null && !failed
           ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           : (
           <FlatList

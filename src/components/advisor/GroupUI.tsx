@@ -70,7 +70,6 @@ export const groupStyles = StyleSheet.create({
   ledger: { borderTopWidth: 1, borderColor: colors.ruleStrong },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
   outline: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: colors.ink, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  outlineOn: { borderWidth: 2, backgroundColor: colors.page },
   linkText: { fontSize: 16, fontWeight: '600', fontFamily: fonts.semibold, color: colors.ink, flexShrink: 1 },
   pill: { minHeight: 48, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.divider, backgroundColor: colors.paper, justifyContent: 'center' },
   selected: { backgroundColor: colors.inkBg, borderColor: colors.ink },

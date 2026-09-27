@@ -366,7 +366,8 @@
     "audienceSelectedCount": "{{count}} Studierende",
     "pickStudents": "Wer bekommt diese Aufgabe?",
     "pickStudentsHint": "Nur die von Ihnen ausgewählten Studierenden sehen diese Aufgabe.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Einige dieser Aufgaben tragen möglicherweise schon die neue Zielgruppe."
   },
   "advisorGroups": {
     "groupCenter": "Gruppenzentrale",
@@ -531,6 +532,11 @@
     "noSubmissions": "Noch keine Einreichungen.",
     "openSubmission": "Einreichung öffnen",
     "advisorNote": "Notiz des Betreuers"
+  },
+  "messages": {
+    "selectAll": "Alle auswählen",
+    "clearAll": "Auswahl aufheben",
+    "continueWith": "Weiter ({{count}})"
   },
   "tabs": {
     "messages": "Nachrichten",

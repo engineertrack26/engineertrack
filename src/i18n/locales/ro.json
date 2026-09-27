@@ -366,7 +366,8 @@
     "audienceSelectedCount": "{{count}} studenți",
     "pickStudents": "Cine primește această sarcină?",
     "pickStudentsHint": "Doar studenții aleși de tine vor vedea această sarcină.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Unele dintre aceste sarcini pot avea deja noua audiență."
   },
   "advisorGroups": {
     "groupCenter": "Centrul grupului",
@@ -531,6 +532,11 @@
     "noSubmissions": "Încă nu există lucrări.",
     "openSubmission": "Deschide lucrarea",
     "advisorNote": "Nota consilierului"
+  },
+  "messages": {
+    "selectAll": "Selectează tot",
+    "clearAll": "Golește selecția",
+    "continueWith": "Continuă ({{count}})"
   },
   "tabs": {
     "messages": "Mesaje",

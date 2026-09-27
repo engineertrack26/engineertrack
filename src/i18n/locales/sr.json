@@ -366,7 +366,8 @@
     "audienceSelectedCount": "{{count}} studenata",
     "pickStudents": "Ko dobija ovaj zadatak?",
     "pickStudentsHint": "Samo studenti koje izaberete videće ovaj zadatak.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Neki od ovih zadataka možda već imaju novu publiku."
   },
   "advisorGroups": {
     "groupCenter": "Centar grupe",
@@ -531,6 +532,11 @@
     "noSubmissions": "Još nema radova.",
     "openSubmission": "Otvori rad",
     "advisorNote": "Beleška savetnika"
+  },
+  "messages": {
+    "selectAll": "Izaberi sve",
+    "clearAll": "Poništi izbor",
+    "continueWith": "Nastavi ({{count}})"
   },
   "tabs": {
     "messages": "Poruke",

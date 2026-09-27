@@ -366,7 +366,8 @@
     "audienceSelectedCount": "{{count}} φοιτητές",
     "pickStudents": "Ποιος λαμβάνει αυτή την εργασία;",
     "pickStudentsHint": "Μόνο οι φοιτητές που θα επιλέξετε θα δουν αυτή την εργασία.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Ορισμένες από αυτές τις εργασίες μπορεί ήδη να έχουν το νέο κοινό."
   },
   "advisorGroups": {
     "groupCenter": "Κέντρο ομάδας",
@@ -531,6 +532,11 @@
     "noSubmissions": "Δεν υπάρχουν ακόμη υποβολές.",
     "openSubmission": "Άνοιγμα υποβολής",
     "advisorNote": "Σημείωση συμβούλου"
+  },
+  "messages": {
+    "selectAll": "Επιλογή όλων",
+    "clearAll": "Εκκαθάριση",
+    "continueWith": "Συνέχεια ({{count}})"
   },
   "tabs": {
     "messages": "Μηνύματα",

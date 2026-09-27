@@ -381,7 +381,8 @@
     "audienceSelectedCount": "{{count}} students",
     "pickStudents": "Who gets this task?",
     "pickStudentsHint": "Only the students you choose will see this task.",
-    "levelBadge": "L{{level}}"
+    "levelBadge": "L{{level}}",
+    "retargetPartial": "Some of these tasks may already carry the new audience."
   },
   "advisorGroups": {
     "groupCenter": "Group center",

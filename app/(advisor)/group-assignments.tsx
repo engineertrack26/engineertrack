@@ -293,9 +293,31 @@ function GroupAssignmentsContent() {
         // Only the people who were actually given the task. Notifying the
         // whole group about a task five of them cannot open is the same leak
         // the stream card was dropped to avoid.
-        const recipients = targetIds.length
-          ? members.filter((m) => targetIds.includes(m.id))
-          : members;
+        //
+        // Recipients follow each assignment's OWN audience, not the
+        // `targetIds` argument alone: the drafts tray always calls this with
+        // an empty array, even for a draft that already carries a 'selected'
+        // audience and its own targets from an earlier review. `targetIds`
+        // wins only for the rows the loop above just retargeted (every id in
+        // `batch`, when it ran); everything else falls back to what the row
+        // itself already says. If any assignment in the batch reaches the
+        // whole group, the whole group is in the recipient set regardless of
+        // any other assignment's narrower targets.
+        let recipients = members;
+        try {
+          const perAssignmentIds = await Promise.all(batch.map(async (a) => {
+            const audience = targetIds.length ? 'selected' : a.audience;
+            if (audience !== 'selected') return members.map((m) => m.id);
+            return targetIds.length ? targetIds : assignmentService.listAssignmentTargets(a.id);
+          }));
+          const recipientIds = new Set(perAssignmentIds.flat());
+          recipients = members.filter((m) => recipientIds.has(m.id));
+        } catch (err) {
+          // A failed target lookup must not swallow every notification for a
+          // publish that already succeeded. Over-notifying the whole group is
+          // the safe direction to fail in, not silence -- fall back to it.
+          console.warn('recipient lookup failed:', err);
+        }
         await Promise.all(
           recipients.map((m) =>
             notificationService.create(
@@ -325,11 +347,18 @@ function GroupAssignmentsContent() {
       // the whole tray for it. The tray is deliberately left untouched (no
       // loadData() here): the advisor has to fix the named task, and
       // reloading could only ever confirm nothing changed.
+      //
+      // The targeting loop above is not atomic: if it throws partway through
+      // a multi-task batch, the earlier tasks in the batch are already
+      // 'selected' server-side even though nothing published. A retry has to
+      // know that, or it retries assuming a clean slate that no longer
+      // exists.
+      const retarget = targetIds.length ? ` ${t('taskFlow.retargetPartial')}` : '';
       if ((code === 'NOT_IN_SCOPE' || code === 'TARGETS_REQUIRED') && detail) {
         Alert.alert(t('common.error'), t(code === 'NOT_IN_SCOPE'
-          ? 'errors.notInScopeTitled' : 'errors.targetsRequiredTitled', { title: detail }));
+          ? 'errors.notInScopeTitled' : 'errors.targetsRequiredTitled', { title: detail }) + retarget);
       } else {
-        Alert.alert(t('common.error'), t(key));
+        Alert.alert(t('common.error'), t(key) + retarget);
       }
       return false;
     } finally {

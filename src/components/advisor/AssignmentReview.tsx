@@ -41,6 +41,12 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   // an advisor who never opens the picker keeps today's behaviour exactly.
   const [targetIds, setTargetIds] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
+  // The picker edits its own copy, seeded from targetIds when it opens and
+  // discarded on close. Without this, ticking two names and then tapping the
+  // X still sent the task to those two -- the picker's own toggle wrote
+  // straight into targetIds, so there was no difference between Cancel and
+  // Continue.
+  const [draftTargetIds, setDraftTargetIds] = useState<string[]>([]);
   const running = useRef(false);
   const snapshot = useRef<PreparedTask[] | null>(null);
 
@@ -128,7 +134,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
 
   </>}>
     <GroupContextLabel groupId={groupId} />
-    <Text style={ui.body}>{t('taskFlow.summary', { tasks: tasks.length, students: memberCount })}</Text>
+    <Text style={ui.body}>{t('taskFlow.summary', { tasks: tasks.length, students: targetIds.length || memberCount })}</Text>
     <Text style={ui.label}>{t('taskFlow.audience', 'Who gets this')}</Text>
     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
       {(['group', 'selected'] as const).map((value) => {
@@ -136,9 +142,18 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         return (
           <TouchableOpacity key={value} accessibilityRole="radio"
             accessibilityState={{ selected: on }}
-            style={[groupStyles.outline, on && groupStyles.outlineOn]}
-            disabled={attempted || busy}
-            onPress={() => value === 'group' ? setTargetIds([]) : setPicking(true)}>
+            style={[groupStyles.outline, on && groupStyles.selected]}
+            // Frozen after a successful attempt, same as everything else --
+            // but a failed one leaves the audience open, because the fix for
+            // a failed send (a departed student was still named) is a
+            // different audience, and a retry that cannot change it can only
+            // fail the same way again.
+            disabled={busy || (attempted && !failed)}
+            onPress={() => {
+              if (value === 'group') { setTargetIds([]); return; }
+              setDraftTargetIds(targetIds);
+              setPicking(true);
+            }}>
             <Text style={groupStyles.linkText}>
               {value === 'group'
                 ? t('taskFlow.audienceGroup', 'Whole group ({{count}})', { count: memberCount })
@@ -208,10 +223,12 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
       </View>}
     </View>)}
     {picking && <TargetPicker visible groupId={groupId} competencyId={competencyId}
-      students={members} selected={targetIds}
-      onToggle={(id) => setTargetIds((old) =>
+      students={members} selected={draftTargetIds}
+      onToggle={(id) => setDraftTargetIds((old) =>
         old.includes(id) ? old.filter((x) => x !== id) : [...old, id])}
-      onSubmit={() => setPicking(false)}
+      // Continue commits the draft; the X (onClose) discards it and leaves
+      // targetIds exactly as it was before the sheet opened.
+      onSubmit={() => { setTargetIds(draftTargetIds); setPicking(false); }}
       onClose={() => setPicking(false)} />}
   </GroupModal>;
 }
