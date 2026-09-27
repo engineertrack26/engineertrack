@@ -299,7 +299,7 @@ export function AssignmentCard({
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('taskFlow.audienceNarrow', 'Send to selected students only'),
+          text: t('taskFlow.audienceNarrowSend', 'Send only'),
           style: 'destructive',
           onPress: () => applyTargets(ids),
         },

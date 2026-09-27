@@ -374,7 +374,8 @@
     "audienceBackToGroupConfirm": "Aceasta face sarcina vizibilă pentru toți studenții din grup și publică un card în flux. Reselectarea acelorași studenți nu va anula această acțiune.",
     "audienceWholeGroup": "Tot grupul",
     "audienceNarrow": "Trimite doar către studenții selectați",
-    "audienceNarrowConfirm": "Studenții pe care nu îi selectați nu vor mai vedea această sarcină, iar cardul care o anunță în flux va fi eliminat."
+    "audienceNarrowConfirm": "Studenții pe care nu îi selectați nu vor mai vedea această sarcină, iar cardul care o anunță în flux va fi eliminat.",
+    "audienceNarrowSend": "Trimite doar"
   },
   "advisorGroups": {
     "groupCenter": "Centrul grupului",

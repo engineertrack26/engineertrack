@@ -374,7 +374,8 @@
     "audienceBackToGroupConfirm": "Ovo čini zadatak vidljivim svim studentima u grupi i objavljuje karticu u toku. Ponovni izbor istih studenata to neće poništiti.",
     "audienceWholeGroup": "Cela grupa",
     "audienceNarrow": "Pošalji samo izabranim studentima",
-    "audienceNarrowConfirm": "Studenti koje ne izaberete više neće videti ovaj zadatak, a kartica koja ga najavljuje u toku biće uklonjena."
+    "audienceNarrowConfirm": "Studenti koje ne izaberete više neće videti ovaj zadatak, a kartica koja ga najavljuje u toku biće uklonjena.",
+    "audienceNarrowSend": "Samo pošalji"
   },
   "advisorGroups": {
     "groupCenter": "Centar grupe",

@@ -433,7 +433,8 @@
     "audienceBackToGroupConfirm": "Bu, görevi gruptaki tüm öğrencilere görünür yapar ve akışta bir kart paylaşır. Aynı öğrencileri tekrar seçmek bunu geri almaz.",
     "audienceWholeGroup": "Tüm grup",
     "audienceNarrow": "Yalnızca seçili öğrencilere gönder",
-    "audienceNarrowConfirm": "Seçmediğiniz öğrenciler bu görevi artık göremeyecek ve akıştaki duyuru kartı kaldırılacak."
+    "audienceNarrowConfirm": "Seçmediğiniz öğrenciler bu görevi artık göremeyecek ve akıştaki duyuru kartı kaldırılacak.",
+    "audienceNarrowSend": "Sadece gönder"
   },
   "advisorGroups": {
     "groupCenter": "Grup merkezi",

@@ -389,7 +389,8 @@
     "audienceBackToGroupConfirm": "This makes the task visible to every student in the group and posts a card to the stream. Re-picking the same students later will not undo it.",
     "audienceWholeGroup": "Whole group",
     "audienceNarrow": "Send to selected students only",
-    "audienceNarrowConfirm": "Students you don't pick will no longer see this task, and the card announcing it in the stream will be removed."
+    "audienceNarrowConfirm": "Students you don't pick will no longer see this task, and the card announcing it in the stream will be removed.",
+    "audienceNarrowSend": "Send only"
   },
   "advisorGroups": {
     "groupCenter": "Group center",
