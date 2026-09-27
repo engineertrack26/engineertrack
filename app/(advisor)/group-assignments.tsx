@@ -25,7 +25,7 @@ import { soleCompetencyId } from '@/utils/assignmentTargets';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { AssignmentCard } from '@/components/cards';
 import type { Competency, CompetencyKpi } from '@/types/competency';
-import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
+import type { GroupAssignment, KpiTriplet, AssignmentCounts } from '@/types/assignment';
 import type { GroupMember } from '@/types/group';
 import { groupCenterRoute } from '@/utils/advisorGroups';
 import { AssignmentReview } from '@/components/advisor/AssignmentReview';
@@ -40,12 +40,13 @@ const LEVELS = [1, 2, 3, 4];
 // 'YYYY-MM-DD' strings, so that stays the stored shape. Only the display
 // changes.
 //
-type SubmissionCounts = Record<
-  string,
-  { submitted: number; approved: number; needsRevision: number }
->;
+type SubmissionCounts = Record<string, AssignmentCounts>;
 
-const ZERO_COUNTS = { submitted: 0, approved: 0, needsRevision: 0 };
+// assignmentId is '' here rather than the row's real id -- nothing reads it
+// off this constant, only off the map key it stands in for.
+const ZERO_COUNTS: AssignmentCounts = {
+  assignmentId: '', submitted: 0, approved: 0, needsRevision: 0, targetCount: 0,
+};
 
 export default function GroupAssignmentsScreen() {
   const { groupId } = useLocalSearchParams<{ groupId?: string }>();
@@ -158,11 +159,7 @@ function GroupAssignmentsContent() {
       setCountsUnavailable(counts === null);
       const byAssignment: SubmissionCounts = {};
       for (const c of counts || []) {
-        byAssignment[c.assignmentId] = {
-          submitted: c.submitted,
-          approved: c.approved,
-          needsRevision: c.needsRevision,
-        };
+        byAssignment[c.assignmentId] = c;
       }
       setSubmissionCounts(byAssignment);
 
@@ -470,7 +467,7 @@ function GroupAssignmentsContent() {
           <AssignmentCard assignment={a} isDraft={!a.publishedAt}
             counts={submissionCounts[a.id] || ZERO_COUNTS} countsUnavailable={countsUnavailable}
             memberCount={members.length} outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
-            onChanged={loadData} />
+            members={targetCandidates} onChanged={loadData} />
         </View>)}
 
         <View style={{ height: spacing.xl }} />

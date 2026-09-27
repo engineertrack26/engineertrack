@@ -426,7 +426,10 @@
     "pickStudents": "Bu görevi kim alacak?",
     "pickStudentsHint": "Sadece seçtiğiniz öğrenciler bu görevi görecek.",
     "levelBadge": "L{{level}}",
-    "retargetPartial": "Bu görevlerin bazıları yeni hedef kitleyi zaten taşıyor olabilir."
+    "retargetPartial": "Bu görevlerin bazıları yeni hedef kitleyi zaten taşıyor olabilir.",
+    "changeAudience": "Kime gönderildiğini değiştir",
+    "audienceBackToGroup": "Tüm gruba gönder",
+    "audienceBackToGroupConfirm": "Bu, görevi gruptaki tüm öğrencilere görünür yapar ve akışta bir kart paylaşır. Aynı öğrencileri tekrar seçmek bunu geri almaz."
   },
   "advisorGroups": {
     "groupCenter": "Grup merkezi",
@@ -1195,6 +1198,7 @@
     "studentsAtTarget": "{{total}} öğrenciden {{atTarget}} tanesi hedefe ulaştı",
     "noStudentsYet": "Henüz öğrenci yok",
     "submittedCount": "{{count}} gönderilen",
+    "submittedOfCount": "{{value}} gönderilen",
     "approvedCount": "{{count}} onaylanan",
     "reminderTitle": "Görev hatırlatması",
     "reminderBody": "{{advisor}}, bir süredir görev göndermediğini fark etti. Lütfen görevlerini kontrol et.",

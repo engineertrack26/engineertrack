@@ -11,14 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { assignmentService } from '@/services/assignments';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { submittedOfTarget } from '@/utils/assignmentTargets';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
-import type { GroupAssignment } from '@/types/assignment';
-
-interface AssignmentCounts {
-  submitted: number;
-  approved: number;
-  needsRevision: number;
-}
+import { ui } from '@/components/common/workflowStyles';
+import { TargetPicker, type TargetCandidate } from '@/components/advisor/TargetPicker';
+import type { GroupAssignment, AssignmentCounts } from '@/types/assignment';
 
 interface AssignmentCardProps {
   assignment: GroupAssignment;
@@ -31,6 +28,10 @@ interface AssignmentCardProps {
   countsUnavailable: boolean;
   memberCount: number;
   outOfScope: boolean;
+  /** The group's roster, in the one spelling of each name the whole targeting
+   *  flow shares -- see targetCandidates in group-assignments.tsx. Passed
+   *  through unchanged to TargetPicker when the advisor re-targets. */
+  members: TargetCandidate[];
   /** Called after any successful mutation -- edit, withdraw, or a document
    *  attach/replace/remove. Re-runs the screen's single `loadData` query;
    *  this card keeps no copy of the row beyond what it seeds the edit form
@@ -39,7 +40,7 @@ interface AssignmentCardProps {
 }
 
 export function AssignmentCard({
-  assignment: a, isDraft, counts, countsUnavailable, memberCount, outOfScope, onChanged,
+  assignment: a, isDraft, counts, countsUnavailable, memberCount, outOfScope, members, onChanged,
 }: AssignmentCardProps) {
   const { t, i18n } = useTranslation();
 
@@ -55,6 +56,12 @@ export function AssignmentCard({
   // Covers both the initial attach and a replace -- one flag either way,
   // since only one of those two actions can be in flight for a single task.
   const [attaching, setAttaching] = useState(false);
+  // Re-targeting: the picker sheet, the ids it is currently showing (seeded
+  // from listAssignmentTargets when opened, not from a local guess), and its
+  // own busy flag -- the card has no shared `busy`, see withdrawing/attaching.
+  const [picking, setPicking] = useState(false);
+  const [targetIds, setTargetIds] = useState<string[]>([]);
+  const [retargeting, setRetargeting] = useState(false);
 
   // A draft has no submissions, so trg_freeze_assessed_assignment cannot have
   // fired and every field stays editable. A sent card falls back to the
@@ -211,6 +218,56 @@ export function AssignmentCard({
     }
   }
 
+  // Seeds the sheet from the server's own record of who is targeted, not
+  // from a local guess -- the card keeps no copy of assignment_targets
+  // between opens.
+  async function openTargetPicker() {
+    try {
+      setTargetIds(await assignmentService.listAssignmentTargets(a.id));
+      setPicking(true);
+    } catch (err) {
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    }
+  }
+
+  // Shared by the picker's "continue" and by the "back to the whole group"
+  // escape -- an empty array is what turns 'selected' back into 'group' on
+  // the server, so both paths are the same call.
+  async function applyTargets(ids: string[]) {
+    setPicking(false);
+    setRetargeting(true);
+    try {
+      await assignmentService.setAssignmentTargets(a.id, ids);
+      onChanged();
+    } catch (err) {
+      // HAS_SUBMISSION is the one an advisor will actually hit: they tried
+      // to take the task away from someone who already submitted it.
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    } finally {
+      setRetargeting(false);
+    }
+  }
+
+  // Widening back to the whole group makes the task visible to everyone and
+  // posts a stream card announcing it -- re-picking the same students later
+  // does not undo either effect, so this needs its own confirmation rather
+  // than riding along with the picker's own "continue".
+  function confirmBackToGroup() {
+    Alert.alert(
+      t('taskFlow.audienceBackToGroup', 'Send to the whole group'),
+      t('taskFlow.audienceBackToGroupConfirm', 'This makes the task visible to every student in the group and posts a card to the stream. Re-picking the same students later will not undo it.'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('taskFlow.audienceBackToGroup', 'Send to the whole group'),
+          onPress: () => applyTargets([]),
+        },
+      ],
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
@@ -288,24 +345,62 @@ export function AssignmentCard({
         // empty". This badge is what actually says "not yet sent".
         <Text style={styles.draftBadge}>{t('advisor.draftBadge')}</Text>
       ) : (
-        // approved and "sent back" are subsets of submitted, not further
-        // buckets alongside it -- the parenthesis is what says so.
-        <Text style={styles.subtle}>
-          {countsUnavailable ? (
-            t('advisor.assignmentCountsUnavailable')
-          ) : (
-            <>
-              {t('advisor.submittedCount', { count: counts.submitted })}
-              {' ('}
-              {t('advisor.approvedCount', { count: counts.approved })}
-              {', '}
-              {t('advisor.revisionCount', { count: counts.needsRevision })}
-              {')'}
-            </>
+        <>
+          {/* Group audience uses memberCount, which is never in doubt. A
+              selected audience's headcount comes from the same counts RPC as
+              the submitted/approved tallies below, so it is withheld under
+              the same countsUnavailable flag rather than asserting a "0" the
+              server never actually said. */}
+          <Text style={ui.label}>
+            {a.audience === 'selected'
+              ? (countsUnavailable
+                ? t('taskFlow.audienceSelected')
+                : t('taskFlow.audienceSelectedCount', { count: counts.targetCount }))
+              : t('taskFlow.audienceGroup', { count: memberCount })}
+          </Text>
+          {/* approved and "sent back" are subsets of submitted, not further
+              buckets alongside it -- the parenthesis is what says so. The
+              denominator is who the task actually reached, not the group's
+              size -- see submittedOfTarget. */}
+          <Text style={styles.subtle}>
+            {countsUnavailable ? (
+              t('advisor.assignmentCountsUnavailable')
+            ) : (
+              <>
+                {t('advisor.submittedOfCount', '{{value}} submitted', { value: submittedOfTarget(counts) })}
+                {' ('}
+                {t('advisor.approvedCount', { count: counts.approved })}
+                {', '}
+                {t('advisor.revisionCount', { count: counts.needsRevision })}
+                {')'}
+              </>
+            )}
+          </Text>
+        </>
+      )}
+
+      {!isDraft && (
+        <View style={styles.audienceActions}>
+          <TouchableOpacity accessibilityRole="button" disabled={retargeting} onPress={openTargetPicker}>
+            <Text style={ui.link}>{t('taskFlow.changeAudience', 'Change who this is for')}</Text>
+          </TouchableOpacity>
+          {a.audience === 'selected' && (
+            <TouchableOpacity accessibilityRole="button" disabled={retargeting} onPress={confirmBackToGroup}>
+              <Text style={ui.link}>{t('taskFlow.audienceBackToGroup', 'Send to the whole group')}</Text>
+            </TouchableOpacity>
           )}
-          {' / '}
-          {t('advisor.memberCount', { count: memberCount })}
-        </Text>
+          {retargeting && <ActivityIndicator size="small" color={colors.primary} />}
+        </View>
+      )}
+
+      {picking && (
+        <TargetPicker visible groupId={a.groupId}
+          competencyId={a.competencyId ?? null}
+          students={members} selected={targetIds}
+          onToggle={(id) => setTargetIds((old) =>
+            old.includes(id) ? old.filter((x) => x !== id) : [...old, id])}
+          onSubmit={() => applyTargets(targetIds)}
+          onClose={() => setPicking(false)} />
       )}
 
       {isEditing && (
@@ -519,6 +614,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: 'uppercase',
     color: colors.status.draft,
+    marginTop: spacing.xs,
+  },
+  audienceActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
     marginTop: spacing.xs,
   },
   label: {

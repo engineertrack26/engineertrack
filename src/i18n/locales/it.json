@@ -367,7 +367,10 @@
     "pickStudents": "Chi riceve questa attività?",
     "pickStudentsHint": "Solo gli studenti selezionati vedranno questa attività.",
     "levelBadge": "L{{level}}",
-    "retargetPartial": "Alcune di queste attività potrebbero già avere il nuovo destinatario."
+    "retargetPartial": "Alcune di queste attività potrebbero già avere il nuovo destinatario.",
+    "changeAudience": "Cambia chi riceve questo compito",
+    "audienceBackToGroup": "Invia a tutto il gruppo",
+    "audienceBackToGroupConfirm": "Questo rende il compito visibile a tutti gli studenti del gruppo e pubblica una scheda nel feed. Riselezionare gli stessi studenti non lo annullerà."
   },
   "advisorGroups": {
     "groupCenter": "Centro del gruppo",

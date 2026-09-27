@@ -382,7 +382,10 @@
     "pickStudents": "Who gets this task?",
     "pickStudentsHint": "Only the students you choose will see this task.",
     "levelBadge": "L{{level}}",
-    "retargetPartial": "Some of these tasks may already carry the new audience."
+    "retargetPartial": "Some of these tasks may already carry the new audience.",
+    "changeAudience": "Change who this is for",
+    "audienceBackToGroup": "Send to the whole group",
+    "audienceBackToGroupConfirm": "This makes the task visible to every student in the group and posts a card to the stream. Re-picking the same students later will not undo it."
   },
   "advisorGroups": {
     "groupCenter": "Group center",
@@ -1031,6 +1034,7 @@
     "attachDocument": "Attach document",
     "replaceDocument": "Replace",
     "submittedCount": "{{count}} submitted",
+    "submittedOfCount": "{{value}} submitted",
     "approvedCount": "{{count}} approved",
     "revisionCount": "{{count}} sent back",
     "assignmentOutOfScope": "The group no longer targets this competency, so submissions cannot be approved until it does.",
