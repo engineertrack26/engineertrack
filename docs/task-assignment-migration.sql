@@ -51,6 +51,17 @@ ALTER TABLE group_assignments ENABLE ROW LEVEL SECURITY;
 -- file (e.g. rebuilding a fresh database from the full migration history),
 -- you MUST re-apply docs/assignment-drafts-migration.sql immediately after
 -- it, before anything else reads group_assignments.
+--
+-- NOTE (2026-09-26): SUPERSEDED AGAIN, and the current home is now
+-- docs/assignment-targeting.sql, not docs/assignment-drafts-migration.sql.
+-- The policy that stands routes through can_see_assignment /
+-- mentor_sees_assignment, which also carry the published_at condition. This
+-- version knows about neither drafts nor audience, so re-running it alone
+-- costs both at once: every draft becomes visible to its whole group AND
+-- EVERY TARGETED TASK BECOMES VISIBLE TO THE WHOLE GROUP -- the
+-- silent-widening direction the targeting data model was shaped to avoid.
+-- Re-apply docs/assignment-targeting.sql after this file, not just the
+-- drafts migration.
 DROP POLICY IF EXISTS "assignments read" ON group_assignments;
 CREATE POLICY "assignments read" ON group_assignments
   FOR SELECT TO authenticated USING (

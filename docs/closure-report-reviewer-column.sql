@@ -6,6 +6,16 @@
 -- pointing here. RE-RUNNING internship-closure-migration.sql RESTORES THE
 -- OLD "Mentor (avg)" / "Mentor" HEADERS.
 --
+-- NOTE (2026-09-27): build_internship_report NO LONGER LIVES HERE EITHER.
+-- docs/assignment-targeting-followups.sql holds the copy that stands: its
+-- Tasks loop lists only the assignments THIS STUDENT WAS GIVEN. The version
+-- below lists every published assignment of the group, so re-running this
+-- file alone puts a task given to two students back on the other five
+-- students' reports as work they failed to do -- stored permanently in
+-- internship_closures.report_md and shown to the student, the mentor and the
+-- university. The headers below are still the ones that stand; re-apply
+-- docs/assignment-targeting-followups.sql immediately after this file.
+--
 -- Change: assignment_submissions.mentor_level is written by
 -- review_assignment, which docs/review-by-advisor.sql moved to the group's
 -- ADVISOR. The report already prints '| Mentor | <workplace mentor> |' from

@@ -45,6 +45,14 @@ ALTER TABLE group_assignments ADD COLUMN IF NOT EXISTS document_name TEXT;
 -- Drafts are invisible to everyone but their author, and that is enforced
 -- here rather than by a filter on a screen: a client-side filter would leave
 -- the rows readable to anything else that queries this table.
+--
+-- NOTE (2026-09-26): the "assignments read" policy NO LONGER LIVES HERE.
+-- docs/assignment-targeting.sql holds the copy that stands, routed through
+-- can_see_assignment / mentor_sees_assignment. This version has no idea
+-- group_assignments.audience exists, so re-running this file alone makes
+-- EVERY TARGETED TASK VISIBLE TO THE WHOLE GROUP again -- the silent-widening
+-- direction the whole data model was shaped to avoid, and it raises nothing.
+-- If you re-apply this file, re-apply docs/assignment-targeting.sql after it.
 DROP POLICY IF EXISTS "assignments read" ON group_assignments;
 CREATE POLICY "assignments read" ON group_assignments
   FOR SELECT TO authenticated USING (
@@ -96,6 +104,15 @@ CREATE POLICY "assignment_docs_upload" ON storage.objects
 -- owning assignment to be published; without this a student or mentor could
 -- list the bucket folder and sign a draft's brief straight from storage even
 -- though group_assignments hides the row itself.
+--
+-- NOTE (2026-09-27): the "assignment_docs_read" policy NO LONGER LIVES HERE.
+-- docs/assignment-targeting-followups.sql holds the copy that stands. The
+-- reasoning below was written about DRAFTS and never revisited when a second
+-- class of hidden assignment appeared: this version knows nothing about
+-- audience, so it lets ANY ACTIVE MEMBER list <groupId>/, walk the
+-- assignment-id folders and sign the brief of a targeted task they were
+-- never given. RE-RUNNING THIS FILE REOPENS THAT HOLE, silently -- re-apply
+-- docs/assignment-targeting-followups.sql immediately after it.
 DROP POLICY IF EXISTS "assignment_docs_read" ON storage.objects;
 CREATE POLICY "assignment_docs_read" ON storage.objects
   FOR SELECT USING (

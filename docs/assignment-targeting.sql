@@ -18,6 +18,15 @@
 -- docs/task-assignment-rpcs.sql) and the trg_feed_assignment_post trigger
 -- (was docs/group-feed-assignment-cards.sql). Re-running any of those three
 -- files reverts this feature; each carries a NOTE saying so.
+--
+-- NOTE (2026-09-27): set_assignment_targets and group_assignment_counts NO
+-- LONGER LIVE HERE. docs/assignment-targeting-followups.sql holds the copies
+-- that stand -- one exempts a submitter who has LEFT the group from
+-- HAS_SUBMISSION (without it, such an assignment can never be re-targeted
+-- again), the other counts only active members on the 'selected' branch of
+-- target_count. Re-running THIS file restores both older bodies; re-apply
+-- docs/assignment-targeting-followups.sql afterwards. The rest of this file
+-- still stands.
 -- ============================================
 
 -- ---- 1. The audience column ----
