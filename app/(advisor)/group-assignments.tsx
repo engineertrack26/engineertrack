@@ -466,7 +466,7 @@ function GroupAssignmentsContent() {
           </TouchableOpacity>}
           <AssignmentCard assignment={a} isDraft={!a.publishedAt}
             counts={submissionCounts[a.id] || ZERO_COUNTS} countsUnavailable={countsUnavailable}
-            memberCount={members.length} outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
+            outOfScope={!!a.competencyId && !inScope.has(a.competencyId)}
             members={targetCandidates} onChanged={loadData} />
         </View>)}
 

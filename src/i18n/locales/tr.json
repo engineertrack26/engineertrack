@@ -429,7 +429,10 @@
     "retargetPartial": "Bu görevlerin bazıları yeni hedef kitleyi zaten taşıyor olabilir.",
     "changeAudience": "Kime gönderildiğini değiştir",
     "audienceBackToGroup": "Tüm gruba gönder",
-    "audienceBackToGroupConfirm": "Bu, görevi gruptaki tüm öğrencilere görünür yapar ve akışta bir kart paylaşır. Aynı öğrencileri tekrar seçmek bunu geri almaz."
+    "audienceBackToGroupConfirm": "Bu, görevi gruptaki tüm öğrencilere görünür yapar ve akışta bir kart paylaşır. Aynı öğrencileri tekrar seçmek bunu geri almaz.",
+    "audienceWholeGroup": "Tüm grup",
+    "audienceNarrow": "Yalnızca seçili öğrencilere gönder",
+    "audienceNarrowConfirm": "Seçmediğiniz öğrenciler bu görevi artık göremeyecek ve akıştaki duyuru kartı kaldırılacak."
   },
   "advisorGroups": {
     "groupCenter": "Grup merkezi",
@@ -1103,7 +1106,6 @@
     "joinCode": "Katılım kodu",
     "joinCodeCopied": "Katılım kodu panoya kopyalandı.",
     "joinCodeHint": "Öğrencilerinin bu gruba katılabilmesi için kodu onlarla paylaş.",
-    "memberCount": "{{count}} öğrenci",
     "viewStudents": "Öğrencileri gör",
     "archive": "Arşivle",
     "unarchive": "Arşivden çıkar",

@@ -370,7 +370,10 @@
     "retargetPartial": "Unele dintre aceste sarcini pot avea deja noua audiență.",
     "changeAudience": "Schimbă cui îi este destinată",
     "audienceBackToGroup": "Trimite către tot grupul",
-    "audienceBackToGroupConfirm": "Aceasta face sarcina vizibilă pentru toți studenții din grup și publică un card în flux. Reselectarea acelorași studenți nu va anula această acțiune."
+    "audienceBackToGroupConfirm": "Aceasta face sarcina vizibilă pentru toți studenții din grup și publică un card în flux. Reselectarea acelorași studenți nu va anula această acțiune.",
+    "audienceWholeGroup": "Tot grupul",
+    "audienceNarrow": "Trimite doar către studenții selectați",
+    "audienceNarrowConfirm": "Studenții pe care nu îi selectați nu vor mai vedea această sarcină, iar cardul care o anunță în flux va fi eliminat."
   },
   "advisorGroups": {
     "groupCenter": "Centrul grupului",

@@ -26,7 +26,6 @@ interface AssignmentCardProps {
   isDraft: boolean;
   counts: AssignmentCounts;
   countsUnavailable: boolean;
-  memberCount: number;
   outOfScope: boolean;
   /** The group's roster, in the one spelling of each name the whole targeting
    *  flow shares -- see targetCandidates in group-assignments.tsx. Passed
@@ -40,7 +39,7 @@ interface AssignmentCardProps {
 }
 
 export function AssignmentCard({
-  assignment: a, isDraft, counts, countsUnavailable, memberCount, outOfScope, members, onChanged,
+  assignment: a, isDraft, counts, countsUnavailable, outOfScope, members, onChanged,
 }: AssignmentCardProps) {
   const { t, i18n } = useTranslation();
 
@@ -268,6 +267,27 @@ export function AssignmentCard({
     );
   }
 
+  // The other direction is destructive, not benign: applying a subset to a
+  // task that currently reaches the whole group hides it from everyone not
+  // picked and deletes the stream card that announced it. Only this one
+  // transition (published, currently 'group') needs asking first -- a task
+  // that is already 'selected' is only having its membership adjusted, and a
+  // draft has never been seen by anyone.
+  function confirmNarrowToSelected(ids: string[]) {
+    Alert.alert(
+      t('taskFlow.audienceNarrow', 'Send to selected students only'),
+      t('taskFlow.audienceNarrowConfirm', "Students you don't pick will no longer see this task, and the card announcing it in the stream will be removed."),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('taskFlow.audienceNarrow', 'Send to selected students only'),
+          style: 'destructive',
+          onPress: () => applyTargets(ids),
+        },
+      ],
+    );
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
@@ -346,17 +366,24 @@ export function AssignmentCard({
         <Text style={styles.draftBadge}>{t('advisor.draftBadge')}</Text>
       ) : (
         <>
-          {/* Group audience uses memberCount, which is never in doubt. A
-              selected audience's headcount comes from the same counts RPC as
-              the submitted/approved tallies below, so it is withheld under
-              the same countsUnavailable flag rather than asserting a "0" the
-              server never actually said. */}
-          <Text style={ui.label}>
+          {/* Metadata, not a headline -- styles.label (12px, secondary), not
+              ui.label (16px, primary): this line used to read louder than
+              the title. Group audience carries no count of its own here --
+              the row below already gives it as the "/ N" denominator (from
+              counts.targetCount, the server's own count of active members
+              for a group audience), so repeating it here would just be the
+              same number twice. A selected audience's headcount comes from
+              the same counts RPC as the submitted/approved tallies below, so
+              it is withheld under the same countsUnavailable flag rather
+              than asserting a "0" the server never actually said -- it is
+              also the ONLY place that number appears, so it stays here
+              rather than moving to the row below. */}
+          <Text style={styles.label}>
             {a.audience === 'selected'
               ? (countsUnavailable
-                ? t('taskFlow.audienceSelected')
+                ? t('taskFlow.audienceSelected', 'Selected students')
                 : t('taskFlow.audienceSelectedCount', { count: counts.targetCount }))
-              : t('taskFlow.audienceGroup', { count: memberCount })}
+              : t('taskFlow.audienceWholeGroup', 'Whole group')}
           </Text>
           {/* approved and "sent back" are subsets of submitted, not further
               buckets alongside it -- the parenthesis is what says so. The
@@ -381,12 +408,18 @@ export function AssignmentCard({
 
       {!isDraft && (
         <View style={styles.audienceActions}>
-          <TouchableOpacity accessibilityRole="button" disabled={retargeting} onPress={openTargetPicker}>
-            <Text style={ui.link}>{t('taskFlow.changeAudience', 'Change who this is for')}</Text>
+          <TouchableOpacity accessibilityRole="button" disabled={retargeting}
+            accessibilityState={{ disabled: retargeting }} onPress={openTargetPicker}>
+            <Text style={[ui.link, retargeting && styles.linkDisabled]}>
+              {t('taskFlow.changeAudience', 'Change who this is for')}
+            </Text>
           </TouchableOpacity>
           {a.audience === 'selected' && (
-            <TouchableOpacity accessibilityRole="button" disabled={retargeting} onPress={confirmBackToGroup}>
-              <Text style={ui.link}>{t('taskFlow.audienceBackToGroup', 'Send to the whole group')}</Text>
+            <TouchableOpacity accessibilityRole="button" disabled={retargeting}
+              accessibilityState={{ disabled: retargeting }} onPress={confirmBackToGroup}>
+              <Text style={[ui.link, retargeting && styles.linkDisabled]}>
+                {t('taskFlow.audienceBackToGroup', 'Send to the whole group')}
+              </Text>
             </TouchableOpacity>
           )}
           {retargeting && <ActivityIndicator size="small" color={colors.primary} />}
@@ -399,7 +432,19 @@ export function AssignmentCard({
           students={members} selected={targetIds}
           onToggle={(id) => setTargetIds((old) =>
             old.includes(id) ? old.filter((x) => x !== id) : [...old, id])}
-          onSubmit={() => applyTargets(targetIds)}
+          onSubmit={() => {
+            // Narrowing a published group-audience task away from the whole
+            // group is the destructive direction -- it hides the task from
+            // everyone not picked and removes the stream card announcing it
+            // (see the trigger in docs/assignment-targeting.sql). Widening
+            // already confirms via confirmBackToGroup; re-picking within an
+            // already-'selected' audience needs no confirmation of its own,
+            // since nothing that was visible becomes hidden that was not
+            // already hidden, and HAS_SUBMISSION guards the case that
+            // matters (dropping someone who already submitted).
+            if (!isDraft && a.audience === 'group') confirmNarrowToSelected(targetIds);
+            else applyTargets(targetIds);
+          }}
           onClose={() => setPicking(false)} />
       )}
 
@@ -622,6 +667,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
     marginTop: spacing.xs,
+  },
+  linkDisabled: {
+    opacity: 0.5,
   },
   label: {
     fontSize: 12, fontFamily: fonts.regular,

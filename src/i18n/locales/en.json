@@ -385,7 +385,10 @@
     "retargetPartial": "Some of these tasks may already carry the new audience.",
     "changeAudience": "Change who this is for",
     "audienceBackToGroup": "Send to the whole group",
-    "audienceBackToGroupConfirm": "This makes the task visible to every student in the group and posts a card to the stream. Re-picking the same students later will not undo it."
+    "audienceBackToGroupConfirm": "This makes the task visible to every student in the group and posts a card to the stream. Re-picking the same students later will not undo it.",
+    "audienceWholeGroup": "Whole group",
+    "audienceNarrow": "Send to selected students only",
+    "audienceNarrowConfirm": "Students you don't pick will no longer see this task, and the card announcing it in the stream will be removed."
   },
   "advisorGroups": {
     "groupCenter": "Group center",
@@ -994,7 +997,6 @@
     "joinCode": "Join code",
     "joinCodeCopied": "Join code copied to clipboard.",
     "joinCodeHint": "Share this code with your students so they can join this group.",
-    "memberCount": "{{count}} students",
     "viewStudents": "View students",
     "archive": "Archive",
     "unarchive": "Unarchive",

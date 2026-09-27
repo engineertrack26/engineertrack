@@ -370,7 +370,10 @@
     "retargetPartial": "Alcune di queste attività potrebbero già avere il nuovo destinatario.",
     "changeAudience": "Cambia chi riceve questo compito",
     "audienceBackToGroup": "Invia a tutto il gruppo",
-    "audienceBackToGroupConfirm": "Questo rende il compito visibile a tutti gli studenti del gruppo e pubblica una scheda nel feed. Riselezionare gli stessi studenti non lo annullerà."
+    "audienceBackToGroupConfirm": "Questo rende il compito visibile a tutti gli studenti del gruppo e pubblica una scheda nel feed. Riselezionare gli stessi studenti non lo annullerà.",
+    "audienceWholeGroup": "Tutto il gruppo",
+    "audienceNarrow": "Invia solo agli studenti selezionati",
+    "audienceNarrowConfirm": "Gli studenti che non selezioni non vedranno più questo compito, e la scheda che lo annuncia nel feed verrà rimossa."
   },
   "advisorGroups": {
     "groupCenter": "Centro del gruppo",

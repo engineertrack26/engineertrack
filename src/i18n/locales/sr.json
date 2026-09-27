@@ -370,7 +370,10 @@
     "retargetPartial": "Neki od ovih zadataka možda već imaju novu publiku.",
     "changeAudience": "Promeni kome je ovo namenjeno",
     "audienceBackToGroup": "Pošalji celoj grupi",
-    "audienceBackToGroupConfirm": "Ovo čini zadatak vidljivim svim studentima u grupi i objavljuje karticu u toku. Ponovni izbor istih studenata to neće poništiti."
+    "audienceBackToGroupConfirm": "Ovo čini zadatak vidljivim svim studentima u grupi i objavljuje karticu u toku. Ponovni izbor istih studenata to neće poništiti.",
+    "audienceWholeGroup": "Cela grupa",
+    "audienceNarrow": "Pošalji samo izabranim studentima",
+    "audienceNarrowConfirm": "Studenti koje ne izaberete više neće videti ovaj zadatak, a kartica koja ga najavljuje u toku biće uklonjena."
   },
   "advisorGroups": {
     "groupCenter": "Centar grupe",

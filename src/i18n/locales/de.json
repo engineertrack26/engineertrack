@@ -370,7 +370,10 @@
     "retargetPartial": "Einige dieser Aufgaben tragen möglicherweise schon die neue Zielgruppe.",
     "changeAudience": "Ändern, für wen das ist",
     "audienceBackToGroup": "An die ganze Gruppe senden",
-    "audienceBackToGroupConfirm": "Dies macht die Aufgabe für alle Studierenden der Gruppe sichtbar und veröffentlicht eine Karte im Feed. Die erneute Auswahl derselben Studierenden macht dies nicht rückgängig."
+    "audienceBackToGroupConfirm": "Dies macht die Aufgabe für alle Studierenden der Gruppe sichtbar und veröffentlicht eine Karte im Feed. Die erneute Auswahl derselben Studierenden macht dies nicht rückgängig.",
+    "audienceWholeGroup": "Ganze Gruppe",
+    "audienceNarrow": "Nur an ausgewählte Studierende senden",
+    "audienceNarrowConfirm": "Studierende, die Sie nicht auswählen, sehen diese Aufgabe nicht mehr, und die Ankündigungskarte im Feed wird entfernt."
   },
   "advisorGroups": {
     "groupCenter": "Gruppenzentrale",
