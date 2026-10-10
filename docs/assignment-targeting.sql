@@ -1,3 +1,10 @@
+-- NOTE (2026-10-10): publish_assignments NO LONGER LIVES HERE.
+-- docs/assignment-scheduling.sql holds the copy that stands: it is a thin
+-- wrapper over publish_assignments_internal, which also writes the
+-- "New Task Assigned" notifications and refuses an archived group.
+-- Re-running this file restores a publish_assignments that does none of that,
+-- so published tasks would stop notifying anyone, silently.
+--
 -- docs/assignment-targeting.sql
 -- A task can go to selected students, not only the whole group.
 -- Spec: docs/superpowers/specs/2026-09-26-assignment-targeting-design.md
