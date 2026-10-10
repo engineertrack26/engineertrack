@@ -10,8 +10,17 @@
 -- that file restores a publish_assignments that knows nothing about
 -- scheduling or notifications.
 --
+-- APPLY TOGETHER WITH THE CLIENT CHANGE. This file moves the "New Task
+-- Assigned" notifications into publish_assignments_internal, but
+-- app/(advisor)/group-assignments.tsx still inserts them itself after a
+-- publish. From the moment this file is applied until the client change that
+-- removes that loop ships, every publish notifies every student twice. The
+-- loop is removed in the same piece of work as this file; do not leave the
+-- window open.
+--
 -- REQUIRES the pg_cron extension, enabled once in the Supabase dashboard
--- (Database -> Extensions). The job is registered at the bottom of this file.
+-- (Database -> Extensions) BEFORE this file is pasted: the job is registered
+-- at the bottom, and a failure there rolls the whole file back.
 -- ============================================
 
 -- ---- 1. The third state ----
@@ -212,6 +221,17 @@ BEGIN
       RAISE EXCEPTION 'SCHEDULE_IN_PAST';
     END IF;
 
+    -- Same guard publishing has, here so the advisor hears it on screen and
+    -- not in a notification the next day. Inside this branch on purpose:
+    -- cancelling (p_at NULL) only clears a row and must still work.
+    IF EXISTS (
+      SELECT 1 FROM group_assignments a
+      JOIN internship_groups g ON g.id = a.group_id
+      WHERE a.id = ANY(p_ids) AND g.is_archived
+    ) THEN
+      RAISE EXCEPTION 'GROUP_ARCHIVED';
+    END IF;
+
     SELECT a.title INTO bad_title
     FROM group_assignments a
     JOIN kpi_triplets t    ON t.id = a.triplet_id
@@ -321,8 +341,10 @@ REVOKE EXECUTE ON FUNCTION publish_due_assignments() FROM PUBLIC, anon, authenti
 
 -- ---- 6. The job ----
 -- Enabling pg_cron is the owner's dashboard step (Database -> Extensions); this
--- file does not try to do it. Without the extension, cron.schedule below fails
--- and nothing above it is affected.
+-- file does not try to do it, so do it BEFORE pasting. The SQL editor runs a
+-- pasted file as one implicit transaction: if cron.schedule below fails, the
+-- WHOLE file is rolled back -- the columns, the index and all four functions --
+-- and the database is left exactly as it was.
 -- Idempotent: unschedule first, because cron.schedule on an existing jobname
 -- behaves differently across pg_cron versions.
 DO $$
