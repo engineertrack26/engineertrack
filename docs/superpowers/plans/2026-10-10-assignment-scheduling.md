@@ -130,11 +130,12 @@ Open `docs/assignment-targeting.sql` and find `publish_assignments`. Its body is
 the thing this task splits. Read it in full; Step 4 copies it almost verbatim and
 a reviewer will diff your copy against it.
 
-Also read `docs/internship-closure-migration.sql` for how this project names an
-archived or closed group, so Step 5's archive check uses the existing vocabulary
-rather than inventing one. If no archive concept exists on
-`internship_groups`, say so in your report and implement the check against
-whatever column does mark a group inactive; do not invent a new column.
+The archive marker is already settled, so you do not have to go looking:
+`internship_groups.is_archived BOOLEAN NOT NULL DEFAULT false`
+(`docs/internship-groups-migration.sql:33`). Archiving is this project's
+retirement mechanism — there is no DELETE policy on the table — and
+`docs/direct-messages-migration.sql:82` is the precedent for refusing an action
+against an archived group.
 
 - [ ] **Step 2: Create the file with its header and the two columns**
 
@@ -228,12 +229,10 @@ BEGIN
   -- NEW: a group can be archived between scheduling and the hour. Publishing
   -- into an archived group would put a task in front of students whose
   -- internship the advisor has already wound up.
-  -- Replace `g.archived_at IS NOT NULL` with this project's actual marker,
-  -- found in Step 1.
   IF EXISTS (
     SELECT 1 FROM group_assignments a
     JOIN internship_groups g ON g.id = a.group_id
-    WHERE a.id = ANY(p_ids) AND g.archived_at IS NOT NULL
+    WHERE a.id = ANY(p_ids) AND g.is_archived
   ) THEN
     RAISE EXCEPTION 'GROUP_ARCHIVED';
   END IF;
@@ -598,10 +597,11 @@ and impersonate the advisor. The checks:
    `publish_assignments_internal` again with the same ids returns 0 and adds no
    notification row.
 8. A group-audience publish created a `feed_posts` row; a selected one does not.
-9. **An archived group fails and tells the advisor** *(Review Focus 3)*: archive
-   the group, schedule a fresh draft into the past, run the job — nothing
-   publishes, the row carries `schedule_error`, and the advisor has a
-   `schedule_failed` notification. Un-archive afterwards.
+9. **An archived group fails and tells the advisor** *(Review Focus 3)*:
+   `UPDATE internship_groups SET is_archived = true WHERE id = g`, schedule a
+   fresh draft into the past, run the job — nothing publishes, the row carries
+   `schedule_error`, and the advisor has a `schedule_failed` notification. The
+   whole part rolls back, so the flag never survives the run.
 10. **The failed row is skipped next run**: running the job again leaves the
     error in place and writes no second notification.
 11. **A batch with one published row is refused whole** *(Review Focus 4)*:
@@ -902,7 +902,9 @@ Add a second row beneath it in the same shape:
               {value === 'now'
                 ? t('taskFlow.sendNow', 'Send now')
                 : sendAt
-                  ? t('taskFlow.sendAtValue', 'On {{when}}', { when: formatSendAt(sendAt) })
+                  ? t('taskFlow.sendAtValue', 'On {{when}}', {
+                      when: new Date(sendAt).toLocaleString(i18n.language),
+                    })
                   : t('taskFlow.sendLater', 'Schedule')}
             </Text>
           </TouchableOpacity>
@@ -910,6 +912,10 @@ Add a second row beneath it in the same shape:
       })}
     </View>
 ```
+
+`i18n` is already destructured from `useTranslation()` at the top of this
+component for the due-date formatting, so the `toLocaleString` call above needs
+no new import.
 
 State beside the existing `targetIds` / `picking`:
 
