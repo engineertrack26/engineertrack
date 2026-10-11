@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { assignmentService } from '@/services/assignments';
 import { mapRpcError } from '@/utils/rpcErrors';
+import { scheduleState, sendBeforeDue } from '@/utils/assignmentSchedule';
 import { submittedOfTarget } from '@/utils/assignmentTargets';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { ui } from '@/components/common/workflowStyles';
@@ -61,6 +62,14 @@ export function AssignmentCard({
   const [picking, setPicking] = useState(false);
   const [targetIds, setTargetIds] = useState<string[]>([]);
   const [retargeting, setRetargeting] = useState(false);
+  // One flag for the three schedule actions (change time, send now, cancel):
+  // only one of them can be in flight for a single task.
+  const [scheduling, setScheduling] = useState(false);
+  // The change-time picker: Android walks date then time, iOS shows one
+  // 'datetime' spinner that is confirmed with Done.
+  const [timeStep, setTimeStep] = useState<'date' | 'time' | null>(null);
+  const [pendingDay, setPendingDay] = useState<Date | null>(null);
+  const [iosDraft, setIosDraft] = useState<Date | null>(null);
 
   // A draft has no submissions, so trg_freeze_assessed_assignment cannot have
   // fired and every field stays editable. A sent card falls back to the
@@ -68,6 +77,11 @@ export function AssignmentCard({
   const canEditTerms = isDraft || (!countsUnavailable && counts.submitted === 0);
 
   const due = a.dueDate ? fromLocalIsoDate(a.dueDate) : null;
+
+  // scheduleState is the one place that knows a failed row also reads as
+  // overdue (its time is necessarily past) and that failed wins.
+  const state = scheduleState(a);
+  const when = a.scheduledFor ? new Date(a.scheduledFor).toLocaleString(i18n.language) : '';
 
   function openEdit() {
     setEditTitle(a.title);
@@ -136,6 +150,59 @@ export function AssignmentCard({
         { text: t('advisor.withdrawAssignment'), style: 'destructive', onPress: handleWithdraw },
       ],
     );
+  }
+
+  async function runScheduleAction(action: () => Promise<unknown>) {
+    if (scheduling) return;
+    setScheduling(true);
+    try {
+      await action();
+      onChanged();
+    } catch (err) {
+      const { key } = mapRpcError(err instanceof Error ? err.message : '');
+      Alert.alert(t('common.error'), t(key));
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  // No confirmation on any of the three: a scheduled task was never visible
+  // to a student, so none of them takes anything away.
+  const cancelSchedule = () => runScheduleAction(
+    () => assignmentService.scheduleAssignments([a.id], null));
+  const sendNow = () => runScheduleAction(
+    () => assignmentService.publishAssignments([a.id]));
+
+  function openTimePicker() {
+    if (scheduling) return;
+    const seed = a.scheduledFor && new Date(a.scheduledFor).getTime() > Date.now()
+      ? new Date(a.scheduledFor)
+      : new Date(Date.now() + 60 * 60 * 1000);
+    setIosDraft(seed);
+    setPendingDay(null);
+    setTimeStep('date');
+  }
+
+  function closeTimePicker() {
+    setTimeStep(null);
+    setPendingDay(null);
+    setIosDraft(null);
+  }
+
+  /** Same rules as the review screen: at least a couple of minutes ahead, and
+   *  not after the due date. A refusal is said in an Alert and nothing moves. */
+  function acceptNewTime(candidate: Date) {
+    const iso = candidate.toISOString();
+    if (candidate.getTime() <= Date.now() + 2 * 60 * 1000) {
+      Alert.alert(t('common.error'), t('errors.scheduleInPast'));
+      return;
+    }
+    if (!sendBeforeDue(iso, a.dueDate || undefined)) {
+      Alert.alert(t('common.error'),
+        t('taskFlow.sendAfterDue', 'The send time cannot be after the due date.'));
+      return;
+    }
+    void runScheduleAction(() => assignmentService.scheduleAssignments([a.id], iso));
   }
 
   async function handleWithdraw() {
@@ -383,6 +450,76 @@ export function AssignmentCard({
         // ever read 0/0/0, which is indistinguishable from "loaded and
         // empty". This badge is what actually says "not yet sent".
         <Text style={styles.draftBadge}>{t('advisor.draftBadge')}</Text>
+      )}
+      {isDraft && state === 'scheduled' && (
+        <Text style={styles.subtle}>{t('taskFlow.scheduledFor', 'Goes out {{when}}', { when })}</Text>
+      )}
+      {isDraft && state === 'overdue' && (
+        // Overdue means the timer did not run, which is not the advisor's
+        // doing: say what happened and leave Send now as the way out.
+        <Text style={styles.warning}>
+          {t('taskFlow.scheduleOverdue', 'Should have gone out {{when}}', { when })}
+        </Text>
+      )}
+      {isDraft && state === 'failed' && (
+        <Text style={styles.error}>
+          {t('taskFlow.scheduleFailed', 'Could not be sent. {{reason}}', {
+            // A stable code becomes a sentence; a raw server message is never
+            // shown, the same rule every other refusal in this app follows.
+            reason: t(mapRpcError(a.scheduleError ?? '').key),
+          })}
+        </Text>
+      )}
+      {isDraft && state !== 'draft' && (
+        <View style={styles.audienceActions}>
+          {([
+            ['taskFlow.changeSendTime', 'Change the time', openTimePicker],
+            ['taskFlow.sendNowAction', 'Send now', sendNow],
+            ['taskFlow.cancelSchedule', 'Cancel schedule', cancelSchedule],
+          ] as const).map(([key, fallback, onPress]) => (
+            <TouchableOpacity key={key} accessibilityRole="button" disabled={scheduling}
+              accessibilityState={{ disabled: scheduling }} onPress={onPress}>
+              <Text style={[ui.link, scheduling && styles.linkDisabled]}>{t(key, fallback)}</Text>
+            </TouchableOpacity>
+          ))}
+          {scheduling && <ActivityIndicator size="small" color={colors.primary} />}
+        </View>
+      )}
+      {isDraft && timeStep && (
+        <View style={Platform.OS === 'ios' ? styles.iosPickerBox : undefined}>
+          <DateTimePicker
+            value={Platform.OS === 'ios' ? (iosDraft ?? new Date())
+              : timeStep === 'time' && pendingDay ? pendingDay : (iosDraft ?? new Date())}
+            mode={Platform.OS === 'ios' ? 'datetime' : timeStep}
+            minimumDate={Platform.OS === 'ios' || timeStep === 'date' ? new Date() : undefined}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, value) => {
+              if (Platform.OS === 'ios') {
+                if (value) setIosDraft(value);
+                return;
+              }
+              if (event.type === 'dismissed' || !value) { closeTimePicker(); return; }
+              if (timeStep === 'date') {
+                setPendingDay(value);
+                // The time picker opens on the next tick, after Android has
+                // torn the date dialog down.
+                setTimeStep(null);
+                setTimeout(() => setTimeStep('time'), 0);
+                return;
+              }
+              const day = pendingDay ?? value;
+              closeTimePicker();
+              acceptNewTime(new Date(day.getFullYear(), day.getMonth(), day.getDate(),
+                value.getHours(), value.getMinutes()));
+            }}
+          />
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity style={styles.iosPickerDone} activeOpacity={0.7}
+              onPress={() => { const d = iosDraft; closeTimePicker(); if (d) acceptNewTime(d); }}>
+              <Text style={styles.iosPickerDoneText}>{t('common.done')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
       {/* Metadata, not a headline -- styles.label (12px, secondary), not
           ui.label (16px, primary): this line used to read louder than the
@@ -746,6 +883,11 @@ const styles = StyleSheet.create({
   warning: {
     fontSize: 13, fontFamily: fonts.regular,
     color: colors.warning,
+    marginTop: spacing.xs,
+  },
+  error: {
+    fontSize: 13, fontFamily: fonts.regular,
+    color: colors.error,
     marginTop: spacing.xs,
   },
   editPanel: {
