@@ -106,6 +106,15 @@ test('a failed scheduled send never shows a code, in any language', () => {
     .toBe('A task scheduled for Grup A could not be sent. Open the group to see why.');
   expect(send('SOME_NEW_REFUSAL', 'tr'))
     .toBe('Grup A için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.');
+  // Not every reason is a code. The database embeds left(SQLERRM, 120)
+  // verbatim, so a statement timeout or a deadlock arrives as a raw Postgres
+  // sentence and must not be shown either.
+  expect(send('canceling statement due to statement timeout', 'en'))
+    .toBe('A task scheduled for Grup A could not be sent. Open the group to see why.');
+  expect(send('deadlock detected', 'tr'))
+    .toBe('Grup A için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.');
+  expect(send('canceling statement due to statement timeout', 'en'))
+    .not.toMatch(/statement/);
   // English title is left alone outside Turkish.
   expect(display('schedule_failed', 'Scheduled task not sent', 'x', 'en').title).toBe('Scheduled task not sent');
 });

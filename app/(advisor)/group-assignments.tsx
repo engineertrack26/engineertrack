@@ -56,14 +56,21 @@ export default function GroupAssignmentsScreen() {
 
 function GroupAssignmentsContent() {
   const { t, i18n } = useTranslation();
-  const { groupId, fromGroup } = useLocalSearchParams<{ groupId?: string; fromGroup?: string }>();
+  const { groupId, fromGroup, tab: tabParam } = useLocalSearchParams<{
+    groupId?: string; fromGroup?: string; tab?: string;
+  }>();
   const groupBack = groupId && fromGroup === '1' ? groupCenterRoute(groupId) : { pathname: '/(advisor)/groups' as const, params: { groupId: '' } };
   const user = useAuthStore((s) => s.user);
 
   const [adding, setAdding] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [reviewingDrafts, setReviewingDrafts] = useState(false);
-  const [tab, setTab] = useState<'published' | 'drafts'>('published');
+  // Seeded from the route, not fixed: the schedule_failed notification routes
+  // here with tab=drafts because the failed card it is about is in the drafts
+  // tray, and landing on the sent list explains nothing. Anything else, and
+  // every other way in, still opens on the sent list.
+  const [tab, setTab] = useState<'published' | 'drafts'>(
+    tabParam === 'drafts' ? 'drafts' : 'published');
   const [search, setSearch] = useState('');
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
   const publishLock = useRef(false);

@@ -108,6 +108,19 @@ describe('routeForNotification', () => {
     expect(routeForNotification('internship_reopened', {}, 'advisor')).toEqual({ pathname: '/(advisor)/student-monitor' });
   });
 
+  // The failed card lives in the drafts tray and the screen opens on the sent
+  // list, so the tab has to be named or the advisor lands where the card is
+  // not and nothing on screen explains the notification they just tapped.
+  it('sends a failed scheduled send to the drafts tab of its group', () => {
+    expect(routeForNotification('schedule_failed', { groupId: 'g1' }, 'advisor')).toEqual({
+      pathname: '/(advisor)/group-assignments',
+      params: { groupId: 'g1', tab: 'drafts' },
+    });
+    expect(routeForNotification('schedule_failed', {}, 'advisor')).toEqual({
+      pathname: '/(advisor)/groups',
+    });
+  });
+
   it('sends a direct message to the conversation for every role', () => {
     for (const role of ['student', 'mentor', 'advisor'] as const) {
       expect(routeForNotification('direct_message', { conversationId: 'c1' }, role)).toEqual({

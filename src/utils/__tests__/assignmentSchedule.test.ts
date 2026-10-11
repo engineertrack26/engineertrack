@@ -17,11 +17,34 @@ describe('scheduleState', () => {
     expect(scheduleState({ scheduledFor: '2026-10-10T11:00:00Z' }, NOW)).toBe('overdue');
   });
 
+  // The cron tick is a minute wide, so a time that has only just passed is
+  // about to be published, not missed. Without the grace window a perfectly
+  // healthy send reads "has not been sent" in red for up to a minute.
+  it('is still scheduled inside the grace window after the time passes', () => {
+    expect(scheduleState({ scheduledFor: '2026-10-10T11:59:59Z' }, NOW)).toBe('scheduled');
+    expect(scheduleState({ scheduledFor: '2026-10-10T11:58:30Z' }, NOW)).toBe('scheduled');
+  });
+
+  it('is overdue once the grace window has elapsed', () => {
+    expect(scheduleState({ scheduledFor: '2026-10-10T11:58:00Z' }, NOW)).toBe('overdue');
+  });
+
   // A failed row's time is necessarily in the past, so both conditions hold.
   // Failed wins: it tells the advisor something is wrong, not merely late.
   it('is failed rather than overdue when the send was refused', () => {
     expect(scheduleState(
       { scheduledFor: '2026-10-10T11:00:00Z', scheduleError: 'GROUP_ARCHIVED' }, NOW,
+    )).toBe('failed');
+  });
+
+  // Failed is decided before the clock is consulted at all, so the grace
+  // window cannot hide a refusal that arrived seconds ago.
+  it('is failed even for a time inside the grace window', () => {
+    expect(scheduleState(
+      { scheduledFor: '2026-10-10T11:59:59Z', scheduleError: 'GROUP_ARCHIVED' }, NOW,
+    )).toBe('failed');
+    expect(scheduleState(
+      { scheduledFor: '2026-10-10T15:00:00Z', scheduleError: 'NOT_IN_SCOPE: x' }, NOW,
     )).toBe('failed');
   });
 });

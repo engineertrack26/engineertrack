@@ -115,8 +115,14 @@ export function routeForNotification(
         case 'internship_reopened':
           return { pathname: '/(advisor)/student-monitor' };
         case 'schedule_failed':
+          // The drafts tab, explicitly: the failed card is the whole point of
+          // this notification and the screen opens on the sent list by
+          // default, where it is not.
           return closureGroupId
-            ? { pathname: '/(advisor)/group-assignments', params: { groupId: closureGroupId } }
+            ? {
+              pathname: '/(advisor)/group-assignments',
+              params: { groupId: closureGroupId, tab: 'drafts' },
+            }
             : { pathname: '/(advisor)/groups' };
         default:
           return null;

@@ -42,16 +42,27 @@ const scheduleFailures: Record<string, { en: string; tr: string }> = {
   TARGETS_REQUIRED: { en: 'it is set to selected students but nobody is chosen', tr: 'görev seçili öğrencilere ayarlı ama kimse seçilmedi' },
   GROUP_ARCHIVED: { en: 'the group is archived', tr: 'grup arşivlendi' },
 };
+/** No reason the advisor could act on, so none is named: the group is the one
+ *  thing they need in order to find the failed card. */
+function scheduleFailedNoReason(group: string, tr: boolean): string {
+  return tr
+    ? `${group} için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.`
+    : `A task scheduled for ${group} could not be sent. Open the group to see why.`;
+}
 function scheduleFailedBody(body: string, tr: boolean): string {
   const m = /^A task scheduled for ([\s\S]+?) could not be sent: ([A-Z][A-Z_]+)(?:: ([\s\S]*))?$/.exec(body);
-  if (!m) return body;
+  if (!m) {
+    // The reason is left(SQLERRM, 120) verbatim, so it is not always a stable
+    // code: a statement timeout or a deadlock arrives as a raw Postgres
+    // sentence. Say the same code-free thing an unknown code gets rather than
+    // show it -- returning the body is how "canceling statement due to
+    // statement timeout" reached the advisor.
+    const prefix = /^A task scheduled for ([\s\S]+?) could not be sent: /.exec(body);
+    return prefix ? scheduleFailedNoReason(prefix[1], tr) : body;
+  }
   const [, group, code, value] = m;
   const known = Object.hasOwn(scheduleFailures, code) ? scheduleFailures[code] : undefined;
-  if (!known) {
-    return tr
-      ? `${group} için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.`
-      : `A task scheduled for ${group} could not be sent. Open the group to see why.`;
-  }
+  if (!known) return scheduleFailedNoReason(group, tr);
   const lang = tr ? 'tr' : 'en';
   const named = value ? (tr ? ` (“${taskContent(value, 'tr')}”)` : ` ("${value}")`) : '';
   return tr
