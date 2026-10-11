@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -761,6 +761,8 @@ export type Database = {
           id: string
           objective: string
           published_at: string | null
+          schedule_error: string | null
+          scheduled_for: string | null
           title: string
           triplet_id: string
         }
@@ -777,6 +779,8 @@ export type Database = {
           id?: string
           objective: string
           published_at?: string | null
+          schedule_error?: string | null
+          scheduled_for?: string | null
           title: string
           triplet_id: string
         }
@@ -793,6 +797,8 @@ export type Database = {
           id?: string
           objective?: string
           published_at?: string | null
+          schedule_error?: string | null
+          scheduled_for?: string | null
           title?: string
           triplet_id?: string
         }
@@ -2684,6 +2690,11 @@ export type Database = {
       }
       owns_group: { Args: { p_group_id: string }; Returns: boolean }
       publish_assignments: { Args: { p_ids: string[] }; Returns: number }
+      publish_assignments_internal: {
+        Args: { p_ids: string[] }
+        Returns: number
+      }
+      publish_due_assignments: { Args: never; Returns: number }
       publish_feed_post: { Args: { p_post_id: string }; Returns: undefined }
       quiz_can_read: { Args: { p_quiz_id: string }; Returns: boolean }
       quiz_close: { Args: { p_id: string }; Returns: undefined }
@@ -2732,6 +2743,10 @@ export type Database = {
           p_submission_id: string
         }
         Returns: undefined
+      }
+      schedule_assignments: {
+        Args: { p_at: string; p_ids: string[] }
+        Returns: number
       }
       send_message: {
         Args: { p_body: string; p_conversation_id: string }
