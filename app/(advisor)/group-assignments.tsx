@@ -71,6 +71,17 @@ function GroupAssignmentsContent() {
   // every other way in, still opens on the sent list.
   const [tab, setTab] = useState<'published' | 'drafts'>(
     tabParam === 'drafts' ? 'drafts' : 'published');
+  // The seed above only runs on mount, and the screen stays mounted when the
+  // notification is tapped from inside the app (same group, same key), so a
+  // changed `tab` param has to be followed here. Only an explicit 'drafts'
+  // moves the tab: a param-less visit leaves whatever the advisor chose.
+  // Done as a state adjustment during render (React's documented pattern for
+  // reacting to a prop change) rather than an effect.
+  const [seenTabParam, setSeenTabParam] = useState(tabParam);
+  if (seenTabParam !== tabParam) {
+    setSeenTabParam(tabParam);
+    if (tabParam === 'drafts') setTab('drafts');
+  }
   const [search, setSearch] = useState('');
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
   const publishLock = useRef(false);
@@ -371,7 +382,13 @@ function GroupAssignmentsContent() {
         // The notification ROWS are written by publish_assignments_internal,
         // from the rows it actually moved, so none are written here. The push
         // still is -- see pushAssignedTasks.
-        await pushAssignedTasks(batch, targetIds, count);
+        // Not awaited: the send already succeeded, and the Expo push endpoint
+        // has no timeout, so waiting would hold the toast, the reload and
+        // publishLock hostage to it. pushAssignedTasks logs its own failures;
+        // the .catch is the backstop that keeps a rejection from going unhandled.
+        pushAssignedTasks(batch, targetIds, count).catch((err) => {
+          console.warn('task_assigned push skipped:', err);
+        });
         showToast(t('advisor.assignmentsSent', { count }));
       } else {
         showToast(t('advisor.assignmentsNoneSent'));
