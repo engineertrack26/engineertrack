@@ -9,6 +9,10 @@
 > **Amended again on 2026-09-26** by
 > `2026-09-26-assignment-targeting-design.md`: an assignment no longer
 > necessarily belongs to every member of its group.
+>
+> **Amended on 2026-10-10** by `2026-10-10-assignment-scheduling-design.md`:
+> publishing can also be triggered by a timer, and the notifications it writes
+> moved from the client into the database.
 
 Date: 2026-08-20
 Status: approved for planning

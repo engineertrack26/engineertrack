@@ -5,6 +5,10 @@
 a group and every member has it. That stays true by default; this document adds
 the second audience.
 
+> **Amended on 2026-10-10** by `2026-10-10-assignment-scheduling-design.md`:
+> publishing can also be triggered by a timer, and the notifications it writes
+> moved from the client into the database.
+
 ## Why
 
 The owners asked for it, and the reason they gave shapes the whole design:
