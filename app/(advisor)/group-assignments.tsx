@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { competencyService } from '@/services/competency';
 import { groupService } from '@/services/group';
+import { sendPushToMultiple } from '@/services/pushNotifications';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
@@ -249,6 +250,58 @@ function GroupAssignmentsContent() {
     setShowDatePicker(false);
   }
 
+  /** The notification ROWS are written by publish_assignments_internal. The
+   *  PUSH is not: there is no server-side fan-out anywhere, so without this a
+   *  manually sent task never buzzes a phone and only turns up when the
+   *  student next opens the app. PUSH ONLY -- no row is written here, because
+   *  a second database writer is exactly what moving the notifications into
+   *  SQL removed.
+   *
+   *  Recipients are re-derived from the two sources the server itself uses --
+   *  LIVE group membership for a 'group' task, the target rows for a
+   *  'selected' one -- rather than from this screen's `members` snapshot. And
+   *  there is NO fallback: if either lookup fails the push is skipped. The
+   *  only wider guess available is "the whole group", which is the
+   *  2026-09-26 bug -- it buzzes students about a targeted task they cannot
+   *  open. Skipping costs nothing fatal: the in-app row is already written
+   *  server-side, so the student still sees the task.
+   *
+   *  The scheduled path cannot be covered from here -- no client is involved
+   *  at the hour -- and a server-side fan-out is its own piece of work. */
+  async function pushAssignedTasks(
+    batch: GroupAssignment[], targetIds: string[] | null, count: number,
+  ): Promise<void> {
+    // Must match the body the server wrote, verbatim (docs/assignment-
+    // scheduling.sql). When FEWER rows moved than were sent -- another
+    // session published part of the batch first -- the server named a single
+    // title this screen cannot identify, so nothing is pushed.
+    const body = count === 1
+      ? (batch.length === 1 ? `A new task has been assigned: "${batch[0].title}".` : null)
+      : `${count} new tasks have been assigned.`;
+    if (!body) return;
+    try {
+      const live = (await groupService.listMembers(groupId!)).map((m) => m.id);
+      const perAssignment = await Promise.all(batch.map(async (a) => {
+        // `targetIds` wins whenever the targeting loop ran -- every id in the
+        // batch, an empty array included, which just set each of them back to
+        // the whole group. Only a `null` falls back to what the row says.
+        const audience = targetIds ? (targetIds.length ? 'selected' : 'group') : a.audience;
+        if (audience !== 'selected') return live;
+        const ids = targetIds?.length
+          ? targetIds
+          : await assignmentService.listAssignmentTargets(a.id);
+        // The server's notification query joins live membership on the target
+        // rows, which outlive the membership that justified them.
+        return ids.filter((id) => live.includes(id));
+      }));
+      const recipients = [...new Set(perAssignment.flat())];
+      if (!recipients.length) return;
+      await sendPushToMultiple(recipients, 'New Task Assigned', body, { type: 'task_assigned' });
+    } catch (err) {
+      console.warn('task_assigned push skipped:', err);
+    }
+  }
+
   /** `targetIds` is the audience DECISION this call site made, and `null` is
    *  "no decision" -- the drafts tray, which shows no picker and must leave
    *  each draft's own audience exactly as it is. An empty ARRAY is a
@@ -308,8 +361,10 @@ function GroupAssignmentsContent() {
       // Done header. Reload instead, so the stale tray catches up to what is
       // actually published.
       if (count > 0) {
-        // The notifications are written by publish_assignments_internal, from
-        // the rows it actually moved, so there is nothing to send from here.
+        // The notification ROWS are written by publish_assignments_internal,
+        // from the rows it actually moved, so none are written here. The push
+        // still is -- see pushAssignedTasks.
+        await pushAssignedTasks(batch, targetIds, count);
         showToast(t('advisor.assignmentsSent', { count }));
       } else {
         showToast(t('advisor.assignmentsNoneSent'));
