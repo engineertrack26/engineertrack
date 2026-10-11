@@ -54,6 +54,9 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   // steps: the day first (kept in pendingDay), then the time.
   const [sendStep, setSendStep] = useState<'date' | 'time' | null>(null);
   const [pendingDay, setPendingDay] = useState<Date | null>(null);
+  // iOS shows one inline date-and-time wheel that fires onChange on every
+  // movement, so its value is only a draft until Done.
+  const [iosDraft, setIosDraft] = useState<Date | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const running = useRef(false);
   const snapshot = useRef<PreparedTask[] | null>(null);
@@ -68,7 +71,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     // that arrives after it is due; drop it rather than keep it silently.
     if (sendAt && !sendBeforeDue(sendAt, value || undefined)) {
       setSendAt(null);
-      setSendError(t('taskFlow.sendAfterDue', 'The send time cannot be after the due date.'));
+      setSendError(t('taskFlow.sendCleared', 'Due date moved, so the scheduled send was cleared.'));
     }
     setTasks((old) => old.map((task) => ({ ...task, dueDate: value || undefined })));
   }
@@ -77,7 +80,9 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
    *  date; otherwise says why, inline, and keeps whatever was chosen before. */
   function acceptSendAt(candidate: Date) {
     const iso = candidate.toISOString();
-    if (candidate.getTime() <= Date.now()) {
+    // A two-minute buffer: the picker is minute-grained and the advisor
+    // takes a moment to tap Send, so the current minute is already late.
+    if (candidate.getTime() <= Date.now() + 2 * 60 * 1000) {
       setSendError(t('errors.scheduleInPast'));
     } else if (!sendBeforeDue(iso, batchDate || undefined)) {
       setSendError(t('taskFlow.sendAfterDue', 'The send time cannot be after the due date.'));
@@ -155,7 +160,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     <TouchableOpacity style={[ui.primary, (busy || memberCount === 0) && { opacity: 0.5 }]}
       accessibilityRole="button" accessibilityState={{ disabled: busy || memberCount === 0 }}
       disabled={busy || memberCount === 0} onPress={() => finish(true)}>
-      {busy ? <ActivityIndicator color="#fff" /> : <Text style={ui.primaryText}>{t('taskFlow.send', { count: tasks.length })}</Text>}
+      {busy ? <ActivityIndicator color="#fff" /> : <Text style={ui.primaryText}>{sendAt ? t('taskFlow.scheduleCount', 'Schedule {{count}} tasks', { count: tasks.length }) : t('taskFlow.send', { count: tasks.length })}</Text>}
     </TouchableOpacity>
     <TouchableOpacity style={groupStyles.outline} accessibilityRole="button" disabled={busy} onPress={() => finish(false)}>
       <Text style={groupStyles.linkText}>{t('taskFlow.saveDraft')}</Text>
@@ -221,14 +226,20 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         );
       })}
     </View>
-    {!!sendError && <Text accessibilityRole="alert" style={ui.secondary}>{sendError}</Text>}
-    {sendStep && !attempted && <View>
+    {!!sendError && <View style={ui.note}><Text accessibilityRole="alert" style={ui.body}>{sendError}</Text></View>}
+    {sendStep && (!attempted || failed) && <View>
       <DateTimePicker
-        value={sendStep === 'time' && pendingDay ? pendingDay : sendAt ? new Date(sendAt) : new Date()}
-        mode={sendStep} minimumDate={sendStep === 'date' ? new Date() : undefined}
+        value={Platform.OS === 'ios' ? (iosDraft ?? (sendAt ? new Date(sendAt) : new Date()))
+          : sendStep === 'time' && pendingDay ? pendingDay : sendAt ? new Date(sendAt) : new Date()}
+        mode={Platform.OS === 'ios' ? 'datetime' : sendStep}
+        minimumDate={Platform.OS === 'ios' || sendStep === 'date' ? new Date() : undefined}
         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
         onChange={(event, value) => {
-          if (Platform.OS !== 'ios') setSendStep(null);
+          if (Platform.OS === 'ios') {
+            if (value) setIosDraft(value);
+            return;
+          }
+          setSendStep(null);
           if (event.type === 'dismissed' || !value) return;
           if (sendStep === 'date') {
             setPendingDay(value);
@@ -242,7 +253,11 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
             value.getHours(), value.getMinutes()));
           setPendingDay(null);
         }} />
-      {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => setSendStep(null)}>
+      {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => {
+        acceptSendAt(iosDraft ?? (sendAt ? new Date(sendAt) : new Date()));
+        setIosDraft(null);
+        setSendStep(null);
+      }}>
         <Text style={ui.link}>{t('common.done')}</Text>
       </TouchableOpacity>}
     </View>}
