@@ -783,8 +783,6 @@
     "daysEmptyHint": "Öğrencilerin günlerini kaydettikçe onayla."
   },
   "notifications": {
-    "taskAssignedBody": "Yeni bir görev atandı: “{{title}}”.",
-    "tasksAssignedBody": "{{count}} yeni görev atandı.",
     "taskAssignedTitle": "Yeni görev atandı"
   },
   "mentorFlow": {

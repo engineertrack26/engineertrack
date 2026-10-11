@@ -120,8 +120,15 @@ target rows for a `selected` one.
 ## When a scheduled send fails
 
 Most failures are caught at schedule time. What can still change before the hour
-arrives: the advisor removes the competency from the group's targets, a targeted
-student leaves the group, the group is archived.
+arrives and is caught then: the advisor removes the competency from the group's
+targets, the group is archived.
+
+A targeted student leaving the group is **not** caught. `assignment_targets`
+rows deliberately survive a departure, so `TARGETS_REQUIRED` — which only asks
+whether any target row exists — is vacuously satisfied, and the batch publishes
+to a `selected` audience that may have no live recipient left: the notification
+query joins live membership, so nobody is told and nothing is refused. This is
+identical on the manual Send now path, so it is not introduced by scheduling.
 
 When a batch is refused at its scheduled time:
 

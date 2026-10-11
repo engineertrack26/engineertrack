@@ -10,8 +10,8 @@
 -- the job and will not apply at all without it.
 --
 -- PART A is STRUCTURAL and comes in TWO submissions, because the editor shows
--- only the LAST statement's result: A1-A7 in one paste, then the cron check on
--- its own. The cron check is separate for a second reason -- on a database
+-- only the LAST statement's result: A1-A7 and A9-A10 in one paste, then the
+-- cron check (A8) on its own. The cron check is separate for a second reason -- on a database
 -- without pg_cron the schema `cron` does not exist and a query naming
 -- cron.job fails at PARSE time, which would take the other seven rows down
 -- with it. See the header above that statement for what each outcome means.
@@ -56,8 +56,10 @@
 
 
 -- ============================================================
--- PART A (1 of 2) -- structural. Run this statement alone. Expect 7 rows,
--- all PASS. A FAIL here means docs/assignment-scheduling.sql was not applied,
+-- PART A (1 of 2) -- structural. Run this statement alone. Expect 9 rows,
+-- all PASS -- A1-A7 and A9-A10; A8 is the cron check in Part A (2 of 2), which
+-- has to be its own submission, so the two anon rows added after it carry the
+-- next free numbers rather than renumbering a check the ledger already names. A FAIL here means docs/assignment-scheduling.sql was not applied,
 -- or was applied and then partly undone by re-running an older file.
 -- ============================================================
 WITH checks AS (
@@ -133,6 +135,28 @@ WITH checks AS (
   -- HOME of that function, so on a database rebuilt from scratch the grant
   -- comes from here. Send now is the default path in the UI; if this row is
   -- red, publishing is broken for every advisor.
+  UNION ALL SELECT 'A9 schedule_assignments is NOT callable by anon',
+         -- Negative assertion, so coalesce(..., true): an absent function
+         -- reads FAIL rather than passing by vacuum, exactly as A4 and A5 do.
+         NOT coalesce((SELECT has_function_privilege('anon', p.oid, 'EXECUTE')
+                       FROM pg_proc p
+                       WHERE p.oid = to_regprocedure('public.schedule_assignments(uuid[],timestamptz)')), true)
+  -- CREATE FUNCTION grants EXECUTE to PUBLIC, which anon inherits, so the
+  -- REVOKE in the migration is the only thing standing between a logged-out
+  -- caller and this function. The checks inside it all key off auth.uid(), so
+  -- anon would reach owns_group(NULL) rather than a refusal it was designed
+  -- for. The REVOKE is READ in the migration and asserted NOWHERE until this
+  -- row: on this database an ALTER DEFAULT PRIVILEGES sweep has already been
+  -- shown not to hold in practice, which is why the grant is proved and not
+  -- trusted.
+  UNION ALL SELECT 'A10 publish_assignments is NOT callable by anon',
+         NOT coalesce((SELECT has_function_privilege('anon', p.oid, 'EXECUTE')
+                       FROM pg_proc p
+                       WHERE p.oid = to_regprocedure('public.publish_assignments(uuid[])')), true)
+  -- Same reasoning, and worse if it fails: publish_assignments moves a draft
+  -- in front of students and writes their notifications. A6/A7 prove the two
+  -- wrappers are callable by authenticated; these two prove that is the ONLY
+  -- role they are callable by.
 )
 SELECT CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END AS result, check_name
 FROM checks
