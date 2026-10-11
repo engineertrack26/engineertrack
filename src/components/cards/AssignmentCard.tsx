@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { assignmentService } from '@/services/assignments';
 import { mapRpcError } from '@/utils/rpcErrors';
-import { scheduleState, sendBeforeDue } from '@/utils/assignmentSchedule';
+import { defaultSendTime, formatSendTime, scheduleState, sendBeforeDue } from '@/utils/assignmentSchedule';
 import { submittedOfTarget } from '@/utils/assignmentTargets';
 import { colors, spacing, borderRadius, fonts } from '@/theme';
 import { ui } from '@/components/common/workflowStyles';
@@ -81,7 +81,7 @@ export function AssignmentCard({
   // scheduleState is the one place that knows a failed row also reads as
   // overdue (its time is necessarily past) and that failed wins.
   const state = scheduleState(a);
-  const when = a.scheduledFor ? new Date(a.scheduledFor).toLocaleString(i18n.language) : '';
+  const when = a.scheduledFor ? formatSendTime(a.scheduledFor, i18n.language) : '';
 
   function openEdit() {
     setEditTitle(a.title);
@@ -197,7 +197,7 @@ export function AssignmentCard({
     if (scheduling) return;
     const seed = a.scheduledFor && new Date(a.scheduledFor).getTime() > Date.now()
       ? new Date(a.scheduledFor)
-      : new Date(Date.now() + 60 * 60 * 1000);
+      : defaultSendTime();
     setIosDraft(seed);
     setPendingDay(null);
     setTimeStep('date');

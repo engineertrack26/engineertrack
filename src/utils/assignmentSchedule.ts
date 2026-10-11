@@ -29,3 +29,18 @@ export function sendBeforeDue(sendAtIso: string, dueDate?: string): boolean {
   if (!dueDate) return true;
   return new Date(sendAtIso).getTime() <= new Date(`${dueDate}T23:59:59`).getTime();
 }
+
+/** Where a send-time picker opens: an hour from now, rounded up to the next
+ *  half hour. Never under 59 minutes ahead, so it clears both the picker's
+ *  minimumDate and the two-minute buffer in acceptSendAt. */
+export function defaultSendTime(now: Date = new Date()): Date {
+  const d = new Date(now.getTime() + 60 * 60 * 1000);
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() <= 30 ? (d.getMinutes() === 0 ? 0 : 30) : 60);
+  return d;
+}
+
+/** A send time for display. It is chosen to the minute, so seconds are noise. */
+export function formatSendTime(value: string | Date, language: string): string {
+  return new Date(value).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' });
+}

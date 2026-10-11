@@ -13,17 +13,7 @@ import { newAssignmentId, prepareAssignments, type PreparedTask } from '@/utils/
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import { toLocalIsoDate } from '@/utils/localDate';
 import { TargetPicker, type TargetCandidate } from './TargetPicker';
-import { sendBeforeDue } from '@/utils/assignmentSchedule';
-
-/** Where the send-time picker opens: an hour from now, rounded up to the next
- *  half hour. Never under 59 minutes ahead, so it clears both the picker's
- *  minimumDate and the two-minute buffer in acceptSendAt. */
-function defaultSendTime(now: Date = new Date()): Date {
-  const d = new Date(now.getTime() + 60 * 60 * 1000);
-  d.setSeconds(0, 0);
-  d.setMinutes(d.getMinutes() <= 30 ? (d.getMinutes() === 0 ? 0 : 30) : 60);
-  return d;
-}
+import { defaultSendTime, formatSendTime, sendBeforeDue } from '@/utils/assignmentSchedule';
 
 export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, members, competencyId, onClose, onDone, onPublish }: {
   groupId: string; createdBy: string; triplets: KpiTriplet[]; dueDate: string; memberCount: number;
@@ -234,7 +224,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
                 ? t('taskFlow.sendNow', 'Send now')
                 : sendAt
                   ? t('taskFlow.sendAtValue', 'On {{when}}', {
-                      when: new Date(sendAt).toLocaleString(i18n.language),
+                      when: formatSendTime(sendAt, i18n.language),
                     })
                   : t('taskFlow.sendLater', 'Schedule')}
             </Text>

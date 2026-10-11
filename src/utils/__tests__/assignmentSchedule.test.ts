@@ -1,4 +1,4 @@
-import { scheduleState, sendBeforeDue } from '@/utils/assignmentSchedule';
+import { defaultSendTime, formatSendTime, scheduleState, sendBeforeDue } from '@/utils/assignmentSchedule';
 
 const NOW = new Date('2026-10-10T12:00:00Z');
 
@@ -94,5 +94,42 @@ describe('the stored value is an instant, not a wall clock', () => {
 
   it('treats the later instant, same wall clock, as still ahead', () => {
     expect(scheduleState({ scheduledFor: afterChange }, between)).toBe('scheduled');
+  });
+});
+
+describe('defaultSendTime', () => {
+  it('rounds up to the next half hour', () => {
+    expect(defaultSendTime(new Date(2026, 9, 10, 14, 58, 30)).getHours()).toBe(16);
+    expect(defaultSendTime(new Date(2026, 9, 10, 14, 58, 30)).getMinutes()).toBe(0);
+    const d = defaultSendTime(new Date(2026, 9, 10, 14, 10, 0));
+    expect([d.getHours(), d.getMinutes(), d.getSeconds()]).toEqual([15, 30, 0]);
+  });
+
+  it('keeps an exact half hour or hour as it is', () => {
+    const d = defaultSendTime(new Date(2026, 9, 10, 14, 30, 0));
+    expect([d.getHours(), d.getMinutes()]).toEqual([15, 30]);
+    const e = defaultSendTime(new Date(2026, 9, 10, 14, 0, 0));
+    expect([e.getHours(), e.getMinutes()]).toEqual([15, 0]);
+  });
+
+  it('is never less than 59 minutes ahead, whatever the minute', () => {
+    for (let m = 0; m < 24 * 60; m += 1) {
+      const now = new Date(2026, 9, 10, 0, m, 59, 999);
+      expect(defaultSendTime(now).getTime() - now.getTime()).toBeGreaterThanOrEqual(59 * 60 * 1000);
+    }
+  });
+});
+
+describe('formatSendTime', () => {
+  const when = new Date(2026, 9, 11, 15, 13, 45);
+
+  it('prints the minute and no seconds', () => {
+    expect(formatSendTime(when, 'tr')).not.toMatch(/15[:.]13[:.]\d\d/);
+    expect(formatSendTime(when, 'en')).not.toMatch(/3:13:\d\d/);
+    expect(formatSendTime(when, 'tr')).toContain('15:13');
+  });
+
+  it('accepts an ISO string as the server sends it', () => {
+    expect(formatSendTime(when.toISOString(), 'tr')).toBe(formatSendTime(when, 'tr'));
   });
 });
