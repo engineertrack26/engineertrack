@@ -85,20 +85,32 @@ test('a failed scheduled send reads as a sentence, not a code', () => {
   expect(title).toBe('Zamanlanan görev gönderilemedi');
   const scoped = display('schedule_failed', 'Scheduled task not sent',
     'A task scheduled for Grup A could not be sent: NOT_IN_SCOPE: Bir görev').body;
-  expect(scoped).toBe('Grup A için zamanlanan görev gönderilemedi: bu yetkinlik artık grubun kapsamında değil (“Bir görev”).');
+  expect(scoped).toBe('Grup A için zamanlanan görev gönderilemedi: bu yetkinlik artık grubun kapsamında değil.');
   const archived = display('schedule_failed', 'Scheduled task not sent',
     'A task scheduled for Grup A could not be sent: GROUP_ARCHIVED').body;
   expect(archived).toBe('Grup A için zamanlanan görev gönderilemedi: grup arşivlendi.');
   expect(archived).not.toMatch(/GROUP_ARCHIVED/);
 });
 
+// Seen on a device before this was fixed. The title rides in on
+// left(SQLERRM, 120), so a long one arrives cut mid-word; a cut title cannot
+// match the catalogue `taskContent` keys on, so it stayed raw English on a
+// Turkish screen. The body names the group and the reason and nothing else.
+test('a failed scheduled send does not quote the task, cut or whole', () => {
+  const cut = display('schedule_failed', 'Scheduled task not sent',
+    'A task scheduled for Grup A could not be sent: NOT_IN_SCOPE: A puzzle to arrange '
+    + "event cards, which illustrate an engineer's problem definition process, such as data c").body;
+  expect(cut).toBe('Grup A için zamanlanan görev gönderilemedi: bu yetkinlik artık grubun kapsamında değil.');
+  expect(cut).not.toMatch(/puzzle|data c/);
+});
+
 test('a failed scheduled send never shows a code, in any language', () => {
   const send = (code: string, language: string) => display('schedule_failed', 'Scheduled task not sent',
     `A task scheduled for Grup A could not be sent: ${code}`, language).body;
   expect(send('NOT_IN_SCOPE: My task', 'en'))
-    .toBe(`A task scheduled for Grup A could not be sent: this competency is no longer in the group's scope ("My task").`);
+    .toBe(`A task scheduled for Grup A could not be sent: this competency is no longer in the group's scope.`);
   expect(send('TARGETS_REQUIRED: My task', 'de'))
-    .toBe('A task scheduled for Grup A could not be sent: it is set to selected students but nobody is chosen ("My task").');
+    .toBe('A task scheduled for Grup A could not be sent: it is set to selected students but nobody is chosen.');
   expect(send('GROUP_ARCHIVED', 'it'))
     .toBe('A task scheduled for Grup A could not be sent: the group is archived.');
   // A refusal the client has never heard of: the code is dropped, not passed on.

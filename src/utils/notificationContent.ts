@@ -60,14 +60,21 @@ function scheduleFailedBody(body: string, tr: boolean): string {
     const prefix = /^A task scheduled for ([\s\S]+?) could not be sent: /.exec(body);
     return prefix ? scheduleFailedNoReason(prefix[1], tr) : body;
   }
-  const [, group, code, value] = m;
+  const [, group, code] = m;
   const known = Object.hasOwn(scheduleFailures, code) ? scheduleFailures[code] : undefined;
   if (!known) return scheduleFailedNoReason(group, tr);
   const lang = tr ? 'tr' : 'en';
-  const named = value ? (tr ? ` (“${taskContent(value, 'tr')}”)` : ` ("${value}")`) : '';
+  // The refusal carries the task's title, and this used to quote it. It does
+  // not any more. The title reaches us through left(SQLERRM, 120), so a long
+  // one arrives cut mid-word, and a cut title no longer matches the catalogue
+  // `taskContent` needs an exact key for -- so on a Turkish screen it fell
+  // back to the raw English seed text: 'A puzzle to arrange event cards, ...
+  // such as data c'. The drafts tray names the task properly in the reader's
+  // own language, which is where this notification sends them, so the group
+  // and the reason are all it has to carry.
   return tr
-    ? `${group} için zamanlanan görev gönderilemedi: ${known.tr}${named}.`
-    : `A task scheduled for ${group} could not be sent: ${known[lang]}${named}.`;
+    ? `${group} için zamanlanan görev gönderilemedi: ${known.tr}.`
+    : `A task scheduled for ${group} could not be sent: ${known[lang]}.`;
 }
 const attendance: Record<string, string> = {
   present: 'katıldı', partial: 'kısmi katılım', absent: 'katılmadı', excused: 'mazeretli',
