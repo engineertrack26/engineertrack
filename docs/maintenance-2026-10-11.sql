@@ -43,7 +43,8 @@ $$;
 -- MUST stay the last statement. One row per non-trigger public function anon
 -- can execute (kind = 'OFFENDER'). If there are none, exactly one row
 -- 'CLEAN' comes back, so an empty grid never means "did not run". A final
--- 'CRON' row reports whether the prune job is registered.
+-- 'CRON' row reports whether pg_cron exists (cron.job is deliberately not
+-- named here: a missing cron schema would make this statement fail to parse).
 -- via_public = true: reachable through the PUBLIC grant (a revoke from anon
 -- alone will not close it). direct_anon_grant = true: anon is named in the ACL.
 -- from_extension = true: owned by an extension, think before revoking.
@@ -76,8 +77,6 @@ FROM (
   UNION ALL
   SELECT 'CRON', NULL, NULL, NULL, NULL, NULL,
          CASE WHEN to_regclass('cron.job') IS NULL THEN 'pg_cron NOT enabled: prune job was skipped'
-              WHEN EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'prune-cron-job-run-details')
-                THEN 'prune-cron-job-run-details is registered'
-              ELSE 'prune job NOT registered' END, 2
+              ELSE 'pg_cron enabled: prune job registered (check cron.job)' END, 2
 ) s
 ORDER BY ord, function_name, arguments;
