@@ -127,15 +127,35 @@ export function AssignmentCard({
       return;
     }
 
+    // The send time and the due date are edited in two different places, so
+    // the guard has to live in both. AssignmentReview.changeDate clears a
+    // send time the new due date has invalidated; without the same check here
+    // a task scheduled for Friday whose due date moves to Tuesday arrives
+    // three days overdue, which is the thing the guard exists to prevent.
+    // Resolved the way the review screen resolves it: drop the schedule and
+    // say so, rather than keep a contradiction.
+    const clearsSchedule = patch.dueDate !== undefined && !!a.scheduledFor
+      && !sendBeforeDue(a.scheduledFor, patch.dueDate ?? undefined);
+
     setEditSaving(true);
+    let saved = false;
     try {
       await assignmentService.updateAssignment(a.id, patch);
-      Alert.alert(t('common.done'), t('advisor.assignmentUpdated'));
+      saved = true;
+      // After the due date, not before: a failed update must not cost the
+      // advisor a schedule that is still valid for the date it had.
+      if (clearsSchedule) await assignmentService.scheduleAssignments([a.id], null);
+      Alert.alert(t('common.done'), clearsSchedule
+        ? `${t('advisor.assignmentUpdated')} ${t('taskFlow.sendCleared', 'Due date moved, so the scheduled send was cleared.')}`
+        : t('advisor.assignmentUpdated'));
       closeEdit();
       onChanged();
     } catch (err) {
       const { key } = mapRpcError(err instanceof Error ? err.message : '');
       Alert.alert(t('common.error'), t(key));
+      // Only the schedule clear failed, so the due date on screen is already
+      // stale. Reload rather than leave the card showing the old one.
+      if (saved) onChanged();
     } finally {
       setEditSaving(false);
     }
@@ -353,6 +373,19 @@ export function AssignmentCard({
     );
   }
 
+  // Built here rather than inline so the two shapes share one `.map`:
+  // `openTimePicker` already seeds now + 1 hour when the row carries no time,
+  // which is what makes 'Schedule' work on a plain draft with no other
+  // change.
+  const scheduleActions: readonly (readonly [string, string, () => void])[] =
+    state === 'draft'
+      ? [['taskFlow.sendLater', 'Schedule', openTimePicker]]
+      : [
+        ['taskFlow.changeSendTime', 'Change the time', openTimePicker],
+        ['taskFlow.sendNowAction', 'Send now', sendNow],
+        ['taskFlow.cancelSchedule', 'Cancel schedule', cancelSchedule],
+      ];
+
   // The other direction is destructive, not benign: applying a subset to a
   // task that currently reaches the whole group hides it from everyone not
   // picked and deletes the stream card that announced it. Only this one
@@ -470,13 +503,15 @@ export function AssignmentCard({
           })}
         </Text>
       )}
-      {isDraft && state !== 'draft' && (
+      {isDraft && (
+        // A plain draft gets the row too, with the time picker as its only
+        // action: without it the creation review screen was the sole place a
+        // send could be scheduled, so an advisor who saved a draft on Monday
+        // and came back on Tuesday had to delete it and start again. The
+        // other two actions only mean something once a time is set, so the
+        // card an advisor who never schedules sees grows exactly one link.
         <View style={styles.audienceActions}>
-          {([
-            ['taskFlow.changeSendTime', 'Change the time', openTimePicker],
-            ['taskFlow.sendNowAction', 'Send now', sendNow],
-            ['taskFlow.cancelSchedule', 'Cancel schedule', cancelSchedule],
-          ] as const).map(([key, fallback, onPress]) => (
+          {scheduleActions.map(([key, fallback, onPress]) => (
             <TouchableOpacity key={key} accessibilityRole="button" disabled={scheduling}
               accessibilityState={{ disabled: scheduling }} onPress={onPress}>
               <Text style={[ui.link, scheduling && styles.linkDisabled]}>{t(key, fallback)}</Text>
