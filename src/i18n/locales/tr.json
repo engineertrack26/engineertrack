@@ -1396,7 +1396,7 @@
     "targetsRequiredTitled": "\"{{title}}\" seçili öğrencilere ayarlı ama henüz kimse seçilmedi.",
     "hasSubmission": "Bu öğrenci görevi zaten teslim etti, görevden çıkarılamaz.",
     "groupArchived": "Bu grup arşivlendi, artık öğrenci veya görev kabul etmiyor.",
-    "scheduleInPast": "İleri bir zaman seçin.",
+    "scheduleInPast": "Birkaç dakika sonrası için bir zaman seçin.",
     "alreadyPublished": "Bu görev zaten gönderildi, yeniden zamanlanamaz.",
     "alreadyApproved": "Bu görev zaten onaylandı. Teslimini değiştirmek istiyorsan danışmanından yeniden açmasını iste.",
     "reflectionRequired": "Göndermeden önce ne öğrendiğini yaz.",

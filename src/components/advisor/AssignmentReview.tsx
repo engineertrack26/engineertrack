@@ -15,6 +15,16 @@ import { toLocalIsoDate } from '@/utils/localDate';
 import { TargetPicker, type TargetCandidate } from './TargetPicker';
 import { sendBeforeDue } from '@/utils/assignmentSchedule';
 
+/** Where the send-time picker opens: an hour from now, rounded up to the next
+ *  half hour. Never under 59 minutes ahead, so it clears both the picker's
+ *  minimumDate and the two-minute buffer in acceptSendAt. */
+function defaultSendTime(now: Date = new Date()): Date {
+  const d = new Date(now.getTime() + 60 * 60 * 1000);
+  d.setSeconds(0, 0);
+  d.setMinutes(d.getMinutes() <= 30 ? (d.getMinutes() === 0 ? 0 : 30) : 60);
+  return d;
+}
+
 export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, members, competencyId, onClose, onDone, onPublish }: {
   groupId: string; createdBy: string; triplets: KpiTriplet[]; dueDate: string; memberCount: number;
   /** The group's active members as the picker wants them. `GroupMember` has
@@ -57,6 +67,8 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   // iOS shows one inline date-and-time wheel that fires onChange on every
   // movement, so its value is only a draft until Done.
   const [iosDraft, setIosDraft] = useState<Date | null>(null);
+  // Fixed when the picker opens, so the wheel does not drift while it is shown.
+  const [sendSeed, setSendSeed] = useState<Date>(() => defaultSendTime());
   const [sendError, setSendError] = useState<string | null>(null);
   const running = useRef(false);
   const snapshot = useRef<PreparedTask[] | null>(null);
@@ -132,6 +144,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     setEditing(null);
     setShowDate(false);
     setSendStep(null);
+    setIosDraft(null);
     setFailed(false);
     // Freeze after the first attempt: retry must recover the exact rows, not
     // silently overwrite a task another session may already have published.
@@ -209,8 +222,11 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
             style={[groupStyles.outline, on && groupStyles.selected]}
             disabled={busy || (attempted && !failed)}
             onPress={() => {
-              if (value === 'now') { setSendAt(null); setSendError(null); setSendStep(null); return; }
+              if (value === 'now') { setSendAt(null); setSendError(null); setSendStep(null); setIosDraft(null); return; }
               setShowDate(false);
+              const seed = sendAt ? new Date(sendAt) : defaultSendTime();
+              setSendSeed(seed);
+              setIosDraft(seed);
               setSendStep('date');
             }}>
             <Text style={groupStyles.linkText}>
@@ -229,8 +245,8 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     {!!sendError && <View style={ui.note}><Text accessibilityRole="alert" style={ui.body}>{sendError}</Text></View>}
     {sendStep && (!attempted || failed) && <View>
       <DateTimePicker
-        value={Platform.OS === 'ios' ? (iosDraft ?? (sendAt ? new Date(sendAt) : new Date()))
-          : sendStep === 'time' && pendingDay ? pendingDay : sendAt ? new Date(sendAt) : new Date()}
+        value={Platform.OS === 'ios' ? (iosDraft ?? sendSeed)
+          : sendStep === 'time' && pendingDay ? pendingDay : sendSeed}
         mode={Platform.OS === 'ios' ? 'datetime' : sendStep}
         minimumDate={Platform.OS === 'ios' || sendStep === 'date' ? new Date() : undefined}
         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -254,7 +270,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
           setPendingDay(null);
         }} />
       {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => {
-        acceptSendAt(iosDraft ?? (sendAt ? new Date(sendAt) : new Date()));
+        acceptSendAt(iosDraft ?? sendSeed);
         setIosDraft(null);
         setSendStep(null);
       }}>
@@ -262,7 +278,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
       </TouchableOpacity>}
     </View>}
     <TouchableOpacity style={groupStyles.outline} accessibilityRole="button" disabled={attempted || busy}
-      onPress={() => { setSendStep(null); setShowDate(true); }}>
+      onPress={() => { setSendStep(null); setIosDraft(null); setShowDate(true); }}>
       <Text style={groupStyles.linkText}>{t('advisor.assignmentDueDate')}: {batchDate
         ? new Date(batchDate + 'T12:00:00').toLocaleDateString(i18n.language) : t('taskFlow.noDate')}</Text>
     </TouchableOpacity>
