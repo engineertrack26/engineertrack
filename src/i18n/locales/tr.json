@@ -1386,6 +1386,8 @@
     "targetsRequired": "En az bir öğrenci seçin ya da görevi tüm gruba gönderin.",
     "targetsRequiredTitled": "\"{{title}}\" seçili öğrencilere ayarlı ama henüz kimse seçilmedi.",
     "hasSubmission": "Bu öğrenci görevi zaten teslim etti, görevden çıkarılamaz.",
+    "scheduleInPast": "İleri bir zaman seçin.",
+    "alreadyPublished": "Bu görev zaten gönderildi, yeniden zamanlanamaz.",
     "alreadyApproved": "Bu görev zaten onaylandı. Teslimini değiştirmek istiyorsan danışmanından yeniden açmasını iste.",
     "reflectionRequired": "Göndermeden önce ne öğrendiğini yaz.",
     "reflectionTooShort": "Ne öğrendiğin hakkında en az 20 karakter yaz.",

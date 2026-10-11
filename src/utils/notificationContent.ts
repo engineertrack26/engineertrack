@@ -25,11 +25,19 @@ const titles: Partial<Record<NotificationType, Record<string, string>>> = {
   },
   internship_closed: { 'Internship closed': 'Staj tamamlandı' },
   internship_reopened: { 'Internship reopened': 'Staj yeniden açıldı' },
+  schedule_failed: { 'Scheduled task not sent': 'Zamanlanan görev gönderilemedi' },
   level_up: { 'Level Up!': 'Yeni gelişim aşaması!' },
   badge_earned: { 'Badge Earned!': 'Rozet kazandın!' },
   general: { 'Task Reminder': 'Görev hatırlatması' },
 };
 
+// The database embeds the raw refusal in this notification, so the body ends in
+// a stable code. An advisor is never shown one: known codes become sentences.
+const scheduleFailures: Record<string, string> = {
+  NOT_IN_SCOPE: 'bu yetkinlik artık grubun kapsamında değil',
+  TARGETS_REQUIRED: 'görev seçili öğrencilere ayarlı ama kimse seçilmedi',
+  GROUP_ARCHIVED: 'grup arşivlendi',
+};
 const attendance: Record<string, string> = {
   present: 'katıldı', partial: 'kısmi katılım', absent: 'katılmadı', excused: 'mazeretli',
 };
@@ -107,6 +115,10 @@ export function notificationContent(item: Pick<AppNotification, 'type' | 'title'
       break;
     case 'internship_reopened':
       body = body.replace(/^(.+?) reopened the internship: ([\s\S]*)$/, (_, name, reason) => `${actor(name)} stajı yeniden açtı: ${reason}`);
+      break;
+    case 'schedule_failed':
+      body = body.replace(/^A task scheduled for ([\s\S]+?) could not be sent: (NOT_IN_SCOPE|TARGETS_REQUIRED|GROUP_ARCHIVED)(?:: ([\s\S]*))?$/,
+        (_, group, code, value) => `${group} için zamanlanan görev gönderilemedi: ${scheduleFailures[code]}${value ? ` (“${task(value)}”)` : ''}.`);
       break;
     case 'level_up':
       body = body.replace(/^Congratulations! You reached Level (\d+)!$/, 'Tebrikler! $1. gelişim aşamasına ulaştın!');

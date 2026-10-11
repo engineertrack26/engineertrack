@@ -62,6 +62,8 @@ const ERROR_KEYS: Record<string, string> = {
   NOT_TARGETED: 'errors.notTargeted',
   TARGETS_REQUIRED: 'errors.targetsRequired',
   HAS_SUBMISSION: 'errors.hasSubmission',
+  SCHEDULE_IN_PAST: 'errors.scheduleInPast',
+  ALREADY_PUBLISHED: 'errors.alreadyPublished',
   QUIZ_FORBIDDEN: 'quiz.unavailable',
   QUIZ_NOT_EDITABLE: 'quiz.notEditable',
   QUIZ_GROUP_ARCHIVED: 'quiz.groupArchived',

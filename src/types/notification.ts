@@ -22,7 +22,8 @@ export type NotificationType =
   | 'internship_correction'
   | 'internship_feedback'
   | 'internship_closed'
-  | 'internship_reopened';
+  | 'internship_reopened'
+  | 'schedule_failed';
 
 export interface AppNotification {
   id: string;

@@ -58,6 +58,8 @@ function toAssignment(r: Record<string, unknown>): GroupAssignment {
     // Server default 'group'. The ?? also covers a row read by an old client
     // path before the column existed -- which meant the whole group.
     audience: (r.audience as AssignmentAudience) ?? 'group',
+    scheduledFor: (r.scheduled_for as string) || undefined,
+    scheduleError: (r.schedule_error as string) || undefined,
     documentPath: (r.document_path as string) || undefined,
     documentName: (r.document_name as string) || undefined,
     // documentUrl is deliberately left unset here -- it is a signed URL, and
@@ -316,6 +318,20 @@ export const assignmentService = {
       needsRevision: (r.needs_revision as number) ?? 0,
       targetCount: (r.target_count as number) ?? 0,
     }));
+  },
+
+  /** Sets or clears the send time for a batch. `null` cancels and returns the
+   *  rows to plain drafts. Every check publishing runs happens here too, so a
+   *  refusal reaches the advisor while they are still looking at the screen.
+   *  See schedule_assignments in docs/assignment-scheduling.sql. */
+  async scheduleAssignments(ids: string[], at: string | null): Promise<number> {
+    // The generated type says `string` because the parameter has no DEFAULT,
+    // but the function treats NULL as "cancel" and PostgREST passes it through.
+    const { data, error } = await supabase.rpc('schedule_assignments', {
+      p_ids: ids, p_at: at as string,
+    });
+    if (error) throw new RpcError(error.message);
+    return (data as number) ?? 0;
   },
 
   /** Sets the audience and the target rows in one call -- they are written

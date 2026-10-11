@@ -77,3 +77,17 @@ test('already Turkish task templates still localize ready-catalog titles', () =>
   expect(display('task_approved', 'Görevin onaylandı', `Ece, “${enTasks[key].task}” çalışmanı onayladı.`).body)
     .toBe(`Ece, “${trTasks[key].task}” çalışmanı onayladı.`);
 });
+
+// The database writes the raw refusal into this body; an advisor must read a
+// sentence, never a stable code.
+test('a failed scheduled send reads as a sentence, not a code', () => {
+  const title = display('schedule_failed', 'Scheduled task not sent', 'x').title;
+  expect(title).toBe('Zamanlanan görev gönderilemedi');
+  const scoped = display('schedule_failed', 'Scheduled task not sent',
+    'A task scheduled for Grup A could not be sent: NOT_IN_SCOPE: Bir görev').body;
+  expect(scoped).toBe('Grup A için zamanlanan görev gönderilemedi: bu yetkinlik artık grubun kapsamında değil (“Bir görev”).');
+  const archived = display('schedule_failed', 'Scheduled task not sent',
+    'A task scheduled for Grup A could not be sent: GROUP_ARCHIVED').body;
+  expect(archived).toBe('Grup A için zamanlanan görev gönderilemedi: grup arşivlendi.');
+  expect(archived).not.toMatch(/GROUP_ARCHIVED/);
+});

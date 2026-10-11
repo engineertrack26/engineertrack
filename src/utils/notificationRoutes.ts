@@ -114,6 +114,10 @@ export function routeForNotification(
         case 'internship_closed':
         case 'internship_reopened':
           return { pathname: '/(advisor)/student-monitor' };
+        case 'schedule_failed':
+          return closureGroupId
+            ? { pathname: '/(advisor)/group-assignments', params: { groupId: closureGroupId } }
+            : { pathname: '/(advisor)/groups' };
         default:
           return null;
       }

@@ -44,6 +44,12 @@ export interface GroupAssignment {
    *  it must not move it again -- it is the record of when students first
    *  saw the task. */
   publishedAt?: string;
+  /** Set with publishedAt still unset means scheduled: the row is a draft to
+   *  every rule that exists, and a timer will publish it. Cleared on publish. */
+  scheduledFor?: string;
+  /** Why the scheduled send was refused. Non-empty also means the job will not
+   *  try again until the advisor re-schedules. */
+  scheduleError?: string;
   /** Server default 'group'; a row read before the column existed reads as
    *  'group' too, which is what it was. */
   audience: AssignmentAudience;

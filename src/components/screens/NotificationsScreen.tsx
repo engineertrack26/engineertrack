@@ -48,6 +48,7 @@ const ICON_MAP: Record<AppNotification['type'], { name: string; color: string }>
   internship_feedback: { name: 'chatbox-ellipses-outline', color: colors.info },
   internship_closed: { name: 'lock-closed-outline', color: colors.warning },
   internship_reopened: { name: 'lock-open-outline', color: colors.warning },
+  schedule_failed: { name: 'time-outline', color: colors.warning },
 };
 
 interface NotificationsScreenProps {
