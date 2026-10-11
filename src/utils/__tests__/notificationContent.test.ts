@@ -91,3 +91,21 @@ test('a failed scheduled send reads as a sentence, not a code', () => {
   expect(archived).toBe('Grup A için zamanlanan görev gönderilemedi: grup arşivlendi.');
   expect(archived).not.toMatch(/GROUP_ARCHIVED/);
 });
+
+test('a failed scheduled send never shows a code, in any language', () => {
+  const send = (code: string, language: string) => display('schedule_failed', 'Scheduled task not sent',
+    `A task scheduled for Grup A could not be sent: ${code}`, language).body;
+  expect(send('NOT_IN_SCOPE: My task', 'en'))
+    .toBe(`A task scheduled for Grup A could not be sent: this competency is no longer in the group's scope ("My task").`);
+  expect(send('TARGETS_REQUIRED: My task', 'de'))
+    .toBe('A task scheduled for Grup A could not be sent: it is set to selected students but nobody is chosen ("My task").');
+  expect(send('GROUP_ARCHIVED', 'it'))
+    .toBe('A task scheduled for Grup A could not be sent: the group is archived.');
+  // A refusal the client has never heard of: the code is dropped, not passed on.
+  expect(send('SOME_NEW_REFUSAL: x', 'en'))
+    .toBe('A task scheduled for Grup A could not be sent. Open the group to see why.');
+  expect(send('SOME_NEW_REFUSAL', 'tr'))
+    .toBe('Grup A için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.');
+  // English title is left alone outside Turkish.
+  expect(display('schedule_failed', 'Scheduled task not sent', 'x', 'en').title).toBe('Scheduled task not sent');
+});

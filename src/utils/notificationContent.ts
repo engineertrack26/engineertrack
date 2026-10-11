@@ -31,13 +31,33 @@ const titles: Partial<Record<NotificationType, Record<string, string>>> = {
   general: { 'Task Reminder': 'Görev hatırlatması' },
 };
 
-// The database embeds the raw refusal in this notification, so the body ends in
-// a stable code. An advisor is never shown one: known codes become sentences.
-const scheduleFailures: Record<string, string> = {
-  NOT_IN_SCOPE: 'bu yetkinlik artık grubun kapsamında değil',
-  TARGETS_REQUIRED: 'görev seçili öğrencilere ayarlı ama kimse seçilmedi',
-  GROUP_ARCHIVED: 'grup arşivlendi',
+// schedule_failed is different from every other type here. The database embeds
+// the raw refusal in the body, so it ends in a stable code (NOT_IN_SCOPE, ...),
+// and a user must never be shown one. So this type is rewritten for EVERY
+// language, not only Turkish: English sentences are the base and the Turkish
+// layer is chosen by `tr`. A code the client does not know (a refusal added to
+// publish_assignments_internal later) is dropped, not passed through.
+const scheduleFailures: Record<string, { en: string; tr: string }> = {
+  NOT_IN_SCOPE: { en: "this competency is no longer in the group's scope", tr: 'bu yetkinlik artık grubun kapsamında değil' },
+  TARGETS_REQUIRED: { en: 'it is set to selected students but nobody is chosen', tr: 'görev seçili öğrencilere ayarlı ama kimse seçilmedi' },
+  GROUP_ARCHIVED: { en: 'the group is archived', tr: 'grup arşivlendi' },
 };
+function scheduleFailedBody(body: string, tr: boolean): string {
+  const m = /^A task scheduled for ([\s\S]+?) could not be sent: ([A-Z][A-Z_]+)(?:: ([\s\S]*))?$/.exec(body);
+  if (!m) return body;
+  const [, group, code, value] = m;
+  const known = Object.hasOwn(scheduleFailures, code) ? scheduleFailures[code] : undefined;
+  if (!known) {
+    return tr
+      ? `${group} için zamanlanan görev gönderilemedi. Nedenini görmek için grubu aç.`
+      : `A task scheduled for ${group} could not be sent. Open the group to see why.`;
+  }
+  const lang = tr ? 'tr' : 'en';
+  const named = value ? (tr ? ` (“${taskContent(value, 'tr')}”)` : ` ("${value}")`) : '';
+  return tr
+    ? `${group} için zamanlanan görev gönderilemedi: ${known.tr}${named}.`
+    : `A task scheduled for ${group} could not be sent: ${known[lang]}${named}.`;
+}
 const attendance: Record<string, string> = {
   present: 'katıldı', partial: 'kısmi katılım', absent: 'katılmadı', excused: 'mazeretli',
 };
@@ -57,7 +77,9 @@ function badgeName(key: string): string {
 
 export function notificationContent(item: Pick<AppNotification, 'type' | 'title' | 'body'>, language: string) {
   const original = { title: item.title, body: item.body };
-  if (language.toLowerCase().split(/[-_]/)[0] !== 'tr') return original;
+  const isTr = language.toLowerCase().split(/[-_]/)[0] === 'tr';
+  if (item.type === 'schedule_failed') original.body = scheduleFailedBody(item.body, isTr);
+  if (!isTr) return original;
   const known = titles[item.type];
   if (!known || (!Object.hasOwn(known, item.title) && !Object.values(known).includes(item.title))) return original;
   const title = known && Object.hasOwn(known, item.title) ? known[item.title] : item.title;
@@ -117,8 +139,7 @@ export function notificationContent(item: Pick<AppNotification, 'type' | 'title'
       body = body.replace(/^(.+?) reopened the internship: ([\s\S]*)$/, (_, name, reason) => `${actor(name)} stajı yeniden açtı: ${reason}`);
       break;
     case 'schedule_failed':
-      body = body.replace(/^A task scheduled for ([\s\S]+?) could not be sent: (NOT_IN_SCOPE|TARGETS_REQUIRED|GROUP_ARCHIVED)(?:: ([\s\S]*))?$/,
-        (_, group, code, value) => `${group} için zamanlanan görev gönderilemedi: ${scheduleFailures[code]}${value ? ` (“${task(value)}”)` : ''}.`);
+      body = original.body; // already rewritten above, code-free
       break;
     case 'level_up':
       body = body.replace(/^Congratulations! You reached Level (\d+)!$/, 'Tebrikler! $1. gelişim aşamasına ulaştın!');
