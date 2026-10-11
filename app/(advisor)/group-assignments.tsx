@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { assignmentService } from '@/services/assignments';
 import { competencyService } from '@/services/competency';
 import { groupService } from '@/services/group';
-import { notificationService } from '@/services/notifications';
 import { useAuthStore } from '@/store/authStore';
 import { mapRpcError } from '@/utils/rpcErrors';
 import { selectableTriplets } from '@/utils/tripletSelection';
@@ -254,7 +253,9 @@ function GroupAssignmentsContent() {
    *  "no decision" -- the drafts tray, which shows no picker and must leave
    *  each draft's own audience exactly as it is. An empty ARRAY is a
    *  decision: it means the whole group, and it has to be written. */
-  async function handleSendToStudents(batch: GroupAssignment[], targetIds: string[] | null): Promise<boolean> {
+  async function handleSendToStudents(
+    batch: GroupAssignment[], targetIds: string[] | null, sendAt: string | null = null,
+  ): Promise<boolean> {
     if (!batch.length || publishLock.current || !user ||
         useAuthStore.getState().user?.id !== user.id) return false;
     publishLock.current = true;
@@ -288,64 +289,27 @@ function GroupAssignmentsContent() {
           await assignmentService.setAssignmentTargets(draft.id, targetIds);
         }
       }
+      if (sendAt) {
+        const scheduled = await assignmentService.scheduleAssignments(
+          batch.map((d) => d.id), sendAt,
+        );
+        showToast(t('advisor.assignmentsScheduled', { count: scheduled }));
+        await loadData();
+        setSelectedDraftIds([]);
+        setReviewingDrafts(false);
+        return true;
+      }
       const count = await assignmentService.publishAssignments(batch.map((d) => d.id));
 
       // count is 0 when every id in the tray was already published --
       // another session (or another tab) sent the same batch first. Nothing
-      // moved, so nothing should notify: without this guard, every group
-      // member gets a "new task assigned" push for a publish that changed
-      // nothing, and the advisor reads "0 tasks sent to students" under a
+      // moved, so nothing should be announced: without this guard the advisor
+      // reads "0 tasks sent to students" under a
       // Done header. Reload instead, so the stale tray catches up to what is
       // actually published.
       if (count > 0) {
-        // Same batch-notification shape handleAddToDraft's ancestor
-        // (handleAssign) used: one notification per student for the whole
-        // batch, best-effort so a delivery failure cannot make assignments
-        // that were actually sent look like they failed.
-        const single = batch.length === 1 ? batch[0] : null;
-        // Only the people who were actually given the task. Notifying the
-        // whole group about a task five of them cannot open is the same leak
-        // the stream card was dropped to avoid.
-        //
-        // Recipients follow each assignment's OWN audience, not the
-        // `targetIds` argument alone: the drafts tray calls this with `null`,
-        // even for a draft that already carries a 'selected' audience and its
-        // own targets from an earlier review. `targetIds` wins whenever the
-        // loop above ran (every id in `batch`) -- including for an empty
-        // array, which just set every one of them back to the whole group;
-        // only a `null` falls back to what the row itself already says. If
-        // any assignment in the batch reaches the whole group, the whole
-        // group is in the recipient set regardless of any other assignment's
-        // narrower targets.
-        let recipients = members;
-        try {
-          const perAssignmentIds = await Promise.all(batch.map(async (a) => {
-            const audience = targetIds ? (targetIds.length ? 'selected' : 'group') : a.audience;
-            if (audience !== 'selected') return members.map((m) => m.id);
-            return targetIds?.length ? targetIds : assignmentService.listAssignmentTargets(a.id);
-          }));
-          const recipientIds = new Set(perAssignmentIds.flat());
-          recipients = members.filter((m) => recipientIds.has(m.id));
-        } catch (err) {
-          // A failed target lookup must not swallow every notification for a
-          // publish that already succeeded. Over-notifying the whole group is
-          // the safe direction to fail in, not silence -- fall back to it.
-          console.warn('recipient lookup failed:', err);
-        }
-        await Promise.all(
-          recipients.map((m) =>
-            notificationService.create(
-              m.id,
-              t('notifications.taskAssignedTitle'),
-              single
-                ? t('notifications.taskAssignedBody', { title: single.title })
-                : t('notifications.tasksAssignedBody', { count }),
-              'task_assigned',
-              {},
-            ).catch((e) => console.warn('notify failed:', e)),
-          ),
-        );
-
+        // The notifications are written by publish_assignments_internal, from
+        // the rows it actually moved, so there is nothing to send from here.
         showToast(t('advisor.assignmentsSent', { count }));
       } else {
         showToast(t('advisor.assignmentsNoneSent'));

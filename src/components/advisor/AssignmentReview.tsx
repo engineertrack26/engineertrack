@@ -13,6 +13,7 @@ import { newAssignmentId, prepareAssignments, type PreparedTask } from '@/utils/
 import type { GroupAssignment, KpiTriplet } from '@/types/assignment';
 import { toLocalIsoDate } from '@/utils/localDate';
 import { TargetPicker, type TargetCandidate } from './TargetPicker';
+import { sendBeforeDue } from '@/utils/assignmentSchedule';
 
 export function AssignmentReview({ groupId, createdBy, triplets, dueDate, memberCount, members, competencyId, onClose, onDone, onPublish }: {
   groupId: string; createdBy: string; triplets: KpiTriplet[]; dueDate: string; memberCount: number;
@@ -24,7 +25,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
    *  than one -- the picker then shows no level badges. */
   competencyId: string | null;
   onClose: () => void; onDone: () => void;
-  onPublish: (rows: GroupAssignment[], targetIds: string[]) => Promise<boolean>;
+  onPublish: (rows: GroupAssignment[], targetIds: string[], sendAt: string | null) => Promise<boolean>;
 }) {
   const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState<PreparedTask[]>(() => triplets.map((tr) => ({
@@ -47,6 +48,13 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
   // straight into targetIds, so there was no difference between Cancel and
   // Continue.
   const [draftTargetIds, setDraftTargetIds] = useState<string[]>([]);
+  // null means "send now", which is what the screen did before this existed.
+  const [sendAt, setSendAt] = useState<string | null>(null);
+  // Android's picker does date or time, never both, so the choice is two
+  // steps: the day first (kept in pendingDay), then the time.
+  const [sendStep, setSendStep] = useState<'date' | 'time' | null>(null);
+  const [pendingDay, setPendingDay] = useState<Date | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const running = useRef(false);
   const snapshot = useRef<PreparedTask[] | null>(null);
 
@@ -56,7 +64,27 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
 
   function changeDate(value: string) {
     setBatchDate(value);
+    // A send time that is now later than the new due date would be a task
+    // that arrives after it is due; drop it rather than keep it silently.
+    if (sendAt && !sendBeforeDue(sendAt, value || undefined)) {
+      setSendAt(null);
+      setSendError(t('taskFlow.sendAfterDue', 'The send time cannot be after the due date.'));
+    }
     setTasks((old) => old.map((task) => ({ ...task, dueDate: value || undefined })));
+  }
+
+  /** Accepts a send time only when it is in the future and not after the due
+   *  date; otherwise says why, inline, and keeps whatever was chosen before. */
+  function acceptSendAt(candidate: Date) {
+    const iso = candidate.toISOString();
+    if (candidate.getTime() <= Date.now()) {
+      setSendError(t('errors.scheduleInPast'));
+    } else if (!sendBeforeDue(iso, batchDate || undefined)) {
+      setSendError(t('taskFlow.sendAfterDue', 'The send time cannot be after the due date.'));
+    } else {
+      setSendError(null);
+      setSendAt(iso);
+    }
   }
 
   function close() {
@@ -98,6 +126,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
     setAttempted(true);
     setEditing(null);
     setShowDate(false);
+    setSendStep(null);
     setFailed(false);
     // Freeze after the first attempt: retry must recover the exact rows, not
     // silently overwrite a task another session may already have published.
@@ -107,7 +136,7 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
       const rows = await prepareAssignments(snapshot.current, assignmentService);
       if (useAuthStore.getState().user?.id !== createdBy) throw new Error('Session changed');
       if (send) {
-        if (!await onPublish(rows, targetIds)) { setFailed(true); return; }
+        if (!await onPublish(rows, targetIds, sendAt)) { setFailed(true); return; }
       } else {
         if (rows.some((row) => row.publishedAt)) throw new Error('PREPARED_TASK_CHANGED');
         Alert.alert(t('common.done'), t('advisor.draftsCreated', { count: rows.length }));
@@ -165,8 +194,60 @@ export function AssignmentReview({ groupId, createdBy, triplets, dueDate, member
         );
       })}
     </View>
+    <Text style={ui.label}>{t('taskFlow.sendWhen', 'When to send')}</Text>
+    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+      {(['now', 'later'] as const).map((value) => {
+        const on = value === 'now' ? !sendAt : !!sendAt;
+        return (
+          <TouchableOpacity key={value} accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            style={[groupStyles.outline, on && groupStyles.selected]}
+            disabled={busy || (attempted && !failed)}
+            onPress={() => {
+              if (value === 'now') { setSendAt(null); setSendError(null); setSendStep(null); return; }
+              setShowDate(false);
+              setSendStep('date');
+            }}>
+            <Text style={groupStyles.linkText}>
+              {value === 'now'
+                ? t('taskFlow.sendNow', 'Send now')
+                : sendAt
+                  ? t('taskFlow.sendAtValue', 'On {{when}}', {
+                      when: new Date(sendAt).toLocaleString(i18n.language),
+                    })
+                  : t('taskFlow.sendLater', 'Schedule')}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+    {!!sendError && <Text accessibilityRole="alert" style={ui.secondary}>{sendError}</Text>}
+    {sendStep && !attempted && <View>
+      <DateTimePicker
+        value={sendStep === 'time' && pendingDay ? pendingDay : sendAt ? new Date(sendAt) : new Date()}
+        mode={sendStep} minimumDate={sendStep === 'date' ? new Date() : undefined}
+        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        onChange={(event, value) => {
+          if (Platform.OS !== 'ios') setSendStep(null);
+          if (event.type === 'dismissed' || !value) return;
+          if (sendStep === 'date') {
+            setPendingDay(value);
+            // The time picker opens on the next tick, after Android has
+            // torn the date dialog down.
+            setTimeout(() => setSendStep('time'), 0);
+            return;
+          }
+          const day = pendingDay ?? value;
+          acceptSendAt(new Date(day.getFullYear(), day.getMonth(), day.getDate(),
+            value.getHours(), value.getMinutes()));
+          setPendingDay(null);
+        }} />
+      {Platform.OS === 'ios' && <TouchableOpacity accessibilityRole="button" onPress={() => setSendStep(null)}>
+        <Text style={ui.link}>{t('common.done')}</Text>
+      </TouchableOpacity>}
+    </View>}
     <TouchableOpacity style={groupStyles.outline} accessibilityRole="button" disabled={attempted || busy}
-      onPress={() => setShowDate(true)}>
+      onPress={() => { setSendStep(null); setShowDate(true); }}>
       <Text style={groupStyles.linkText}>{t('advisor.assignmentDueDate')}: {batchDate
         ? new Date(batchDate + 'T12:00:00').toLocaleDateString(i18n.language) : t('taskFlow.noDate')}</Text>
     </TouchableOpacity>
