@@ -430,7 +430,7 @@
     "scheduleCount": "{{count}} görevi zamanla",
     "sendAfterDue": "Gönderim zamanı son teslim tarihinden sonra olamaz.",
     "scheduledFor": "{{when}} tarihinde gönderilecek",
-    "scheduleOverdue": "{{when}} tarihinde gönderilmesi gerekiyordu",
+    "scheduleOverdue": "{{when}} tarihinde gönderilmesi gerekiyordu ve henüz gönderilmedi.",
     "scheduleFailed": "Gönderilemedi. {{reason}}",
     "cancelSchedule": "Zamanlamayı iptal et",
     "sendNowAction": "Şimdi gönder",

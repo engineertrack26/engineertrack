@@ -458,7 +458,7 @@ export function AssignmentCard({
         // Overdue means the timer did not run, which is not the advisor's
         // doing: say what happened and leave Send now as the way out.
         <Text style={styles.warning}>
-          {t('taskFlow.scheduleOverdue', 'Should have gone out {{when}}', { when })}
+          {t('taskFlow.scheduleOverdue', 'Was due to go out {{when}} and has not been sent.', { when })}
         </Text>
       )}
       {isDraft && state === 'failed' && (

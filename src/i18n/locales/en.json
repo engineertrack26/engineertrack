@@ -386,7 +386,7 @@
     "scheduleCount": "Schedule {{count}} tasks",
     "sendAfterDue": "The send time cannot be after the due date.",
     "scheduledFor": "Goes out {{when}}",
-    "scheduleOverdue": "Should have gone out {{when}}",
+    "scheduleOverdue": "Was due to go out {{when}} and has not been sent.",
     "scheduleFailed": "Could not be sent. {{reason}}",
     "cancelSchedule": "Cancel schedule",
     "sendNowAction": "Send now",

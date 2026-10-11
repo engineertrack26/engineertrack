@@ -14,3 +14,16 @@ test.each(Object.entries({ en, tr, de, it, ro, sr, el }))('%s has every task wor
       .toEqual((en.taskFlow[key].match(/\{\{\w+\}\}/g) || []).sort());
   }
 });
+
+// The drafts tray shows these errors inline as the only explanation of why a
+// scheduled task never went out, so they must be real sentences in every
+// language (the rest of the errors section is not held to parity).
+const SCHEDULE_ERROR_KEYS = ['notInScope', 'groupArchived', 'targetsRequired', 'scheduleInPast'] as const;
+test.each(Object.entries({ tr, de, it, ro, sr, el }))('%s translates the scheduling error sentences', (_language, locale) => {
+  for (const key of SCHEDULE_ERROR_KEYS) {
+    const value = (locale.errors as Record<string, string>)[key];
+    expect(typeof value).toBe('string');
+    expect(value.trim().length).toBeGreaterThan(0);
+    expect(value).not.toBe((en.errors as Record<string, string>)[key]);
+  }
+});
